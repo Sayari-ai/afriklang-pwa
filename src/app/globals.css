@@ -1,26 +1,108 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ */
+/* Afriklang design tokens                                            */
+/*                                                                    */
+/* Mirrors src/lib/colors.ts (and lib/core/theme/app_colors.dart in   */
+/* the Flutter app). Exposed both as raw CSS variables (for inline    */
+/* style usage and gradients) and as Tailwind v4 @theme tokens so     */
+/* utilities like `bg-primary`, `text-record-active`, etc. work.      */
+/* ------------------------------------------------------------------ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand */
+  --color-primary: #00539f;
+  /* Alias used throughout the components — kept in sync with
+     --color-primary so existing inline `var(--color-brand-primary)`
+     references resolve. The shorter `--color-primary` is the
+     canonical Tailwind v4 token (see @theme inline below). */
+  --color-brand-primary: var(--color-primary);
+
+  /* Map */
+  --color-map-bg: #7bc96f;
+  --color-mascot-body: #e53935;
+  --color-step-bar: #66bb6a;
+  --color-step-bar-track: #cfcfcf;
+  --color-locked-node: #6b6b6b;
+  --color-locked-icon: #b5b5b5;
+
+  /* Level review */
+  --color-retake: #e53935;
+  --color-listen: #2196f3;
+  --color-submit: #66bb6a;
+
+  /* Recording states */
+  --color-record-idle: #66bb6a;
+  --color-record-active: #e53935;
+
+  /* Rewards / podium */
+  --color-points-reward: #ffc02e;
+  --color-podium-gold: #ffd700;
+  --color-podium-silver: #c0c0c0;
+  --color-podium-bronze: #cd7f32;
+
+  /* Overlays (matching Flutter's 0x99 / 0xCC ARGB literals). */
+  --color-bg-overlay-60: rgba(0, 0, 0, 0.6);
+  --color-bg-overlay-80: rgba(0, 0, 0, 0.8);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Make Satoshi the default sans-serif. The CSS variable is set by
+     `next/font/local` in src/lib/fonts.ts and applied to <html>. */
+  --font-sans: var(--font-satoshi);
+
+  --color-primary: var(--color-primary);
+  --color-map-bg: var(--color-map-bg);
+  --color-mascot-body: var(--color-mascot-body);
+  --color-step-bar: var(--color-step-bar);
+  --color-step-bar-track: var(--color-step-bar-track);
+  --color-locked-node: var(--color-locked-node);
+  --color-locked-icon: var(--color-locked-icon);
+  --color-retake: var(--color-retake);
+  --color-listen: var(--color-listen);
+  --color-submit: var(--color-submit);
+  --color-record-idle: var(--color-record-idle);
+  --color-record-active: var(--color-record-active);
+  --color-points-reward: var(--color-points-reward);
+  --color-podium-gold: var(--color-podium-gold);
+  --color-podium-silver: var(--color-podium-silver);
+  --color-podium-bronze: var(--color-podium-bronze);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ------------------------------------------------------------------ */
+/* Global resets                                                      */
+/* ------------------------------------------------------------------ */
+
+html,
+body {
+  /* Anchor at black so that screens with a translucent scrim over
+     `bg.png` never expose a flash of system white between transitions. */
+  background: #000000;
+  color: #ffffff;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  /* Better text rendering on macOS / iOS Safari for the heavy weights. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* The PWA is a "fullscreen kiosk-ish" experience: disable iOS rubber-band
+   scroll on the document, allow it on individual scroll containers. */
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  margin: 0;
+  /* Notched devices: extend background under home indicator/notch.
+     Individual screens add safe-area padding where they need it. */
+  padding: 0;
+}
+
+/* Re-enable focus rings (Tailwind v4 doesn't strip them by default but
+   we explicitly want them visible-on-keyboard for a11y). */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Placeholder Afriklang PWA icon. Solid brand-blue background with a
+  bold white "A" wordmark. Replace with the real logo before launch.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Afriklang">
+  <rect width="512" height="512" rx="96" ry="96" fill="#00539F" />
+  <text
+    x="50%"
+    y="54%"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-weight="900"
+    font-size="320"
+    fill="#FFFFFF"
+  >A</text>
+</svg>

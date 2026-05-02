@@ -12,6 +12,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // next-pwa generated artifacts: minified workbox runtime + service
+    // worker that ship as-is. Linting them produces hundreds of bogus
+    // warnings against the bundled minified code.
+    "public/sw.js",
+    "public/sw.js.map",
+    "public/workbox-*.js",
+    "public/workbox-*.js.map",
+    "public/fallback-*.js",
   ]),
 ]);
 

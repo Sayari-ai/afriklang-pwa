@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Afriklang PWA
 
-## Getting Started
+Progressive Web App companion to the [Afriklang Flutter app](../afriklang-mobile).
+Built with Next.js (App Router) + TypeScript + Tailwind CSS, with offline / installable
+support provided by [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa).
 
-First, run the development server:
+## Stack
+
+- **Framework**: Next.js 16 (App Router), TypeScript, React 19
+- **Styling**: Tailwind CSS v4
+- **PWA**: `@ducanh2912/next-pwa` (Workbox-based service worker)
+- **Bundler**: webpack (forced via `--webpack` because `next-pwa` does not
+  yet support Turbopack — see `package.json` scripts)
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000 — service worker disabled in dev
+npm run build    # emits public/sw.js + workbox runtime
+npm run start    # serve the production build, install banner becomes available
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## PWA wiring
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `next.config.ts` wraps the Next config with `withPWAInit({ dest: "public", ... })`.
+  The service worker is auto-registered on the client.
+- `src/app/manifest.ts` is the App Router-native manifest (served at
+  `/manifest.webmanifest`). Brand color `#00539F` matches the mobile app.
+- Icons are SVG placeholders in `public/icons/`. Replace with real PNG/ICO
+  exports of the Afriklang logo before launch.
+- Generated artifacts (`public/sw.js`, `public/workbox-*.js`, etc.) are
+  gitignored and re-emitted on every `next build`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Layout
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  app/
+    layout.tsx       # Root layout with PWA metadata + viewport
+    manifest.ts      # PWA manifest
+    page.tsx         # Landing placeholder
+    globals.css
+public/
+  icons/             # PWA icons (SVG placeholders)
+```
