@@ -26,6 +26,19 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // LAN dev access: when running `next dev` and hitting the dev
+  // server from another device on the local network (phone, tablet)
+  // Next 15+ rejects the request unless the origin is allow-listed.
+  // Keep this list small and only for local dev — production
+  // deployments don't go through this path.
+  //
+  // (Previously this was set via a stray `module.exports = { ... }`
+  // block above the real config. That assignment ran at load time
+  // and clobbered the module's exports *before* the wrapped
+  // `export default` below could attach the next-intl plugin —
+  // which manifested as `Couldn't find next-intl config file` at
+  // request time. Folding the option into the real config fixes it.)
+  allowedDevOrigins: ["192.168.100.19"],
   // Allow the network image cells served from the Supabase storage
   // bucket. Same domain set the Flutter app fetches from.
   images: {

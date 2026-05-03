@@ -20,16 +20,19 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#00539F",
     theme_color: "#00539F",
     icons: [
-      // SVG placeholders — fully scalable, replace with real PNG/ICO
-      // exports of the Afriklang logo at 192/512 once artwork lands.
+      // Afriklang brand logo. SVG is fully scalable so a single asset
+      // covers every install surface (home screen, app switcher, etc.).
       {
-        src: "/icons/icon.svg",
+        src: "/icons/Logo.svg",
         sizes: "any",
         type: "image/svg+xml",
         purpose: "any",
       },
+      // Reuse the same logo for the maskable slot. Note: Android masks
+      // crop the outer ~10% of maskable icons, so if the Logo lacks a
+      // safe-zone padding, swap this to a padded export when available.
       {
-        src: "/icons/icon-maskable.svg",
+        src: "/icons/Logo.svg",
         sizes: "any",
         type: "image/svg+xml",
         purpose: "maskable",
