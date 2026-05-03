@@ -26,6 +26,7 @@ import { useAppLocale } from "@/stores/app-locale";
 import { useConsent } from "@/stores/consent";
 import { useDeviceIdentity } from "@/stores/device-identity";
 import { useLearningLanguage } from "@/stores/learning-language";
+import { useNickname } from "@/stores/nickname";
 import { useOnboarding } from "@/stores/onboarding";
 
 export function AppHydration() {
@@ -48,6 +49,7 @@ export function AppHydration() {
     useConsent.getState().hydrate();
     useLearningLanguage.getState().hydrate();
     useOnboarding.getState().hydrate();
+    useNickname.getState().hydrate();
 
     // 3. Locale: server already picked one — record it as the
     //    `effective` value. The persisted override (if any) is read

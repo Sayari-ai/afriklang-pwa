@@ -96,6 +96,22 @@
   "profileVersionLabel": "Version",
   "profileVersionValue": "{version} ({build})",
 
+  "profileNicknameLabel": "Nickname",
+  "profileNicknameNotSet": "Not set",
+
+  "nicknameSheetTitleFirstRun": "Pick a nickname",
+  "nicknameSheetTitleEdit": "Change your nickname",
+  "nicknameSheetSubtitle": "This is the name shown on the leaderboard.",
+  "nicknameSheetPlaceholder": "Your nickname",
+  "nicknameSheetSave": "Save",
+  "nicknameSheetSaving": "Saving…",
+  "nicknameSheetMaybeLater": "Maybe later",
+  "nicknameErrorEmpty": "Please type a nickname.",
+  "nicknameErrorTooShort": "Nickname must be at least 2 characters.",
+  "nicknameErrorTooLong": "Nickname must be 20 characters or fewer.",
+  "nicknameSaveOfflineSnack": "You're offline — your nickname will be visible locally until you reconnect.",
+  "nicknameSaveFailedSnack": "Couldn't save your nickname on the server. We'll keep it locally for now.",
+
   "notificationsTitle": "Notifications",
   "notificationsEmptyTitle": "Nothing yet",
   "notificationsEmptySubtitle": "Your level unlocks and rank changes will show up here.",

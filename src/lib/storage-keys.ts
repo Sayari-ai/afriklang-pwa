@@ -40,6 +40,21 @@ export const StorageKeys = {
    * model uniform with the upload queue.
    */
   progressQueueStore: "afriklang.progress_queue.v1",
+
+  /**
+   * User-chosen display name for the leaderboard. Optional override of
+   * the server-assigned nickname returned by `leaderboard_get`. UTF-8
+   * string, trimmed and length-validated client-side before write.
+   */
+  nickname: "afriklang.nickname.v1",
+
+  /**
+   * Boolean flag: has the first-run nickname prompt been shown on the
+   * map screen? Persisted separately from `nickname` itself so a user
+   * who dismisses the prompt without entering a name doesn't get asked
+   * again on every cold start.
+   */
+  nicknamePrompted: "afriklang.nickname.v1.prompted",
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

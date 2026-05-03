@@ -34,6 +34,7 @@ import { useEffect, useState } from "react";
 
 import { ScreenBackground } from "@/components/screen-background";
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
+import { NicknameSheet } from "@/components/nickname-sheet";
 import { useSetAppLocale } from "@/hooks/use-set-app-locale";
 import type { Locale } from "@/i18n/locales";
 import { useAppLocale, type LocaleOverride } from "@/stores/app-locale";
@@ -43,6 +44,7 @@ import {
   type LearningLanguage,
   useLearningLanguage,
 } from "@/stores/learning-language";
+import { useNickname } from "@/stores/nickname";
 
 const PRIMARY = "#00539F";
 const RED = "#E53935";
@@ -58,6 +60,7 @@ const APP_BUILD = "web";
 type SheetSpec =
   | { kind: "app-language" }
   | { kind: "learning-language" }
+  | { kind: "nickname" }
   | { kind: "revoke-confirm" }
   | null;
 
@@ -88,6 +91,8 @@ export default function ProfilePage() {
           <LearningLanguageRow
             onTap={() => setSheet({ kind: "learning-language" })}
           />
+          <Divider />
+          <NicknameRow onTap={() => setSheet({ kind: "nickname" })} />
         </SectionCard>
 
         <div className="h-4" />
@@ -110,6 +115,9 @@ export default function ProfilePage() {
       )}
       {sheet?.kind === "learning-language" && (
         <LearningLanguageSheet onClose={() => setSheet(null)} />
+      )}
+      {sheet?.kind === "nickname" && (
+        <NicknameSheet mode="edit" onClose={() => setSheet(null)} />
       )}
       {sheet?.kind === "revoke-confirm" && (
         <RevokeConfirmDialog onClose={() => setSheet(null)} />
@@ -229,6 +237,31 @@ function LearningLanguageRow({ onTap }: { onTap: () => void }) {
     <Tile
       leading={<SchoolIcon />}
       label={t("profileLearningLanguageLabel")}
+      trailing={trailing}
+      onTap={onTap}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Nickname row
+// ---------------------------------------------------------------------------
+
+function NicknameRow({ onTap }: { onTap: () => void }) {
+  const t = useTranslations();
+  // Reactive — flips from "Not set" to the chosen value as soon as
+  // the user submits the sheet. We don't show the server-assigned
+  // fallback here because it's not known on the profile screen
+  // (would require a leaderboard fetch); keep this row strictly
+  // about the *user-chosen* override.
+  const value = useNickname((s) => s.value);
+  const trailing = value && value.length > 0
+    ? value
+    : t("profileNicknameNotSet");
+  return (
+    <Tile
+      leading={<PersonIcon />}
+      label={t("profileNicknameLabel")}
       trailing={trailing}
       onTap={onTap}
     />
@@ -362,7 +395,7 @@ function SheetShell({
         onClick={onClose}
         className="absolute inset-0 bg-black/50"
       />
-      <div className="relative flex flex-col bg-white pb-safe rounded-t-[20px]">
+      <div className="relative mx-auto flex w-full max-w-[480px] flex-col rounded-t-[20px] bg-white pb-safe">
         <div className="flex justify-center pt-2">
           <span className="block h-1 w-10 rounded bg-black/25" />
         </div>
@@ -582,6 +615,14 @@ function CheckIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+    </svg>
+  );
+}
+
+function PersonIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-3.34 0-10 1.67-10 5v3h20v-3c0-3.33-6.66-5-10-5z" />
     </svg>
   );
 }
