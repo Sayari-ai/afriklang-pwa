@@ -53,6 +53,7 @@
   "levelConsentRequiredSnack": "Le consentement à l'enregistrement est requis avant l'envoi. Réactivez-le dans les paramètres.",
   "levelUploadFailedSnack": "Échec de l'envoi : {error}",
   "levelOfflineSubmitSnack": "Vous êtes hors ligne. Reconnectez-vous pour envoyer votre enregistrement.",
+  "progressQueuedSyncFailedSnack": "Impossible de synchroniser votre progression avec le serveur.",
   "levelSkippedSnack": "Passé",
   "levelQuestionTitle": "Comment dit-on cela en\n{language} ?",
   "levelTapToStop": "Touchez pour arrêter",

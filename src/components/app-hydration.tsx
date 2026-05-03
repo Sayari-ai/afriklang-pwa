@@ -18,9 +18,10 @@
  */
 
 import { useEffect } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { isSupportedLocale, type Locale } from "@/i18n/locales";
+import { startProgressQueueRunner } from "@/lib/storage/progress-queue-runner";
 import { useAppLocale } from "@/stores/app-locale";
 import { useConsent } from "@/stores/consent";
 import { useDeviceIdentity } from "@/stores/device-identity";
@@ -33,6 +34,11 @@ export function AppHydration() {
   // it to the locale store so client components have a synchronous
   // source of truth without re-doing the resolution.
   const serverLocale = useLocale();
+  // Translator handle used by the upload-queue runner to surface a
+  // localised snackbar when an item is permanently dropped. We pass
+  // the current `t` via a closure, so a locale switch at runtime is
+  // reflected on the next drain (start-up call is idempotent).
+  const t = useTranslations();
 
   useEffect(() => {
     // 1. Identity is the prerequisite for every API call.
@@ -50,7 +56,19 @@ export function AppHydration() {
     if (isSupportedLocale(serverLocale)) {
       useAppLocale.getState().setEffective(serverLocale as Locale);
     }
-  }, [serverLocale]);
+
+    // 4. Boot the offline progress-queue drain loop. Idempotent on
+    //    repeat mounts; copy refreshes on every effect run so locale
+    //    switches don't strand the snackbar text in the old language.
+    //    Audio uploads no longer have a queue — submission is now an
+    //    online-only operation (see `audio.ts` "at-most-once policy"),
+    //    so only progress writes get queued here.
+    startProgressQueueRunner({
+      getCopy: () => ({
+        syncFailed: t("progressQueuedSyncFailedSnack"),
+      }),
+    });
+  }, [serverLocale, t]);
 
   return null;
 }

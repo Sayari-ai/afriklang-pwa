@@ -31,6 +31,15 @@ export const StorageKeys = {
 
   /** Cached progress payload (ProgressVector JSON). */
   progressCache: "afriklang.progress.v1",
+
+  /**
+   * IndexedDB store name for the offline progress-write queue. Holds
+   * pending `progress_set` calls (e.g. level completions made while
+   * the device was offline). Items are small JSON, but living in IDB
+   * lets us share the runner's drain machinery and keeps the data
+   * model uniform with the upload queue.
+   */
+  progressQueueStore: "afriklang.progress_queue.v1",
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];
