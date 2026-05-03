@@ -55,6 +55,19 @@ export const StorageKeys = {
    * again on every cold start.
    */
   nicknamePrompted: "afriklang.nickname.v1.prompted",
+
+  /**
+   * Integer schema version for client-side persisted state. Bumped
+   * whenever a non-additive change to localStorage / IndexedDB layout
+   * ships, and read on every boot by `runStorageMigrations()` to
+   * decide whether one-shot cleanup is needed. See
+   * `src/lib/storage/migrations.ts` for the migration list.
+   *
+   * Stored as a base-10 integer string ("1", "2", ...). Absent on
+   * pre-migration installs — treated as version 0 by the runner so
+   * the first migration always fires.
+   */
+  schemaVersion: "afriklang.schema_version",
 } as const;
 
 export type StorageKey = (typeof StorageKeys)[keyof typeof StorageKeys];

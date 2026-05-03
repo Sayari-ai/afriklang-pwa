@@ -21,6 +21,7 @@ import { useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { isSupportedLocale, type Locale } from "@/i18n/locales";
+import { runStorageMigrations } from "@/lib/storage/migrations";
 import { startProgressQueueRunner } from "@/lib/storage/progress-queue-runner";
 import { useAppLocale } from "@/stores/app-locale";
 import { useConsent } from "@/stores/consent";
@@ -42,6 +43,17 @@ export function AppHydration() {
   const t = useTranslations();
 
   useEffect(() => {
+    // 0. Storage migrations. Runs *before* any store hydrates so the
+    //    on-disk shape matches what the hydration code expects. The
+    //    runner is idempotent (reads a stored version key first), so
+    //    on every boot after the first this is a single localStorage
+    //    read and an early return. Fire-and-forget — async cleanup
+    //    (e.g. orphan IDB deletes) shouldn't block first paint, and
+    //    the synchronous parts (path-cache wipe) complete before
+    //    `pathRepo.boot()` reads the cache anyway because that runs
+    //    later, on a separate trigger.
+    void runStorageMigrations();
+
     // 1. Identity is the prerequisite for every API call.
     useDeviceIdentity.getState().ensure();
 
