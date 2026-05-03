@@ -47,6 +47,7 @@ import { ScreenBackground } from "@/components/screen-background";
 import { uploadAudio, AudioUploadError } from "@/lib/api/audio";
 import { buildRecordingFilename } from "@/lib/audio/filename";
 import { RecorderError, WavRecorder } from "@/lib/audio/recorder";
+import { type LevelDefinition } from "@/lib/content/models";
 import { useConsent } from "@/stores/consent";
 import { useDeviceIdentity } from "@/stores/device-identity";
 import { useLearningLanguage } from "@/stores/learning-language";
@@ -68,11 +69,30 @@ export default function LevelPage({
   const t = useTranslations();
   const router = useRouter();
 
-  const path = usePathRepo((s) => s.path);
-  const level = useMemo(
-    () => path?.levels.find((l) => l.levelId === levelId) ?? null,
-    [path, levelId],
-  );
+  const bundle = usePathRepo((s) => s.bundle);
+  // Locate the cycle that owns this level, then the level itself.
+  // Level ids are globally unique across cycles, so the first match
+  // is canonical. Memoised together so the level's `pathId` (used to
+  // build recording filenames) and the level definition stay aligned.
+  // The shape (`{ level, owningPathId }` with both nullable) is kept
+  // single-shape across all branches so the React Compiler can preserve
+  // the memoization — early returns with constructor-literal objects
+  // confuse its escape analysis.
+  const { level, owningPathId } = useMemo(() => {
+    let foundLevel: LevelDefinition | null = null;
+    let foundPathId: number | null = null;
+    if (bundle) {
+      for (const cycle of bundle) {
+        const hit = cycle.levels.find((l) => l.levelId === levelId);
+        if (hit) {
+          foundLevel = hit;
+          foundPathId = cycle.pathId;
+          break;
+        }
+      }
+    }
+    return { level: foundLevel, owningPathId: foundPathId };
+  }, [bundle, levelId]);
   const questions = level?.questions ?? [];
   const totalSteps = questions.length;
 
@@ -80,13 +100,13 @@ export default function LevelPage({
   // back home rather than render a broken screen. The home tab
   // already gates this, but the guard belongs here too.
   useEffect(() => {
-    if (path && (level === null || totalSteps === 0)) {
+    if (bundle && (level === null || totalSteps === 0)) {
       useSnackbar
         .getState()
         .show(t("homeLevelHasNoQuestionsSnack", { levelId }));
       router.replace("/home");
     }
-  }, [path, level, totalSteps, levelId, router, t]);
+  }, [bundle, level, totalSteps, levelId, router, t]);
 
   // ---------------------------------------------------------------
   // Live state
@@ -106,6 +126,17 @@ export default function LevelPage({
   const playbackUrlRef = useRef<string | null>(null);
   // Reentrancy guard for the start/stop pair (matches `_busy` in Dart).
   const busyRef = useRef(false);
+  // Number of questions the user has actually submitted (i.e. uploaded
+  // a recording for) so far in this level. Skips don't increment. Used
+  // to decide whether the level is a "full" or "partial" completion
+  // when the user reaches the last step / skips it / hits back.
+  // A ref (not state) because it never affects render and avoids stale
+  // closures inside async submit handlers.
+  const submittedCountRef = useRef(0);
+  // Guards against double-firing the partial-completion persistence.
+  // `onSkip` on the last step + the back button + the unmount cleanup
+  // can race; we only ever want one `completeLevel` call per visit.
+  const completionDispatchedRef = useRef(false);
 
   const question = questions[step - 1];
   const isRecording = phase === "recording";
@@ -251,7 +282,7 @@ export default function LevelPage({
   };
 
   const onSubmit = async () => {
-    if (uploading || !recording || !path || !question) return;
+    if (uploading || !recording || owningPathId === null || !question) return;
 
     // Defence-in-depth: a revoked-since-onboarding consent state must
     // block uploads, even mid-level (matches Flutter, level_screen.dart:319).
@@ -271,7 +302,7 @@ export default function LevelPage({
     const filename = buildRecordingFilename({
       languageIso: langIso,
       speakerId,
-      pathId: path.pathId,
+      pathId: owningPathId,
       levelId,
       qIndex: question.qIndex,
     });
@@ -286,13 +317,30 @@ export default function LevelPage({
         englishDescription: question.promptEn,
       });
     } catch (e) {
-      const message =
-        e instanceof AudioUploadError
+      // Submit is a hard, online-only operation now. Earlier
+      // revisions queued failed uploads to IDB and replayed them
+      // when connectivity returned, but that combined with the
+      // audio-API's own retry loop produced duplicate writes in the
+      // backend bucket on ambiguous failures (timeout-after-store,
+      // lost response). Both layers are now at-most-once: one POST
+      // per call, no client-side queue. The user retries by tapping
+      // Submit again. We pick a friendlier copy for offline so they
+      // know reconnecting is the next step, but otherwise reuse the
+      // generic snackbar.
+      const isNetwork = e instanceof AudioUploadError && e.isNetwork;
+      const message = isNetwork
+        ? t("levelOfflineSubmitSnack")
+        : e instanceof AudioUploadError
           ? e.message
           : e instanceof Error
             ? e.message
             : String(e);
-      useSnackbar.getState().show(t("levelUploadFailedSnack", { error: message }), 4000);
+      useSnackbar
+        .getState()
+        .show(
+          isNetwork ? message : t("levelUploadFailedSnack", { error: message }),
+          4000,
+        );
       setUploading(false);
       return;
     }
@@ -304,22 +352,53 @@ export default function LevelPage({
     }
     setRecording(null);
 
+    // Count this successful submission. Used by the last-step branch
+    // below (and by `onSkip` / the back button) to decide whether the
+    // level should be persisted as a full or partial completion.
+    submittedCountRef.current += 1;
+
     if (isLast) {
+      // Decide whether this run was a full sweep (every question
+      // submitted) or a partial completion (at least one skip). The
+      // backend always returns the full `points_reward`, so for partial
+      // we override locally with floor(reward / 2).
+      const submitted = submittedCountRef.current;
+      const isPartial = submitted < totalSteps;
+      const reward = level?.pointsReward ?? 0;
+      const awardedPoints = isPartial ? Math.floor(reward / 2) : reward;
+
       // Persist completion (best-effort). If the network call to
       // `progress_set` fails, surface a snackbar but still navigate
       // to the celebration screen — the next boot will reconcile
       // from the backend (Flutter has the same optimistic policy).
+      // We capture `cycleComplete` from the repo's return value: when
+      // true, the user just finished the last level of the current
+      // cycle and the celebration screen should render the
+      // cycle-complete variant (with the "Start next cycle" CTA)
+      // rather than the per-level one.
+      completionDispatchedRef.current = true;
+      let cycleComplete = false;
       try {
-        await usePathRepo.getState().completeLevel(levelId);
+        const res = await usePathRepo.getState().completeLevel(levelId, {
+          pointsOverride: awardedPoints,
+          submittedCount: submitted,
+          totalSteps,
+        });
+        cycleComplete = res.cycleComplete;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         useSnackbar
           .getState()
           .show(t("homeCouldNotSaveProgressSnack", { error: msg }));
       }
-      router.replace(
-        `/level/${levelId}/complete?points=${level?.pointsReward ?? 0}&total=${totalSteps}`,
-      );
+      const params = new URLSearchParams({
+        points: String(awardedPoints),
+        total: String(totalSteps),
+        submitted: String(submitted),
+      });
+      if (isPartial) params.set("partial", "1");
+      if (cycleComplete) params.set("cycleComplete", "1");
+      router.replace(`/level/${levelId}/complete?${params.toString()}`);
       return;
     }
 
@@ -332,8 +411,9 @@ export default function LevelPage({
   };
 
   const onSkip = () => {
-    // Cancel any in-flight recording and clear local state, then
-    // bounce back home.
+    // Cancel any in-flight recording / playback and clear local state
+    // for the *current* question, then move on to the next image.
+    // Skipping never uploads.
     const rec = recorderRef.current;
     if (rec) void rec.dispose();
     recorderRef.current = null;
@@ -342,8 +422,80 @@ export default function LevelPage({
       URL.revokeObjectURL(playbackUrlRef.current);
       playbackUrlRef.current = null;
     }
+    setRecording(null);
     stopTimer();
+    setUploading(false);
+
+    const isLast = step >= totalSteps;
+    if (isLast) {
+      // End of the level reached via skip. If the user managed to
+      // submit at least one recording, the level still counts as a
+      // partial completion (half points). Otherwise nothing is
+      // persisted — they just leave the level untouched.
+      const submitted = submittedCountRef.current;
+      if (submitted > 0) {
+        void persistPartialAndExit(submitted);
+      } else {
+        useSnackbar.getState().show(t("levelSkippedSnack"), 1000);
+        router.back();
+      }
+      return;
+    }
+
+    // Advance to the next question (next image).
     useSnackbar.getState().show(t("levelSkippedSnack"), 1000);
+    setStep((s) => s + 1);
+    setPhase("idle");
+    setElapsedSec(0);
+  };
+
+  /**
+   * Persist a partial completion and route to the celebration screen.
+   * Called from `onSkip` (last step, with prior submissions) and from
+   * the TopBar back button (any step, with prior submissions). Idempotent
+   * via `completionDispatchedRef`.
+   */
+  const persistPartialAndExit = async (submitted: number) => {
+    if (completionDispatchedRef.current) return;
+    completionDispatchedRef.current = true;
+    const reward = level?.pointsReward ?? 0;
+    const awardedPoints = Math.floor(reward / 2);
+    let cycleComplete = false;
+    try {
+      const res = await usePathRepo.getState().completeLevel(levelId, {
+        pointsOverride: awardedPoints,
+        submittedCount: submitted,
+        totalSteps,
+      });
+      cycleComplete = res.cycleComplete;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      useSnackbar
+        .getState()
+        .show(t("homeCouldNotSaveProgressSnack", { error: msg }));
+    }
+    const params = new URLSearchParams({
+      points: String(awardedPoints),
+      total: String(totalSteps),
+      submitted: String(submitted),
+      partial: "1",
+    });
+    if (cycleComplete) params.set("cycleComplete", "1");
+    router.replace(`/level/${levelId}/complete?${params.toString()}`);
+  };
+
+  /**
+   * TopBar back button. If the user has already submitted at least one
+   * recording, treat the exit as a partial completion (half points,
+   * level marked complete with N/total stars). Otherwise just leave
+   * the level — no progress recorded.
+   */
+  const onBack = () => {
+    const submitted = submittedCountRef.current;
+    if (submitted > 0 && !completionDispatchedRef.current) {
+      void persistPartialAndExit(submitted);
+      return;
+    }
     router.back();
   };
 
@@ -351,7 +503,7 @@ export default function LevelPage({
   // Render
   // ---------------------------------------------------------------
 
-  if (!path || !level || !question) {
+  if (!bundle || !level || !question) {
     // Hydration race / deep link — show a transparent placeholder
     // while the effect above bounces us home.
     return <ScreenBackground overlay="strong"><div /></ScreenBackground>;
@@ -365,7 +517,7 @@ export default function LevelPage({
         <TopBar
           totalSteps={totalSteps}
           currentStep={step}
-          onBack={() => router.back()}
+          onBack={onBack}
           onSkip={onSkip}
           skipLabel={t("commonSkip")}
         />
@@ -458,15 +610,16 @@ function TopBar({
         </svg>
       </button>
       <div className="flex flex-1 justify-center">
-        {/* Step bar — 60% width to match Flutter's FractionallySizedBox. */}
-        <div className="w-3/5">
+        {/* Step bar — 60% width to match Flutter's FractionallySizedBox.
+            On very narrow phones, give it more room so dots stay legible. */}
+        <div className="w-3/5 phone-sm:w-4/5">
           <StepBar total={totalSteps} current={currentStep} />
         </div>
       </div>
       <button
         type="button"
         onClick={onSkip}
-        className="px-3 py-2 text-[18px] font-semibold text-white"
+        className="px-3 py-2 text-[18px] font-semibold text-white phone-sm:px-2 phone-sm:text-[15px]"
       >
         {skipLabel}
       </button>
@@ -517,15 +670,15 @@ function QuestionContent({
   titleTemplate: string;
 }) {
   return (
-    <div className="flex flex-col items-center px-6">
+    <div className="flex flex-col items-center px-6 phone-sm:px-4">
       <h1
-        className="whitespace-pre-line text-center text-[32px] font-black leading-tight text-white"
+        className="whitespace-pre-line text-center text-[32px] font-black leading-tight text-white phone-sm:text-[24px]"
         style={{ letterSpacing: "-0.3px" }}
       >
         {titleTemplate}
       </h1>
       <div className="h-3" />
-      <p className="text-center text-[18px] font-medium text-white">
+      <p className="text-center text-[18px] font-medium text-white phone-sm:text-[15px]">
         {promptEn}
       </p>
       <div className="h-4" />
@@ -572,10 +725,8 @@ function RecordButton({
       type="button"
       onClick={onClick}
       aria-label={recording ? "Stop recording" : "Start recording"}
-      className="relative flex h-25 w-25 items-center justify-center rounded-full"
+      className="relative flex h-[100px] w-[100px] items-center justify-center rounded-full phone-sm:h-[88px] phone-sm:w-[88px]"
       style={{
-        width: 100,
-        height: 100,
         backgroundColor: color,
         boxShadow: `0 0 18px 2px ${color}80`,
       }}
@@ -698,15 +849,13 @@ function ActionButton({
   busy?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex w-full max-w-[88px] flex-col items-center">
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className="flex items-center justify-center rounded-full transition-opacity disabled:cursor-not-allowed"
+        className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full transition-opacity disabled:cursor-not-allowed phone-sm:h-[64px] phone-sm:w-[64px]"
         style={{
-          width: 72,
-          height: 72,
           backgroundColor: color,
           boxShadow: `0 0 14px 1px ${color}73`,
           opacity: disabled && !busy ? 0.5 : 1,
@@ -715,7 +864,7 @@ function ActionButton({
         {busy ? <ActionSpinner /> : icon}
       </button>
       <div className="h-2" />
-      <span className="text-[15px] font-semibold text-white">{label}</span>
+      <span className="line-clamp-2 text-center text-[15px] font-semibold text-white phone-sm:text-[13px]">{label}</span>
     </div>
   );
 }

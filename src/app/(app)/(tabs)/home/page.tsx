@@ -5,26 +5,34 @@
  *
  * Direct port of the `_MapTab` widget tree in
  * `lib/features/home/home_screen.dart:144-468`. Concretely:
- *   - A fixed-to-viewport background image (bg.png, 1608×3496),
- *     `object-cover` so it always fills the screen no matter the
- *     scroll position. Eight `LevelNode`s are positioned absolutely
- *     in normalized coordinates (`_kNodePositions`) inside a
- *     transparent scroll container layered above, so the user
- *     scrolls the nodes (and the map's coordinate system) over the
- *     fixed background — same vibe as Duolingo's path.
+ *   - A background image (bg.png, 1608×3496) tiled vertically, one
+ *     copy per cycle. `LevelNode`s are positioned absolutely in
+ *     normalized coordinates (`NODE_POSITIONS`) inside a scroll
+ *     container, so the user scrolls the nodes + bg as one — same
+ *     vibe as Duolingo's path.
  *   - A floating points pill at the top, fixed above the scroll
  *     (matches `_PointsHeader`).
  *   - Tap on `current` or `completed` → navigate to `/level/[id]`.
  *     Tap on `locked` → snackbar + shake animation.
  *
+ * Multi-cycle layout:
+ *   - The repo now hands us `bundle: PathDefinition[]` — one entry
+ *     per cycle the device has been issued, in cycle-ascending order.
+ *     We render every cycle in a single continuous scroll, with the
+ *     oldest cycle (cycle 1) at the **bottom** of the scroller (so
+ *     `scrollTop = scrollHeight` on mount keeps level 1 visible, same
+ *     as before) and any newer cycles stacked above. Each cycle gets
+ *     its own copy of the `bg.png` artwork and the same 8
+ *     `NODE_POSITIONS`, with the level ids lifted from that cycle's
+ *     `levels[]`. Level ids are globally unique across cycles (per
+ *     the backend contract) so id-based lookups keep working.
+ *
  * What's intentionally simplified for the web port:
  *   - The Flutter version computes a `cover` image scale that picks
  *     `max(viewportW/1608, viewportH/3496)` so the artwork covers
  *     both axes. On the PWA we let the map width track the viewport
- *     width (`100%`) and height follow from the aspect ratio. This
- *     loses the "wide-viewport extra padding" behaviour, but
- *     desktop browsers will naturally constrain the column via the
- *     centred max-width container.
+ *     width (`100%`) and height follow from the aspect ratio × cycle
+ *     count.
  *   - The strawberry mascot's hand-painted CustomPaint is replaced
  *     by an inline SVG that captures the shape (red body, green
  *     leaves, eyes, smile). Close enough for parity at thumbnail
@@ -35,7 +43,7 @@
  *     plan, so we don't need a second entry point.
  *
  * Hydration: the parent `(app)` layout's `<AppRouteGuard>` blocks
- * rendering until stores are hydrated, so `usePathRepo.path` is
+ * rendering until stores are hydrated, so `usePathRepo.bundle` is
  * always non-null here. Defensive null-checks are still in place
  * because the repository fields can in theory be null between a
  * `reset()` and the next `boot()`.
@@ -47,7 +55,9 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
-import { type LevelDefinition } from "@/lib/content/models";
+import { NicknameSheet } from "@/components/nickname-sheet";
+import { type LevelDefinition, flattenLevels } from "@/lib/content/models";
+import { useNickname } from "@/stores/nickname";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
 
@@ -62,8 +72,24 @@ interface LevelNode {
   status: LevelStatus;
   /** Normalized x ∈ [0,1] within the map. */
   dx: number;
-  /** Normalized y ∈ [0,1] within the map. */
+  /**
+   * Normalized y ∈ [0,1] within the entire stacked map (i.e. across
+   * every cycle). Computed from the per-cycle `dy` plus a
+   * cycle-index offset so that cycle 1 sits at the bottom of the
+   * scroller and newer cycles stack above. See `useMemo` below.
+   */
   dy: number;
+  /**
+   * For `completed` levels only: number of questions the user actually
+   * submitted recordings for. Drives the 3-star rating on the node.
+   * Undefined if the entry came from the backend without a client-side
+   * completion event (e.g. cross-device progress, or a level completed
+   * before the partial-credit feature shipped) — render as "fully
+   * completed" (3 filled stars) in that case.
+   */
+  submittedCount?: number;
+  /** Total questions the level had at the moment of completion. */
+  totalSteps?: number;
 }
 
 /** Hand-tuned positions, identical to `_kNodePositions` in Dart. */
@@ -95,26 +121,84 @@ export default function HomePage() {
   // We subscribe to the entire repo so any background mutation
   // (e.g. `completeLevel` from the level screen returning) re-renders
   // the map. Cheap — it's a single object identity.
-  const path = usePathRepo((s) => s.path);
+  const bundle = usePathRepo((s) => s.bundle);
   const progress = usePathRepo((s) => s.progress);
+
+  // Cycle count drives container height + per-cycle vertical offsets.
+  // `bundle` is sorted cycle-ascending in the repo; we treat index 0
+  // as the *oldest* cycle (cycle 1, on first run) and stack newer
+  // cycles above. At least one — defensive for the brief window
+  // between `reset()` and the next `boot()`.
+  const cycleCount = Math.max(1, bundle?.length ?? 1);
 
   // Derive nodes from the live progress vector. `useMemo` so the
   // mascot-position lookup downstream is stable across renders that
-  // don't actually change progress.
+  // don't actually change progress. We iterate every cycle in the
+  // bundle, emit one node per (cycle, position-in-cycle) pair, and
+  // stamp a global `dy` that places cycle 1 at the bottom and newer
+  // cycles above. Falls back to a single synthetic cycle (level ids
+  // 1..8) when the bundle is briefly null, matching the legacy
+  // single-cycle behaviour.
   const levels = useMemo<LevelNode[]>(() => {
     const out: LevelNode[] = [];
-    for (let i = 0; i < 8; i++) {
-      const id = i + 1;
-      const entry = progress?.entries.find((e) => e.levelId === id) ?? null;
-      const status: LevelStatus = entry
-        ? (entry.status as LevelStatus)
-        : id === 1
-          ? "current"
-          : "locked";
-      out.push({ id, status, ...NODE_POSITIONS[i] });
+    // Synthetic fallback so the page still renders something during
+    // the boot ↔ reset window. Only used when `bundle` is null.
+    const cycles =
+      bundle && bundle.length > 0
+        ? bundle
+        : [
+            {
+              pathId: "",
+              cycle: 1,
+              levels: Array.from({ length: 8 }, (_, i) => ({
+                levelId: i + 1,
+                theme: "",
+                pointsReward: 0,
+                questions: [],
+              })),
+            },
+          ];
+    for (let ci = 0; ci < cycles.length; ci++) {
+      const cycle = cycles[ci];
+      // Cycle 0 (oldest) → bottom of the scroll. The y-offset is
+      // measured from the *top* (CSS convention), so the oldest
+      // cycle gets the largest top offset.
+      const cycleTopOffset = (cycles.length - 1 - ci) / cycles.length;
+      // Each cycle occupies 1/cycles.length of the global y-range.
+      // The per-cycle `dy` from `NODE_POSITIONS` is in [0,1] within
+      // that band, so we scale and shift.
+      const bandHeight = 1 / cycles.length;
+
+      for (let i = 0; i < NODE_POSITIONS.length; i++) {
+        const def = cycle.levels[i];
+        // Cycle should always carry exactly 8 levels per the backend
+        // contract, but guard so a malformed payload doesn't crash
+        // the render — skip the missing slot.
+        if (!def) continue;
+        const id = def.levelId;
+        const entry = progress?.entries.find((e) => e.levelId === id) ?? null;
+        // Default-status fallback only applies in the synthetic
+        // cycle (no bundle yet): legacy behaviour was "level 1 is
+        // current, the rest are locked". Once the bundle loads, the
+        // backend's `progress` vector is authoritative.
+        const status: LevelStatus = entry
+          ? (entry.status as LevelStatus)
+          : id === 1 && bundle === null
+            ? "current"
+            : "locked";
+        const pos = NODE_POSITIONS[i];
+        out.push({
+          id,
+          status,
+          submittedCount: entry?.submittedCount,
+          totalSteps: entry?.totalSteps,
+          dx: pos.dx,
+          dy: cycleTopOffset + pos.dy * bandHeight,
+        });
+      }
     }
     return out;
-  }, [progress]);
+  }, [bundle, progress]);
 
   const totalPoints = progress?.totalPoints ?? 0;
 
@@ -134,11 +218,11 @@ export default function HomePage() {
         .show(t("homeLevelLockedSnack", { levelId: node.id }));
       return;
     }
-    if (!path) {
+    if (!bundle) {
       useSnackbar.getState().show(t("homeAdventureNotLoadedSnack"));
       return;
     }
-    const level: LevelDefinition | undefined = path.levels.find(
+    const level: LevelDefinition | undefined = flattenLevels(bundle).find(
       (l) => l.levelId === node.id,
     );
     if (!level || level.questions.length === 0) {
@@ -153,25 +237,30 @@ export default function HomePage() {
   const currentNode =
     levels.find((n) => n.status === "current") ?? levels[0];
 
+  // First-visit nickname prompt. Derived directly from the store
+  // rather than a local `useState`: opening means "no nickname set
+  // *and* prompt has not been shown", and the sheet's own dismiss /
+  // submit paths flip `prompted` (or both flags) which collapses
+  // the predicate to `false` and closes the sheet.
+  //
+  // We gate on `hydrated` to avoid a flash where `prompted` defaults
+  // to `false` pre-hydrate and we'd open the sheet for a user who
+  // already dismissed it. `<AppRouteGuard>` blocks render until the
+  // *onboarding* store is hydrated, but the nickname store hydrates
+  // independently in `<AppHydration>` — wait for it explicitly.
+  const nicknameHydrated = useNickname((s) => s.hydrated);
+  const nicknameValue = useNickname((s) => s.value);
+  const nicknamePrompted = useNickname((s) => s.prompted);
+  const showNicknameSheet =
+    nicknameHydrated && nicknameValue === null && !nicknamePrompted;
+
   return (
     <div className="relative min-h-dvh w-full overflow-hidden bg-[#7BC96F]">
-      {/* Fixed background layer — `object-cover` fills the viewport,
-          never scrolls. Sits below the scroller and the points pill.
-          Sized to the layout box (the page itself, which is min-h-dvh)
-          so it tracks viewport resizes without re-layout. */}
-      <div className="pointer-events-none absolute inset-0 z-0">
-        <Image
-          src="/images/bg.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
-      </div>
-
-      {/* Scrollable node layer. Transparent — the fixed bg shows
-          through. Padded at the bottom so the last visible row clears
+      {/* Scrollable map. The bg.png is *inside* the scroller (one tile
+          per cycle, stacked vertically), so it scrolls with the nodes
+          rather than staying fixed to the viewport. The page bg
+          (#7BC96F) shows through if the scroller is shorter than the
+          viewport. Padded at the bottom so the last visible row clears
           the floating bottom-nav. */}
       <div
         ref={scrollerRef}
@@ -180,16 +269,43 @@ export default function HomePage() {
           paddingBottom: BOTTOM_NAV_RESERVED_PX,
         }}
       >
-        {/* Node container: width 100%, height = width × aspect. The
-            nodes stay anchored to the same artwork coordinates as
-            before, so as the user scrolls them up the visual still
-            tracks the (fixed) bg. */}
+        {/* Node container: width 100%, height = width × aspect ×
+            cycleCount. Each cycle gets one full bg tile and one
+            copy of the 8 node positions, stacked top-to-bottom with
+            cycle 1 at the *bottom*. */}
         <div
           className="relative w-full"
-          style={{ paddingTop: `${MAP_ASPECT * 100}%` }}
+          style={{ paddingTop: `${MAP_ASPECT * cycleCount * 100}%` }}
         >
+          {/* Background tiles. We render `cycleCount` copies of bg.png,
+              each occupying `1/cycleCount` of the container's height.
+              `next/image` with `fill` needs an absolutely-positioned
+              parent — give each tile its own wrapper. The newest cycle
+              (top) gets `priority` so the initial paint above the fold
+              lights up fast; older cycles below load lazily. */}
+          {Array.from({ length: cycleCount }).map((_, idx) => (
+            <div
+              key={idx}
+              className="pointer-events-none absolute left-0 w-full"
+              style={{
+                top: `${(idx / cycleCount) * 100}%`,
+                height: `${(1 / cycleCount) * 100}%`,
+              }}
+            >
+              <Image
+                src="/images/bg.png"
+                alt=""
+                fill
+                priority={idx === 0}
+                sizes="100vw"
+                className="object-cover"
+              />
+            </div>
+          ))}
+
           {/* Level nodes. Each anchored absolutely in the map's own
-              coordinate system. */}
+              coordinate system. `dy` is already in global (whole-map)
+              normalized space — see the `useMemo` above. */}
           {levels.map((node) => (
             <div
               key={node.id}
@@ -231,6 +347,25 @@ export default function HomePage() {
           pointsLabel={t("homePointsLabel")}
         />
       </div>
+
+      {/* First-run nickname prompt. Lives at the page root so its
+          fixed-position scrim covers the whole shell, not just the
+          scroll container. The sheet is visible whenever the store
+          says we haven't shown it yet — it dismisses itself by
+          flipping `prompted` (via `markPrompted()`), which makes the
+          predicate above evaluate to `false` and unmounts this. */}
+      {showNicknameSheet && (
+        <NicknameSheet
+          mode="first-run"
+          onClose={() => {
+            // Defensive: ensure `prompted` is set even if the sheet
+            // closed via a path that didn't flip it (e.g. an edge
+            // case where the network call branched early). Calling
+            // `markPrompted()` is idempotent.
+            useNickname.getState().markPrompted();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -252,17 +387,16 @@ function PointsHeader({
 
   return (
     <div
-      className="flex h-16 items-center rounded-full px-5 shadow-lg"
+      className="flex h-16 items-center gap-2 rounded-full px-5 shadow-lg phone-sm:h-14 phone-sm:px-4"
       style={{ backgroundColor: "var(--color-brand-primary)" }}
     >
-      <p className="text-[22px] text-white">
+      <p className="min-w-0 flex-1 truncate text-[22px] text-white phone-sm:text-[18px]">
         <span className="font-black">+{animated} </span>
         <span className="font-medium">{pointsLabel}</span>
       </p>
-      <div className="flex-1" />
       {/* Streak pill (cosmetic — backend has no streak yet, hardcoded
           to 0 to match Flutter). */}
-      <div className="flex h-9 items-center gap-1.5 rounded-full bg-white/15 px-3">
+      <div className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 phone-sm:h-8 phone-sm:px-2.5">
         <span className="text-[18px] leading-none">🔥</span>
         <span className="text-[16px] font-bold text-white">0</span>
       </div>
@@ -343,7 +477,12 @@ function LevelNodeView({
       }}
     >
       {node.status === "locked" && <LockedNode />}
-      {node.status === "completed" && <CompletedNode />}
+      {node.status === "completed" && (
+        <CompletedNode
+          submittedCount={node.submittedCount}
+          totalSteps={node.totalSteps}
+        />
+      )}
       {node.status === "current" && (
         <CurrentNode id={node.id} tapLabel={tapToStartLabel} />
       )}
@@ -383,23 +522,81 @@ function LockedNode() {
   );
 }
 
-function CompletedNode() {
+function CompletedNode({
+  submittedCount,
+  totalSteps,
+}: {
+  submittedCount?: number;
+  totalSteps?: number;
+}) {
+  // 3-star "completion quality" rating. The mapping squashes the
+  // user's submitted/total ratio into 3 slots so that:
+  //   - a clean sweep (submittedCount === totalSteps) → 3 filled stars
+  //   - a partial run → ceil(ratio * 3) filled stars, e.g.
+  //       1/4 submitted → 1 filled, 2 outline
+  //       2/4 → 2 filled, 1 outline
+  //       3/4 → 3 filled, 0 outline (full bar visible only at 4/4)
+  // When the entry has no client-side completion data (legacy or
+  // cross-device), default to 3 filled stars.
+  //
+  // Visual: per design, completed levels are rendered as *just stars*
+  // — no green disc, no dashed ring, no halo. The stars sit directly
+  // on the map background, so the cluster needs a soft shadow to keep
+  // them legible against the green path. The 80×80 button slot is
+  // preserved for layout (so positions don't shift), and the row is
+  // centered inside it.
+  const knownPartial =
+    typeof submittedCount === "number" &&
+    typeof totalSteps === "number" &&
+    totalSteps > 0;
+  const filled = knownPartial
+    ? Math.max(
+        1,
+        Math.min(3, Math.ceil((submittedCount! / totalSteps!) * 3)),
+      )
+    : 3;
   return (
-    <div className="relative h-full w-full">
-      <DashedRing color="white" />
-      <div
-        className="absolute inset-1.5 flex animate-[afk-pulse-glow_1.4s_ease-in-out_infinite_alternate] items-center justify-center rounded-full bg-[#7BC96F]"
-        style={{ boxShadow: "0 0 18px 3px rgba(255,200,61,0.4)" }}
-      >
-        <StarIcon />
-      </div>
-      <style>{`
-        @keyframes afk-pulse-glow {
-          from { box-shadow: 0 0 0 0 rgba(255,200,61,0); }
-          to { box-shadow: 0 0 18px 3px rgba(255,200,61,0.4); }
-        }
-      `}</style>
+    <div className="relative flex h-full w-full items-center justify-center">
+      <ThreeStarRow filled={filled} />
     </div>
+  );
+}
+
+function ThreeStarRow({ filled }: { filled: number }) {
+  // Three small stars centered in the 80×80 node slot. Stars sit
+  // directly on the green map background (no disc behind them), so
+  // they get a soft drop-shadow for legibility and a subtle white
+  // stroke ring on filled stars — the same trick used on the points
+  // pill numerals.
+  const slots = [0, 1, 2];
+  return (
+    <div
+      className="flex items-center gap-0.5"
+      style={{ filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.35))" }}
+    >
+      {slots.map((i) => (
+        <SmallStarIcon key={i} filled={i < filled} />
+      ))}
+    </div>
+  );
+}
+
+function SmallStarIcon({ filled }: { filled: boolean }) {
+  // Filled = gold with a thin white outline so the star pops off the
+  // green map. Outline-only = white stroke (no fill), matching the
+  // "missed slot" look you'd find in classic 3-star rating UIs.
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-6 w-6"
+      fill={filled ? "#FFC83D" : "none"}
+      stroke="white"
+      strokeWidth={filled ? 1.25 : 2}
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7.1L12 17.6 5.7 21.3l1.7-7.1L2 9.5l7.1-.6L12 2z" />
+    </svg>
   );
 }
 
@@ -426,7 +623,7 @@ function CurrentNode({ id, tapLabel }: { id: number; tapLabel: string }) {
           so a longer translation (e.g. FR "Touchez pour commencer")
           extends the pill horizontally rather than wrapping to a
           second line and covering the level number underneath. */}
-      <div className="absolute left-1/2 top-[-34px] -translate-x-1/2 whitespace-nowrap rounded-xl bg-white px-2.5 py-1 shadow">
+      <div className="absolute left-1/2 top-[-34px] max-w-[80vw] -translate-x-1/2 whitespace-nowrap rounded-xl bg-white px-2.5 py-1 text-center shadow phone-sm:whitespace-normal phone-sm:max-w-[140px]">
         <span
           className="text-[12px] font-extrabold"
           style={{ color: "var(--color-brand-primary)" }}
@@ -485,14 +682,6 @@ function LockIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-9 w-9" fill="#B5B5B5" aria-hidden>
       <path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2v-9a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 8V7a3 3 0 116 0v3H9z" />
-    </svg>
-  );
-}
-
-function StarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-11 w-11" fill="#FFC83D" aria-hidden>
-      <path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7.1L12 17.6 5.7 21.3l1.7-7.1L2 9.5l7.1-.6L12 2z" />
     </svg>
   );
 }

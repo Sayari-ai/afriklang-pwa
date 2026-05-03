@@ -40,6 +40,30 @@ export interface ProgressEntry {
   /** ISO-8601 UTC. `null` while the level is locked or current. */
   completedAt: string | null;
   points: number;
+  /**
+   * Cycle this entry belongs to. Tolerant default `1` for the legacy
+   * single-cycle backend response (or a cached payload from before the
+   * multi-cycle refactor) that doesn't carry the field. Once cycle 2 is
+   * issued the server stamps each row, and we group by `cycle` to
+   * detect "all 8 of the active cycle done".
+   */
+  cycle: number;
+  /**
+   * Client-only: number of questions the user actually submitted
+   * (i.e. uploaded a recording for) within this level. Skipped questions
+   * don't count. Used to render a 3-star "completion quality" rating on
+   * the home map. Undefined for levels that came from the backend with
+   * no client-side completion event recorded yet (legacy / cross-device
+   * progress) — UI must treat undefined as "fully completed" to stay
+   * compatible with the backend-only state.
+   */
+  submittedCount?: number;
+  /**
+   * Client-only: total number of questions in the level at the moment
+   * of completion. Stored alongside `submittedCount` so the rating
+   * remains stable even if the level definition is later edited.
+   */
+  totalSteps?: number;
 }
 
 export interface ProgressVector {
@@ -125,6 +149,29 @@ export function parsePathAssignment(raw: unknown): PathAssignment {
   };
 }
 
+/**
+ * Parse `paths_get`'s response. Tolerates two shapes:
+ *
+ *   - **Legacy** (single cycle): `{ path_id, cycle, levels[] }` →
+ *     wrapped as a one-element array `[parsePath(it)]`.
+ *   - **Multi-cycle**: `{ cycles: [{ path_id, cycle, levels[] }, ...] }`
+ *     → each entry parsed and returned in cycle-ascending order.
+ *
+ * Always returns at least one element (caller can rely on `[0]`).
+ * Cycles are sorted ascending so downstream code that flattens
+ * `levels[]` doesn't have to re-sort.
+ */
+export function parsePathBundle(raw: unknown): PathDefinition[] {
+  const o = asObject(raw, "path");
+  if (Array.isArray(o.cycles)) {
+    const cycles = o.cycles.map(parsePath);
+    cycles.sort((a, b) => a.cycle - b.cycle);
+    return cycles;
+  }
+  // Legacy: parse the whole object as a single cycle.
+  return [parsePath(raw)];
+}
+
 function parseStatus(v: unknown, field: string): LevelProgressStatus {
   const s = asString(v, field);
   if (s === "locked" || s === "current" || s === "completed") return s;
@@ -135,11 +182,30 @@ function parseStatus(v: unknown, field: string): LevelProgressStatus {
 export function parseProgressEntry(raw: unknown): ProgressEntry {
   const o = asObject(raw, "progress_entry");
   const completedAt = o.completed_at;
+  const submitted = o.submitted_count;
+  const total = o.total_steps;
+  // `cycle` is optional on the wire so legacy single-cycle responses
+  // (and any cached payload written before the multi-cycle parsers
+  // shipped) round-trip without a re-fetch. Default to cycle 1.
+  const cycleRaw = o.cycle;
+  const cycle =
+    typeof cycleRaw === "number" && Number.isFinite(cycleRaw)
+      ? Math.max(1, Math.trunc(cycleRaw))
+      : 1;
   return {
     levelId: asInt(o.level_id, "progress_entry.level_id"),
     status: parseStatus(o.status, "progress_entry.status"),
     completedAt: typeof completedAt === "string" ? completedAt : null,
     points: typeof o.points === "number" ? Math.trunc(o.points) : 0,
+    cycle,
+    submittedCount:
+      typeof submitted === "number" && Number.isFinite(submitted)
+        ? Math.max(0, Math.trunc(submitted))
+        : undefined,
+    totalSteps:
+      typeof total === "number" && Number.isFinite(total)
+        ? Math.max(0, Math.trunc(total))
+        : undefined,
   };
 }
 
@@ -170,4 +236,60 @@ export function progressByLevel(
   levelId: number,
 ): ProgressEntry | null {
   return vector.entries.find((e) => e.levelId === levelId) ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Multi-cycle helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Concatenate every level across every cycle in cycle-ascending,
+ * level_id-ascending order. Used by the home map (continuous scroll
+ * spec) and by `levelById` lookups that don't care which cycle.
+ *
+ * Level_ids are documented as globally unique across cycles, so the
+ * flat array has no key collisions; routes like `/level/[id]` continue
+ * to work with the existing single-id keying.
+ */
+export function flattenLevels(
+  bundle: ReadonlyArray<PathDefinition>,
+): LevelDefinition[] {
+  const out: LevelDefinition[] = [];
+  for (const c of bundle) {
+    for (const l of c.levels) {
+      out.push(l);
+    }
+  }
+  return out;
+}
+
+/**
+ * The largest `cycle` value present in `bundle`. Treated as the
+ * *active* cycle — everything below it is historical. Returns `1` for
+ * an empty bundle (defensive; callers should never see this).
+ */
+export function activeCycle(
+  bundle: ReadonlyArray<PathDefinition>,
+): number {
+  let max = 1;
+  for (const c of bundle) if (c.cycle > max) max = c.cycle;
+  return max;
+}
+
+/**
+ * True iff every entry in `vector` whose `cycle === targetCycle` has
+ * status `"completed"`. Returns `false` when the cycle has zero
+ * entries (a malformed vector shouldn't auto-trigger advance).
+ */
+export function isCycleComplete(
+  vector: ProgressVector,
+  targetCycle: number,
+): boolean {
+  let seen = 0;
+  for (const e of vector.entries) {
+    if (e.cycle !== targetCycle) continue;
+    seen += 1;
+    if (e.status !== "completed") return false;
+  }
+  return seen > 0;
 }

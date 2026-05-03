@@ -66,6 +66,12 @@
   "levelCompleteCongrats": "Congratulations",
   "levelCompleteEncouragement": "You're closer to getting your first {amount}",
   "levelCompleteNextMission": "Next mission",
+  "levelCompleteCycleTitle": "Path complete!",
+  "levelCompleteCycleSubtitle": "You finished every level on this path. Ready for a fresh challenge?",
+  "levelCompleteCycleStartNext": "Start next path",
+  "cycleAdvancePending": "Loading…",
+  "cycleAdvanceOfflineSnack": "You need to be online to start the next path.",
+  "cycleAdvanceFailedSnack": "Couldn't start the next path: {error}",
 
   "leaderboardErrorTitle": "Couldn't load leaderboard",
   "leaderboardTitle": "Leaderboard",

@@ -11,9 +11,20 @@
  * the level is already marked done.
  *
  * Inputs (query string):
- *   - `points` → integer points reward to display (defaults to 0).
- *   - `total`  → number of segments in the all-green step bar (the
- *     question count for this level). Defaults to 4 for safety.
+ *   - `points`         → integer points reward to display (defaults to 0).
+ *   - `total`          → number of segments in the all-green step bar
+ *                         (the question count for this level). Defaults to 4.
+ *   - `submitted`      → number of questions actually recorded; the
+ *                         step bar fills only that many segments.
+ *   - `partial`        → "1" when the level was completed partially
+ *                         (skip/back with at least one submission).
+ *                         Halves the bar fill behaviour.
+ *   - `cycleComplete`  → "1" when this completion was the *last* level
+ *                         of the user's current cycle. Switches the
+ *                         page to the "cycle complete" variant: a
+ *                         different headline, a "Start next cycle" CTA
+ *                         that calls `usePathRepo.advanceCycle()`, and
+ *                         offline-aware enable state for the CTA.
  *
  * Hardware back / browser back: indistinguishable from the "Next
  * mission" CTA in our case — both routes back to `/home`. The Flutter
@@ -23,11 +34,13 @@
  *
  * Visuals:
  *   - Same dark scrim background (`overlay="strong"` → 0xCC overlay).
- *   - Massive amber `+N` numeral, white "Congratulations" headline,
- *     bilingual encouragement with a bold `$20` span (rendered via
- *     a sentinel split, mirroring Flutter's `\u0000AMOUNT\u0000`).
+ *   - Massive amber `+N` numeral, white headline, bilingual encouragement
+ *     with a bold `$20` span (rendered via a sentinel split, mirroring
+ *     Flutter's `\u0000AMOUNT\u0000`).
  *   - All-green step bar pinned to the top.
- *   - White pill CTA at the bottom labelled "Next mission".
+ *   - White pill CTA at the bottom. Label depends on the variant:
+ *     "Next mission" for the per-level variant, "Start next cycle"
+ *     for the cycle-complete variant.
  *   - CSS-only confetti burst near the top — 24 particles, 6 brand
  *     colors, 3-second one-shot animation. No npm dep.
  */
@@ -35,9 +48,11 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { use, useMemo } from "react";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ScreenBackground } from "@/components/screen-background";
+import { usePathRepo } from "@/stores/path-repo";
+import { useSnackbar } from "@/stores/snackbar";
 
 // Encouragement is a templated ICU string with a `{amount}` slot. We
 // render it with a control-char sentinel, then split around the
@@ -70,6 +85,48 @@ export default function LevelCompletePage({
 
   const points = parseIntSafe(search.get("points"), 0);
   const total = parseIntSafe(search.get("total"), 4);
+  // Partial-completion query params. When `partial=1`, the step bar
+  // renders the first `submitted` segments green and the rest grey, so
+  // the user can see at a glance that they skipped some images. Falls
+  // back to a full bar (the legacy behaviour) when the params are
+  // missing — e.g. older URLs from before partial credit existed.
+  const isPartial = search.get("partial") === "1";
+  const submitted = parseIntSafe(search.get("submitted"), total);
+
+  // Cycle-complete variant. When the level page detected (via the
+  // repo's `completeLevel` return) that this was the final level of
+  // the active cycle, it appends `&cycleComplete=1` to the URL. We
+  // branch the headline + CTA on this rather than rendering a
+  // separate page, because the layout (step bar, hero, points,
+  // confetti, pill button) is otherwise identical and we'd just be
+  // duplicating the chrome.
+  const isCycleComplete = search.get("cycleComplete") === "1";
+
+  // Track online/offline so the cycle-complete CTA can disable when
+  // the device is offline — `advanceCycle` POSTs to the backend and
+  // we don't queue path-assignment writes (the backend issues a new
+  // cycle synchronously, so there's nothing meaningful to defer).
+  // `navigator.onLine` is unreliable on its own (some browsers stay
+  // optimistic) but for a UX hint it's fine; the actual `advanceCycle`
+  // call still has a try/catch fallback.
+  const [online, setOnline] = useState<boolean>(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
+  useEffect(() => {
+    const onUp = () => setOnline(true);
+    const onDown = () => setOnline(false);
+    window.addEventListener("online", onUp);
+    window.addEventListener("offline", onDown);
+    return () => {
+      window.removeEventListener("online", onUp);
+      window.removeEventListener("offline", onDown);
+    };
+  }, []);
+
+  // Pending state for the "Start next cycle" CTA. While true the
+  // button is disabled + shows a spinner, so a slow `paths_assign`
+  // round-trip can't be re-triggered by an impatient double-tap.
+  const [advancing, setAdvancing] = useState(false);
 
   // Render the encouragement once with the sentinel, then split into
   // [before, after] around it. This avoids rebuilding the string on
@@ -84,9 +141,48 @@ export default function LevelCompletePage({
     ];
   }, [t]);
 
-  const onNext = () => {
+  // Headline variants. For cycle-complete we want a punchier, more
+  // celebratory string ("Path complete!") so the user understands the
+  // scope of what they just achieved — not just "another level done".
+  const headline = isCycleComplete
+    ? t("levelCompleteCycleTitle")
+    : t("levelCompleteCongrats");
+
+  /**
+   * Per-level CTA: just go home. The home page picks up the new
+   * `current` level from the progress vector and the user keeps
+   * playing.
+   */
+  const onNext = useCallback(() => {
     router.replace("/home");
-  };
+  }, [router]);
+
+  /**
+   * Cycle-complete CTA: ask the backend for a new cycle, refetch
+   * the bundle + progress, and go home. The repo's `advanceCycle`
+   * is online-only by design (no offline queue for path issuance,
+   * since the backend response is what defines the new cycle's
+   * level ids). On any failure we keep the user on this screen and
+   * snackbar the error, so they can retry once back online.
+   */
+  const onAdvanceCycle = useCallback(async () => {
+    if (advancing) return;
+    if (!online) {
+      useSnackbar.getState().show(t("cycleAdvanceOfflineSnack"));
+      return;
+    }
+    setAdvancing(true);
+    try {
+      await usePathRepo.getState().advanceCycle();
+      router.replace("/home");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      useSnackbar
+        .getState()
+        .show(t("cycleAdvanceFailedSnack", { error: msg }));
+      setAdvancing(false);
+    }
+  }, [advancing, online, router, t]);
 
   return (
     <ScreenBackground overlay="strong">
@@ -95,7 +191,7 @@ export default function LevelCompletePage({
             the in-level top bar. */}
         <div className="px-6 pt-3">
           <div className="mx-auto w-3/5">
-            <AllGreenStepBar total={total} />
+            <AllGreenStepBar total={total} submitted={isPartial ? submitted : total} />
           </div>
         </div>
 
@@ -106,10 +202,11 @@ export default function LevelCompletePage({
         {/* Centered hero block (points + headline + encouragement). */}
         <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
           <span
-            className="block font-black leading-none"
+            className="block max-w-full break-words font-black leading-none"
             style={{
               color: "#FFC02E",
-              fontSize: "96px",
+              // Fluid: 64px on tiny phones, scales up to 96px around 480px.
+              fontSize: "clamp(64px, 22vw, 96px)",
               fontWeight: 900,
               letterSpacing: "-2px",
             }}
@@ -117,30 +214,48 @@ export default function LevelCompletePage({
             +{points}
           </span>
           <div className="h-8" />
-          <h1 className="text-[28px] font-bold text-white">
-            {t("levelCompleteCongrats")}
+          <h1 className="text-[28px] font-bold text-white phone-sm:text-[22px]">
+            {headline}
           </h1>
           <div className="h-4" />
           <p
-            className="text-[16px] font-normal leading-snug text-white"
+            className="text-[16px] font-normal leading-snug text-white phone-sm:text-[14px]"
             style={{ lineHeight: 1.4 }}
           >
-            {encouragementBefore}
-            <strong className="font-bold">$20</strong>
-            {encouragementAfter}
+            {/*
+              Cycle-complete variant gets its own subtitle (no $20
+              sentinel split) — the per-level encouragement copy
+              doesn't fit the "you finished the whole path" beat.
+            */}
+            {isCycleComplete ? (
+              t("levelCompleteCycleSubtitle")
+            ) : (
+              <>
+                {encouragementBefore}
+                <strong className="font-bold">$20</strong>
+                {encouragementAfter}
+              </>
+            )}
           </p>
         </div>
 
-        {/* Next-mission CTA. White pill, green text — matches the
-            Flutter style (`#66BB6A` foreground). */}
+        {/* CTA. Variant-dependent label + handler. White pill with
+            green text — matches the Flutter style. Disabled while
+            `advancing` (cycle-complete only) so the user can't double
+            -submit a `paths_assign`. */}
         <div className="px-6 pb-6">
           <button
             type="button"
-            onClick={onNext}
-            className="flex h-15 w-full items-center justify-center rounded-full bg-white text-[20px] font-bold transition-opacity active:opacity-80"
-            style={{ height: 60, color: "#66BB6A" }}
+            onClick={isCycleComplete ? onAdvanceCycle : onNext}
+            disabled={isCycleComplete && (advancing || !online)}
+            className="flex h-[60px] w-full items-center justify-center rounded-full bg-white text-[20px] font-bold transition-opacity active:opacity-80 disabled:opacity-60"
+            style={{ color: "#66BB6A" }}
           >
-            {t("levelCompleteNextMission")}
+            {isCycleComplete
+              ? advancing
+                ? t("cycleAdvancePending")
+                : t("levelCompleteCycleStartNext")
+              : t("levelCompleteNextMission")}
           </button>
         </div>
       </div>
@@ -152,16 +267,19 @@ export default function LevelCompletePage({
 // All-green step bar
 // ---------------------------------------------------------------------------
 
-function AllGreenStepBar({ total }: { total: number }) {
+function AllGreenStepBar({ total, submitted }: { total: number; submitted: number }) {
   // Defensive: at least 1 segment so we don't render an empty row.
   const n = Math.max(1, total);
+  const filled = Math.max(0, Math.min(n, submitted));
   return (
     <div className="flex h-1.5 items-center gap-1.5">
       {Array.from({ length: n }).map((_, i) => (
         <div
           key={i}
           className="h-1.5 flex-1 rounded-[3px]"
-          style={{ backgroundColor: "#66BB6A" }}
+          style={{
+            backgroundColor: i < filled ? "#66BB6A" : "rgba(255,255,255,0.25)",
+          }}
         />
       ))}
     </div>
@@ -197,11 +315,23 @@ function ConfettiBurst() {
           10%  { opacity: 1; }
           100% { transform: translate3d(var(--afk-cx), 480px, 0) rotate(var(--afk-rot)); opacity: 0; }
         }
+        /*
+         * Reduced-motion users get a still version: the keyframes
+         * still exist (browsers need them defined for the animation
+         * shorthand to resolve), but we cancel the animation
+         * outright on each particle so they render at their
+         * computed start state (top-center, opacity 0). The result
+         * is "no confetti at all" rather than a frozen mid-fall
+         * snapshot, which matches the spirit of the preference.
+         */
+        @media (prefers-reduced-motion: reduce) {
+          .afk-confetti-particle { animation: none !important; }
+        }
       `}</style>
       {particles.map((p, i) => (
         <span
           key={i}
-          className="absolute left-1/2 top-16 block"
+          className="afk-confetti-particle absolute left-1/2 top-16 block"
           style={{
             width: p.w,
             height: p.h,

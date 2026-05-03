@@ -66,6 +66,12 @@
   "levelCompleteCongrats": "Félicitations",
   "levelCompleteEncouragement": "Vous vous rapprochez de vos premiers {amount}",
   "levelCompleteNextMission": "Mission suivante",
+  "levelCompleteCycleTitle": "Parcours terminé !",
+  "levelCompleteCycleSubtitle": "Vous avez terminé tous les niveaux de ce parcours. Prêt(e) pour un nouveau défi ?",
+  "levelCompleteCycleStartNext": "Démarrer le prochain parcours",
+  "cycleAdvancePending": "Chargement…",
+  "cycleAdvanceOfflineSnack": "Vous devez être en ligne pour démarrer le prochain parcours.",
+  "cycleAdvanceFailedSnack": "Impossible de démarrer le prochain parcours : {error}",
 
   "leaderboardErrorTitle": "Impossible de charger le classement",
   "leaderboardTitle": "Classement",
