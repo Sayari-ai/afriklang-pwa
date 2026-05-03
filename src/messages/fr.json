@@ -52,6 +52,7 @@
   "levelCouldNotPlayRecording": "Impossible de lire l'enregistrement : {error}",
   "levelConsentRequiredSnack": "Le consentement à l'enregistrement est requis avant l'envoi. Réactivez-le dans les paramètres.",
   "levelUploadFailedSnack": "Échec de l'envoi : {error}",
+  "levelOfflineSubmitSnack": "Vous êtes hors ligne. Reconnectez-vous pour envoyer votre enregistrement.",
   "levelSkippedSnack": "Passé",
   "levelQuestionTitle": "Comment dit-on cela en\n{language} ?",
   "levelTapToStop": "Touchez pour arrêter",

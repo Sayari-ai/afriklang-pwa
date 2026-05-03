@@ -52,6 +52,7 @@
   "levelCouldNotPlayRecording": "Could not play recording: {error}",
   "levelConsentRequiredSnack": "Recording consent is required before uploading. Re-enable consent in settings.",
   "levelUploadFailedSnack": "Upload failed: {error}",
+  "levelOfflineSubmitSnack": "You're offline. Reconnect to submit your recording.",
   "levelSkippedSnack": "Skipped",
   "levelQuestionTitle": "How do you call this in\n{language} ?",
   "levelTapToStop": "Tap to stop",
