@@ -68,13 +68,13 @@ export default function ConsentPage() {
       <div className="flex min-h-dvh w-full flex-col px-6">
         <div className="h-6" />
         <h1
-          className="whitespace-pre-line text-[40px] font-black leading-tight text-white"
+          className="whitespace-pre-line text-[40px] font-black leading-tight text-white phone-sm:text-[30px]"
           style={{ letterSpacing: "-0.5px" }}
         >
           {t("consentTitle")}
         </h1>
         <div className="h-3" />
-        <p className="text-[18px] font-normal leading-snug text-white">
+        <p className="text-[18px] font-normal leading-snug text-white phone-sm:text-[15px]">
           {t("consentSubtitle")}
         </p>
         <div className="h-8" />
@@ -97,7 +97,7 @@ export default function ConsentPage() {
           onClick={accept}
           disabled={busy}
           aria-busy={busy}
-          className="flex h-16 w-full items-center justify-center rounded-[36px] text-[24px] font-bold disabled:cursor-not-allowed"
+          className="flex h-16 w-full items-center justify-center rounded-[36px] text-[24px] font-bold disabled:cursor-not-allowed phone-sm:h-14 phone-sm:text-[18px]"
           style={{
             backgroundColor: busy ? "rgba(255,255,255,0.7)" : "#FFFFFF",
             color: "var(--color-brand-primary)",
@@ -127,7 +127,7 @@ function Bullet({ children }: { children: React.ReactNode }) {
         aria-hidden
         className="mt-2 inline-block h-2 w-2 shrink-0 rounded-full bg-white"
       />
-      <span className="text-[17px] font-medium leading-snug text-white">
+      <span className="text-[17px] font-medium leading-snug text-white phone-sm:text-[14px]">
         {children}
       </span>
     </li>

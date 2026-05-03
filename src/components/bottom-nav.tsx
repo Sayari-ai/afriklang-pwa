@@ -65,10 +65,15 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Primary"
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-4 pb-3"
+      // `fixed` is positioned relative to the viewport, not the
+      // phone-frame wrapper in the root layout, so we manually clamp
+      // the nav to the same max-width and center it horizontally.
+      // That keeps the pill anchored to the bottom of the viewport
+      // while still sitting inside the mobile-sized column on desktop.
+      className="pointer-events-none fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 px-4 pb-3 phone-sm:px-2"
     >
       <div
-        className="pointer-events-auto mx-auto flex h-[72px] max-w-md items-center justify-between rounded-[40px] bg-white px-3"
+        className="pointer-events-auto mx-auto flex h-[72px] max-w-md items-center justify-between rounded-[40px] bg-white px-3 phone-sm:h-[64px] phone-sm:px-2"
         style={{ boxShadow: "0 6px 16px rgba(0,0,0,0.2)" }}
       >
         {TABS.map((tab) => {
@@ -81,7 +86,7 @@ export function BottomNav() {
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
               prefetch
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-200 ease-out"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-200 ease-out phone-sm:h-12 phone-sm:w-12"
               style={{
                 backgroundColor: active ? "var(--color-brand-primary)" : "transparent",
                 transform: active ? "scale(1.06)" : "scale(1)",

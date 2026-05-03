@@ -14,6 +14,13 @@ export const metadata: Metadata = {
   },
   description:
     "Learn African languages through bite-sized, gamified speaking lessons.",
+  // Browser tab favicon. Points at the same SVG used by the PWA
+  // manifest so the brand mark is consistent across install surfaces.
+  icons: {
+    icon: [{ url: "/icons/Logo.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: "/icons/Logo.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icons/Logo.svg", type: "image/svg+xml" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -64,7 +71,16 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AppHydration />
-          {children}
+          {/*
+            Phone-frame: the app is designed as a mobile experience and
+            ports a Flutter mobile UI. On wide viewports we letterbox
+            the content into a centered phone-width column rather than
+            letting layouts stretch to desktop widths. The black body
+            background (set in globals.css) fills the gutters.
+          */}
+          <div className="relative mx-auto flex w-full max-w-[480px] flex-1 flex-col overflow-hidden">
+            {children}
+          </div>
         </NextIntlClientProvider>
       </body>
     </html>

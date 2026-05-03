@@ -1,6 +1,22 @@
 @import "tailwindcss";
 
 /* ------------------------------------------------------------------ */
+/* Custom variants & utilities                                        */
+/* ------------------------------------------------------------------ */
+
+/* Narrow-phone variant — applies on viewports up to 379px wide
+   (iPhone SE 1st gen 320px, Galaxy Fold cover 280px, smaller Androids).
+   Use as `phone-sm:text-2xl` to override base styles on tiny screens. */
+@custom-variant phone-sm (@media (max-width: 379px));
+
+/* Safe-area bottom padding utility (used by bottom sheets / footers
+   to clear the iOS home indicator). Tailwind v4 does not ship this
+   by default. */
+@utility pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+
+/* ------------------------------------------------------------------ */
 /* Afriklang design tokens                                            */
 /*                                                                    */
 /* Mirrors src/lib/colors.ts (and lib/core/theme/app_colors.dart in   */

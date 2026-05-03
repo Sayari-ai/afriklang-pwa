@@ -138,7 +138,7 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={skip}
-              className="px-4 py-2 text-[22px] font-bold text-white"
+              className="px-4 py-2 text-[22px] font-bold text-white phone-sm:text-[18px]"
             >
               {t("commonSkip")}
             </button>
@@ -187,16 +187,16 @@ function IntroPage({ onCta }: { onCta: () => void }) {
         width={440}
         height={440}
         priority
-        className="h-[220px] w-auto object-contain"
+        className="h-[220px] w-auto object-contain phone-sm:h-[170px]"
       />
       <div className="flex flex-col gap-3">
         <h1
-          className="text-[40px] font-black leading-tight text-white"
+          className="text-[40px] font-black leading-tight text-white phone-sm:text-[30px]"
           style={{ letterSpacing: "-0.5px" }}
         >
           {t("onboardingIntroTitle")}
         </h1>
-        <p className="text-[24px] font-medium leading-snug text-white">
+        <p className="text-[24px] font-medium leading-snug text-white phone-sm:text-[18px]">
           {t("onboardingIntroSubtitle")}
         </p>
       </div>
@@ -223,12 +223,12 @@ function LanguagePickerPage({
     <div className="flex w-full flex-col justify-center gap-8">
       <div className="flex flex-col gap-3">
         <h1
-          className="whitespace-pre-line text-[40px] font-black leading-tight text-white"
+          className="whitespace-pre-line text-[40px] font-black leading-tight text-white phone-sm:text-[30px]"
           style={{ letterSpacing: "-0.5px" }}
         >
           {t("onboardingLanguagePickerTitle")}
         </h1>
-        <p className="text-[18px] font-medium text-white/70">
+        <p className="text-[18px] font-medium text-white/70 phone-sm:text-[15px]">
           {t("onboardingLanguagePickerSubtitle")}
         </p>
       </div>
@@ -278,17 +278,17 @@ function LanguageChip({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className="flex items-center gap-2.5 rounded-full border-[1.5px] border-white px-5 py-3 transition-colors duration-200"
+      className="flex items-center gap-2.5 rounded-full border-[1.5px] border-white px-5 py-3 transition-colors duration-200 phone-sm:px-3.5 phone-sm:py-2.5"
       style={{
         backgroundColor: selected ? "var(--color-brand-primary)" : "transparent",
       }}
     >
-      <span className="text-[22px] leading-none">{language.flagEmoji}</span>
+      <span className="text-[22px] leading-none phone-sm:text-[18px]">{language.flagEmoji}</span>
       <span className="flex flex-col items-start leading-tight">
-        <span className="text-[22px] font-bold text-white">
+        <span className="text-[22px] font-bold text-white phone-sm:text-[17px]">
           {language.displayName}
         </span>
-        <span className="text-[13px] font-medium text-white/70">
+        <span className="text-[13px] font-medium text-white/70 phone-sm:text-[11px]">
           {language.country}
         </span>
       </span>
@@ -343,7 +343,7 @@ function PrimaryButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="h-16 w-full rounded-[36px] text-[24px] font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+      className="h-16 w-full rounded-[36px] text-[24px] font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-50 phone-sm:h-14 phone-sm:text-[18px]"
       style={{
         backgroundColor: filled ? "var(--color-brand-primary)" : "#FFFFFF",
         color: filled ? "#FFFFFF" : "var(--color-brand-primary)",
