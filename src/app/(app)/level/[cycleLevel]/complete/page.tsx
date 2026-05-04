@@ -72,10 +72,12 @@ const CONFETTI_COLORS = [
 export default function LevelCompletePage({
   params,
 }: {
-  // Next 16: params are async; unwrap with `React.use()`. The id is
-  // unused inside the component itself (the URL already encodes it),
-  // but consuming the promise here keeps the type signature honest.
-  params: Promise<{ id: string }>;
+  // Next 16: params are async; unwrap with `React.use()`. The
+  // `cycleLevel` segment is unused inside the component itself (the
+  // URL already encodes it and the celebration body reads everything
+  // else from the query string), but consuming the promise here keeps
+  // the type signature honest.
+  params: Promise<{ cycleLevel: string }>;
 }) {
   void use(params);
 

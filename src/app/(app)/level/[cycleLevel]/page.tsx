@@ -15,8 +15,8 @@
  *     snackbar (defence-in-depth: the consent gate already enforces
  *     this, but a user can revoke from Profile mid-level).
  *   - Advance to the next question, or — on the last one — call
- *     `usePathRepo.completeLevel(levelId)` and `router.replace` to
- *     `/level/[id]/complete?points=N`.
+ *     `usePathRepo.completeLevel(cycle, levelId)` and `router.replace`
+ *     to `/level/${cycle}-${levelId}/complete?points=N`.
  *
  * Differences from Flutter:
  *   - No `permission_handler`/`AudioRecorder` adapters; we use the
@@ -48,6 +48,10 @@ import { uploadAudio, AudioUploadError } from "@/lib/api/audio";
 import { buildRecordingFilename } from "@/lib/audio/filename";
 import { RecorderError, WavRecorder } from "@/lib/audio/recorder";
 import { type LevelDefinition } from "@/lib/content/models";
+import {
+  formatCycleLevelParam,
+  parseCycleLevelParam,
+} from "@/lib/content/cycle-level";
 import { useConsent } from "@/stores/consent";
 import { useDeviceIdentity } from "@/stores/device-identity";
 import { useLearningLanguage } from "@/stores/learning-language";
@@ -61,19 +65,32 @@ export default function LevelPage({
 }: {
   // Next 16: dynamic route params resolve as a Promise; unwrap with
   // `use()`. See `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/page.md`.
-  params: Promise<{ id: string }>;
+  //
+  // The `cycleLevel` segment is a composite `${cycle}-${levelId}` key
+  // (e.g. `2-3`); see `lib/content/cycle-level.ts`. We tolerate the
+  // legacy bare-integer form (`/level/3`) by falling back to cycle 1
+  // — that keeps any pre-multi-cycle deep-links and shared bookmarks
+  // alive without a redirect dance.
+  params: Promise<{ cycleLevel: string }>;
 }) {
-  const { id: idParam } = use(params);
-  const levelId = Number.parseInt(idParam, 10);
+  const { cycleLevel: rawParam } = use(params);
+  const parsed = parseCycleLevelParam(rawParam);
+  // We render guards against `parsed === null` below; until we know
+  // the parse worked, fall back to NaN so any downstream lookups miss
+  // (and the home-redirect effect fires).
+  const cycle = parsed?.cycle ?? Number.NaN;
+  const levelId = parsed?.levelId ?? Number.NaN;
 
   const t = useTranslations();
   const router = useRouter();
 
   const bundle = usePathRepo((s) => s.bundle);
-  // Locate the cycle that owns this level, then the level itself.
-  // Level ids are globally unique across cycles, so the first match
-  // is canonical. Memoised together so the level's `pathId` (used to
-  // build recording filenames) and the level definition stay aligned.
+  // Locate the level by composite (cycle, levelId) key. Level ids are
+  // 1..8 *within a cycle* and NOT globally unique across cycles, so
+  // matching on levelId alone would silently surface a same-numbered
+  // level from a different cycle once the user has advanced. Memoised
+  // together so the level's `pathId` (used to build recording
+  // filenames) and the level definition stay aligned.
   // The shape (`{ level, owningPathId }` with both nullable) is kept
   // single-shape across all branches so the React Compiler can preserve
   // the memoization — early returns with constructor-literal objects
@@ -81,32 +98,36 @@ export default function LevelPage({
   const { level, owningPathId } = useMemo(() => {
     let foundLevel: LevelDefinition | null = null;
     let foundPathId: number | null = null;
-    if (bundle) {
-      for (const cycle of bundle) {
-        const hit = cycle.levels.find((l) => l.levelId === levelId);
-        if (hit) {
-          foundLevel = hit;
-          foundPathId = cycle.pathId;
-          break;
-        }
+    if (bundle && Number.isInteger(cycle) && Number.isInteger(levelId)) {
+      const cycleDef = bundle.find((c) => c.cycle === cycle);
+      const hit = cycleDef?.levels.find((l) => l.levelId === levelId);
+      if (cycleDef && hit) {
+        foundLevel = hit;
+        foundPathId = cycleDef.pathId;
       }
     }
     return { level: foundLevel, owningPathId: foundPathId };
-  }, [bundle, levelId]);
+  }, [bundle, cycle, levelId]);
   const questions = level?.questions ?? [];
   const totalSteps = questions.length;
 
-  // Defensive: if a user deep-links to /level/9 or similar, bounce
-  // back home rather than render a broken screen. The home tab
-  // already gates this, but the guard belongs here too.
+  // Defensive: if a user deep-links to /level/9-9 or a malformed
+  // composite key, bounce back home rather than render a broken
+  // screen. The home tab already gates this, but the guard belongs
+  // here too.
   useEffect(() => {
+    if (parsed === null) {
+      // Unparsable param — not even worth a snackbar with a level id.
+      router.replace("/home");
+      return;
+    }
     if (bundle && (level === null || totalSteps === 0)) {
       useSnackbar
         .getState()
         .show(t("homeLevelHasNoQuestionsSnack", { levelId }));
       router.replace("/home");
     }
-  }, [bundle, level, totalSteps, levelId, router, t]);
+  }, [bundle, level, totalSteps, levelId, parsed, router, t]);
 
   // ---------------------------------------------------------------
   // Live state
@@ -379,7 +400,7 @@ export default function LevelPage({
       completionDispatchedRef.current = true;
       let cycleComplete = false;
       try {
-        const res = await usePathRepo.getState().completeLevel(levelId, {
+        const res = await usePathRepo.getState().completeLevel(cycle, levelId, {
           pointsOverride: awardedPoints,
           submittedCount: submitted,
           totalSteps,
@@ -398,7 +419,10 @@ export default function LevelPage({
       });
       if (isPartial) params.set("partial", "1");
       if (cycleComplete) params.set("cycleComplete", "1");
-      router.replace(`/level/${levelId}/complete?${params.toString()}`);
+      // Build the composite-key segment via the canonical formatter
+      // — never hand-concatenate. See `lib/content/cycle-level.ts`.
+      const seg = formatCycleLevelParam({ cycle, levelId });
+      router.replace(`/level/${seg}/complete?${params.toString()}`);
       return;
     }
 
@@ -462,7 +486,7 @@ export default function LevelPage({
     const awardedPoints = Math.floor(reward / 2);
     let cycleComplete = false;
     try {
-      const res = await usePathRepo.getState().completeLevel(levelId, {
+      const res = await usePathRepo.getState().completeLevel(cycle, levelId, {
         pointsOverride: awardedPoints,
         submittedCount: submitted,
         totalSteps,
@@ -481,7 +505,8 @@ export default function LevelPage({
       partial: "1",
     });
     if (cycleComplete) params.set("cycleComplete", "1");
-    router.replace(`/level/${levelId}/complete?${params.toString()}`);
+    const seg = formatCycleLevelParam({ cycle, levelId });
+    router.replace(`/level/${seg}/complete?${params.toString()}`);
   };
 
   /**

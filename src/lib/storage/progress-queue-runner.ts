@@ -157,6 +157,7 @@ async function replayItem(
   try {
     await setProgress({
       deviceId,
+      cycle: item.cycle,
       levelId: item.levelId,
       status: item.status,
     });

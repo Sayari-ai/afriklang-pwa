@@ -56,7 +56,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
 import { NicknameSheet } from "@/components/nickname-sheet";
-import { type LevelDefinition, flattenLevels } from "@/lib/content/models";
+import { type LevelDefinition } from "@/lib/content/models";
+import { formatCycleLevelParam } from "@/lib/content/cycle-level";
 import { useNickname } from "@/stores/nickname";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
@@ -68,6 +69,13 @@ import { useSnackbar } from "@/stores/snackbar";
 type LevelStatus = "completed" | "current" | "locked";
 
 interface LevelNode {
+  /**
+   * The cycle this level belongs to. Together with `id` forms the
+   * composite identity of a level — level ids are 1..8 *within a
+   * cycle* and NOT globally unique. React `key` and `progress` lookups
+   * must use both fields.
+   */
+  cycle: number;
   id: number;
   status: LevelStatus;
   /** Normalized x ∈ [0,1] within the map. */
@@ -176,7 +184,12 @@ export default function HomePage() {
         // the render — skip the missing slot.
         if (!def) continue;
         const id = def.levelId;
-        const entry = progress?.entries.find((e) => e.levelId === id) ?? null;
+        // Composite-key lookup: same level id can appear in cycle 1
+        // and cycle 2 with completely different progress states.
+        const entry =
+          progress?.entries.find(
+            (e) => e.cycle === cycle.cycle && e.levelId === id,
+          ) ?? null;
         // Default-status fallback only applies in the synthetic
         // cycle (no bundle yet): legacy behaviour was "level 1 is
         // current, the rest are locked". Once the bundle loads, the
@@ -188,6 +201,7 @@ export default function HomePage() {
             : "locked";
         const pos = NODE_POSITIONS[i];
         out.push({
+          cycle: cycle.cycle,
           id,
           status,
           submittedCount: entry?.submittedCount,
@@ -222,7 +236,11 @@ export default function HomePage() {
       useSnackbar.getState().show(t("homeAdventureNotLoadedSnack"));
       return;
     }
-    const level: LevelDefinition | undefined = flattenLevels(bundle).find(
+    // Resolve by composite (cycle, levelId) — flattening + level-id
+    // match alone would silently launch a same-numbered level from a
+    // different cycle once the user has advanced.
+    const cycleDef = bundle.find((c) => c.cycle === node.cycle);
+    const level: LevelDefinition | undefined = cycleDef?.levels.find(
       (l) => l.levelId === node.id,
     );
     if (!level || level.questions.length === 0) {
@@ -231,11 +249,20 @@ export default function HomePage() {
         .show(t("homeLevelHasNoQuestionsSnack", { levelId: node.id }));
       return;
     }
-    router.push(`/level/${node.id}`);
+    const seg = formatCycleLevelParam({ cycle: node.cycle, levelId: node.id });
+    router.push(`/level/${seg}`);
   };
 
+  // The "Tap to start" pulse anchors to the active cycle's current
+  // node. Each cycle can have at most one `current` row, but the user
+  // may have multiple cycles active in `bundle` (i.e. they advanced
+  // mid-completion of a previous cycle, which the backend doesn't
+  // currently allow but is cheap to defend against). Prefer the
+  // highest-cycle current — that's the one the user is "on".
   const currentNode =
-    levels.find((n) => n.status === "current") ?? levels[0];
+    levels
+      .filter((n) => n.status === "current")
+      .sort((a, b) => b.cycle - a.cycle)[0] ?? levels[0];
 
   // First-visit nickname prompt. Derived directly from the store
   // rather than a local `useState`: opening means "no nickname set
@@ -308,7 +335,10 @@ export default function HomePage() {
               normalized space — see the `useMemo` above. */}
           {levels.map((node) => (
             <div
-              key={node.id}
+              // Composite key — `node.id` alone collides across cycles
+              // (level 1 of cycle 1 and level 1 of cycle 2 are both
+              // rendered when the user has advanced).
+              key={`${node.cycle}-${node.id}`}
               className="absolute"
               style={{
                 // 80×80 node, anchor centre-to-coordinate

@@ -233,9 +233,14 @@ export function levelById(
 
 export function progressByLevel(
   vector: ProgressVector,
+  cycle: number,
   levelId: number,
 ): ProgressEntry | null {
-  return vector.entries.find((e) => e.levelId === levelId) ?? null;
+  return (
+    vector.entries.find(
+      (e) => e.cycle === cycle && e.levelId === levelId,
+    ) ?? null
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -245,19 +250,21 @@ export function progressByLevel(
 /**
  * Concatenate every level across every cycle in cycle-ascending,
  * level_id-ascending order. Used by the home map (continuous scroll
- * spec) and by `levelById` lookups that don't care which cycle.
- *
- * Level_ids are documented as globally unique across cycles, so the
- * flat array has no key collisions; routes like `/level/[id]` continue
- * to work with the existing single-id keying.
+ * spec). Each emitted entry carries its enclosing `cycle` so callers
+ * can key React lists / progress lookups on the composite identity
+ * (level ids are 1..8 *within a cycle* and NOT globally unique).
  */
+export interface FlatLevel extends LevelDefinition {
+  readonly cycle: number;
+}
+
 export function flattenLevels(
   bundle: ReadonlyArray<PathDefinition>,
-): LevelDefinition[] {
-  const out: LevelDefinition[] = [];
+): FlatLevel[] {
+  const out: FlatLevel[] = [];
   for (const c of bundle) {
     for (const l of c.levels) {
-      out.push(l);
+      out.push({ ...l, cycle: c.cycle });
     }
   }
   return out;

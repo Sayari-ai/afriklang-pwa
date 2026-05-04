@@ -14,15 +14,16 @@
  *     single `PathDefinition` with 8 levels. Once all 8 are completed,
  *     the user can opt-in (via the cycle-complete celebration screen)
  *     to be issued a new cycle. Calling `advanceCycle()` POSTs
- *     `paths_assign` again, which (per the new server contract) returns
- *     a fresh `(path_id, cycle)` instead of the cached one. We then
- *     re-fetch `paths_get` (which now returns every cycle the device
- *     has been issued, in `{ cycles: [...] }` shape) and `progress_get`
- *     (whose entries now carry a `cycle` field).
+ *     `paths_assign` with `{ advance: true }`, which (per the server
+ *     contract) returns a fresh `(path_id, cycle)`. We then re-fetch
+ *     `paths_get?multicycle=1` (which returns every cycle the device
+ *     has been issued, in `{ cycles: [...] }` shape) and
+ *     `progress_get?multicycle=1` (whose entries carry a `cycle` field).
  *   - `bundle` is the flat array of cycles. The home map flattens to a
  *     single continuous scroll via `flattenLevels(bundle)`.
- *   - Level ids are globally unique across cycles, so existing routes
- *     (`/level/[id]`) and lookups by id keep working with no changes.
+ *   - Level ids are 1..8 *within a cycle* and NOT globally unique across
+ *     cycles. The composite (cycle, levelId) is the canonical identity.
+ *     All splice/find operations on `progress.entries` filter by both.
  *
  * Tolerance:
  *   - Parsers accept both the legacy single-cycle shape and the new
@@ -36,19 +37,20 @@
  *   1. `boot({ forceRefresh })` is called by the path-setup screen.
  *      We try the localStorage cache first; on miss (or refresh) we go
  *      assign → getPath → getProgress and write both back to disk.
- *   2. `completeLevel(levelId)` is called by the level screen when the
- *      user finishes a mission. We POST `progress_set` for the
- *      completion, then — if no other level is `current` — promote the
- *      lowest-numbered locked level *in the same cycle* to `current`.
- *      Returns `{ promotedId, cycleComplete }`. `cycleComplete` is
- *      `true` when every entry in the just-completed level's cycle is
- *      `"completed"` AND no `locked` entry exists in that cycle to
- *      promote — i.e. the user has finished cycle N and there is no
- *      cycle N+1 yet. The level screen routes to the cycle-complete
- *      celebration variant when this flag is set.
- *   3. `advanceCycle()` POSTs `paths_assign` again, refetches
- *      `paths_get` + `progress_get`, replaces `bundle` and `progress`
- *      with the merged result, and persists. Online-only.
+ *   2. `completeLevel(cycle, levelId)` is called by the level screen
+ *      when the user finishes a mission. We POST `progress_set` for the
+ *      completion (passing the cycle), then — if no other level is
+ *      `current` *in the same cycle* — promote the lowest-numbered
+ *      locked level *in that cycle* to `current`. Returns
+ *      `{ promotedId, cycleComplete }`. `cycleComplete` is `true` when
+ *      every entry in the just-completed level's cycle is `"completed"`
+ *      AND no `locked` entry exists in that cycle to promote — i.e. the
+ *      user has finished cycle N and there is no cycle N+1 yet. The
+ *      level screen routes to the cycle-complete celebration variant
+ *      when this flag is set.
+ *   3. `advanceCycle()` POSTs `paths_assign?advance=true`, refetches
+ *      `paths_get` + `progress_get` (multicycle), and merges into
+ *      `bundle`/`progress`. Online-only.
  *   4. `reset()` is a dev-time affordance: clears caches and rotates
  *      the device id so the next boot claims a fresh path slot.
  *
@@ -60,15 +62,13 @@
 import { create } from "zustand";
 
 import { EdgeFunctionError } from "@/lib/api/edge";
-import { assignPath, getPath } from "@/lib/api/paths";
+import { advanceCycleApi, assignPath, getPath } from "@/lib/api/paths";
 import { getProgress, setProgress } from "@/lib/api/progress";
 import {
   type LevelProgressStatus,
   type PathDefinition,
   type ProgressEntry,
   type ProgressVector,
-  activeCycle,
-  flattenLevels,
   isCycleComplete,
   parsePathBundle,
   parseProgressVector,
@@ -91,19 +91,24 @@ import { useDeviceIdentity } from "@/stores/device-identity";
  *
  * Real backend errors (4xx/5xx with a status) re-throw — we don't
  * want to silently mask, say, a 409 from the level-id being unknown.
+ *
+ * `cycle` is mandatory. The client always knows which cycle it's
+ * mutating because `completeLevel` resolves it before calling. The
+ * server still tolerates an absent `cycle` (defaults to top cycle)
+ * for the deployed mobile app, but the PWA never relies on that.
  */
 async function setProgressOrQueue(args: {
   deviceId: string;
+  cycle: number;
   levelId: number;
   status: LevelProgressStatus;
   /** Used as fallback `points` for an optimistic row. */
   fallbackPoints: number;
-  /** Used as fallback `cycle` for an optimistic row. */
-  fallbackCycle: number;
 }): Promise<ProgressEntry> {
   try {
     return await setProgress({
       deviceId: args.deviceId,
+      cycle: args.cycle,
       levelId: args.levelId,
       status: args.status,
     });
@@ -111,6 +116,7 @@ async function setProgressOrQueue(args: {
     const isNetwork = e instanceof EdgeFunctionError && e.status === 0;
     if (!isNetwork) throw e;
     await enqueueProgressWrite({
+      cycle: args.cycle,
       levelId: args.levelId,
       status: args.status,
     });
@@ -123,7 +129,7 @@ async function setProgressOrQueue(args: {
       completedAt:
         args.status === "completed" ? new Date().toISOString() : null,
       points: args.status === "completed" ? args.fallbackPoints : 0,
-      cycle: args.fallbackCycle,
+      cycle: args.cycle,
     };
   }
 }
@@ -144,14 +150,14 @@ interface PathRepoState {
   /** Reentrant-safe: returns the in-flight promise if `boot()` is already running. */
   boot: (opts?: { forceRefresh?: boolean }) => Promise<void>;
   /**
-   * Marks `levelId` complete, promotes next locked → current.
-   * Returns `{ promotedId, cycleComplete }`:
+   * Marks `(cycle, levelId)` complete, promotes next locked → current
+   * **within the same cycle**. Returns `{ promotedId, cycleComplete }`:
    *   - `promotedId`: id of the level promoted to `current` (or `null`).
    *   - `cycleComplete`: `true` iff after this completion every entry in
-   *     the just-completed level's cycle is `"completed"` AND there is
-   *     no `current` row in that cycle. Signals to the caller that the
-   *     user should be routed to the cycle-complete celebration variant
-   *     instead of the per-level one.
+   *     `cycle` is `"completed"` AND there is no `current` row in that
+   *     cycle. Signals to the caller that the user should be routed to
+   *     the cycle-complete celebration variant instead of the per-level
+   *     one.
    *
    * `opts` controls the *quality* of the completion (full vs. partial):
    *   - `pointsOverride`: if provided, the level's `points` field in the
@@ -165,6 +171,7 @@ interface PathRepoState {
    *     the home map can render the 3-star rating. Both are client-only.
    */
   completeLevel: (
+    cycle: number,
     levelId: number,
     opts?: {
       pointsOverride?: number;
@@ -373,7 +380,7 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
       return inFlightBoot;
     },
 
-    completeLevel: async (levelId, opts = {}) => {
+    completeLevel: async (cycle, levelId, opts = {}) => {
       const current = get().progress;
       const bundle = get().bundle;
       if (!current) {
@@ -381,43 +388,37 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
       }
       const deviceId = useDeviceIdentity.getState().ensure();
 
-      // Look up the level definition + its enclosing cycle. Used for
-      // (a) the fallback points reward when offline, and (b) scoping
-      // the "promote next locked" search to the same cycle so we
-      // don't accidentally promote a level from a future cycle that's
-      // already in `bundle` (shouldn't happen, but cheap to guard).
-      const flat = bundle ? flattenLevels(bundle) : [];
-      const levelDef = flat.find((l) => l.levelId === levelId) ?? null;
+      // Resolve the level definition inside the requested cycle. The
+      // home map and the level page are responsible for passing the
+      // matching cycle in; if they don't, we refuse rather than silently
+      // mutating a different cycle's entry.
+      const owningCycleDef =
+        bundle?.find((c) => c.cycle === cycle) ?? null;
+      const levelDef =
+        owningCycleDef?.levels.find((l) => l.levelId === levelId) ?? null;
       const fullReward = levelDef?.pointsReward ?? 0;
-      // Resolve the cycle this level lives in. Prefer the existing
-      // progress entry (server-stamped, authoritative); fall back to
-      // the bundle, then to the active cycle.
-      const existingEntry =
-        current.entries.find((e) => e.levelId === levelId) ?? null;
-      const owningCycle =
-        existingEntry?.cycle ??
-        (bundle
-          ? bundle.find((c) => c.levels.some((l) => l.levelId === levelId))
-              ?.cycle ?? activeCycle(bundle)
-          : 1);
 
       // 1. Mark this level completed (server returns the canonical entry,
       //    including `completed_at`, `points`, and `cycle`).
       const completed = await setProgressOrQueue({
         deviceId,
+        cycle,
         levelId,
         status: "completed",
         fallbackPoints: fullReward,
-        fallbackCycle: owningCycle,
       });
 
       // 1a. Apply client-side overrides for partial completions. The
       //     backend returns full `pointsReward` regardless of how many
       //     questions the user actually submitted, so we patch the
       //     locally-cached entry to reflect the half-credit the user
-      //     just saw on the celebration screen.
+      //     just saw on the celebration screen. Force `cycle` to the
+      //     caller-supplied one — the legacy server response may omit
+      //     it (defaulting to 1 in the parser) which would silently
+      //     reassign a cycle-2 completion to cycle 1.
       const completedPatched: ProgressEntry = {
         ...completed,
+        cycle,
         points:
           typeof opts.pointsOverride === "number"
             ? Math.max(0, Math.trunc(opts.pointsOverride))
@@ -432,38 +433,44 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
             : completed.totalSteps,
       };
 
-      // 2. Splice the (patched) completion in.
+      // 2. Splice the (patched) completion in. KEYED ON (cycle, levelId)
+      //    — never on levelId alone — because the same levelId exists
+      //    across cycles.
       const splicedEntries: ProgressEntry[] = current.entries.map((e) =>
-        e.levelId === levelId ? completedPatched : e,
+        e.cycle === cycle && e.levelId === levelId ? completedPatched : e,
       );
 
       // 3. If no other level *in the same cycle* is `current`, promote
       //    the lowest locked id *within that cycle*. Cross-cycle
       //    promotion is the job of `advanceCycle()`, not this method.
       const hasOtherCurrentInCycle = splicedEntries.some(
-        (e) => e.status === "current" && e.cycle === owningCycle,
+        (e) => e.status === "current" && e.cycle === cycle,
       );
       let promotedId: number | null = null;
       let finalEntries = splicedEntries;
 
       if (!hasOtherCurrentInCycle) {
         const nextLocked = splicedEntries
-          .filter((e) => e.status === "locked" && e.cycle === owningCycle)
+          .filter((e) => e.status === "locked" && e.cycle === cycle)
           .sort((a, b) => a.levelId - b.levelId)[0];
         if (nextLocked) {
           const promoted = await setProgressOrQueue({
             deviceId,
+            cycle,
             levelId: nextLocked.levelId,
             status: "current",
             // The promotion row carries 0 points by definition (status
             // is `current`, not `completed`), so the fallback value is
             // unused — pass 0 for clarity.
             fallbackPoints: 0,
-            fallbackCycle: owningCycle,
           });
-          promotedId = promoted.levelId;
+          // Force cycle on the optimistic row (same reasoning as above).
+          const promotedPatched: ProgressEntry = { ...promoted, cycle };
+          promotedId = promotedPatched.levelId;
           finalEntries = splicedEntries.map((e) =>
-            e.levelId === promoted.levelId ? promoted : e,
+            e.cycle === cycle && e.levelId === promotedPatched.levelId
+              ? promotedPatched
+              : e,
           );
         }
       }
@@ -475,7 +482,7 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
       writeCachedProgress(updated);
       set({ progress: updated, isReady: get().bundle !== null });
 
-      // 4. Detect "cycle complete": every entry in `owningCycle` is
+      // 4. Detect "cycle complete": every entry in `cycle` is
       //    `"completed"` AND no level was promoted (the only way
       //    `promotedId` stays null inside the same cycle is when no
       //    locked sibling existed — i.e. the user just finished the
@@ -483,31 +490,32 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
       //    avoid a false positive from a cross-cycle promotion that
       //    we don't currently do but might in future.
       const cycleComplete =
-        promotedId === null && isCycleComplete(updated, owningCycle);
+        promotedId === null && isCycleComplete(updated, cycle);
 
       return { promotedId, cycleComplete };
     },
 
     advanceCycle: async () => {
       const deviceId = useDeviceIdentity.getState().ensure();
-      // Re-issue. The server-side contract says `paths_assign` will
-      // hand out a fresh `(path_id, cycle)` once the previous cycle
-      // is fully completed; on a stale call (previous cycle not
-      // actually done) it returns the cached assignment, which we
-      // detect and treat as a no-op below. We still go through the
-      // full refetch so any server-side adjustments to existing
-      // cycles (e.g. retroactive content fixes) make it into the
-      // local cache.
-      await assignPath(deviceId);
+      // Re-issue WITH `advance: true` — that's the explicit-advance
+      // signal the server-side `advance_path()` RPC requires. Without
+      // the flag, `paths_assign` is idempotent and just returns the
+      // current top cycle, so we'd silently never get a new cycle.
+      //
+      // The RPC rejects with HTTP 409 (`cycle_incomplete`) if the
+      // user's current top cycle isn't fully completed yet. The
+      // celebration screen catches and surfaces a snackbar — we
+      // intentionally let the error propagate untransformed.
+      await advanceCycleApi(deviceId);
       const [nextBundle, nextProgress] = await Promise.all([
         getPath(deviceId),
         getProgress(deviceId),
       ]);
       // Merge with whatever we already had locally — see `mergeBundles`
       // for why this is union-by-cycle and not a wholesale replace.
-      // During the multi-cycle backend rollout, `nextBundle` may still
-      // be a single cycle even when we've previously seen others, and
-      // we don't want a partial response to drop history.
+      // The server now always returns the multi-cycle envelope (we
+      // pass `?multicycle=1`), but we still merge defensively in case
+      // a transient response drops a historical cycle.
       const merged = mergeBundles(get().bundle, nextBundle);
       writeCachedBundle(merged);
       writeCachedProgress(nextProgress);
@@ -528,29 +536,37 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
 // ---------------------------------------------------------------------------
 
 /**
- * Look up a level definition by id across every cycle in the bundle.
- * Level ids are globally unique (per the backend contract) so this
- * returns at most one match.
+ * Look up a level definition by composite (cycle, levelId) key.
+ * Level ids are 1..8 *within a cycle* and NOT globally unique; passing
+ * just a levelId would silently match the wrong cycle once the device
+ * has been advanced past cycle 1.
  */
-export function selectLevel(state: PathRepoState, levelId: number) {
+export function selectLevel(
+  state: PathRepoState,
+  cycle: number,
+  levelId: number,
+) {
   if (!state.bundle) return null;
-  for (const c of state.bundle) {
-    const found = c.levels.find((l) => l.levelId === levelId);
-    if (found) return found;
-  }
-  return null;
+  const cycleDef = state.bundle.find((c) => c.cycle === cycle);
+  return cycleDef?.levels.find((l) => l.levelId === levelId) ?? null;
 }
 
 export function selectProgressEntry(
   state: PathRepoState,
+  cycle: number,
   levelId: number,
 ): ProgressEntry | null {
-  return state.progress?.entries.find((e) => e.levelId === levelId) ?? null;
+  return (
+    state.progress?.entries.find(
+      (e) => e.cycle === cycle && e.levelId === levelId,
+    ) ?? null
+  );
 }
 
 export function selectStatus(
   state: PathRepoState,
+  cycle: number,
   levelId: number,
 ): LevelProgressStatus {
-  return selectProgressEntry(state, levelId)?.status ?? "locked";
+  return selectProgressEntry(state, cycle, levelId)?.status ?? "locked";
 }
