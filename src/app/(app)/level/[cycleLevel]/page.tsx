@@ -45,8 +45,10 @@ import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ScreenBackground } from "@/components/screen-background";
 import { uploadAudio, AudioUploadError } from "@/lib/api/audio";
+import { EdgeFunctionError } from "@/lib/api/edge";
+import { swapQuestion } from "@/lib/api/questions";
 import { buildRecordingFilename } from "@/lib/audio/filename";
-import { RecorderError, WavRecorder } from "@/lib/audio/recorder";
+import { RecorderError, WavRecorder, acquireMicStream } from "@/lib/audio/recorder";
 import { type LevelDefinition } from "@/lib/content/models";
 import {
   formatCycleLevelParam,
@@ -58,7 +60,7 @@ import { useLearningLanguage } from "@/stores/learning-language";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
 
-type Phase = "idle" | "recording" | "review";
+type Phase = "idle" | "countdown" | "recording" | "review";
 
 export default function LevelPage({
   params,
@@ -136,6 +138,10 @@ export default function LevelPage({
   const [step, setStep] = useState(1); // 1-based
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsedSec, setElapsedSec] = useState(0);
+  // 3-2-1 countdown shown on the mic button before recording starts.
+  // null = no countdown active. Decreases once per second; when it
+  // would tick past 0 we transition to `recording`.
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   // Holds the most recent recording blob for the current question.
   // Cleared whenever we leave review (advance, retake, skip).
@@ -143,6 +149,18 @@ export default function LevelPage({
 
   const recorderRef = useRef<WavRecorder | null>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // 3-2-1 countdown timer handle. Lives in a ref so we can cancel it
+  // from cleanup and from `stopRecording` without needing it in any
+  // dependency array.
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Mic stream pre-acquired synchronously during the user-gesture
+  // click handler that kicks off the countdown. iOS Safari requires
+  // `getUserMedia` to be called from a synchronously-reachable code
+  // path of the gesture handler — `setInterval` callbacks lose the
+  // gesture token and the OS prompt is silently suppressed. So we
+  // grab the stream right away and hold it for the worklet to adopt
+  // when the countdown completes. See `acquireMicStream()` doc.
+  const pendingStreamRef = useRef<Promise<MediaStream> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackUrlRef = useRef<string | null>(null);
   // Reentrancy guard for the start/stop pair (matches `_busy` in Dart).
@@ -168,8 +186,18 @@ export default function LevelPage({
   useEffect(() => {
     return () => {
       if (tickerRef.current) clearInterval(tickerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
       const rec = recorderRef.current;
       if (rec) void rec.dispose();
+      // If the user backed out mid-countdown, release the
+      // pre-acquired mic stream so the OS indicator goes away.
+      const pending = pendingStreamRef.current;
+      if (pending) {
+        pending
+          .then((s) => s.getTracks().forEach((t) => t.stop()))
+          .catch(() => {});
+        pendingStreamRef.current = null;
+      }
       if (playbackUrlRef.current) {
         URL.revokeObjectURL(playbackUrlRef.current);
         playbackUrlRef.current = null;
@@ -196,6 +224,14 @@ export default function LevelPage({
     }
   };
 
+  const stopCountdown = () => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+    setCountdown(null);
+  };
+
   const startRecording = useCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -214,9 +250,18 @@ export default function LevelPage({
       }
       setRecording(null);
 
+      // Adopt the mic stream that `beginCountdown` pre-acquired during
+      // the user-gesture click. If for any reason it's not there
+      // (defensive: countdown was bypassed), fall back to the
+      // recorder's internal `getUserMedia`. That fallback path won't
+      // work on iOS Safari but is safe on Chrome / Firefox / Android.
+      const pending = pendingStreamRef.current;
+      pendingStreamRef.current = null;
+      const stream = pending ? await pending : undefined;
+
       const rec = new WavRecorder();
       recorderRef.current = rec;
-      await rec.start();
+      await rec.start(stream);
       setPhase("recording");
       startTimer();
     } catch (e) {
@@ -235,6 +280,76 @@ export default function LevelPage({
       busyRef.current = false;
     }
   }, [t]);
+
+  /**
+   * Show a 3 → 2 → 1 countdown on the mic button, then call
+   * `startRecording`. Idempotent: a second call while already counting
+   * down (or already recording) is a no-op.
+   *
+   * Why a separate phase rather than a brief delay-then-record:
+   *   - The mic button must remain visibly disabled and show the
+   *     digit, so the user knows recording hasn't started yet.
+   *   - The label flips to `levelGetReady` so screen readers announce
+   *     the state change explicitly.
+   *
+   * iOS Safari mic-permission dance: we MUST call `getUserMedia`
+   * synchronously from the user-gesture handler (the click that
+   * triggered `beginCountdown`). `setInterval` callbacks lose the
+   * gesture token, so deferring `getUserMedia` until after the
+   * countdown silently suppresses the permission prompt on iOS.
+   *
+   * Workaround: kick off `acquireMicStream()` right here while the
+   * gesture is still alive, stash the Promise on a ref, and let
+   * `startRecording` adopt the resolved stream once the countdown
+   * fires. The OS prompt may appear immediately (overlapping the
+   * countdown) — that's fine: once accepted, the digit keeps ticking
+   * and recording starts at zero.
+   */
+  const beginCountdown = useCallback(() => {
+    // Allowed entry points: idle (initial take) and review (retake).
+    // Reject if a countdown or recording is already in flight.
+    if (phase === "countdown" || phase === "recording") return;
+    if (countdownRef.current) return;
+
+    // CRITICAL: synchronous getUserMedia call inside the gesture
+    // handler. Don't await — just stash the promise. If the user
+    // denies, `startRecording` will surface the snackbar and reset
+    // to idle. If we're mid-countdown when that happens, that's OK:
+    // the permission prompt itself paused the JS event loop until
+    // the user dismissed it, so the countdown timer is paused too.
+    if (!pendingStreamRef.current) {
+      pendingStreamRef.current = acquireMicStream();
+      // Swallow unhandledrejection — `startRecording` re-throws and
+      // surfaces the snackbar with the proper i18n copy.
+      pendingStreamRef.current.catch(() => {});
+    }
+
+    setPhase("countdown");
+    setCountdown(3);
+    countdownRef.current = setInterval(() => {
+      setCountdown((n) => {
+        // n is the digit currently *displayed*. After 1s, decrement.
+        // When we'd tick past 1, clear the interval and start
+        // recording. Use the functional setter so we don't capture
+        // a stale `countdown` value.
+        if (n === null) return null;
+        if (n <= 1) {
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+          }
+          // Defer `startRecording` so we don't call setState during
+          // a setState callback.
+          queueMicrotask(() => {
+            setCountdown(null);
+            void startRecording();
+          });
+          return n;
+        }
+        return n - 1;
+      });
+    }, 1000);
+  }, [phase, startRecording]);
 
   const stopRecording = useCallback(async () => {
     if (busyRef.current) return;
@@ -265,10 +380,12 @@ export default function LevelPage({
 
   const toggleRecord = () => {
     if (phase === "idle") {
-      void startRecording();
+      beginCountdown();
     } else if (phase === "recording") {
       void stopRecording();
     }
+    // `countdown` phase: tap is a no-op. The button is also disabled
+    // visually so this branch shouldn't fire in practice.
   };
 
   // ---------------------------------------------------------------
@@ -276,7 +393,7 @@ export default function LevelPage({
   // ---------------------------------------------------------------
 
   const onRetake = () => {
-    void startRecording();
+    beginCountdown();
   };
 
   const onListen = () => {
@@ -436,8 +553,16 @@ export default function LevelPage({
 
   const onSkip = () => {
     // Cancel any in-flight recording / playback and clear local state
-    // for the *current* question, then move on to the next image.
-    // Skipping never uploads.
+    // for the *current* question. Skipping never uploads.
+    //
+    // Semantics changed: Skip now means "I don't know this word — give
+    // me a different one for the same slot". When online we ask the
+    // server for a fresh question (`question_swap`), splice it into
+    // the cached bundle, and stay on the same step. When offline we
+    // fall back to the original "advance without credit" behaviour
+    // since the swap requires the server to know which questions the
+    // device has already been served. The back button (TopBar) is the
+    // way to exit a level mid-flow.
     const rec = recorderRef.current;
     if (rec) void rec.dispose();
     recorderRef.current = null;
@@ -448,8 +573,88 @@ export default function LevelPage({
     }
     setRecording(null);
     stopTimer();
+    stopCountdown();
+    // Release any mic stream that was pre-acquired for an
+    // about-to-start take but never adopted by the recorder.
+    const pending = pendingStreamRef.current;
+    if (pending) {
+      pending
+        .then((s) => s.getTracks().forEach((t) => t.stop()))
+        .catch(() => {});
+      pendingStreamRef.current = null;
+    }
     setUploading(false);
 
+    const online =
+      typeof navigator === "undefined" ? true : navigator.onLine;
+    const currentQ = questions[step - 1];
+
+    if (!online || !currentQ) {
+      // Offline (or defensive: no current question to swap) — keep the
+      // legacy advance-or-exit behaviour so the user is never stuck.
+      fallbackSkip();
+      return;
+    }
+
+    // Online: ask the server for a replacement at the same slot.
+    void runSwap(currentQ.qIndex);
+  };
+
+  /**
+   * Server-driven swap of the current slot's question. On success,
+   * mutates the cached bundle so the live `questions[step-1]` reflects
+   * the new prompt/image; the user stays on the same step. On
+   * `swap_pool_exhausted` (409) or any other failure we fall back to
+   * the legacy plain-skip behaviour so the user is never stuck.
+   */
+  const runSwap = async (slotQIndex: number) => {
+    const deviceId = useDeviceIdentity.getState().ensure();
+    useSnackbar.getState().show(t("levelSwappingSnack"), 1000);
+    try {
+      const replacement = await swapQuestion(
+        deviceId,
+        cycle,
+        levelId,
+        slotQIndex,
+      );
+      usePathRepo.getState().applyQuestionSwap(
+        cycle,
+        levelId,
+        slotQIndex,
+        replacement,
+      );
+      // Stay on the same step; reset transient phase so the new
+      // image/prompt renders cleanly with the mic CTA.
+      setPhase("idle");
+      setElapsedSec(0);
+    } catch (e) {
+      const isExhausted =
+        e instanceof EdgeFunctionError && e.status === 409;
+      const isNetwork =
+        e instanceof EdgeFunctionError && e.status === 0;
+      if (isExhausted) {
+        useSnackbar.getState().show(t("levelSwapPoolExhaustedSnack"), 1500);
+      } else if (isNetwork) {
+        // We checked navigator.onLine before calling, but the server
+        // may still be unreachable (DNS, CORS, function cold-boot
+        // failure). Surface the same offline message the rest of the
+        // app uses for consistency.
+        useSnackbar.getState().show(t("levelOfflineSubmitSnack"), 1500);
+      } else {
+        useSnackbar.getState().show(t("levelSwapFailedSnack"), 1500);
+      }
+      // Fall back to plain skip so the user keeps moving.
+      fallbackSkip();
+    }
+  };
+
+  /**
+   * Original Skip behaviour preserved for the offline / swap-failed
+   * fallback path: advance to next step (or finalise the level on the
+   * last step). Does NOT touch the recorder/mic state — `onSkip` has
+   * already cleaned those up before delegating here.
+   */
+  const fallbackSkip = () => {
     const isLast = step >= totalSteps;
     if (isLast) {
       // End of the level reached via skip. If the user managed to
@@ -562,10 +767,10 @@ export default function LevelPage({
         </div>
 
         {/* Footer: timer + record CTA, OR the review row. */}
-        <div className="flex flex-col items-center px-6 pb-6">
+        <div className="flex flex-col items-center px-6 pb-6 phone-sm:px-4 phone-sm:pb-4">
           {isRecording && (
             <>
-              <p className="text-[20px] font-semibold text-white">
+              <p className="text-[20px] font-semibold text-white phone-sm:text-[18px]">
                 {formatElapsed(elapsedSec)}
               </p>
               <div className="h-4" />
@@ -586,10 +791,18 @@ export default function LevelPage({
             />
           ) : (
             <>
-              <RecordButton recording={isRecording} onClick={toggleRecord} />
+              <RecordButton
+                recording={isRecording}
+                countdown={phase === "countdown" ? countdown : null}
+                onClick={toggleRecord}
+              />
               <div className="h-3" />
               <p className="text-[18px] font-semibold text-white">
-                {isRecording ? t("levelTapToStop") : t("levelTapToRecord")}
+                {phase === "countdown"
+                  ? t("levelGetReady")
+                  : isRecording
+                    ? t("levelTapToStop")
+                    : t("levelTapToRecord")}
               </p>
             </>
           )}
@@ -738,25 +951,64 @@ function QuestionContent({
 
 function RecordButton({
   recording,
+  countdown,
   onClick,
 }: {
   recording: boolean;
+  /** Non-null while the 3-2-1 countdown is active. The digit is
+   *  rendered inside the button and the click is disabled. */
+  countdown: number | null;
   onClick: () => void;
 }) {
+  const counting = countdown !== null;
   // Idle green #66BB6A → active red #E53935 (matches Flutter tokens).
+  // During countdown we keep the green hue but dim the glow to hint
+  // the button is non-interactive.
   const color = recording ? "#E53935" : "#66BB6A";
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={recording ? "Stop recording" : "Start recording"}
+      disabled={counting}
+      aria-label={
+        counting
+          ? `Recording starts in ${countdown}`
+          : recording
+            ? "Stop recording"
+            : "Start recording"
+      }
+      aria-live={counting ? "polite" : undefined}
       className="relative flex h-[100px] w-[100px] items-center justify-center rounded-full phone-sm:h-[88px] phone-sm:w-[88px]"
       style={{
         backgroundColor: color,
-        boxShadow: `0 0 18px 2px ${color}80`,
+        boxShadow: counting
+          ? `0 0 12px 1px ${color}55`
+          : `0 0 18px 2px ${color}80`,
+        opacity: counting ? 0.85 : 1,
       }}
     >
-      {recording ? <WaveformIcon /> : <MicIcon />}
+      {counting ? (
+        <span
+          // Pop the digit each tick — key on the value so the CSS
+          // animation restarts on every change.
+          key={countdown}
+          className="text-[56px] font-bold leading-none text-white phone-sm:text-[48px]"
+          style={{ animation: "afk-count-pop 0.5s ease-out" }}
+        >
+          {countdown}
+        </span>
+      ) : recording ? (
+        <WaveformIcon />
+      ) : (
+        <MicIcon />
+      )}
+      <style>{`
+        @keyframes afk-count-pop {
+          0% { transform: scale(0.6); opacity: 0; }
+          40% { transform: scale(1.15); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
     </button>
   );
 }

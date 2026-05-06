@@ -190,6 +190,28 @@ interface PathRepoState {
    * surfaces a snackbar.
    */
   advanceCycle: () => Promise<void>;
+  /**
+   * Replace the question at `(cycle, levelId, qIndex)` in the in-memory
+   * bundle with `replacement`, persist the patched bundle to localStorage,
+   * and notify subscribers. The `qIndex` is the **slot** index (1..7) —
+   * the original question's position. The replacement may carry a
+   * different `promptEn`/`imageUrl` but the slot's `qIndex` is preserved
+   * so the audio filename slug `pNN-Lx-qy` keeps pointing at the slot.
+   *
+   * No backend call here — the swap was already persisted server-side
+   * by the `question_swap` edge function call that produced `replacement`.
+   * This method just keeps the cached bundle in sync without forcing a
+   * full `paths_get` round-trip.
+   *
+   * Throws if `boot()` hasn't run yet or if the cycle/level/slot doesn't
+   * exist in the cached bundle (silent no-op would be a bug).
+   */
+  applyQuestionSwap: (
+    cycle: number,
+    levelId: number,
+    qIndex: number,
+    replacement: import("@/lib/content/models").LevelQuestionData,
+  ) => void;
   /** Dev-only: wipe caches and rotate device id. */
   reset: () => void;
 }
@@ -520,6 +542,58 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
       writeCachedBundle(merged);
       writeCachedProgress(nextProgress);
       set({ bundle: merged, progress: nextProgress, isReady: true, error: null });
+    },
+
+    applyQuestionSwap: (cycle, levelId, qIndex, replacement) => {
+      const bundle = get().bundle;
+      if (!bundle) {
+        throw new Error("applyQuestionSwap called before boot()");
+      }
+      const cycleIdx = bundle.findIndex((c) => c.cycle === cycle);
+      if (cycleIdx === -1) {
+        throw new Error(`applyQuestionSwap: cycle ${cycle} not in bundle`);
+      }
+      const cycleDef = bundle[cycleIdx];
+      const levelIdx = cycleDef.levels.findIndex(
+        (l) => l.levelId === levelId,
+      );
+      if (levelIdx === -1) {
+        throw new Error(
+          `applyQuestionSwap: cycle ${cycle} level ${levelId} not in bundle`,
+        );
+      }
+      const levelDef = cycleDef.levels[levelIdx];
+      const qIdx = levelDef.questions.findIndex((q) => q.qIndex === qIndex);
+      if (qIdx === -1) {
+        throw new Error(
+          `applyQuestionSwap: cycle ${cycle} level ${levelId} q_index ${qIndex} not in bundle`,
+        );
+      }
+
+      // Force the slot's original qIndex onto the replacement so the
+      // audio filename slug never drifts, even if a future server
+      // change starts echoing the replacement's own qIndex back.
+      const patchedQuestion: import("@/lib/content/models").LevelQuestionData =
+        {
+          qIndex,
+          promptEn: replacement.promptEn,
+          imageUrl: replacement.imageUrl,
+          languageIso: replacement.languageIso,
+        };
+
+      // Immutable patch: rebuild the questions array, level, cycle, and
+      // bundle so React subscribers see new references all the way up.
+      const nextQuestions = levelDef.questions.slice();
+      nextQuestions[qIdx] = patchedQuestion;
+      const nextLevel = { ...levelDef, questions: nextQuestions };
+      const nextLevels = cycleDef.levels.slice();
+      nextLevels[levelIdx] = nextLevel;
+      const nextCycle = { ...cycleDef, levels: nextLevels };
+      const nextBundle = bundle.slice();
+      nextBundle[cycleIdx] = nextCycle;
+
+      writeCachedBundle(nextBundle);
+      set({ bundle: nextBundle });
     },
 
     reset: () => {

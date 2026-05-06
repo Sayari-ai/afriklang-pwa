@@ -86,6 +86,66 @@ export interface RecordingResult {
   durationSec: number;
 }
 
+/**
+ * Acquire a microphone `MediaStream` *synchronously inside a user
+ * gesture*. This is split out from `WavRecorder.start()` because iOS
+ * Safari (≤17 at the time of writing) only honours `getUserMedia` if
+ * it's invoked from a synchronously-reachable code path of a user
+ * gesture handler. Any `setTimeout` / `setInterval` indirection in
+ * between (e.g. our 3-2-1 countdown) loses the gesture token and the
+ * native permission prompt is silently suppressed.
+ *
+ * Pattern:
+ *   onClick = () => {
+ *     const streamP = acquireMicStream();   // gesture preserved
+ *     startCountdown(() => {
+ *       streamP.then((s) => recorder.startWithStream(s));
+ *     });
+ *   };
+ *
+ * Returns a Promise so callers can keep the synchronous call shape
+ * but await the actual permission decision later. On rejection, the
+ * error matches the shape thrown by `WavRecorder.start()` so the
+ * existing snackbar copy keeps working.
+ */
+export function acquireMicStream(): Promise<MediaStream> {
+  if (!isAudioRecordingSupported()) {
+    return Promise.reject(
+      new RecorderError(
+        "Audio recording is not supported in this browser.",
+        "unsupported",
+      ),
+    );
+  }
+  return navigator.mediaDevices
+    .getUserMedia({
+      audio: {
+        channelCount: 1,
+        sampleRate: WAV_TARGET_SAMPLE_RATE, // hint; iOS ignores
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+      video: false,
+    })
+    .catch((e) => {
+      const name = (e as { name?: string }).name ?? "";
+      if (name === "NotAllowedError" || name === "SecurityError") {
+        throw new RecorderError(
+          "Microphone permission denied.",
+          "permission-denied",
+        );
+      }
+      if (name === "NotFoundError" || name === "OverconstrainedError") {
+        throw new RecorderError("No usable microphone found.", "no-mic");
+      }
+      throw new RecorderError(
+        `getUserMedia failed: ${(e as Error).message}`,
+        "internal",
+      );
+    });
+}
+
 export class WavRecorder {
   private ctx: AudioContext | null = null;
   private stream: MediaStream | null = null;
@@ -99,17 +159,21 @@ export class WavRecorder {
    * Acquires the mic, sets up the pipeline, and starts buffering. On
    * second + subsequent calls within the same instance, returns the
    * in-flight promise rather than re-opening the device.
+   *
+   * If `preAcquiredStream` is provided, skips the internal
+   * `getUserMedia` call and adopts the caller's stream. This is the
+   * iOS-Safari-safe path: see `acquireMicStream()`.
    */
-  async start(): Promise<void> {
+  async start(preAcquiredStream?: MediaStream): Promise<void> {
     if (this.starting) return this.starting;
     if (this.isRecording) return;
-    this.starting = this.startInternal().finally(() => {
+    this.starting = this.startInternal(preAcquiredStream).finally(() => {
       this.starting = null;
     });
     return this.starting;
   }
 
-  private async startInternal(): Promise<void> {
+  private async startInternal(preAcquiredStream?: MediaStream): Promise<void> {
     if (!isAudioRecordingSupported()) {
       throw new RecorderError(
         "Audio recording is not supported in this browser.",
@@ -117,31 +181,22 @@ export class WavRecorder {
       );
     }
 
-    // Acquire mic. Most permission errors land here.
+    // Acquire mic if the caller didn't already. Most permission errors
+    // land in `acquireMicStream`; this branch handles the legacy
+    // direct-`start()` path.
     let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: WAV_TARGET_SAMPLE_RATE, // hint; iOS ignores
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-        video: false,
-      });
-    } catch (e) {
-      const name = (e as { name?: string }).name ?? "";
-      if (name === "NotAllowedError" || name === "SecurityError") {
-        throw new RecorderError("Microphone permission denied.", "permission-denied");
+    if (preAcquiredStream) {
+      stream = preAcquiredStream;
+    } else {
+      try {
+        stream = await acquireMicStream();
+      } catch (e) {
+        if (e instanceof RecorderError) throw e;
+        throw new RecorderError(
+          `getUserMedia failed: ${(e as Error).message}`,
+          "internal",
+        );
       }
-      if (name === "NotFoundError" || name === "OverconstrainedError") {
-        throw new RecorderError("No usable microphone found.", "no-mic");
-      }
-      throw new RecorderError(
-        `getUserMedia failed: ${(e as Error).message}`,
-        "internal",
-      );
     }
 
     let ctx: AudioContext;

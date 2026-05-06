@@ -283,12 +283,26 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-dvh w-full overflow-hidden bg-[#7BC96F]">
-      {/* Scrollable map. The bg.png is *inside* the scroller (one tile
-          per cycle, stacked vertically), so it scrolls with the nodes
-          rather than staying fixed to the viewport. The page bg
-          (#7BC96F) shows through if the scroller is shorter than the
-          viewport. Padded at the bottom so the last visible row clears
-          the floating bottom-nav. */}
+      {/* Background — a single bg.png tile pinned to the viewport.
+          It does NOT scroll with the nodes; the level curve scrolls
+          over it. Sits in a layer below the scroller (z-0). The page
+          bg (#7BC96F) shows through any letterboxing. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0"
+      >
+        <Image
+          src="/images/bg.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+        />
+      </div>
+
+      {/* Scrollable nodes. Padded at the bottom so the last visible
+          row clears the floating bottom-nav. */}
       <div
         ref={scrollerRef}
         className="relative z-[1] h-dvh w-full overflow-y-auto overscroll-y-contain"
@@ -297,39 +311,13 @@ export default function HomePage() {
         }}
       >
         {/* Node container: width 100%, height = width × aspect ×
-            cycleCount. Each cycle gets one full bg tile and one
-            copy of the 8 node positions, stacked top-to-bottom with
-            cycle 1 at the *bottom*. */}
+            cycleCount. Each cycle gets one copy of the 8 node
+            positions, stacked top-to-bottom with cycle 1 at the
+            *bottom*. The bg lives outside this scroller (above). */}
         <div
           className="relative w-full"
           style={{ paddingTop: `${MAP_ASPECT * cycleCount * 100}%` }}
         >
-          {/* Background tiles. We render `cycleCount` copies of bg.png,
-              each occupying `1/cycleCount` of the container's height.
-              `next/image` with `fill` needs an absolutely-positioned
-              parent — give each tile its own wrapper. The newest cycle
-              (top) gets `priority` so the initial paint above the fold
-              lights up fast; older cycles below load lazily. */}
-          {Array.from({ length: cycleCount }).map((_, idx) => (
-            <div
-              key={idx}
-              className="pointer-events-none absolute left-0 w-full"
-              style={{
-                top: `${(idx / cycleCount) * 100}%`,
-                height: `${(1 / cycleCount) * 100}%`,
-              }}
-            >
-              <Image
-                src="/images/bg.png"
-                alt=""
-                fill
-                priority={idx === 0}
-                sizes="100vw"
-                className="object-cover"
-              />
-            </div>
-          ))}
-
           {/* Level nodes. Each anchored absolutely in the map's own
               coordinate system. `dy` is already in global (whole-map)
               normalized space — see the `useMemo` above. */}

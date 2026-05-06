@@ -4,7 +4,9 @@
  * Sayari audio-upload client.
  *
  * Mirrors `lib/core/api/audio_api.dart`. Single endpoint:
- *   POST {NEXT_PUBLIC_SAYARI_BASE_URL}/api/audio/upload
+ *   POST /api/audio-upload   (same-origin Next.js Route Handler that
+ *   proxies to Sayari server-side — see
+ *   `src/app/api/audio-upload/route.ts` for why)
  *   multipart/form-data
  *     fields:
  *       language            (required)  ISO 639-1/-3 code
@@ -52,11 +54,15 @@
  *     message so the snackbar isn't a stack trace.
  */
 
-const DEFAULT_BASE_URL =
-  "https://sayari-labeling-aitool-backend-f910.up.railway.app";
+const DEFAULT_BASE_URL = "";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SAYARI_BASE_URL?.replace(/\/+$/, "") ?? DEFAULT_BASE_URL;
+// We always POST to a same-origin proxy. The actual Sayari URL is
+// configured server-side via `SAYARI_BASE_URL` (see
+// `src/app/api/audio-upload/route.ts`). Keeping the proxy in front
+// avoids Sayari's CORS allowlist, which only includes
+// `http://localhost:3000` and would otherwise make the deployed PWA
+// see successful uploads as `TypeError: Failed to fetch`.
+const BASE_URL = DEFAULT_BASE_URL;
 
 /** Per-call timeout. Railway cold starts can take ~20 s, so don't
  *  set this too aggressively. */
@@ -110,7 +116,7 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<void> {
     );
   }
 
-  const url = `${BASE_URL}/api/audio/upload`;
+  const url = `${BASE_URL}/api/audio-upload`;
 
   // Build the multipart body. We don't reuse this across calls — the
   // function is single-shot now, but `FormData` is also single-shot
