@@ -91,9 +91,9 @@ export interface RecordingResult {
  * gesture*. This is split out from `WavRecorder.start()` because iOS
  * Safari (≤17 at the time of writing) only honours `getUserMedia` if
  * it's invoked from a synchronously-reachable code path of a user
- * gesture handler. Any `setTimeout` / `setInterval` indirection in
- * between (e.g. our 3-2-1 countdown) loses the gesture token and the
- * native permission prompt is silently suppressed.
+ * gesture handler. Any `setTimeout` / `setInterval` / `await` in
+ * between loses the gesture token and the native permission prompt
+ * is silently suppressed.
  *
  * Pattern:
  *   onClick = () => {
@@ -144,6 +144,31 @@ export function acquireMicStream(): Promise<MediaStream> {
         "internal",
       );
     });
+}
+
+/**
+ * Prefetch the AudioWorklet module so that the first user tap on the
+ * mic button doesn't pay the network + parse cost (200–500 ms on
+ * phones). Safe to call multiple times — `<link rel="prefetch">` is
+ * the lightest-weight primitive that warms the HTTP cache without
+ * needing an AudioContext (which would itself require a user
+ * gesture on iOS).
+ *
+ * Call this on the level screen mount.
+ */
+export function prewarmAudioWorklet(): void {
+  if (typeof document === "undefined") return;
+  // Avoid duplicate inserts on remount.
+  const existing = document.head.querySelector(
+    `link[data-afk-prefetch="${WORKLET_URL}"]`,
+  );
+  if (existing) return;
+  const link = document.createElement("link");
+  link.rel = "prefetch";
+  link.as = "script";
+  link.href = WORKLET_URL;
+  link.setAttribute("data-afk-prefetch", WORKLET_URL);
+  document.head.appendChild(link);
 }
 
 export class WavRecorder {
@@ -233,6 +258,21 @@ export class WavRecorder {
     // Do NOT connect the node to `ctx.destination` — that would feed
     // the user's voice back into their speakers (echo). The worklet is
     // a sink, the connection above is enough to drive `process()`.
+
+    // iOS Safari can hand back a context in "suspended" state when
+    // it's constructed inside a Promise chain (we are: getUserMedia
+    // already awaited above). The worklet's process() never runs in
+    // suspended state, so the recording would silently capture zero
+    // chunks and `stop()` would throw "No audio captured." Defensive
+    // resume — `getUserMedia` itself counts as an extending gesture
+    // so this almost always succeeds.
+    if (ctx.state === "suspended") {
+      try {
+        await ctx.resume();
+      } catch {
+        // best-effort
+      }
+    }
 
     this.ctx = ctx;
     this.stream = stream;

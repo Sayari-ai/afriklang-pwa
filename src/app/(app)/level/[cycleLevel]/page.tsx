@@ -48,7 +48,7 @@ import { uploadAudio, AudioUploadError } from "@/lib/api/audio";
 import { EdgeFunctionError } from "@/lib/api/edge";
 import { swapQuestion } from "@/lib/api/questions";
 import { buildRecordingFilename } from "@/lib/audio/filename";
-import { RecorderError, WavRecorder, acquireMicStream } from "@/lib/audio/recorder";
+import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
 import { type LevelDefinition } from "@/lib/content/models";
 import {
   formatCycleLevelParam,
@@ -60,7 +60,7 @@ import { useLearningLanguage } from "@/stores/learning-language";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
 
-type Phase = "idle" | "countdown" | "recording" | "review";
+type Phase = "idle" | "recording" | "review";
 
 export default function LevelPage({
   params,
@@ -138,10 +138,6 @@ export default function LevelPage({
   const [step, setStep] = useState(1); // 1-based
   const [phase, setPhase] = useState<Phase>("idle");
   const [elapsedSec, setElapsedSec] = useState(0);
-  // 3-2-1 countdown shown on the mic button before recording starts.
-  // null = no countdown active. Decreases once per second; when it
-  // would tick past 0 we transition to `recording`.
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   // Holds the most recent recording blob for the current question.
   // Cleared whenever we leave review (advance, retake, skip).
@@ -149,17 +145,13 @@ export default function LevelPage({
 
   const recorderRef = useRef<WavRecorder | null>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // 3-2-1 countdown timer handle. Lives in a ref so we can cancel it
-  // from cleanup and from `stopRecording` without needing it in any
-  // dependency array.
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Mic stream pre-acquired synchronously during the user-gesture
-  // click handler that kicks off the countdown. iOS Safari requires
-  // `getUserMedia` to be called from a synchronously-reachable code
-  // path of the gesture handler — `setInterval` callbacks lose the
-  // gesture token and the OS prompt is silently suppressed. So we
-  // grab the stream right away and hold it for the worklet to adopt
-  // when the countdown completes. See `acquireMicStream()` doc.
+  // click handler. iOS Safari requires `getUserMedia` to be called
+  // from a synchronously-reachable code path of the gesture handler;
+  // any awaits before the call lose the gesture token and the OS
+  // prompt is silently suppressed. So we grab the stream right away
+  // in `toggleRecord` and hold it for the worklet to adopt inside
+  // `startRecording`. See `acquireMicStream()` doc.
   const pendingStreamRef = useRef<Promise<MediaStream> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackUrlRef = useRef<string | null>(null);
@@ -184,13 +176,17 @@ export default function LevelPage({
   // Cleanup: stop the recorder + ticker + revoke any blob URLs when
   // the screen is torn down (back-button or replace).
   useEffect(() => {
+    // Warm the AudioWorklet HTTP cache so the first mic tap doesn't
+    // wait on a 200–500 ms network round-trip. Safe to call on every
+    // mount — the helper dedupes via a marker <link> in <head>.
+    prewarmAudioWorklet();
     return () => {
       if (tickerRef.current) clearInterval(tickerRef.current);
-      if (countdownRef.current) clearInterval(countdownRef.current);
       const rec = recorderRef.current;
       if (rec) void rec.dispose();
-      // If the user backed out mid-countdown, release the
-      // pre-acquired mic stream so the OS indicator goes away.
+      // If the user backed out before the recorder adopted the
+      // pre-acquired mic stream, release it so the OS indicator
+      // goes away.
       const pending = pendingStreamRef.current;
       if (pending) {
         pending
@@ -224,14 +220,6 @@ export default function LevelPage({
     }
   };
 
-  const stopCountdown = () => {
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-      countdownRef.current = null;
-    }
-    setCountdown(null);
-  };
-
   const startRecording = useCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -250,11 +238,11 @@ export default function LevelPage({
       }
       setRecording(null);
 
-      // Adopt the mic stream that `beginCountdown` pre-acquired during
-      // the user-gesture click. If for any reason it's not there
-      // (defensive: countdown was bypassed), fall back to the
-      // recorder's internal `getUserMedia`. That fallback path won't
-      // work on iOS Safari but is safe on Chrome / Firefox / Android.
+      // Adopt the mic stream that the click handler pre-acquired
+      // during the user gesture. If for some reason it's missing
+      // (defensive: programmatic call), fall back to the recorder's
+      // internal `getUserMedia`. That fallback path won't work on
+      // iOS Safari but is safe on Chrome / Firefox / Android.
       const pending = pendingStreamRef.current;
       pendingStreamRef.current = null;
       const stream = pending ? await pending : undefined;
@@ -282,41 +270,25 @@ export default function LevelPage({
   }, [t]);
 
   /**
-   * Show a 3 → 2 → 1 countdown on the mic button, then call
-   * `startRecording`. Idempotent: a second call while already counting
-   * down (or already recording) is a no-op.
+   * Begin a fresh recording attempt. MUST run synchronously inside a
+   * user-gesture event handler (the mic-button click or retake click)
+   * so that `acquireMicStream()` retains its iOS Safari gesture token.
    *
-   * Why a separate phase rather than a brief delay-then-record:
-   *   - The mic button must remain visibly disabled and show the
-   *     digit, so the user knows recording hasn't started yet.
-   *   - The label flips to `levelGetReady` so screen readers announce
-   *     the state change explicitly.
+   * iOS Safari mic-permission dance: `getUserMedia` MUST be called
+   * synchronously from the user-gesture handler. Any prior `await`
+   * loses the gesture token and the OS prompt is silently suppressed.
+   * We therefore stash the Promise on a ref while still in the gesture
+   * tick, then `startRecording` adopts the resolved stream.
    *
-   * iOS Safari mic-permission dance: we MUST call `getUserMedia`
-   * synchronously from the user-gesture handler (the click that
-   * triggered `beginCountdown`). `setInterval` callbacks lose the
-   * gesture token, so deferring `getUserMedia` until after the
-   * countdown silently suppresses the permission prompt on iOS.
-   *
-   * Workaround: kick off `acquireMicStream()` right here while the
-   * gesture is still alive, stash the Promise on a ref, and let
-   * `startRecording` adopt the resolved stream once the countdown
-   * fires. The OS prompt may appear immediately (overlapping the
-   * countdown) — that's fine: once accepted, the digit keeps ticking
-   * and recording starts at zero.
+   * Idempotent: a second call while already recording is a no-op.
    */
-  const beginCountdown = useCallback(() => {
-    // Allowed entry points: idle (initial take) and review (retake).
-    // Reject if a countdown or recording is already in flight.
-    if (phase === "countdown" || phase === "recording") return;
-    if (countdownRef.current) return;
+  const beginRecording = useCallback(() => {
+    if (phase === "recording") return;
 
     // CRITICAL: synchronous getUserMedia call inside the gesture
     // handler. Don't await — just stash the promise. If the user
     // denies, `startRecording` will surface the snackbar and reset
-    // to idle. If we're mid-countdown when that happens, that's OK:
-    // the permission prompt itself paused the JS event loop until
-    // the user dismissed it, so the countdown timer is paused too.
+    // to idle.
     if (!pendingStreamRef.current) {
       pendingStreamRef.current = acquireMicStream();
       // Swallow unhandledrejection — `startRecording` re-throws and
@@ -324,31 +296,7 @@ export default function LevelPage({
       pendingStreamRef.current.catch(() => {});
     }
 
-    setPhase("countdown");
-    setCountdown(3);
-    countdownRef.current = setInterval(() => {
-      setCountdown((n) => {
-        // n is the digit currently *displayed*. After 1s, decrement.
-        // When we'd tick past 1, clear the interval and start
-        // recording. Use the functional setter so we don't capture
-        // a stale `countdown` value.
-        if (n === null) return null;
-        if (n <= 1) {
-          if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
-          }
-          // Defer `startRecording` so we don't call setState during
-          // a setState callback.
-          queueMicrotask(() => {
-            setCountdown(null);
-            void startRecording();
-          });
-          return n;
-        }
-        return n - 1;
-      });
-    }, 1000);
+    void startRecording();
   }, [phase, startRecording]);
 
   const stopRecording = useCallback(async () => {
@@ -380,12 +328,10 @@ export default function LevelPage({
 
   const toggleRecord = () => {
     if (phase === "idle") {
-      beginCountdown();
+      beginRecording();
     } else if (phase === "recording") {
       void stopRecording();
     }
-    // `countdown` phase: tap is a no-op. The button is also disabled
-    // visually so this branch shouldn't fire in practice.
   };
 
   // ---------------------------------------------------------------
@@ -393,7 +339,7 @@ export default function LevelPage({
   // ---------------------------------------------------------------
 
   const onRetake = () => {
-    beginCountdown();
+    beginRecording();
   };
 
   const onListen = () => {
@@ -573,7 +519,6 @@ export default function LevelPage({
     }
     setRecording(null);
     stopTimer();
-    stopCountdown();
     // Release any mic stream that was pre-acquired for an
     // about-to-start take but never adopted by the recorder.
     const pending = pendingStreamRef.current;
@@ -793,16 +738,11 @@ export default function LevelPage({
             <>
               <RecordButton
                 recording={isRecording}
-                countdown={phase === "countdown" ? countdown : null}
                 onClick={toggleRecord}
               />
               <div className="h-3" />
               <p className="text-[18px] font-semibold text-white">
-                {phase === "countdown"
-                  ? t("levelGetReady")
-                  : isRecording
-                    ? t("levelTapToStop")
-                    : t("levelTapToRecord")}
+                {isRecording ? t("levelTapToStop") : t("levelTapToRecord")}
               </p>
             </>
           )}
@@ -951,64 +891,36 @@ function QuestionContent({
 
 function RecordButton({
   recording,
-  countdown,
   onClick,
 }: {
   recording: boolean;
-  /** Non-null while the 3-2-1 countdown is active. The digit is
-   *  rendered inside the button and the click is disabled. */
-  countdown: number | null;
   onClick: () => void;
 }) {
-  const counting = countdown !== null;
   // Idle green #66BB6A → active red #E53935 (matches Flutter tokens).
-  // During countdown we keep the green hue but dim the glow to hint
-  // the button is non-interactive.
   const color = recording ? "#E53935" : "#66BB6A";
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={counting}
-      aria-label={
-        counting
-          ? `Recording starts in ${countdown}`
-          : recording
-            ? "Stop recording"
-            : "Start recording"
-      }
-      aria-live={counting ? "polite" : undefined}
+      aria-label={recording ? "Stop recording" : "Start recording"}
       className="relative flex h-[100px] w-[100px] items-center justify-center rounded-full phone-sm:h-[88px] phone-sm:w-[88px]"
       style={{
         backgroundColor: color,
-        boxShadow: counting
-          ? `0 0 12px 1px ${color}55`
-          : `0 0 18px 2px ${color}80`,
-        opacity: counting ? 0.85 : 1,
+        boxShadow: `0 0 18px 2px ${color}80`,
+        // Kill the iOS Safari 300ms tap delay AND prevent the touch
+        // landing on the inner <svg>/<span> children from being
+        // re-routed away from the button. Without this, on iPhone +
+        // some Android browsers the second tap (the one meant to stop
+        // recording) can be swallowed by the WaveformIcon's animated
+        // child elements.
+        touchAction: "manipulation",
       }}
     >
-      {counting ? (
-        <span
-          // Pop the digit each tick — key on the value so the CSS
-          // animation restarts on every change.
-          key={countdown}
-          className="text-[56px] font-bold leading-none text-white phone-sm:text-[48px]"
-          style={{ animation: "afk-count-pop 0.5s ease-out" }}
-        >
-          {countdown}
-        </span>
-      ) : recording ? (
-        <WaveformIcon />
-      ) : (
-        <MicIcon />
-      )}
-      <style>{`
-        @keyframes afk-count-pop {
-          0% { transform: scale(0.6); opacity: 0; }
-          40% { transform: scale(1.15); opacity: 1; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
+      {/* `pointer-events: none` on the icon ensures every tap on the
+          circle hits the <button>, never an animated child. */}
+      <span className="pointer-events-none flex items-center justify-center">
+        {recording ? <WaveformIcon /> : <MicIcon />}
+      </span>
     </button>
   );
 }
