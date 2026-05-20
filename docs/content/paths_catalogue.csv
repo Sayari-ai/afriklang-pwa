@@ -1,0 +1,801 @@
+path_id,level_id,q_index,theme,prompt_en,image_concept,search_query,license_filter
+1,1,1,Food,A ripe yellow mango on a wooden table,close-up of mango fruit on rustic wood,mango fruit wooden table,cc-or-royalty-free
+1,1,2,Food,A bowl of white rice,steaming white rice in ceramic bowl,bowl of white rice,cc-or-royalty-free
+1,1,3,Food,A loaf of fresh bread,crusty baguette on cutting board,fresh bread loaf,cc-or-royalty-free
+1,2,1,Body,A person's right hand showing the palm,open palm of hand on plain background,open hand palm,cc-or-royalty-free
+1,2,2,Body,A close-up of a smiling mouth,smiling mouth showing teeth,smiling mouth close up,cc-or-royalty-free
+1,2,3,Body,A child's bare foot,small bare foot on neutral background,child bare foot,cc-or-royalty-free
+1,2,4,Body,A pair of brown human eyes,close-up of brown eyes,brown human eyes close up,cc-or-royalty-free
+1,3,1,Family,A mother holding her baby,african mother cradling infant,mother holding baby,cc-or-royalty-free
+1,3,2,Family,A grandfather sitting with a grandchild,elderly man with young child laughing,grandfather grandchild,cc-or-royalty-free
+1,3,3,Family,Two sisters laughing together,two young women laughing outdoors,two sisters laughing,cc-or-royalty-free
+1,3,4,Family,A father teaching his son to ride a bike,father helping son on bicycle,father son bicycle learning,cc-or-royalty-free
+1,3,5,Family,A family eating dinner around a table,family dinner together at home,family eating dinner table,cc-or-royalty-free
+1,4,1,Market,A vendor selling tomatoes,market stall with tomatoes,market tomato vendor west africa,cc-or-royalty-free
+1,4,2,Market,A woman carrying a basket on her head,woman with basket on head walking,woman basket on head africa,cc-or-royalty-free
+1,4,3,Market,A pile of fresh fish on a market table,fresh fish at outdoor market,fresh fish market table,cc-or-royalty-free
+1,4,4,Market,A stack of colorful fabrics for sale,african wax print fabrics stacked,african wax fabric market,cc-or-royalty-free
+1,4,5,Market,A shopkeeper handing change to a customer,small shop transaction money exchange,shopkeeper handing change,cc-or-royalty-free
+1,4,6,Market,A boy carrying groceries home,boy carrying shopping bag,boy carrying groceries,cc-or-royalty-free
+1,5,1,Daily,A man brushing his teeth,man brushing teeth bathroom mirror,man brushing teeth,cc-or-royalty-free
+1,5,2,Daily,A woman preparing breakfast,woman cooking breakfast in kitchen,woman preparing breakfast africa,cc-or-royalty-free
+1,5,3,Daily,A child walking to school with a backpack,child with school backpack walking,child walking to school backpack,cc-or-royalty-free
+1,5,4,Daily,A taxi driving down a busy street,yellow taxi on city street,yellow taxi busy street africa,cc-or-royalty-free
+1,5,5,Daily,A woman washing clothes by hand,hand washing laundry in basin,hand washing clothes basin,cc-or-royalty-free
+1,5,6,Daily,A family watching television in the evening,family on couch watching TV,family watching television evening,cc-or-royalty-free
+1,5,7,Daily,A man sweeping a courtyard at sunrise,man sweeping yard with broom morning,sweeping courtyard morning broom,cc-or-royalty-free
+1,6,1,Weather,Heavy rain falling on a tin roof,rain on corrugated metal roof,rain on tin roof,cc-or-royalty-free
+1,6,2,Weather,Bright sun over a sandy beach,intense sunshine on beach,bright sun sandy beach,cc-or-royalty-free
+1,6,3,Weather,Dark storm clouds gathering,dramatic storm clouds in sky,storm clouds gathering dark,cc-or-royalty-free
+1,6,4,Weather,A rainbow over green hills,rainbow arcing over landscape,rainbow over green hills,cc-or-royalty-free
+1,6,5,Weather,Wind blowing through tall grass,wind bending tall grass field,wind blowing tall grass,cc-or-royalty-free
+1,6,6,Weather,Mist rising from a river at dawn,morning fog over river,mist river dawn,cc-or-royalty-free
+1,7,1,Celebration,A bride and groom at a wedding,african wedding bride and groom,african wedding couple,cc-or-royalty-free
+1,7,2,Celebration,A drummer playing a sabar drum,man playing sabar drum,sabar drum player senegal,cc-or-royalty-free
+1,7,3,Celebration,Children dancing at a festival,children dancing in colorful clothes,children dancing festival africa,cc-or-royalty-free
+1,7,4,Celebration,A birthday cake with lit candles,birthday cake with burning candles,birthday cake lit candles,cc-or-royalty-free
+1,7,5,Celebration,Fireworks lighting up a night sky,fireworks display night sky,fireworks night sky celebration,cc-or-royalty-free
+1,8,1,Storytelling,An elder telling stories under a baobab tree,old man speaking under baobab,elder storytelling baobab tree,cc-or-royalty-free
+1,8,2,Storytelling,Children listening to a story by firelight,kids around campfire listening,children around campfire listening,cc-or-royalty-free
+1,8,3,Storytelling,A griot playing a kora,griot musician playing kora,griot kora player west africa,cc-or-royalty-free
+1,8,4,Storytelling,A handwritten book of folktales,old book with handwritten pages,old handwritten folktale book,cc-or-royalty-free
+2,1,1,Food,A bunch of green plantains,a bunch of green plantains,A bunch of green plantains,cc-or-royalty-free
+2,1,2,Food,A plate of jollof rice,a plate of jollof rice,A plate of jollof rice,cc-or-royalty-free
+2,1,3,Food,A cup of black coffee,a cup of black coffee,A cup of black coffee,cc-or-royalty-free
+2,2,1,Body,A clenched fist held up high,a clenched fist held up high,A clenched fist held up high,cc-or-royalty-free
+2,2,2,Body,A pair of laughing lips,a pair of laughing lips,A pair of laughing lips,cc-or-royalty-free
+2,2,3,Body,A foot wearing a sandal,a foot wearing a sandal,A foot wearing a sandal,cc-or-royalty-free
+2,2,4,Body,A pair of dark eyes looking sideways,a pair of dark eyes looking sideways,A pair of dark eyes looking sideways,cc-or-royalty-free
+2,3,1,Family,A grandmother braiding a girl's hair,a grandmother braiding a girl's hair,A grandmother braiding a girl's hair,cc-or-royalty-free
+2,3,2,Family,Two brothers playing chess,two brothers playing chess,Two brothers playing chess,cc-or-royalty-free
+2,3,3,Family,A mother feeding her toddler,a mother feeding her toddler,A mother feeding her toddler,cc-or-royalty-free
+2,3,4,Family,A father carrying his daughter on shoulders,a father carrying his daughter on shoulders,A father carrying his daughter on shoulders,cc-or-royalty-free
+2,3,5,Family,A family taking a group photo,a family taking a group photo,A family taking a group photo,cc-or-royalty-free
+2,4,1,Market,A man weighing peppers on a scale,a man weighing peppers on a scale,A man weighing peppers on a scale,cc-or-royalty-free
+2,4,2,Market,A girl helping her mother sell oranges,a girl helping her mother sell oranges,A girl helping her mother sell oranges,cc-or-royalty-free
+2,4,3,Market,A row of woven baskets for sale,a row of woven baskets for sale,A row of woven baskets for sale,cc-or-royalty-free
+2,4,4,Market,A vendor cutting watermelon for customers,a vendor cutting watermelon for customers,A vendor cutting watermelon for customers,cc-or-royalty-free
+2,4,5,Market,A boy pushing a wheelbarrow of yams,a boy pushing a wheelbarrow of yams,A boy pushing a wheelbarrow of yams,cc-or-royalty-free
+2,4,6,Market,A woman counting bills at her stall,a woman counting bills at her stall,A woman counting bills at her stall,cc-or-royalty-free
+2,5,1,Daily,A man shaving in front of a mirror,a man shaving in front of a mirror,A man shaving in front of a mirror,cc-or-royalty-free
+2,5,2,Daily,A woman frying eggs in a pan,a woman frying eggs in a pan,A woman frying eggs in a pan,cc-or-royalty-free
+2,5,3,Daily,A child waiting at a school bus stop,a child waiting at a school bus stop,A child waiting at a school bus stop,cc-or-royalty-free
+2,5,4,Daily,A motorbike weaving through traffic,a motorbike weaving through traffic,A motorbike weaving through traffic,cc-or-royalty-free
+2,5,5,Daily,A man hanging shirts on a clothesline,a man hanging shirts on a clothesline,A man hanging shirts on a clothesline,cc-or-royalty-free
+2,5,6,Daily,A family playing cards under a lamp,a family playing cards under a lamp,A family playing cards under a lamp,cc-or-royalty-free
+2,5,7,Daily,A woman fetching water from a tap,a woman fetching water from a tap,A woman fetching water from a tap,cc-or-royalty-free
+2,6,1,Weather,Lightning over a city skyline,lightning over a city skyline,Lightning over a city skyline,cc-or-royalty-free
+2,6,2,Weather,Sun setting behind a baobab tree,sun setting behind a baobab tree,Sun setting behind a baobab tree,cc-or-royalty-free
+2,6,3,Weather,Hail bouncing off a road,hail bouncing off a road,Hail bouncing off a road,cc-or-royalty-free
+2,6,4,Weather,Fog rolling over a mountain,fog rolling over a mountain,Fog rolling over a mountain,cc-or-royalty-free
+2,6,5,Weather,A dust storm sweeping across the desert,a dust storm sweeping across the desert,A dust storm sweeping across the desert,cc-or-royalty-free
+2,6,6,Weather,Frost forming on a window,frost forming on a window,Frost forming on a window,cc-or-royalty-free
+2,7,1,Celebration,A couple cutting a wedding cake,a couple cutting a wedding cake,A couple cutting a wedding cake,cc-or-royalty-free
+2,7,2,Celebration,A flutist playing at a celebration,a flutist playing at a celebration,A flutist playing at a celebration,cc-or-royalty-free
+2,7,3,Celebration,Children waving flags at a parade,children waving flags at a parade,Children waving flags at a parade,cc-or-royalty-free
+2,7,4,Celebration,A grandmother blowing out birthday candles,a grandmother blowing out birthday candles,A grandmother blowing out birthday candles,cc-or-royalty-free
+2,7,5,Celebration,Sparklers held by friends in the dark,sparklers held by friends in the dark,Sparklers held by friends in the dark,cc-or-royalty-free
+2,8,1,Storytelling,A grandmother telling a bedtime story,a grandmother telling a bedtime story,A grandmother telling a bedtime story,cc-or-royalty-free
+2,8,2,Storytelling,A village storyteller surrounded by children,a village storyteller surrounded by children,A village storyteller surrounded by children,cc-or-royalty-free
+2,8,3,Storytelling,A musician playing the balafon,a musician playing the balafon,A musician playing the balafon,cc-or-royalty-free
+2,8,4,Storytelling,A worn book of fables on a desk,a worn book of fables on a desk,A worn book of fables on a desk,cc-or-royalty-free
+3,1,1,Food,A red tomato sliced in half,a red tomato sliced in half,A red tomato sliced in half,cc-or-royalty-free
+3,1,2,Food,A pot of bubbling stew,a pot of bubbling stew,A pot of bubbling stew,cc-or-royalty-free
+3,1,3,Food,A single boiled egg on a plate,a single boiled egg on a plate,A single boiled egg on a plate,cc-or-royalty-free
+3,2,1,Body,A hand giving a thumbs up,a hand giving a thumbs up,A hand giving a thumbs up,cc-or-royalty-free
+3,2,2,Body,A face with closed eyes,a face with closed eyes,A face with closed eyes,cc-or-royalty-free
+3,2,3,Body,A foot stepping on sand,a foot stepping on sand,A foot stepping on sand,cc-or-royalty-free
+3,2,4,Body,A pair of eyes peering over glasses,a pair of eyes peering over glasses,A pair of eyes peering over glasses,cc-or-royalty-free
+3,3,1,Family,A grandfather telling stories to grandchildren,a grandfather telling stories to grandchildren,A grandfather telling stories to grandchildren,cc-or-royalty-free
+3,3,2,Family,A mother and daughter cooking together,a mother and daughter cooking together,A mother and daughter cooking together,cc-or-royalty-free
+3,3,3,Family,Two cousins splashing in water,two cousins splashing in water,Two cousins splashing in water,cc-or-royalty-free
+3,3,4,Family,A father reading a book to his children,a father reading a book to his children,A father reading a book to his children,cc-or-royalty-free
+3,3,5,Family,A family watching the sunset,a family watching the sunset,A family watching the sunset,cc-or-royalty-free
+3,4,1,Market,A vendor pouring rice into a sack,a vendor pouring rice into a sack,A vendor pouring rice into a sack,cc-or-royalty-free
+3,4,2,Market,A man holding a live chicken at the market,a man holding a live chicken at the market,A man holding a live chicken at the market,cc-or-royalty-free
+3,4,3,Market,A row of jewelry on a velvet cloth,a row of jewelry on a velvet cloth,A row of jewelry on a velvet cloth,cc-or-royalty-free
+3,4,4,Market,A woman bargaining over a price,a woman bargaining over a price,A woman bargaining over a price,cc-or-royalty-free
+3,4,5,Market,A boy carrying a tray of bread on his head,a boy carrying a tray of bread on his head,A boy carrying a tray of bread on his head,cc-or-royalty-free
+3,4,6,Market,A girl tasting a piece of fruit at a stall,a girl tasting a piece of fruit at a stall,A girl tasting a piece of fruit at a stall,cc-or-royalty-free
+3,5,1,Daily,A man tying his shoelaces,a man tying his shoelaces,A man tying his shoelaces,cc-or-royalty-free
+3,5,2,Daily,A woman pouring tea into a glass,a woman pouring tea into a glass,A woman pouring tea into a glass,cc-or-royalty-free
+3,5,3,Daily,A child eating breakfast in uniform,a child eating breakfast in uniform,A child eating breakfast in uniform,cc-or-royalty-free
+3,5,4,Daily,A bicycle rider crossing a bridge,a bicycle rider crossing a bridge,A bicycle rider crossing a bridge,cc-or-royalty-free
+3,5,5,Daily,A man scrubbing a pot with sand,a man scrubbing a pot with sand,A man scrubbing a pot with sand,cc-or-royalty-free
+3,5,6,Daily,A family eating dinner by candlelight,a family eating dinner by candlelight,A family eating dinner by candlelight,cc-or-royalty-free
+3,5,7,Daily,A woman sweeping the front steps,a woman sweeping the front steps,A woman sweeping the front steps,cc-or-royalty-free
+3,6,1,Weather,Heavy rain on banana leaves,heavy rain on banana leaves,Heavy rain on banana leaves,cc-or-royalty-free
+3,6,2,Weather,A blue cloudless sky over a field,a blue cloudless sky over a field,A blue cloudless sky over a field,cc-or-royalty-free
+3,6,3,Weather,Snow on a mountain peak,snow on a mountain peak,Snow on a mountain peak,cc-or-royalty-free
+3,6,4,Weather,A dramatic sunrise over the savanna,a dramatic sunrise over the savanna,A dramatic sunrise over the savanna,cc-or-royalty-free
+3,6,5,Weather,Wind bending palm trees,wind bending palm trees,Wind bending palm trees,cc-or-royalty-free
+3,6,6,Weather,Drizzle on a quiet street,drizzle on a quiet street,Drizzle on a quiet street,cc-or-royalty-free
+3,7,1,Celebration,A bride being lifted in a chair,a bride being lifted in a chair,A bride being lifted in a chair,cc-or-royalty-free
+3,7,2,Celebration,A man playing the kora at a party,a man playing the kora at a party,A man playing the kora at a party,cc-or-royalty-free
+3,7,3,Celebration,Children with painted faces at a carnival,children with painted faces at a carnival,Children with painted faces at a carnival,cc-or-royalty-free
+3,7,4,Celebration,A baby tasting their first birthday cake,a baby tasting their first birthday cake,A baby tasting their first birthday cake,cc-or-royalty-free
+3,7,5,Celebration,Fireworks reflected on a river,fireworks reflected on a river,Fireworks reflected on a river,cc-or-royalty-free
+3,8,1,Storytelling,An old man teaching a proverb to youth,an old man teaching a proverb to youth,An old man teaching a proverb to youth,cc-or-royalty-free
+3,8,2,Storytelling,Children acting out a folktale,children acting out a folktale,Children acting out a folktale,cc-or-royalty-free
+3,8,3,Storytelling,A drummer accompanying a storyteller,a drummer accompanying a storyteller,A drummer accompanying a storyteller,cc-or-royalty-free
+3,8,4,Storytelling,An open scroll of myths,an open scroll of myths,An open scroll of myths,cc-or-royalty-free
+4,1,1,Food,A pile of roasted peanuts,a pile of roasted peanuts,A pile of roasted peanuts,cc-or-royalty-free
+4,1,2,Food,A bowl of fresh fruit salad,a bowl of fresh fruit salad,A bowl of fresh fruit salad,cc-or-royalty-free
+4,1,3,Food,A glass of orange juice,a glass of orange juice,A glass of orange juice,cc-or-royalty-free
+4,2,1,Body,Two hands clapping together,two hands clapping together,Two hands clapping together,cc-or-royalty-free
+4,2,2,Body,A nose with a small piercing,a nose with a small piercing,A nose with a small piercing,cc-or-royalty-free
+4,2,3,Body,A foot kicking a ball,a foot kicking a ball,A foot kicking a ball,cc-or-royalty-free
+4,2,4,Body,A pair of green eyes,a pair of green eyes,A pair of green eyes,cc-or-royalty-free
+4,3,1,Family,A grandmother knitting beside her grandchild,a grandmother knitting beside her grandchild,A grandmother knitting beside her grandchild,cc-or-royalty-free
+4,3,2,Family,Two brothers helping their mother carry bags,two brothers helping their mother carry bags,Two brothers helping their mother carry bags,cc-or-royalty-free
+4,3,3,Family,A father holding a newborn,a father holding a newborn,A father holding a newborn,cc-or-royalty-free
+4,3,4,Family,A mother and son walking to school,a mother and son walking to school,A mother and son walking to school,cc-or-royalty-free
+4,3,5,Family,A family planting a tree together,a family planting a tree together,A family planting a tree together,cc-or-royalty-free
+4,4,1,Market,A vendor frying fish at the roadside,a vendor frying fish at the roadside,A vendor frying fish at the roadside,cc-or-royalty-free
+4,4,2,Market,A man arranging shoes in neat rows,a man arranging shoes in neat rows,A man arranging shoes in neat rows,cc-or-royalty-free
+4,4,3,Market,A woman tying up a bundle of greens,a woman tying up a bundle of greens,A woman tying up a bundle of greens,cc-or-royalty-free
+4,4,4,Market,A boy chasing a goat through the market,a boy chasing a goat through the market,A boy chasing a goat through the market,cc-or-royalty-free
+4,4,5,Market,A vendor selling spices in clear jars,a vendor selling spices in clear jars,A vendor selling spices in clear jars,cc-or-royalty-free
+4,4,6,Market,A girl holding a colorful kite,a girl holding a colorful kite,A girl holding a colorful kite,cc-or-royalty-free
+4,5,1,Daily,A man buttoning his shirt,a man buttoning his shirt,A man buttoning his shirt,cc-or-royalty-free
+4,5,2,Daily,A woman braiding her own hair,a woman braiding her own hair,A woman braiding her own hair,cc-or-royalty-free
+4,5,3,Daily,A child finishing homework at a desk,a child finishing homework at a desk,A child finishing homework at a desk,cc-or-royalty-free
+4,5,4,Daily,A bus filling with passengers,a bus filling with passengers,A bus filling with passengers,cc-or-royalty-free
+4,5,5,Daily,A man washing a car with a hose,a man washing a car with a hose,A man washing a car with a hose,cc-or-royalty-free
+4,5,6,Daily,A family reading the newspaper together,a family reading the newspaper together,A family reading the newspaper together,cc-or-royalty-free
+4,5,7,Daily,A woman feeding chickens in a yard,a woman feeding chickens in a yard,A woman feeding chickens in a yard,cc-or-royalty-free
+4,6,1,Weather,Storm clouds over the ocean,storm clouds over the ocean,Storm clouds over the ocean,cc-or-royalty-free
+4,6,2,Weather,Sunlight streaming through a forest,sunlight streaming through a forest,Sunlight streaming through a forest,cc-or-royalty-free
+4,6,3,Weather,Puddles after a heavy downpour,puddles after a heavy downpour,Puddles after a heavy downpour,cc-or-royalty-free
+4,6,4,Weather,A double rainbow over a lake,a double rainbow over a lake,A double rainbow over a lake,cc-or-royalty-free
+4,6,5,Weather,Strong wind whipping a flag,strong wind whipping a flag,Strong wind whipping a flag,cc-or-royalty-free
+4,6,6,Weather,Steam rising from wet pavement after rain,steam rising from wet pavement after rain,Steam rising from wet pavement after rain,cc-or-royalty-free
+4,7,1,Celebration,A wedding reception under a tent,a wedding reception under a tent,A wedding reception under a tent,cc-or-royalty-free
+4,7,2,Celebration,A band of dancers in matching outfits,a band of dancers in matching outfits,A band of dancers in matching outfits,cc-or-royalty-free
+4,7,3,Celebration,Children riding a carousel,children riding a carousel,Children riding a carousel,cc-or-royalty-free
+4,7,4,Celebration,A man being congratulated on his graduation,a man being congratulated on his graduation,A man being congratulated on his graduation,cc-or-royalty-free
+4,7,5,Celebration,Confetti falling at a stage performance,confetti falling at a stage performance,Confetti falling at a stage performance,cc-or-royalty-free
+4,8,1,Storytelling,A historian explaining a map to students,a historian explaining a map to students,A historian explaining a map to students,cc-or-royalty-free
+4,8,2,Storytelling,Children reciting a tale together,children reciting a tale together,Children reciting a tale together,cc-or-royalty-free
+4,8,3,Storytelling,A flutist providing music to a story,a flutist providing music to a story,A flutist providing music to a story,cc-or-royalty-free
+4,8,4,Storytelling,A library shelf full of folk-story books,a library shelf full of folk-story books,A library shelf full of folk-story books,cc-or-royalty-free
+5,1,1,Food,A piece of grilled fish on a plate,a piece of grilled fish on a plate,A piece of grilled fish on a plate,cc-or-royalty-free
+5,1,2,Food,A bowl of pepper soup,a bowl of pepper soup,A bowl of pepper soup,cc-or-royalty-free
+5,1,3,Food,A wedge of watermelon,a wedge of watermelon,A wedge of watermelon,cc-or-royalty-free
+5,2,1,Body,A hand waving hello,a hand waving hello,A hand waving hello,cc-or-royalty-free
+5,2,2,Body,A wide open mouth laughing,a wide open mouth laughing,A wide open mouth laughing,cc-or-royalty-free
+5,2,3,Body,A foot resting on a stool,a foot resting on a stool,A foot resting on a stool,cc-or-royalty-free
+5,2,4,Body,A pair of tired sleepy eyes,a pair of tired sleepy eyes,A pair of tired sleepy eyes,cc-or-royalty-free
+5,3,1,Family,A grandfather teaching a grandchild to fish,a grandfather teaching a grandchild to fish,A grandfather teaching a grandchild to fish,cc-or-royalty-free
+5,3,2,Family,Two sisters sharing a snack,two sisters sharing a snack,Two sisters sharing a snack,cc-or-royalty-free
+5,3,3,Family,A mother combing her daughter's hair,a mother combing her daughter's hair,A mother combing her daughter's hair,cc-or-royalty-free
+5,3,4,Family,A father and son fixing a bike,a father and son fixing a bike,A father and son fixing a bike,cc-or-royalty-free
+5,3,5,Family,A family praying together,a family praying together,A family praying together,cc-or-royalty-free
+5,4,1,Market,A vendor pouring oil into a bottle,a vendor pouring oil into a bottle,A vendor pouring oil into a bottle,cc-or-royalty-free
+5,4,2,Market,A woman sorting beans into piles,a woman sorting beans into piles,A woman sorting beans into piles,cc-or-royalty-free
+5,4,3,Market,A man slicing pineapple with a machete,a man slicing pineapple with a machete,A man slicing pineapple with a machete,cc-or-royalty-free
+5,4,4,Market,A row of leather sandals for sale,a row of leather sandals for sale,A row of leather sandals for sale,cc-or-royalty-free
+5,4,5,Market,A boy collecting empty bottles,a boy collecting empty bottles,A boy collecting empty bottles,cc-or-royalty-free
+5,4,6,Market,A girl carrying a chicken under her arm,a girl carrying a chicken under her arm,A girl carrying a chicken under her arm,cc-or-royalty-free
+5,5,1,Daily,A man yawning in front of a window,a man yawning in front of a window,A man yawning in front of a window,cc-or-royalty-free
+5,5,2,Daily,A woman ironing a shirt,a woman ironing a shirt,A woman ironing a shirt,cc-or-royalty-free
+5,5,3,Daily,A child packing books into a bag,a child packing books into a bag,A child packing books into a bag,cc-or-royalty-free
+5,5,4,Daily,A boda boda picking up a passenger,a boda boda picking up a passenger,A boda boda picking up a passenger,cc-or-royalty-free
+5,5,5,Daily,A man fixing a leaky tap,a man fixing a leaky tap,A man fixing a leaky tap,cc-or-royalty-free
+5,5,6,Daily,A family praying before a meal,a family praying before a meal,A family praying before a meal,cc-or-royalty-free
+5,5,7,Daily,A woman boiling water on a stove,a woman boiling water on a stove,A woman boiling water on a stove,cc-or-royalty-free
+5,6,1,Weather,A flooded street after heavy rain,a flooded street after heavy rain,A flooded street after heavy rain,cc-or-royalty-free
+5,6,2,Weather,A crescent moon in a clear sky,a crescent moon in a clear sky,A crescent moon in a clear sky,cc-or-royalty-free
+5,6,3,Weather,Lightning bolt across a dark sky,lightning bolt across a dark sky,Lightning bolt across a dark sky,cc-or-royalty-free
+5,6,4,Weather,Sunset behind a mosque,sunset behind a mosque,Sunset behind a mosque,cc-or-royalty-free
+5,6,5,Weather,Fog over a coffee plantation,fog over a coffee plantation,Fog over a coffee plantation,cc-or-royalty-free
+5,6,6,Weather,Wind moving a curtain through an open window,wind moving a curtain through an open window,Wind moving a curtain through an open window,cc-or-royalty-free
+5,7,1,Celebration,A bride holding a bouquet of flowers,a bride holding a bouquet of flowers,A bride holding a bouquet of flowers,cc-or-royalty-free
+5,7,2,Celebration,A drummer leading a procession,a drummer leading a procession,A drummer leading a procession,cc-or-royalty-free
+5,7,3,Celebration,Children running with sparklers,children running with sparklers,Children running with sparklers,cc-or-royalty-free
+5,7,4,Celebration,A graduation cap being thrown in the air,a graduation cap being thrown in the air,A graduation cap being thrown in the air,cc-or-royalty-free
+5,7,5,Celebration,A streamer-filled birthday party room,a streamer-filled birthday party room,A streamer-filled birthday party room,cc-or-royalty-free
+5,8,1,Storytelling,An elder gesturing while telling a tale,an elder gesturing while telling a tale,An elder gesturing while telling a tale,cc-or-royalty-free
+5,8,2,Storytelling,Children laughing at a funny story,children laughing at a funny story,Children laughing at a funny story,cc-or-royalty-free
+5,8,3,Storytelling,A young man learning to play the kora,a young man learning to play the kora,A young man learning to play the kora,cc-or-royalty-free
+5,8,4,Storytelling,A poster of a famous folktale,a poster of a famous folktale,A poster of a famous folktale,cc-or-royalty-free
+6,1,1,Food,A stack of pancakes with honey,a stack of pancakes with honey,A stack of pancakes with honey,cc-or-royalty-free
+6,1,2,Food,A bowl of millet porridge,a bowl of millet porridge,A bowl of millet porridge,cc-or-royalty-free
+6,1,3,Food,A plate of fried plantains,a plate of fried plantains,A plate of fried plantains,cc-or-royalty-free
+6,2,1,Body,A hand pointing forward,a hand pointing forward,A hand pointing forward,cc-or-royalty-free
+6,2,2,Body,An ear with an earring,an ear with an earring,An ear with an earring,cc-or-royalty-free
+6,2,3,Body,A pair of feet in running shoes,a pair of feet in running shoes,A pair of feet in running shoes,cc-or-royalty-free
+6,2,4,Body,A pair of eyes wearing eyeliner,a pair of eyes wearing eyeliner,A pair of eyes wearing eyeliner,cc-or-royalty-free
+6,3,1,Family,A grandmother and grandson baking bread,a grandmother and grandson baking bread,A grandmother and grandson baking bread,cc-or-royalty-free
+6,3,2,Family,Two siblings sharing one umbrella,two siblings sharing one umbrella,Two siblings sharing one umbrella,cc-or-royalty-free
+6,3,3,Family,A mother carrying twin babies,a mother carrying twin babies,A mother carrying twin babies,cc-or-royalty-free
+6,3,4,Family,A father lifting his child in the air,a father lifting his child in the air,A father lifting his child in the air,cc-or-royalty-free
+6,3,5,Family,A family gathered around a campfire,a family gathered around a campfire,A family gathered around a campfire,cc-or-royalty-free
+6,4,1,Market,A vendor stacking onions in a pyramid,a vendor stacking onions in a pyramid,A vendor stacking onions in a pyramid,cc-or-royalty-free
+6,4,2,Market,A man selling sunglasses from a tray,a man selling sunglasses from a tray,A man selling sunglasses from a tray,cc-or-royalty-free
+6,4,3,Market,A woman wrapping fish in newspaper,a woman wrapping fish in newspaper,A woman wrapping fish in newspaper,cc-or-royalty-free
+6,4,4,Market,A row of dried fish on a table,a row of dried fish on a table,A row of dried fish on a table,cc-or-royalty-free
+6,4,5,Market,A boy paying with coins at a stall,a boy paying with coins at a stall,A boy paying with coins at a stall,cc-or-royalty-free
+6,4,6,Market,A girl holding a balloon at the market,a girl holding a balloon at the market,A girl holding a balloon at the market,cc-or-royalty-free
+6,5,1,Daily,A man combing his hair,a man combing his hair,A man combing his hair,cc-or-royalty-free
+6,5,2,Daily,A woman rolling out dough,a woman rolling out dough,A woman rolling out dough,cc-or-royalty-free
+6,5,3,Daily,A child tying their tie for school,a child tying their tie for school,A child tying their tie for school,cc-or-royalty-free
+6,5,4,Daily,A truck unloading goods at a shop,a truck unloading goods at a shop,A truck unloading goods at a shop,cc-or-royalty-free
+6,5,5,Daily,A man mending a torn shirt,a man mending a torn shirt,A man mending a torn shirt,cc-or-royalty-free
+6,5,6,Daily,A family telling jokes at the table,a family telling jokes at the table,A family telling jokes at the table,cc-or-royalty-free
+6,5,7,Daily,A woman hanging a baby in a wrap,a woman hanging a baby in a wrap,A woman hanging a baby in a wrap,cc-or-royalty-free
+6,6,1,Weather,Rain dripping off the edge of a thatched roof,rain dripping off the edge of a thatched roof,Rain dripping off the edge of a thatched roof,cc-or-royalty-free
+6,6,2,Weather,Sunlight glinting off corrugated metal,sunlight glinting off corrugated metal,Sunlight glinting off corrugated metal,cc-or-royalty-free
+6,6,3,Weather,A clear starry night over a village,a clear starry night over a village,A clear starry night over a village,cc-or-royalty-free
+6,6,4,Weather,Heat haze over a long road,heat haze over a long road,Heat haze over a long road,cc-or-royalty-free
+6,6,5,Weather,A whirlwind moving across a dry field,a whirlwind moving across a dry field,A whirlwind moving across a dry field,cc-or-royalty-free
+6,6,6,Weather,A red sky at sunset,a red sky at sunset,A red sky at sunset,cc-or-royalty-free
+6,7,1,Celebration,A traditional wedding ceremony outdoors,a traditional wedding ceremony outdoors,A traditional wedding ceremony outdoors,cc-or-royalty-free
+6,7,2,Celebration,A trumpeter playing in a brass band,a trumpeter playing in a brass band,A trumpeter playing in a brass band,cc-or-royalty-free
+6,7,3,Celebration,Children watching dancers in colorful costumes,children watching dancers in colorful costumes,Children watching dancers in colorful costumes,cc-or-royalty-free
+6,7,4,Celebration,A surprise party with friends jumping out,a surprise party with friends jumping out,A surprise party with friends jumping out,cc-or-royalty-free
+6,7,5,Celebration,A New Year's countdown crowd,a new year's countdown crowd,A New Year's countdown crowd,cc-or-royalty-free
+6,8,1,Storytelling,A teacher reading a story to a class,a teacher reading a story to a class,A teacher reading a story to a class,cc-or-royalty-free
+6,8,2,Storytelling,Children with eyes wide during a story,children with eyes wide during a story,Children with eyes wide during a story,cc-or-royalty-free
+6,8,3,Storytelling,A pair of musicians backing a storyteller,a pair of musicians backing a storyteller,A pair of musicians backing a storyteller,cc-or-royalty-free
+6,8,4,Storytelling,An illustrated children's storybook,an illustrated children's storybook,An illustrated children's storybook,cc-or-royalty-free
+7,1,1,Food,A roasted yam on a plate,a roasted yam on a plate,A roasted yam on a plate,cc-or-royalty-free
+7,1,2,Food,A bowl of okra soup,a bowl of okra soup,A bowl of okra soup,cc-or-royalty-free
+7,1,3,Food,A glass of cold milk,a glass of cold milk,A glass of cold milk,cc-or-royalty-free
+7,2,1,Body,A hand holding a pencil,a hand holding a pencil,A hand holding a pencil,cc-or-royalty-free
+7,2,2,Body,A small chin with a dimple,a small chin with a dimple,A small chin with a dimple,cc-or-royalty-free
+7,2,3,Body,A foot covered in mud,a foot covered in mud,A foot covered in mud,cc-or-royalty-free
+7,2,4,Body,A pair of eyes squinting in sunlight,a pair of eyes squinting in sunlight,A pair of eyes squinting in sunlight,cc-or-royalty-free
+7,3,1,Family,A grandfather walking with a cane and grandchild,a grandfather walking with a cane and grandchild,A grandfather walking with a cane and grandchild,cc-or-royalty-free
+7,3,2,Family,Two sisters writing a letter together,two sisters writing a letter together,Two sisters writing a letter together,cc-or-royalty-free
+7,3,3,Family,A mother kissing her child's forehead,a mother kissing her child's forehead,A mother kissing her child's forehead,cc-or-royalty-free
+7,3,4,Family,A father and daughter painting a wall,a father and daughter painting a wall,A father and daughter painting a wall,cc-or-royalty-free
+7,3,5,Family,A family decorating a house for a holiday,a family decorating a house for a holiday,A family decorating a house for a holiday,cc-or-royalty-free
+7,4,1,Market,A vendor bagging peanuts in plastic,a vendor bagging peanuts in plastic,A vendor bagging peanuts in plastic,cc-or-royalty-free
+7,4,2,Market,A man fixing a watch at a small stall,a man fixing a watch at a small stall,A man fixing a watch at a small stall,cc-or-royalty-free
+7,4,3,Market,A woman carrying firewood on her back,a woman carrying firewood on her back,A woman carrying firewood on her back,cc-or-royalty-free
+7,4,4,Market,A row of secondhand shoes on cardboard,a row of secondhand shoes on cardboard,A row of secondhand shoes on cardboard,cc-or-royalty-free
+7,4,5,Market,A boy delivering tea in small glasses,a boy delivering tea in small glasses,A boy delivering tea in small glasses,cc-or-royalty-free
+7,4,6,Market,A girl admiring beads at a jewelry stall,a girl admiring beads at a jewelry stall,A girl admiring beads at a jewelry stall,cc-or-royalty-free
+7,5,1,Daily,A man making the bed,a man making the bed,A man making the bed,cc-or-royalty-free
+7,5,2,Daily,A woman pouring rice into a pot,a woman pouring rice into a pot,A woman pouring rice into a pot,cc-or-royalty-free
+7,5,3,Daily,A child polishing school shoes,a child polishing school shoes,A child polishing school shoes,cc-or-royalty-free
+7,5,4,Daily,A car horn-honking in traffic,a car horn-honking in traffic,A car horn-honking in traffic,cc-or-royalty-free
+7,5,5,Daily,A man scrubbing the floor with a brush,a man scrubbing the floor with a brush,A man scrubbing the floor with a brush,cc-or-royalty-free
+7,5,6,Daily,A family playing music in the living room,a family playing music in the living room,A family playing music in the living room,cc-or-royalty-free
+7,5,7,Daily,A woman counting eggs from a basket,a woman counting eggs from a basket,A woman counting eggs from a basket,cc-or-royalty-free
+7,6,1,Weather,A drenched umbrella in a doorway,a drenched umbrella in a doorway,A drenched umbrella in a doorway,cc-or-royalty-free
+7,6,2,Weather,Sunbeams breaking through clouds,sunbeams breaking through clouds,Sunbeams breaking through clouds,cc-or-royalty-free
+7,6,3,Weather,Snow on rooftops in a high town,snow on rooftops in a high town,Snow on rooftops in a high town,cc-or-royalty-free
+7,6,4,Weather,A pink dawn over rice fields,a pink dawn over rice fields,A pink dawn over rice fields,cc-or-royalty-free
+7,6,5,Weather,A breeze moving prayer flags,a breeze moving prayer flags,A breeze moving prayer flags,cc-or-royalty-free
+7,6,6,Weather,Smoke from a chimney in cold air,smoke from a chimney in cold air,Smoke from a chimney in cold air,cc-or-royalty-free
+7,7,1,Celebration,A bride dancing with her father,a bride dancing with her father,A bride dancing with her father,cc-or-royalty-free
+7,7,2,Celebration,A guitarist performing at a community event,a guitarist performing at a community event,A guitarist performing at a community event,cc-or-royalty-free
+7,7,3,Celebration,Children holding balloons at a fair,children holding balloons at a fair,Children holding balloons at a fair,cc-or-royalty-free
+7,7,4,Celebration,A team celebrating a championship win,a team celebrating a championship win,A team celebrating a championship win,cc-or-royalty-free
+7,7,5,Celebration,A bonfire surrounded by celebrating friends,a bonfire surrounded by celebrating friends,A bonfire surrounded by celebrating friends,cc-or-royalty-free
+7,8,1,Storytelling,A grandfather acting out characters in a story,a grandfather acting out characters in a story,A grandfather acting out characters in a story,cc-or-royalty-free
+7,8,2,Storytelling,Children clapping along during a tale,children clapping along during a tale,Children clapping along during a tale,cc-or-royalty-free
+7,8,3,Storytelling,A storyteller with a calabash drum,a storyteller with a calabash drum,A storyteller with a calabash drum,cc-or-royalty-free
+7,8,4,Storytelling,A handwritten poem on parchment,a handwritten poem on parchment,A handwritten poem on parchment,cc-or-royalty-free
+8,1,1,Food,A piece of chocolate cake,a piece of chocolate cake,A piece of chocolate cake,cc-or-royalty-free
+8,1,2,Food,A bowl of attiéké,a bowl of attiéké,A bowl of attiéké,cc-or-royalty-free
+8,1,3,Food,A grilled chicken leg,a grilled chicken leg,A grilled chicken leg,cc-or-royalty-free
+8,2,1,Body,A hand washing under tap water,a hand washing under tap water,A hand washing under tap water,cc-or-royalty-free
+8,2,2,Body,A face with painted cheeks,a face with painted cheeks,A face with painted cheeks,cc-or-royalty-free
+8,2,3,Body,A foot soaking in a basin,a foot soaking in a basin,A foot soaking in a basin,cc-or-royalty-free
+8,2,4,Body,A pair of curious wide eyes,a pair of curious wide eyes,A pair of curious wide eyes,cc-or-royalty-free
+8,3,1,Family,A grandmother sweeping with her grandchild,a grandmother sweeping with her grandchild,A grandmother sweeping with her grandchild,cc-or-royalty-free
+8,3,2,Family,Two brothers sharing earbuds,two brothers sharing earbuds,Two brothers sharing earbuds,cc-or-royalty-free
+8,3,3,Family,A mother breastfeeding her baby,a mother breastfeeding her baby,A mother breastfeeding her baby,cc-or-royalty-free
+8,3,4,Family,A father carrying groceries with his kids,a father carrying groceries with his kids,A father carrying groceries with his kids,cc-or-royalty-free
+8,3,5,Family,A family playing a board game,a family playing a board game,A family playing a board game,cc-or-royalty-free
+8,4,1,Market,A vendor grinding peppers in a mortar,a vendor grinding peppers in a mortar,A vendor grinding peppers in a mortar,cc-or-royalty-free
+8,4,2,Market,A man selling cassettes from a wooden box,a man selling cassettes from a wooden box,A man selling cassettes from a wooden box,cc-or-royalty-free
+8,4,3,Market,A woman sweeping in front of her stall,a woman sweeping in front of her stall,A woman sweeping in front of her stall,cc-or-royalty-free
+8,4,4,Market,A row of clay pots for sale,a row of clay pots for sale,A row of clay pots for sale,cc-or-royalty-free
+8,4,5,Market,A boy carrying a sack of charcoal,a boy carrying a sack of charcoal,A boy carrying a sack of charcoal,cc-or-royalty-free
+8,4,6,Market,A girl helping a customer choose a cloth,a girl helping a customer choose a cloth,A girl helping a customer choose a cloth,cc-or-royalty-free
+8,5,1,Daily,A man drinking coffee from a small cup,a man drinking coffee from a small cup,A man drinking coffee from a small cup,cc-or-royalty-free
+8,5,2,Daily,A woman slicing onions,a woman slicing onions,A woman slicing onions,cc-or-royalty-free
+8,5,3,Daily,A child running to catch a school bus,a child running to catch a school bus,A child running to catch a school bus,cc-or-royalty-free
+8,5,4,Daily,A van full of vegetables headed to market,a van full of vegetables headed to market,A van full of vegetables headed to market,cc-or-royalty-free
+8,5,5,Daily,A man washing windows with a cloth,a man washing windows with a cloth,A man washing windows with a cloth,cc-or-royalty-free
+8,5,6,Daily,A family sitting in a circle on a mat,a family sitting in a circle on a mat,A family sitting in a circle on a mat,cc-or-royalty-free
+8,5,7,Daily,A woman sweeping a verandah,a woman sweeping a verandah,A woman sweeping a verandah,cc-or-royalty-free
+8,6,1,Weather,Rain hitting a window pane,rain hitting a window pane,Rain hitting a window pane,cc-or-royalty-free
+8,6,2,Weather,Heat shimmering above asphalt,heat shimmering above asphalt,Heat shimmering above asphalt,cc-or-royalty-free
+8,6,3,Weather,Frost on the grass at dawn,frost on the grass at dawn,Frost on the grass at dawn,cc-or-royalty-free
+8,6,4,Weather,Stars over a desert dune,stars over a desert dune,Stars over a desert dune,cc-or-royalty-free
+8,6,5,Weather,A wind chime spinning in a storm,a wind chime spinning in a storm,A wind chime spinning in a storm,cc-or-royalty-free
+8,6,6,Weather,Rays of sun through stained glass,rays of sun through stained glass,Rays of sun through stained glass,cc-or-royalty-free
+8,7,1,Celebration,A wedding photographer capturing a group,a wedding photographer capturing a group,A wedding photographer capturing a group,cc-or-royalty-free
+8,7,2,Celebration,A choir singing at a celebration,a choir singing at a celebration,A choir singing at a celebration,cc-or-royalty-free
+8,7,3,Celebration,Children watching a magic show,children watching a magic show,Children watching a magic show,cc-or-royalty-free
+8,7,4,Celebration,A baby's naming ceremony,a baby's naming ceremony,A baby's naming ceremony,cc-or-royalty-free
+8,7,5,Celebration,A street parade with floats,a street parade with floats,A street parade with floats,cc-or-royalty-free
+8,8,1,Storytelling,A village chief telling a history lesson,a village chief telling a history lesson,A village chief telling a history lesson,cc-or-royalty-free
+8,8,2,Storytelling,Children pointing at imaginary characters,children pointing at imaginary characters,Children pointing at imaginary characters,cc-or-royalty-free
+8,8,3,Storytelling,A xylophonist playing under a tree,a xylophonist playing under a tree,A xylophonist playing under a tree,cc-or-royalty-free
+8,8,4,Storytelling,A bookshelf with old leather-bound volumes,a bookshelf with old leather-bound volumes,A bookshelf with old leather-bound volumes,cc-or-royalty-free
+9,1,1,Food,A handful of dates,a handful of dates,A handful of dates,cc-or-royalty-free
+9,1,2,Food,A plate of fufu and soup,a plate of fufu and soup,A plate of fufu and soup,cc-or-royalty-free
+9,1,3,Food,A cup of ginger tea,a cup of ginger tea,A cup of ginger tea,cc-or-royalty-free
+9,2,1,Body,A hand wearing a wedding ring,a hand wearing a wedding ring,A hand wearing a wedding ring,cc-or-royalty-free
+9,2,2,Body,A forehead with beads of sweat,a forehead with beads of sweat,A forehead with beads of sweat,cc-or-royalty-free
+9,2,3,Body,A foot wrapped in a bandage,a foot wrapped in a bandage,A foot wrapped in a bandage,cc-or-royalty-free
+9,2,4,Body,A pair of focused reading eyes,a pair of focused reading eyes,A pair of focused reading eyes,cc-or-royalty-free
+9,3,1,Family,A grandfather teaching a grandchild to write,a grandfather teaching a grandchild to write,A grandfather teaching a grandchild to write,cc-or-royalty-free
+9,3,2,Family,Two sisters trying on clothes,two sisters trying on clothes,Two sisters trying on clothes,cc-or-royalty-free
+9,3,3,Family,A mother soothing a crying baby,a mother soothing a crying baby,A mother soothing a crying baby,cc-or-royalty-free
+9,3,4,Family,A father showing his son a watch,a father showing his son a watch,A father showing his son a watch,cc-or-royalty-free
+9,3,5,Family,A family arriving at the airport,a family arriving at the airport,A family arriving at the airport,cc-or-royalty-free
+9,4,1,Market,A vendor pouring palm oil into a jug,a vendor pouring palm oil into a jug,A vendor pouring palm oil into a jug,cc-or-royalty-free
+9,4,2,Market,A man slicing meat at a butcher stall,a man slicing meat at a butcher stall,A man slicing meat at a butcher stall,cc-or-royalty-free
+9,4,3,Market,A woman fanning charcoal with a flat tray,a woman fanning charcoal with a flat tray,A woman fanning charcoal with a flat tray,cc-or-royalty-free
+9,4,4,Market,A row of plastic buckets stacked high,a row of plastic buckets stacked high,A row of plastic buckets stacked high,cc-or-royalty-free
+9,4,5,Market,A boy carrying ice in a bucket,a boy carrying ice in a bucket,A boy carrying ice in a bucket,cc-or-royalty-free
+9,4,6,Market,A girl holding a chicken egg in each hand,a girl holding a chicken egg in each hand,A girl holding a chicken egg in each hand,cc-or-royalty-free
+9,5,1,Daily,A man lacing up his boots,a man lacing up his boots,A man lacing up his boots,cc-or-royalty-free
+9,5,2,Daily,A woman milking a goat,a woman milking a goat,A woman milking a goat,cc-or-royalty-free
+9,5,3,Daily,A child reciting a lesson aloud,a child reciting a lesson aloud,A child reciting a lesson aloud,cc-or-royalty-free
+9,5,4,Daily,A van delivering bread early in the morning,a van delivering bread early in the morning,A van delivering bread early in the morning,cc-or-royalty-free
+9,5,5,Daily,A man trimming a hedge with shears,a man trimming a hedge with shears,A man trimming a hedge with shears,cc-or-royalty-free
+9,5,6,Daily,A family lighting a kerosene lamp,a family lighting a kerosene lamp,A family lighting a kerosene lamp,cc-or-royalty-free
+9,5,7,Daily,A woman pounding grain in a mortar,a woman pounding grain in a mortar,A woman pounding grain in a mortar,cc-or-royalty-free
+9,6,1,Weather,Raindrops on a spiderweb,raindrops on a spiderweb,Raindrops on a spiderweb,cc-or-royalty-free
+9,6,2,Weather,Sunset reflected on water,sunset reflected on water,Sunset reflected on water,cc-or-royalty-free
+9,6,3,Weather,A cloud shaped like an animal,a cloud shaped like an animal,A cloud shaped like an animal,cc-or-royalty-free
+9,6,4,Weather,Sunlight on a dewy field,sunlight on a dewy field,Sunlight on a dewy field,cc-or-royalty-free
+9,6,5,Weather,Wind fluttering newspapers down a street,wind fluttering newspapers down a street,Wind fluttering newspapers down a street,cc-or-royalty-free
+9,6,6,Weather,A lightning storm seen through a window,a lightning storm seen through a window,A lightning storm seen through a window,cc-or-royalty-free
+9,7,1,Celebration,A bride and her bridesmaids posing,a bride and her bridesmaids posing,A bride and her bridesmaids posing,cc-or-royalty-free
+9,7,2,Celebration,A traditional flutist by a fire,a traditional flutist by a fire,A traditional flutist by a fire,cc-or-royalty-free
+9,7,3,Celebration,Children holding lanterns at night,children holding lanterns at night,Children holding lanterns at night,cc-or-royalty-free
+9,7,4,Celebration,A senior citizen receiving an award,a senior citizen receiving an award,A senior citizen receiving an award,cc-or-royalty-free
+9,7,5,Celebration,Fireworks bursting over a temple,fireworks bursting over a temple,Fireworks bursting over a temple,cc-or-royalty-free
+9,8,1,Storytelling,An author reading at a community center,an author reading at a community center,An author reading at a community center,cc-or-royalty-free
+9,8,2,Storytelling,Children sitting cross-legged before a storyteller,children sitting cross-legged before a storyteller,Children sitting cross-legged before a storyteller,cc-or-royalty-free
+9,8,3,Storytelling,A traditional musician with face painted,a traditional musician with face painted,A traditional musician with face painted,cc-or-royalty-free
+9,8,4,Storytelling,A notebook full of family proverbs,a notebook full of family proverbs,A notebook full of family proverbs,cc-or-royalty-free
+10,1,1,Food,A bunch of red chili peppers,a bunch of red chili peppers,A bunch of red chili peppers,cc-or-royalty-free
+10,1,2,Food,A bowl of beans porridge,a bowl of beans porridge,A bowl of beans porridge,cc-or-royalty-free
+10,1,3,Food,A roasted corn on the cob,a roasted corn on the cob,A roasted corn on the cob,cc-or-royalty-free
+10,2,1,Body,A hand holding a phone,a hand holding a phone,A hand holding a phone,cc-or-royalty-free
+10,2,2,Body,A neck with a beaded necklace,a neck with a beaded necklace,A neck with a beaded necklace,cc-or-royalty-free
+10,2,3,Body,A foot on a bicycle pedal,a foot on a bicycle pedal,A foot on a bicycle pedal,cc-or-royalty-free
+10,2,4,Body,A pair of eyes behind sunglasses,a pair of eyes behind sunglasses,A pair of eyes behind sunglasses,cc-or-royalty-free
+10,3,1,Family,A grandmother and grandson tending plants,a grandmother and grandson tending plants,A grandmother and grandson tending plants,cc-or-royalty-free
+10,3,2,Family,Two cousins running in the rain,two cousins running in the rain,Two cousins running in the rain,cc-or-royalty-free
+10,3,3,Family,A mother teaching her child to count,a mother teaching her child to count,A mother teaching her child to count,cc-or-royalty-free
+10,3,4,Family,A father pushing a stroller,a father pushing a stroller,A father pushing a stroller,cc-or-royalty-free
+10,3,5,Family,A family unpacking after moving home,a family unpacking after moving home,A family unpacking after moving home,cc-or-royalty-free
+10,4,1,Market,A vendor arranging mangoes in a basket,a vendor arranging mangoes in a basket,A vendor arranging mangoes in a basket,cc-or-royalty-free
+10,4,2,Market,A man repairing shoes in a corner,a man repairing shoes in a corner,A man repairing shoes in a corner,cc-or-royalty-free
+10,4,3,Market,A woman selling bread from a glass case,a woman selling bread from a glass case,A woman selling bread from a glass case,cc-or-royalty-free
+10,4,4,Market,A row of dried herbs hanging from string,a row of dried herbs hanging from string,A row of dried herbs hanging from string,cc-or-royalty-free
+10,4,5,Market,A boy collecting trash at the market entrance,a boy collecting trash at the market entrance,A boy collecting trash at the market entrance,cc-or-royalty-free
+10,4,6,Market,A girl trying on a pair of earrings,a girl trying on a pair of earrings,A girl trying on a pair of earrings,cc-or-royalty-free
+10,5,1,Daily,A man sitting on a bench reading a newspaper,a man sitting on a bench reading a newspaper,A man sitting on a bench reading a newspaper,cc-or-royalty-free
+10,5,2,Daily,A woman lighting a charcoal stove,a woman lighting a charcoal stove,A woman lighting a charcoal stove,cc-or-royalty-free
+10,5,3,Daily,A child wiping a chalkboard,a child wiping a chalkboard,A child wiping a chalkboard,cc-or-royalty-free
+10,5,4,Daily,A donkey cart carrying produce,a donkey cart carrying produce,A donkey cart carrying produce,cc-or-royalty-free
+10,5,5,Daily,A man patching a bicycle tire,a man patching a bicycle tire,A man patching a bicycle tire,cc-or-royalty-free
+10,5,6,Daily,A family welcoming a guest at the door,a family welcoming a guest at the door,A family welcoming a guest at the door,cc-or-royalty-free
+10,5,7,Daily,A woman folding a baby blanket,a woman folding a baby blanket,A woman folding a baby blanket,cc-or-royalty-free
+10,6,1,Weather,Steam rising from a hot drink in cold air,steam rising from a hot drink in cold air,Steam rising from a hot drink in cold air,cc-or-royalty-free
+10,6,2,Weather,Sun rising behind clouds,sun rising behind clouds,Sun rising behind clouds,cc-or-royalty-free
+10,6,3,Weather,Dark rainclouds reflected in a river,dark rainclouds reflected in a river,Dark rainclouds reflected in a river,cc-or-royalty-free
+10,6,4,Weather,Fog hiding the tops of buildings,fog hiding the tops of buildings,Fog hiding the tops of buildings,cc-or-royalty-free
+10,6,5,Weather,Wind blowing leaves across a square,wind blowing leaves across a square,Wind blowing leaves across a square,cc-or-royalty-free
+10,6,6,Weather,A halo around the moon,a halo around the moon,A halo around the moon,cc-or-royalty-free
+10,7,1,Celebration,A wedding feast on a long table,a wedding feast on a long table,A wedding feast on a long table,cc-or-royalty-free
+10,7,2,Celebration,A man playing the talking drum,a man playing the talking drum,A man playing the talking drum,cc-or-royalty-free
+10,7,3,Celebration,Children dancing in matching uniforms,children dancing in matching uniforms,Children dancing in matching uniforms,cc-or-royalty-free
+10,7,4,Celebration,A team holding up a trophy,a team holding up a trophy,A team holding up a trophy,cc-or-royalty-free
+10,7,5,Celebration,A house decorated with festive lights,a house decorated with festive lights,A house decorated with festive lights,cc-or-royalty-free
+10,8,1,Storytelling,An aunt telling a moral tale at dinner,an aunt telling a moral tale at dinner,An aunt telling a moral tale at dinner,cc-or-royalty-free
+10,8,2,Storytelling,Children covering their eyes during a scary story,children covering their eyes during a scary story,Children covering their eyes during a scary story,cc-or-royalty-free
+10,8,3,Storytelling,A storyteller with a colorful staff,a storyteller with a colorful staff,A storyteller with a colorful staff,cc-or-royalty-free
+10,8,4,Storytelling,A printed booklet of local legends,a printed booklet of local legends,A printed booklet of local legends,cc-or-royalty-free
+11,1,1,Food,A piece of suya on a stick,a piece of suya on a stick,A piece of suya on a stick,cc-or-royalty-free
+11,1,2,Food,A bowl of fresh yogurt,a bowl of fresh yogurt,A bowl of fresh yogurt,cc-or-royalty-free
+11,1,3,Food,A plate of injera with stew,a plate of injera with stew,A plate of injera with stew,cc-or-royalty-free
+11,2,1,Body,A hand stirring a pot,a hand stirring a pot,A hand stirring a pot,cc-or-royalty-free
+11,2,2,Body,A shoulder with a tattoo,a shoulder with a tattoo,A shoulder with a tattoo,cc-or-royalty-free
+11,2,3,Body,A foot stepping into water,a foot stepping into water,A foot stepping into water,cc-or-royalty-free
+11,2,4,Body,A pair of newborn baby eyes,a pair of newborn baby eyes,A pair of newborn baby eyes,cc-or-royalty-free
+11,3,1,Family,A grandfather and grandchild fixing a radio,a grandfather and grandchild fixing a radio,A grandfather and grandchild fixing a radio,cc-or-royalty-free
+11,3,2,Family,Two sisters making each other laugh,two sisters making each other laugh,Two sisters making each other laugh,cc-or-royalty-free
+11,3,3,Family,A mother and son shopping at a market,a mother and son shopping at a market,A mother and son shopping at a market,cc-or-royalty-free
+11,3,4,Family,A father and child flying a kite,a father and child flying a kite,A father and child flying a kite,cc-or-royalty-free
+11,3,5,Family,A family sitting on a porch,a family sitting on a porch,A family sitting on a porch,cc-or-royalty-free
+11,4,1,Market,A vendor mixing cosmetics in a small bowl,a vendor mixing cosmetics in a small bowl,A vendor mixing cosmetics in a small bowl,cc-or-royalty-free
+11,4,2,Market,A man cutting sugarcane into short sticks,a man cutting sugarcane into short sticks,A man cutting sugarcane into short sticks,cc-or-royalty-free
+11,4,3,Market,A woman folding fabric on a wooden table,a woman folding fabric on a wooden table,A woman folding fabric on a wooden table,cc-or-royalty-free
+11,4,4,Market,A row of brooms tied together with twine,a row of brooms tied together with twine,A row of brooms tied together with twine,cc-or-royalty-free
+11,4,5,Market,A boy weighing scrap metal at a stall,a boy weighing scrap metal at a stall,A boy weighing scrap metal at a stall,cc-or-royalty-free
+11,4,6,Market,A girl carrying a cup of porridge,a girl carrying a cup of porridge,A girl carrying a cup of porridge,cc-or-royalty-free
+11,5,1,Daily,A man brushing dust off his shoes,a man brushing dust off his shoes,A man brushing dust off his shoes,cc-or-royalty-free
+11,5,2,Daily,A woman pouring milk into a glass,a woman pouring milk into a glass,A woman pouring milk into a glass,cc-or-royalty-free
+11,5,3,Daily,A child raising a hand in class,a child raising a hand in class,A child raising a hand in class,cc-or-royalty-free
+11,5,4,Daily,A tro tro full of commuters,a tro tro full of commuters,A tro tro full of commuters,cc-or-royalty-free
+11,5,5,Daily,A man feeding goats in a pen,a man feeding goats in a pen,A man feeding goats in a pen,cc-or-royalty-free
+11,5,6,Daily,A family sharing tea on a couch,a family sharing tea on a couch,A family sharing tea on a couch,cc-or-royalty-free
+11,5,7,Daily,A woman braiding a daughter's hair,a woman braiding a daughter's hair,A woman braiding a daughter's hair,cc-or-royalty-free
+11,6,1,Weather,Heavy rain on a market awning,heavy rain on a market awning,Heavy rain on a market awning,cc-or-royalty-free
+11,6,2,Weather,Sunlight cutting through dust in the air,sunlight cutting through dust in the air,Sunlight cutting through dust in the air,cc-or-royalty-free
+11,6,3,Weather,Lightning illuminating a tree,lightning illuminating a tree,Lightning illuminating a tree,cc-or-royalty-free
+11,6,4,Weather,Sunset behind a lone tree on a hill,sunset behind a lone tree on a hill,Sunset behind a lone tree on a hill,cc-or-royalty-free
+11,6,5,Weather,Wind moving sails on small boats,wind moving sails on small boats,Wind moving sails on small boats,cc-or-royalty-free
+11,6,6,Weather,Snowflakes on someone's coat,snowflakes on someone's coat,Snowflakes on someone's coat,cc-or-royalty-free
+11,7,1,Celebration,A wedding procession through a village,a wedding procession through a village,A wedding procession through a village,cc-or-royalty-free
+11,7,2,Celebration,A jazz band performing at a wedding,a jazz band performing at a wedding,A jazz band performing at a wedding,cc-or-royalty-free
+11,7,3,Celebration,Children playing tug-of-war at a festival,children playing tug-of-war at a festival,Children playing tug-of-war at a festival,cc-or-royalty-free
+11,7,4,Celebration,A retirement party with a banner,a retirement party with a banner,A retirement party with a banner,cc-or-royalty-free
+11,7,5,Celebration,A laser light show on a stage,a laser light show on a stage,A laser light show on a stage,cc-or-royalty-free
+11,8,1,Storytelling,A radio host telling stories on air,a radio host telling stories on air,A radio host telling stories on air,cc-or-royalty-free
+11,8,2,Storytelling,Children retelling a story to one another,children retelling a story to one another,Children retelling a story to one another,cc-or-royalty-free
+11,8,3,Storytelling,A musician singing an epic poem,a musician singing an epic poem,A musician singing an epic poem,cc-or-royalty-free
+11,8,4,Storytelling,An anthology of African folktales,an anthology of african folktales,An anthology of African folktales,cc-or-royalty-free
+12,1,1,Food,A bowl of egusi soup,a bowl of egusi soup,A bowl of egusi soup,cc-or-royalty-free
+12,1,2,Food,A handful of cashew nuts,a handful of cashew nuts,A handful of cashew nuts,cc-or-royalty-free
+12,1,3,Food,A cup of bissap juice,a cup of bissap juice,A cup of bissap juice,cc-or-royalty-free
+12,2,1,Body,A hand cracking an egg,a hand cracking an egg,A hand cracking an egg,cc-or-royalty-free
+12,2,2,Body,A back covered in a colorful shirt,a back covered in a colorful shirt,A back covered in a colorful shirt,cc-or-royalty-free
+12,2,3,Body,A foot on a yoga mat,a foot on a yoga mat,A foot on a yoga mat,cc-or-royalty-free
+12,2,4,Body,A pair of eyes peeking through a door,a pair of eyes peeking through a door,A pair of eyes peeking through a door,cc-or-royalty-free
+12,3,1,Family,A grandmother handing her grandchild a coin,a grandmother handing her grandchild a coin,A grandmother handing her grandchild a coin,cc-or-royalty-free
+12,3,2,Family,Two brothers wrestling on a mat,two brothers wrestling on a mat,Two brothers wrestling on a mat,cc-or-royalty-free
+12,3,3,Family,A mother giving medicine to her child,a mother giving medicine to her child,A mother giving medicine to her child,cc-or-royalty-free
+12,3,4,Family,A father carrying his sleeping daughter,a father carrying his sleeping daughter,A father carrying his sleeping daughter,cc-or-royalty-free
+12,3,5,Family,A family celebrating a birthday,a family celebrating a birthday,A family celebrating a birthday,cc-or-royalty-free
+12,4,1,Market,A vendor dipping akara into hot oil,a vendor dipping akara into hot oil,A vendor dipping akara into hot oil,cc-or-royalty-free
+12,4,2,Market,A man selling phone chargers from a board,a man selling phone chargers from a board,A man selling phone chargers from a board,cc-or-royalty-free
+12,4,3,Market,A woman braiding straw into mats,a woman braiding straw into mats,A woman braiding straw into mats,cc-or-royalty-free
+12,4,4,Market,A row of toy cars on a blanket,a row of toy cars on a blanket,A row of toy cars on a blanket,cc-or-royalty-free
+12,4,5,Market,A boy running between stalls with a message,a boy running between stalls with a message,A boy running between stalls with a message,cc-or-royalty-free
+12,4,6,Market,A girl helping her father tie up a sack,a girl helping her father tie up a sack,A girl helping her father tie up a sack,cc-or-royalty-free
+12,5,1,Daily,A man closing a metal gate,a man closing a metal gate,A man closing a metal gate,cc-or-royalty-free
+12,5,2,Daily,A woman washing her face at a basin,a woman washing her face at a basin,A woman washing her face at a basin,cc-or-royalty-free
+12,5,3,Daily,A child sharpening a pencil,a child sharpening a pencil,A child sharpening a pencil,cc-or-royalty-free
+12,5,4,Daily,A taxi driver counting fares,a taxi driver counting fares,A taxi driver counting fares,cc-or-royalty-free
+12,5,5,Daily,A man clearing leaves from a path,a man clearing leaves from a path,A man clearing leaves from a path,cc-or-royalty-free
+12,5,6,Daily,A family playing dominoes outdoors,a family playing dominoes outdoors,A family playing dominoes outdoors,cc-or-royalty-free
+12,5,7,Daily,A woman packing food for a journey,a woman packing food for a journey,A woman packing food for a journey,cc-or-royalty-free
+12,6,1,Weather,Rain pouring through a broken gutter,rain pouring through a broken gutter,Rain pouring through a broken gutter,cc-or-royalty-free
+12,6,2,Weather,A bright noon shadow on the ground,a bright noon shadow on the ground,A bright noon shadow on the ground,cc-or-royalty-free
+12,6,3,Weather,A cloud pressed against a mountain,a cloud pressed against a mountain,A cloud pressed against a mountain,cc-or-royalty-free
+12,6,4,Weather,Sunset over a herd of cattle,sunset over a herd of cattle,Sunset over a herd of cattle,cc-or-royalty-free
+12,6,5,Weather,A breeze ruffling water in a basin,a breeze ruffling water in a basin,A breeze ruffling water in a basin,cc-or-royalty-free
+12,6,6,Weather,Fog drifting over a fishing dock,fog drifting over a fishing dock,Fog drifting over a fishing dock,cc-or-royalty-free
+12,7,1,Celebration,A bride throwing a bouquet,a bride throwing a bouquet,A bride throwing a bouquet,cc-or-royalty-free
+12,7,2,Celebration,Drummers in a circle at a festival,drummers in a circle at a festival,Drummers in a circle at a festival,cc-or-royalty-free
+12,7,3,Celebration,Children watching a parade pass by,children watching a parade pass by,Children watching a parade pass by,cc-or-royalty-free
+12,7,4,Celebration,A community elder being honored,a community elder being honored,A community elder being honored,cc-or-royalty-free
+12,7,5,Celebration,A barbecue on a national holiday,a barbecue on a national holiday,A barbecue on a national holiday,cc-or-royalty-free
+12,8,1,Storytelling,A poet performing on a small stage,a poet performing on a small stage,A poet performing on a small stage,cc-or-royalty-free
+12,8,2,Storytelling,Children listening with chins on hands,children listening with chins on hands,Children listening with chins on hands,cc-or-royalty-free
+12,8,3,Storytelling,A duo of singers narrating a legend,a duo of singers narrating a legend,A duo of singers narrating a legend,cc-or-royalty-free
+12,8,4,Storytelling,An illustrated map of a folktale's setting,an illustrated map of a folktale's setting,An illustrated map of a folktale's setting,cc-or-royalty-free
+13,1,1,Food,A roasted goat skewer,a roasted goat skewer,A roasted goat skewer,cc-or-royalty-free
+13,1,2,Food,A bowl of pap with akara,a bowl of pap with akara,A bowl of pap with akara,cc-or-royalty-free
+13,1,3,Food,A slice of pineapple,a slice of pineapple,A slice of pineapple,cc-or-royalty-free
+13,2,1,Body,A hand braiding hair,a hand braiding hair,A hand braiding hair,cc-or-royalty-free
+13,2,2,Body,A knee bandaged with cloth,a knee bandaged with cloth,A knee bandaged with cloth,cc-or-royalty-free
+13,2,3,Body,A foot dancing on grass,a foot dancing on grass,A foot dancing on grass,cc-or-royalty-free
+13,2,4,Body,A pair of eyes tearing up,a pair of eyes tearing up,A pair of eyes tearing up,cc-or-royalty-free
+13,3,1,Family,A grandfather watching grandchildren play football,a grandfather watching grandchildren play football,A grandfather watching grandchildren play football,cc-or-royalty-free
+13,3,2,Family,Two sisters reading the same book,two sisters reading the same book,Two sisters reading the same book,cc-or-royalty-free
+13,3,3,Family,A mother washing her child's hands,a mother washing her child's hands,A mother washing her child's hands,cc-or-royalty-free
+13,3,4,Family,A father showing his son how to tie a tie,a father showing his son how to tie a tie,A father showing his son how to tie a tie,cc-or-royalty-free
+13,3,5,Family,A family attending a wedding,a family attending a wedding,A family attending a wedding,cc-or-royalty-free
+13,4,1,Market,A vendor selling soft drinks in a cooler,a vendor selling soft drinks in a cooler,A vendor selling soft drinks in a cooler,cc-or-royalty-free
+13,4,2,Market,A man cutting bananas off a stalk,a man cutting bananas off a stalk,A man cutting bananas off a stalk,cc-or-royalty-free
+13,4,3,Market,A woman roasting corn over a brazier,a woman roasting corn over a brazier,A woman roasting corn over a brazier,cc-or-royalty-free
+13,4,4,Market,A row of belts hanging on a frame,a row of belts hanging on a frame,A row of belts hanging on a frame,cc-or-royalty-free
+13,4,5,Market,A boy carrying water in a yellow jerrycan,a boy carrying water in a yellow jerrycan,A boy carrying water in a yellow jerrycan,cc-or-royalty-free
+13,4,6,Market,A girl trying on a colorful headwrap,a girl trying on a colorful headwrap,A girl trying on a colorful headwrap,cc-or-royalty-free
+13,5,1,Daily,A man carrying a briefcase to work,a man carrying a briefcase to work,A man carrying a briefcase to work,cc-or-royalty-free
+13,5,2,Daily,A woman wiping a kitchen counter,a woman wiping a kitchen counter,A woman wiping a kitchen counter,cc-or-royalty-free
+13,5,3,Daily,A child entering a school gate,a child entering a school gate,A child entering a school gate,cc-or-royalty-free
+13,5,4,Daily,A boda boda stopping at a junction,a boda boda stopping at a junction,A boda boda stopping at a junction,cc-or-royalty-free
+13,5,5,Daily,A man washing dishes in a basin,a man washing dishes in a basin,A man washing dishes in a basin,cc-or-royalty-free
+13,5,6,Daily,A family fanning themselves on a hot evening,a family fanning themselves on a hot evening,A family fanning themselves on a hot evening,cc-or-royalty-free
+13,5,7,Daily,A woman lighting incense in a doorway,a woman lighting incense in a doorway,A woman lighting incense in a doorway,cc-or-royalty-free
+13,6,1,Weather,Storm clouds over a football pitch,storm clouds over a football pitch,Storm clouds over a football pitch,cc-or-royalty-free
+13,6,2,Weather,Sun beating down on a market crowd,sun beating down on a market crowd,Sun beating down on a market crowd,cc-or-royalty-free
+13,6,3,Weather,Hail collecting on a windowsill,hail collecting on a windowsill,Hail collecting on a windowsill,cc-or-royalty-free
+13,6,4,Weather,Sunset over a railway track,sunset over a railway track,Sunset over a railway track,cc-or-royalty-free
+13,6,5,Weather,Wind tugging at a clothesline,wind tugging at a clothesline,Wind tugging at a clothesline,cc-or-royalty-free
+13,6,6,Weather,A cool morning mist on a footpath,a cool morning mist on a footpath,A cool morning mist on a footpath,cc-or-royalty-free
+13,7,1,Celebration,A wedding couple walking under flower petals,a wedding couple walking under flower petals,A wedding couple walking under flower petals,cc-or-royalty-free
+13,7,2,Celebration,A musician playing a wooden xylophone,a musician playing a wooden xylophone,A musician playing a wooden xylophone,cc-or-royalty-free
+13,7,3,Celebration,Children running with colorful streamers,children running with colorful streamers,Children running with colorful streamers,cc-or-royalty-free
+13,7,4,Celebration,A reunion of old classmates with hugs,a reunion of old classmates with hugs,A reunion of old classmates with hugs,cc-or-royalty-free
+13,7,5,Celebration,A traditional torchlight procession,a traditional torchlight procession,A traditional torchlight procession,cc-or-royalty-free
+13,8,1,Storytelling,A grandmother holding a child while telling a story,a grandmother holding a child while telling a story,A grandmother holding a child while telling a story,cc-or-royalty-free
+13,8,2,Storytelling,Children in a circle around a storyteller,children in a circle around a storyteller,Children in a circle around a storyteller,cc-or-royalty-free
+13,8,3,Storytelling,A man playing the ngoni at sundown,a man playing the ngoni at sundown,A man playing the ngoni at sundown,cc-or-royalty-free
+13,8,4,Storytelling,A textbook chapter on oral history,a textbook chapter on oral history,A textbook chapter on oral history,cc-or-royalty-free
+14,1,1,Food,A plate of kenkey and fish,a plate of kenkey and fish,A plate of kenkey and fish,cc-or-royalty-free
+14,1,2,Food,A bowl of light soup,a bowl of light soup,A bowl of light soup,cc-or-royalty-free
+14,1,3,Food,A cup of zobo drink,a cup of zobo drink,A cup of zobo drink,cc-or-royalty-free
+14,2,1,Body,A hand picking up a coin,a hand picking up a coin,A hand picking up a coin,cc-or-royalty-free
+14,2,2,Body,An elbow leaning on a table,an elbow leaning on a table,An elbow leaning on a table,cc-or-royalty-free
+14,2,3,Body,A foot in a flip-flop,a foot in a flip-flop,A foot in a flip-flop,cc-or-royalty-free
+14,2,4,Body,A pair of eyes under a hat,a pair of eyes under a hat,A pair of eyes under a hat,cc-or-royalty-free
+14,3,1,Family,A grandmother passing a tray of food,a grandmother passing a tray of food,A grandmother passing a tray of food,cc-or-royalty-free
+14,3,2,Family,Two cousins drawing on the ground,two cousins drawing on the ground,Two cousins drawing on the ground,cc-or-royalty-free
+14,3,3,Family,A mother teaching her daughter to dance,a mother teaching her daughter to dance,A mother teaching her daughter to dance,cc-or-royalty-free
+14,3,4,Family,A father teaching his son to fish,a father teaching his son to fish,A father teaching his son to fish,cc-or-royalty-free
+14,3,5,Family,A family lighting candles together,a family lighting candles together,A family lighting candles together,cc-or-royalty-free
+14,4,1,Market,A vendor weighing tomatoes in a metal pan,a vendor weighing tomatoes in a metal pan,A vendor weighing tomatoes in a metal pan,cc-or-royalty-free
+14,4,2,Market,A man unloading a truck of plantains,a man unloading a truck of plantains,A man unloading a truck of plantains,cc-or-royalty-free
+14,4,3,Market,A woman pouring beans into a paper cone,a woman pouring beans into a paper cone,A woman pouring beans into a paper cone,cc-or-royalty-free
+14,4,4,Market,A row of plastic flowers in vases,a row of plastic flowers in vases,A row of plastic flowers in vases,cc-or-royalty-free
+14,4,5,Market,A boy rolling a tire down the road,a boy rolling a tire down the road,A boy rolling a tire down the road,cc-or-royalty-free
+14,4,6,Market,A girl carrying a small chicken cage,a girl carrying a small chicken cage,A girl carrying a small chicken cage,cc-or-royalty-free
+14,5,1,Daily,A man buckling his belt,a man buckling his belt,A man buckling his belt,cc-or-royalty-free
+14,5,2,Daily,A woman setting plates on a table,a woman setting plates on a table,A woman setting plates on a table,cc-or-royalty-free
+14,5,3,Daily,A child climbing onto a school chair,a child climbing onto a school chair,A child climbing onto a school chair,cc-or-royalty-free
+14,5,4,Daily,A van driver checking tires,a van driver checking tires,A van driver checking tires,cc-or-royalty-free
+14,5,5,Daily,A man scrubbing a wooden door,a man scrubbing a wooden door,A man scrubbing a wooden door,cc-or-royalty-free
+14,5,6,Daily,A family decorating a room with streamers,a family decorating a room with streamers,A family decorating a room with streamers,cc-or-royalty-free
+14,5,7,Daily,A woman shaking out a rug from a balcony,a woman shaking out a rug from a balcony,A woman shaking out a rug from a balcony,cc-or-royalty-free
+14,6,1,Weather,A bus driving through pouring rain,a bus driving through pouring rain,A bus driving through pouring rain,cc-or-royalty-free
+14,6,2,Weather,A bicycle rider squinting in bright sun,a bicycle rider squinting in bright sun,A bicycle rider squinting in bright sun,cc-or-royalty-free
+14,6,3,Weather,Lightning over a quiet harbor,lightning over a quiet harbor,Lightning over a quiet harbor,cc-or-royalty-free
+14,6,4,Weather,Sunset reflected on solar panels,sunset reflected on solar panels,Sunset reflected on solar panels,cc-or-royalty-free
+14,6,5,Weather,A swirl of leaves caught by the wind,a swirl of leaves caught by the wind,A swirl of leaves caught by the wind,cc-or-royalty-free
+14,6,6,Weather,A blanket of fog over a tea field,a blanket of fog over a tea field,A blanket of fog over a tea field,cc-or-royalty-free
+14,7,1,Celebration,A bride and groom sharing a first dance,a bride and groom sharing a first dance,A bride and groom sharing a first dance,cc-or-royalty-free
+14,7,2,Celebration,A choir performing at a Christmas service,a choir performing at a christmas service,A choir performing at a Christmas service,cc-or-royalty-free
+14,7,3,Celebration,Children playing musical chairs,children playing musical chairs,Children playing musical chairs,cc-or-royalty-free
+14,7,4,Celebration,A friend group toasting at a dinner,a friend group toasting at a dinner,A friend group toasting at a dinner,cc-or-royalty-free
+14,7,5,Celebration,A rooftop fireworks viewing,a rooftop fireworks viewing,A rooftop fireworks viewing,cc-or-royalty-free
+14,8,1,Storytelling,A village mediator telling a parable,a village mediator telling a parable,A village mediator telling a parable,cc-or-royalty-free
+14,8,2,Storytelling,Children mimicking a storyteller's gestures,children mimicking a storyteller's gestures,Children mimicking a storyteller's gestures,cc-or-royalty-free
+14,8,3,Storytelling,A drummer warming up before a tale,a drummer warming up before a tale,A drummer warming up before a tale,cc-or-royalty-free
+14,8,4,Storytelling,A booklet of riddles for children,a booklet of riddles for children,A booklet of riddles for children,cc-or-royalty-free
+15,1,1,Food,A bowl of waakye,a bowl of waakye,A bowl of waakye,cc-or-royalty-free
+15,1,2,Food,A piece of meat pie,a piece of meat pie,A piece of meat pie,cc-or-royalty-free
+15,1,3,Food,A glass of palm wine,a glass of palm wine,A glass of palm wine,cc-or-royalty-free
+15,2,1,Body,A hand patting a dog,a hand patting a dog,A hand patting a dog,cc-or-royalty-free
+15,2,2,Body,A wrist wearing many bracelets,a wrist wearing many bracelets,A wrist wearing many bracelets,cc-or-royalty-free
+15,2,3,Body,A foot stepping out of a car,a foot stepping out of a car,A foot stepping out of a car,cc-or-royalty-free
+15,2,4,Body,A pair of eyes lit by candlelight,a pair of eyes lit by candlelight,A pair of eyes lit by candlelight,cc-or-royalty-free
+15,3,1,Family,A grandfather pointing at a photo album,a grandfather pointing at a photo album,A grandfather pointing at a photo album,cc-or-royalty-free
+15,3,2,Family,Two siblings building a sandcastle,two siblings building a sandcastle,Two siblings building a sandcastle,cc-or-royalty-free
+15,3,3,Family,A mother helping her child do homework,a mother helping her child do homework,A mother helping her child do homework,cc-or-royalty-free
+15,3,4,Family,A father and child carrying a basket,a father and child carrying a basket,A father and child carrying a basket,cc-or-royalty-free
+15,3,5,Family,A family decorating a Christmas tree,a family decorating a christmas tree,A family decorating a Christmas tree,cc-or-royalty-free
+15,4,1,Market,A vendor frying yam slices in a deep pan,a vendor frying yam slices in a deep pan,A vendor frying yam slices in a deep pan,cc-or-royalty-free
+15,4,2,Market,A man arranging mobile phones under glass,a man arranging mobile phones under glass,A man arranging mobile phones under glass,cc-or-royalty-free
+15,4,3,Market,A woman sewing a hem on her stall,a woman sewing a hem on her stall,A woman sewing a hem on her stall,cc-or-royalty-free
+15,4,4,Market,A row of brightly colored buckets,a row of brightly colored buckets,A row of brightly colored buckets,cc-or-royalty-free
+15,4,5,Market,A boy splashing water on a fish to keep it fresh,a boy splashing water on a fish to keep it fresh,A boy splashing water on a fish to keep it fresh,cc-or-royalty-free
+15,4,6,Market,A girl polishing fruit with a cloth,a girl polishing fruit with a cloth,A girl polishing fruit with a cloth,cc-or-royalty-free
+15,5,1,Daily,A man drinking a glass of water in the morning,a man drinking a glass of water in the morning,A man drinking a glass of water in the morning,cc-or-royalty-free
+15,5,2,Daily,A woman lighting candles after sunset,a woman lighting candles after sunset,A woman lighting candles after sunset,cc-or-royalty-free
+15,5,3,Daily,A child tying their school sash,a child tying their school sash,A child tying their school sash,cc-or-royalty-free
+15,5,4,Daily,A bus driver pulling away from a stop,a bus driver pulling away from a stop,A bus driver pulling away from a stop,cc-or-royalty-free
+15,5,5,Daily,A man trimming a bonsai-like plant,a man trimming a bonsai-like plant,A man trimming a bonsai-like plant,cc-or-royalty-free
+15,5,6,Daily,A family arriving home with shopping bags,a family arriving home with shopping bags,A family arriving home with shopping bags,cc-or-royalty-free
+15,5,7,Daily,A woman folding a basket of laundry,a woman folding a basket of laundry,A woman folding a basket of laundry,cc-or-royalty-free
+15,6,1,Weather,A child jumping in a rain puddle,a child jumping in a rain puddle,A child jumping in a rain puddle,cc-or-royalty-free
+15,6,2,Weather,A man squinting up at the sun,a man squinting up at the sun,A man squinting up at the sun,cc-or-royalty-free
+15,6,3,Weather,A storm rolling across a flat plain,a storm rolling across a flat plain,A storm rolling across a flat plain,cc-or-royalty-free
+15,6,4,Weather,A red sunset behind chimneys,a red sunset behind chimneys,A red sunset behind chimneys,cc-or-royalty-free
+15,6,5,Weather,Wind making a kite dance,wind making a kite dance,Wind making a kite dance,cc-or-royalty-free
+15,6,6,Weather,Mist drifting over a bridge,mist drifting over a bridge,Mist drifting over a bridge,cc-or-royalty-free
+15,7,1,Celebration,A wedding cake with multiple tiers,a wedding cake with multiple tiers,A wedding cake with multiple tiers,cc-or-royalty-free
+15,7,2,Celebration,A young drummer practicing at sunset,a young drummer practicing at sunset,A young drummer practicing at sunset,cc-or-royalty-free
+15,7,3,Celebration,Children riding decorated bicycles in a parade,children riding decorated bicycles in a parade,Children riding decorated bicycles in a parade,cc-or-royalty-free
+15,7,4,Celebration,A family welcoming a graduate at the airport,a family welcoming a graduate at the airport,A family welcoming a graduate at the airport,cc-or-royalty-free
+15,7,5,Celebration,A festival of lights along a riverside,a festival of lights along a riverside,A festival of lights along a riverside,cc-or-royalty-free
+15,8,1,Storytelling,A father telling a fishing tale to his sons,a father telling a fishing tale to his sons,A father telling a fishing tale to his sons,cc-or-royalty-free
+15,8,2,Storytelling,Children laughing with an elder in a courtyard,children laughing with an elder in a courtyard,Children laughing with an elder in a courtyard,cc-or-royalty-free
+15,8,3,Storytelling,A duo of dancers acting out a story,a duo of dancers acting out a story,A duo of dancers acting out a story,cc-or-royalty-free
+15,8,4,Storytelling,An old cassette of recorded stories,an old cassette of recorded stories,An old cassette of recorded stories,cc-or-royalty-free
+16,1,1,Food,A plate of mafe with rice,a plate of mafe with rice,A plate of mafe with rice,cc-or-royalty-free
+16,1,2,Food,A bowl of pounded yam,a bowl of pounded yam,A bowl of pounded yam,cc-or-royalty-free
+16,1,3,Food,A cup of baobab juice,a cup of baobab juice,A cup of baobab juice,cc-or-royalty-free
+16,2,1,Body,A hand holding a passport,a hand holding a passport,A hand holding a passport,cc-or-royalty-free
+16,2,2,Body,An arm flexing its bicep,an arm flexing its bicep,An arm flexing its bicep,cc-or-royalty-free
+16,2,3,Body,A foot beside a soccer ball,a foot beside a soccer ball,A foot beside a soccer ball,cc-or-royalty-free
+16,2,4,Body,A pair of eyes through a window,a pair of eyes through a window,A pair of eyes through a window,cc-or-royalty-free
+16,3,1,Family,A grandmother offering tea to her grandchild,a grandmother offering tea to her grandchild,A grandmother offering tea to her grandchild,cc-or-royalty-free
+16,3,2,Family,Two brothers riding the same bicycle,two brothers riding the same bicycle,Two brothers riding the same bicycle,cc-or-royalty-free
+16,3,3,Family,A mother and child shopping for shoes,a mother and child shopping for shoes,A mother and child shopping for shoes,cc-or-royalty-free
+16,3,4,Family,A father and son washing a car,a father and son washing a car,A father and son washing a car,cc-or-royalty-free
+16,3,5,Family,A family at a graduation ceremony,a family at a graduation ceremony,A family at a graduation ceremony,cc-or-royalty-free
+16,4,1,Market,A vendor stirring a pot of beans,a vendor stirring a pot of beans,A vendor stirring a pot of beans,cc-or-royalty-free
+16,4,2,Market,A man calling out prices through a horn,a man calling out prices through a horn,A man calling out prices through a horn,cc-or-royalty-free
+16,4,3,Market,A woman counting eggs into a tray,a woman counting eggs into a tray,A woman counting eggs into a tray,cc-or-royalty-free
+16,4,4,Market,A row of secondhand books on a mat,a row of secondhand books on a mat,A row of secondhand books on a mat,cc-or-royalty-free
+16,4,5,Market,A boy carrying a basket of yams on his head,a boy carrying a basket of yams on his head,A boy carrying a basket of yams on his head,cc-or-royalty-free
+16,4,6,Market,A girl ringing a bell to call customers,a girl ringing a bell to call customers,A girl ringing a bell to call customers,cc-or-royalty-free
+16,5,1,Daily,A man putting on a wristwatch,a man putting on a wristwatch,A man putting on a wristwatch,cc-or-royalty-free
+16,5,2,Daily,A woman boiling milk on a stove,a woman boiling milk on a stove,A woman boiling milk on a stove,cc-or-royalty-free
+16,5,3,Daily,A child sitting cross-legged on a mat,a child sitting cross-legged on a mat,A child sitting cross-legged on a mat,cc-or-royalty-free
+16,5,4,Daily,A small motorbike weaving past stalls,a small motorbike weaving past stalls,A small motorbike weaving past stalls,cc-or-royalty-free
+16,5,5,Daily,A man waxing a wooden table,a man waxing a wooden table,A man waxing a wooden table,cc-or-royalty-free
+16,5,6,Daily,A family washing a car together,a family washing a car together,A family washing a car together,cc-or-royalty-free
+16,5,7,Daily,A woman shaking sand out of a sandal,a woman shaking sand out of a sandal,A woman shaking sand out of a sandal,cc-or-royalty-free
+16,6,1,Weather,A woman shaking water off an umbrella,a woman shaking water off an umbrella,A woman shaking water off an umbrella,cc-or-royalty-free
+16,6,2,Weather,A boy shielding his eyes from the sun,a boy shielding his eyes from the sun,A boy shielding his eyes from the sun,cc-or-royalty-free
+16,6,3,Weather,Storm clouds over fishing boats,storm clouds over fishing boats,Storm clouds over fishing boats,cc-or-royalty-free
+16,6,4,Weather,Sun rising over a misty river,sun rising over a misty river,Sun rising over a misty river,cc-or-royalty-free
+16,6,5,Weather,Wind blowing sand across a road,wind blowing sand across a road,Wind blowing sand across a road,cc-or-royalty-free
+16,6,6,Weather,Fog parting to reveal a hill,fog parting to reveal a hill,Fog parting to reveal a hill,cc-or-royalty-free
+16,7,1,Celebration,A bride being carried over a threshold,a bride being carried over a threshold,A bride being carried over a threshold,cc-or-royalty-free
+16,7,2,Celebration,A pianist playing at a charity event,a pianist playing at a charity event,A pianist playing at a charity event,cc-or-royalty-free
+16,7,3,Celebration,Children dressed in traditional clothes for a holiday,children dressed in traditional clothes for a holiday,Children dressed in traditional clothes for a holiday,cc-or-royalty-free
+16,7,4,Celebration,A baby shower with gifts on a table,a baby shower with gifts on a table,A baby shower with gifts on a table,cc-or-royalty-free
+16,7,5,Celebration,A community parade led by elders,a community parade led by elders,A community parade led by elders,cc-or-royalty-free
+16,8,1,Storytelling,An elder pointing at the night sky during a story,an elder pointing at the night sky during a story,An elder pointing at the night sky during a story,cc-or-royalty-free
+16,8,2,Storytelling,Children listening on a porch at twilight,children listening on a porch at twilight,Children listening on a porch at twilight,cc-or-royalty-free
+16,8,3,Storytelling,A guitarist accompanying a folktale,a guitarist accompanying a folktale,A guitarist accompanying a folktale,cc-or-royalty-free
+16,8,4,Storytelling,A diary with handwritten stories inside,a diary with handwritten stories inside,A diary with handwritten stories inside,cc-or-royalty-free
+17,1,1,Food,A plate of thieboudienne,a plate of thieboudienne,A plate of thieboudienne,cc-or-royalty-free
+17,1,2,Food,A bowl of groundnut soup,a bowl of groundnut soup,A bowl of groundnut soup,cc-or-royalty-free
+17,1,3,Food,A cup of tamarind drink,a cup of tamarind drink,A cup of tamarind drink,cc-or-royalty-free
+17,2,1,Body,A hand pouring water from a kettle,a hand pouring water from a kettle,A hand pouring water from a kettle,cc-or-royalty-free
+17,2,2,Body,A jaw chewing food,a jaw chewing food,A jaw chewing food,cc-or-royalty-free
+17,2,3,Body,A foot in a school shoe,a foot in a school shoe,A foot in a school shoe,cc-or-royalty-free
+17,2,4,Body,A pair of eyes during a phone call,a pair of eyes during a phone call,A pair of eyes during a phone call,cc-or-royalty-free
+17,3,1,Family,A grandfather watching the news with grandchildren,a grandfather watching the news with grandchildren,A grandfather watching the news with grandchildren,cc-or-royalty-free
+17,3,2,Family,Two sisters playing dress-up,two sisters playing dress-up,Two sisters playing dress-up,cc-or-royalty-free
+17,3,3,Family,A mother teaching her daughter to cook,a mother teaching her daughter to cook,A mother teaching her daughter to cook,cc-or-royalty-free
+17,3,4,Family,A father teaching his son to drive,a father teaching his son to drive,A father teaching his son to drive,cc-or-royalty-free
+17,3,5,Family,A family at a religious service,a family at a religious service,A family at a religious service,cc-or-royalty-free
+17,4,1,Market,A vendor packing rice into small bags,a vendor packing rice into small bags,A vendor packing rice into small bags,cc-or-royalty-free
+17,4,2,Market,A man selling bicycle parts from a shelf,a man selling bicycle parts from a shelf,A man selling bicycle parts from a shelf,cc-or-royalty-free
+17,4,3,Market,A woman cracking palm nuts open,a woman cracking palm nuts open,A woman cracking palm nuts open,cc-or-royalty-free
+17,4,4,Market,A row of wooden masks on display,a row of wooden masks on display,A row of wooden masks on display,cc-or-royalty-free
+17,4,5,Market,A boy chasing pigeons away from a grain heap,a boy chasing pigeons away from a grain heap,A boy chasing pigeons away from a grain heap,cc-or-royalty-free
+17,4,6,Market,A girl holding up a printed dress,a girl holding up a printed dress,A girl holding up a printed dress,cc-or-royalty-free
+17,5,1,Daily,A man putting on a hat by the door,a man putting on a hat by the door,A man putting on a hat by the door,cc-or-royalty-free
+17,5,2,Daily,A woman placing fruit in a bowl,a woman placing fruit in a bowl,A woman placing fruit in a bowl,cc-or-royalty-free
+17,5,3,Daily,A child reading a comic on a step,a child reading a comic on a step,A child reading a comic on a step,cc-or-royalty-free
+17,5,4,Daily,A taxi waiting at a fuel pump,a taxi waiting at a fuel pump,A taxi waiting at a fuel pump,cc-or-royalty-free
+17,5,5,Daily,A man trimming his beard with scissors,a man trimming his beard with scissors,A man trimming his beard with scissors,cc-or-royalty-free
+17,5,6,Daily,A family lifting boxes off a truck,a family lifting boxes off a truck,A family lifting boxes off a truck,cc-or-royalty-free
+17,5,7,Daily,A woman tucking a child into bed,a woman tucking a child into bed,A woman tucking a child into bed,cc-or-royalty-free
+17,6,1,Weather,A child watching rain through a window,a child watching rain through a window,A child watching rain through a window,cc-or-royalty-free
+17,6,2,Weather,Sun reflecting off a rooftop solar panel,sun reflecting off a rooftop solar panel,Sun reflecting off a rooftop solar panel,cc-or-royalty-free
+17,6,3,Weather,Lightning above a stadium,lightning above a stadium,Lightning above a stadium,cc-or-royalty-free
+17,6,4,Weather,A pale dawn over a quiet beach,a pale dawn over a quiet beach,A pale dawn over a quiet beach,cc-or-royalty-free
+17,6,5,Weather,Strong wind tilting a palm tree,strong wind tilting a palm tree,Strong wind tilting a palm tree,cc-or-royalty-free
+17,6,6,Weather,Frosty breath in cold morning air,frosty breath in cold morning air,Frosty breath in cold morning air,cc-or-royalty-free
+17,7,1,Celebration,A bride having her henna applied,a bride having her henna applied,A bride having her henna applied,cc-or-royalty-free
+17,7,2,Celebration,A drumming circle at sunset,a drumming circle at sunset,A drumming circle at sunset,cc-or-royalty-free
+17,7,3,Celebration,Children holding hands in a dance circle,children holding hands in a dance circle,Children holding hands in a dance circle,cc-or-royalty-free
+17,7,4,Celebration,A first day of school celebration,a first day of school celebration,A first day of school celebration,cc-or-royalty-free
+17,7,5,Celebration,A village festival with stalls,a village festival with stalls,A village festival with stalls,cc-or-royalty-free
+17,8,1,Storytelling,A teacher dramatizing a fable for students,a teacher dramatizing a fable for students,A teacher dramatizing a fable for students,cc-or-royalty-free
+17,8,2,Storytelling,Children gasping at a story's twist,children gasping at a story's twist,Children gasping at a story's twist,cc-or-royalty-free
+17,8,3,Storytelling,A storyteller wearing traditional regalia,a storyteller wearing traditional regalia,A storyteller wearing traditional regalia,cc-or-royalty-free
+17,8,4,Storytelling,A school chalkboard with a moral written on it,a school chalkboard with a moral written on it,A school chalkboard with a moral written on it,cc-or-royalty-free
+18,1,1,Food,A plate of yassa chicken,a plate of yassa chicken,A plate of yassa chicken,cc-or-royalty-free
+18,1,2,Food,A bowl of cassava leaves,a bowl of cassava leaves,A bowl of cassava leaves,cc-or-royalty-free
+18,1,3,Food,A glass of fresh coconut water,a glass of fresh coconut water,A glass of fresh coconut water,cc-or-royalty-free
+18,2,1,Body,A hand carrying a child,a hand carrying a child,A hand carrying a child,cc-or-royalty-free
+18,2,2,Body,A throat singing into a microphone,a throat singing into a microphone,A throat singing into a microphone,cc-or-royalty-free
+18,2,3,Body,A foot beside a fishing net,a foot beside a fishing net,A foot beside a fishing net,cc-or-royalty-free
+18,2,4,Body,A pair of eyes reading a book,a pair of eyes reading a book,A pair of eyes reading a book,cc-or-royalty-free
+18,3,1,Family,A grandmother folding laundry with her grandchild,a grandmother folding laundry with her grandchild,A grandmother folding laundry with her grandchild,cc-or-royalty-free
+18,3,2,Family,Two cousins arm wrestling,two cousins arm wrestling,Two cousins arm wrestling,cc-or-royalty-free
+18,3,3,Family,A mother carrying her baby in a wrap,a mother carrying her baby in a wrap,A mother carrying her baby in a wrap,cc-or-royalty-free
+18,3,4,Family,A father reading a newspaper with his son,a father reading a newspaper with his son,A father reading a newspaper with his son,cc-or-royalty-free
+18,3,5,Family,A family at the beach,a family at the beach,A family at the beach,cc-or-royalty-free
+18,4,1,Market,A vendor wrapping snails in leaves,a vendor wrapping snails in leaves,A vendor wrapping snails in leaves,cc-or-royalty-free
+18,4,2,Market,A man chopping a watermelon in half,a man chopping a watermelon in half,A man chopping a watermelon in half,cc-or-royalty-free
+18,4,3,Market,A woman shelling peas into a tray,a woman shelling peas into a tray,A woman shelling peas into a tray,cc-or-royalty-free
+18,4,4,Market,A row of beaded bracelets on a string,a row of beaded bracelets on a string,A row of beaded bracelets on a string,cc-or-royalty-free
+18,4,5,Market,A boy collecting pieces of cardboard,a boy collecting pieces of cardboard,A boy collecting pieces of cardboard,cc-or-royalty-free
+18,4,6,Market,A girl handing change to a customer,a girl handing change to a customer,A girl handing change to a customer,cc-or-royalty-free
+18,5,1,Daily,A man drinking water from a clay pot,a man drinking water from a clay pot,A man drinking water from a clay pot,cc-or-royalty-free
+18,5,2,Daily,A woman hanging up a calendar,a woman hanging up a calendar,A woman hanging up a calendar,cc-or-royalty-free
+18,5,3,Daily,A child writing on a slate with chalk,a child writing on a slate with chalk,A child writing on a slate with chalk,cc-or-royalty-free
+18,5,4,Daily,A bus conductor calling out routes,a bus conductor calling out routes,A bus conductor calling out routes,cc-or-royalty-free
+18,5,5,Daily,A man scrubbing a metal pot until it shines,a man scrubbing a metal pot until it shines,A man scrubbing a metal pot until it shines,cc-or-royalty-free
+18,5,6,Daily,A family arriving at a restaurant,a family arriving at a restaurant,A family arriving at a restaurant,cc-or-royalty-free
+18,5,7,Daily,A woman covering bread dough with a cloth,a woman covering bread dough with a cloth,A woman covering bread dough with a cloth,cc-or-royalty-free
+18,6,1,Weather,A taxi driver wiping rain from a windscreen,a taxi driver wiping rain from a windscreen,A taxi driver wiping rain from a windscreen,cc-or-royalty-free
+18,6,2,Weather,A vendor adjusting an umbrella against the sun,a vendor adjusting an umbrella against the sun,A vendor adjusting an umbrella against the sun,cc-or-royalty-free
+18,6,3,Weather,Lightning silhouetting a tree,lightning silhouetting a tree,Lightning silhouetting a tree,cc-or-royalty-free
+18,6,4,Weather,Pink clouds over a rural road,pink clouds over a rural road,Pink clouds over a rural road,cc-or-royalty-free
+18,6,5,Weather,Wind catching a balloon,wind catching a balloon,Wind catching a balloon,cc-or-royalty-free
+18,6,6,Weather,A foggy morning at a bus stop,a foggy morning at a bus stop,A foggy morning at a bus stop,cc-or-royalty-free
+18,7,1,Celebration,A wedding altar decorated with flowers,a wedding altar decorated with flowers,A wedding altar decorated with flowers,cc-or-royalty-free
+18,7,2,Celebration,Singers performing at an outdoor stage,singers performing at an outdoor stage,Singers performing at an outdoor stage,cc-or-royalty-free
+18,7,3,Celebration,Children eating cake at a birthday,children eating cake at a birthday,Children eating cake at a birthday,cc-or-royalty-free
+18,7,4,Celebration,A teacher being honored on appreciation day,a teacher being honored on appreciation day,A teacher being honored on appreciation day,cc-or-royalty-free
+18,7,5,Celebration,A wedding sparkler send-off,a wedding sparkler send-off,A wedding sparkler send-off,cc-or-royalty-free
+18,8,1,Storytelling,An aunt telling a wedding-day legend,an aunt telling a wedding-day legend,An aunt telling a wedding-day legend,cc-or-royalty-free
+18,8,2,Storytelling,Children clapping at the end of a story,children clapping at the end of a story,Children clapping at the end of a story,cc-or-royalty-free
+18,8,3,Storytelling,A chorus singing the refrain of a tale,a chorus singing the refrain of a tale,A chorus singing the refrain of a tale,cc-or-royalty-free
+18,8,4,Storytelling,A bound manuscript on a wooden table,a bound manuscript on a wooden table,A bound manuscript on a wooden table,cc-or-royalty-free
+19,1,1,Food,A plate of ndolé,a plate of ndolé,A plate of ndolé,cc-or-royalty-free
+19,1,2,Food,A bowl of fonio with fish,a bowl of fonio with fish,A bowl of fonio with fish,cc-or-royalty-free
+19,1,3,Food,A cup of hibiscus tea,a cup of hibiscus tea,A cup of hibiscus tea,cc-or-royalty-free
+19,2,1,Body,A hand counting money,a hand counting money,A hand counting money,cc-or-royalty-free
+19,2,2,Body,A finger tapping a keyboard,a finger tapping a keyboard,A finger tapping a keyboard,cc-or-royalty-free
+19,2,3,Body,A foot stepping over a rope,a foot stepping over a rope,A foot stepping over a rope,cc-or-royalty-free
+19,2,4,Body,A pair of eyes during sunset,a pair of eyes during sunset,A pair of eyes during sunset,cc-or-royalty-free
+19,3,1,Family,A grandfather playing the harmonica for grandchildren,a grandfather playing the harmonica for grandchildren,A grandfather playing the harmonica for grandchildren,cc-or-royalty-free
+19,3,2,Family,Two sisters posing in front of a mirror,two sisters posing in front of a mirror,Two sisters posing in front of a mirror,cc-or-royalty-free
+19,3,3,Family,A mother helping her child put on shoes,a mother helping her child put on shoes,A mother helping her child put on shoes,cc-or-royalty-free
+19,3,4,Family,A father lifting his child onto a horse,a father lifting his child onto a horse,A father lifting his child onto a horse,cc-or-royalty-free
+19,3,5,Family,A family roasting marshmallows,a family roasting marshmallows,A family roasting marshmallows,cc-or-royalty-free
+19,4,1,Market,A vendor weighing dried beans on a small scale,a vendor weighing dried beans on a small scale,A vendor weighing dried beans on a small scale,cc-or-royalty-free
+19,4,2,Market,A man pumping air into a balloon,a man pumping air into a balloon,A man pumping air into a balloon,cc-or-royalty-free
+19,4,3,Market,A woman hanging clothes on a line behind her stall,a woman hanging clothes on a line behind her stall,A woman hanging clothes on a line behind her stall,cc-or-royalty-free
+19,4,4,Market,A row of carved wooden bowls,a row of carved wooden bowls,A row of carved wooden bowls,cc-or-royalty-free
+19,4,5,Market,A boy filling bottles with palm oil,a boy filling bottles with palm oil,A boy filling bottles with palm oil,cc-or-royalty-free
+19,4,6,Market,A girl helping carry a sack of millet,a girl helping carry a sack of millet,A girl helping carry a sack of millet,cc-or-royalty-free
+19,5,1,Daily,A man knotting a tie,a man knotting a tie,A man knotting a tie,cc-or-royalty-free
+19,5,2,Daily,A woman pouring soup into bowls,a woman pouring soup into bowls,A woman pouring soup into bowls,cc-or-royalty-free
+19,5,3,Daily,A child folding their school uniform,a child folding their school uniform,A child folding their school uniform,cc-or-royalty-free
+19,5,4,Daily,A truck loaded with sacks of grain,a truck loaded with sacks of grain,A truck loaded with sacks of grain,cc-or-royalty-free
+19,5,5,Daily,A man oiling the chain of a bicycle,a man oiling the chain of a bicycle,A man oiling the chain of a bicycle,cc-or-royalty-free
+19,5,6,Daily,A family carrying suitcases out of a house,a family carrying suitcases out of a house,A family carrying suitcases out of a house,cc-or-royalty-free
+19,5,7,Daily,A woman wiping a baby's hands,a woman wiping a baby's hands,A woman wiping a baby's hands,cc-or-royalty-free
+19,6,1,Weather,An old woman holding an umbrella in heavy rain,an old woman holding an umbrella in heavy rain,An old woman holding an umbrella in heavy rain,cc-or-royalty-free
+19,6,2,Weather,A field worker drinking water under the sun,a field worker drinking water under the sun,A field worker drinking water under the sun,cc-or-royalty-free
+19,6,3,Weather,A storm rolling over a coastal city,a storm rolling over a coastal city,A storm rolling over a coastal city,cc-or-royalty-free
+19,6,4,Weather,Sun rising over a fishing harbor,sun rising over a fishing harbor,Sun rising over a fishing harbor,cc-or-royalty-free
+19,6,5,Weather,Wind pushing waves onto a beach,wind pushing waves onto a beach,Wind pushing waves onto a beach,cc-or-royalty-free
+19,6,6,Weather,Mist softening a row of houses,mist softening a row of houses,Mist softening a row of houses,cc-or-royalty-free
+19,7,1,Celebration,A bride and groom posing with elders,a bride and groom posing with elders,A bride and groom posing with elders,cc-or-royalty-free
+19,7,2,Celebration,A young woman playing the violin at a celebration,a young woman playing the violin at a celebration,A young woman playing the violin at a celebration,cc-or-royalty-free
+19,7,3,Celebration,Children playing limbo at a beach party,children playing limbo at a beach party,Children playing limbo at a beach party,cc-or-royalty-free
+19,7,4,Celebration,A grandfather's 80th birthday gathering,a grandfather's 80th birthday gathering,A grandfather's 80th birthday gathering,cc-or-royalty-free
+19,7,5,Celebration,A boat parade on a lake during a festival,a boat parade on a lake during a festival,A boat parade on a lake during a festival,cc-or-royalty-free
+19,8,1,Storytelling,An old fisherman telling a sea story,an old fisherman telling a sea story,An old fisherman telling a sea story,cc-or-royalty-free
+19,8,2,Storytelling,Children listening to a story in a classroom,children listening to a story in a classroom,Children listening to a story in a classroom,cc-or-royalty-free
+19,8,3,Storytelling,A modern poet using a microphone,a modern poet using a microphone,A modern poet using a microphone,cc-or-royalty-free
+19,8,4,Storytelling,A children's book left open on a step,a children's book left open on a step,A children's book left open on a step,cc-or-royalty-free
+20,1,1,Food,A plate of poulet braisé,a plate of poulet braisé,A plate of poulet braisé,cc-or-royalty-free
+20,1,2,Food,A bowl of kelewele,a bowl of kelewele,A bowl of kelewele,cc-or-royalty-free
+20,1,3,Food,A cup of millet drink,a cup of millet drink,A cup of millet drink,cc-or-royalty-free
+20,2,1,Body,A hand opening a door,a hand opening a door,A hand opening a door,cc-or-royalty-free
+20,2,2,Body,A tongue tasting a spoon,a tongue tasting a spoon,A tongue tasting a spoon,cc-or-royalty-free
+20,2,3,Body,A foot on a wooden floor,a foot on a wooden floor,A foot on a wooden floor,cc-or-royalty-free
+20,2,4,Body,A pair of eyes shielded by a hand,a pair of eyes shielded by a hand,A pair of eyes shielded by a hand,cc-or-royalty-free
+20,3,1,Family,A grandmother chopping vegetables with her grandchild,a grandmother chopping vegetables with her grandchild,A grandmother chopping vegetables with her grandchild,cc-or-royalty-free
+20,3,2,Family,Two siblings laughing on a swing,two siblings laughing on a swing,Two siblings laughing on a swing,cc-or-royalty-free
+20,3,3,Family,A mother holding her child's hand at a crosswalk,a mother holding her child's hand at a crosswalk,A mother holding her child's hand at a crosswalk,cc-or-royalty-free
+20,3,4,Family,A father holding his child up to see fireworks,a father holding his child up to see fireworks,A father holding his child up to see fireworks,cc-or-royalty-free
+20,3,5,Family,A family hugging in a doorway,a family hugging in a doorway,A family hugging in a doorway,cc-or-royalty-free
+20,4,1,Market,A vendor mixing groundnut paste in a jar,a vendor mixing groundnut paste in a jar,A vendor mixing groundnut paste in a jar,cc-or-royalty-free
+20,4,2,Market,A man arranging hats on a long pole,a man arranging hats on a long pole,A man arranging hats on a long pole,cc-or-royalty-free
+20,4,3,Market,A woman sweeping out a stall at the end of the day,a woman sweeping out a stall at the end of the day,A woman sweeping out a stall at the end of the day,cc-or-royalty-free
+20,4,4,Market,A row of plastic toys neatly stacked,a row of plastic toys neatly stacked,A row of plastic toys neatly stacked,cc-or-royalty-free
+20,4,5,Market,A boy locking up a stall with a chain,a boy locking up a stall with a chain,A boy locking up a stall with a chain,cc-or-royalty-free
+20,4,6,Market,A girl waving goodbye to customers,a girl waving goodbye to customers,A girl waving goodbye to customers,cc-or-royalty-free
+20,5,1,Daily,A man stretching his arms in a doorway,a man stretching his arms in a doorway,A man stretching his arms in a doorway,cc-or-royalty-free
+20,5,2,Daily,A woman peeling oranges into a bowl,a woman peeling oranges into a bowl,A woman peeling oranges into a bowl,cc-or-royalty-free
+20,5,3,Daily,A child fastening a watch they got as a gift,a child fastening a watch they got as a gift,A child fastening a watch they got as a gift,cc-or-royalty-free
+20,5,4,Daily,A taxi driver helping a passenger with bags,a taxi driver helping a passenger with bags,A taxi driver helping a passenger with bags,cc-or-royalty-free
+20,5,5,Daily,A man washing his work clothes outside,a man washing his work clothes outside,A man washing his work clothes outside,cc-or-royalty-free
+20,5,6,Daily,A family arriving at church in their best clothes,a family arriving at church in their best clothes,A family arriving at church in their best clothes,cc-or-royalty-free
+20,5,7,Daily,A woman closing the shutters before bed,a woman closing the shutters before bed,A woman closing the shutters before bed,cc-or-royalty-free
+20,6,1,Weather,Children running for shelter in heavy rain,children running for shelter in heavy rain,Children running for shelter in heavy rain,cc-or-royalty-free
+20,6,2,Weather,A lifeguard scanning a sun-drenched beach,a lifeguard scanning a sun-drenched beach,A lifeguard scanning a sun-drenched beach,cc-or-royalty-free
+20,6,3,Weather,A storm churning the surface of a lake,a storm churning the surface of a lake,A storm churning the surface of a lake,cc-or-royalty-free
+20,6,4,Weather,A peaceful sunset behind a windmill,a peaceful sunset behind a windmill,A peaceful sunset behind a windmill,cc-or-royalty-free
+20,6,5,Weather,Wind tugging at a straw hat,wind tugging at a straw hat,Wind tugging at a straw hat,cc-or-royalty-free
+20,6,6,Weather,A foggy valley seen from a hilltop,a foggy valley seen from a hilltop,A foggy valley seen from a hilltop,cc-or-royalty-free
+20,7,1,Celebration,A bride preparing in a dressing room,a bride preparing in a dressing room,A bride preparing in a dressing room,cc-or-royalty-free
+20,7,2,Celebration,A street musician playing a saxophone,a street musician playing a saxophone,A street musician playing a saxophone,cc-or-royalty-free
+20,7,3,Celebration,Children blowing bubbles at a party,children blowing bubbles at a party,Children blowing bubbles at a party,cc-or-royalty-free
+20,7,4,Celebration,A neighborhood block party with food stalls,a neighborhood block party with food stalls,A neighborhood block party with food stalls,cc-or-royalty-free
+20,7,5,Celebration,A drone light show over a city,a drone light show over a city,A drone light show over a city,cc-or-royalty-free
+20,8,1,Storytelling,A grandfather sharing a war story with grandchildren,a grandfather sharing a war story with grandchildren,A grandfather sharing a war story with grandchildren,cc-or-royalty-free
+20,8,2,Storytelling,Children listening intently to an audio story on a tablet,children listening intently to an audio story on a tablet,Children listening intently to an audio story on a tablet,cc-or-royalty-free
+20,8,3,Storytelling,A balafon and djembe duo performing,a balafon and djembe duo performing,A balafon and djembe duo performing,cc-or-royalty-free
+20,8,4,Storytelling,An illustrated calendar with a story for each month,an illustrated calendar with a story for each month,An illustrated calendar with a story for each month,cc-or-royalty-free
