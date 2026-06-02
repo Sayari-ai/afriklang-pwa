@@ -35,7 +35,7 @@ import { NextRequest, NextResponse } from "next/server";
  */
 
 const DEFAULT_BASE_URL =
-  "https://sayari-labeling-aitool-backend-f910.up.railway.app";
+  "https://sayari-afriklang-backend-prod-production.up.railway.app";
 
 const BASE_URL = (
   process.env.SAYARI_BASE_URL ??
