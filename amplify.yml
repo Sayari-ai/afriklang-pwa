@@ -1,0 +1,48 @@
+# AWS Amplify Hosting build settings — Afriklang PWA
+#
+# This is a Next.js 16 (App Router) app with a server-side Route Handler
+# (/api/audio-upload, Node runtime) and dynamic, server-rendered routes.
+# It therefore deploys to Amplify's SSR/compute platform (WEB_COMPUTE),
+# NOT static hosting. Amplify auto-detects this from the `.next` output
+# below — do NOT add `output: "export"` to next.config.ts.
+#
+# Required environment variables are set in the Amplify console
+# (App settings -> Environment variables). See .env.example for the list.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Pin Node from .nvmrc (Next.js 16 requires Node >= 20.9).
+        # `nvm install` with no args reads .nvmrc, installs, and activates it.
+        - nvm install
+        # Reproducible install from the committed lock file (same as CI).
+        - npm ci
+    build:
+      commands:
+        # Amplify's SSR compute does NOT see the app's environment
+        # variables at runtime unless they are written into .env.production
+        # at build time. This also inlines the NEXT_PUBLIC_* values into the
+        # client bundle. (|| true: grep exits non-zero when nothing matches.)
+        - env | grep -e NEXT_PUBLIC_ -e SAYARI_ >> .env.production || true
+        - npm run build
+  artifacts:
+    # Next.js SSR build output. Amplify reads this to provision the compute
+    # plus static assets (including the generated PWA service worker).
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - .next/cache/**/*
+      - node_modules/**/*
+customHeaders:
+  # The Workbox service worker must never be served stale, otherwise
+  # returning users keep an old sw.js that serves cached _next/* chunks
+  # from a previous deploy (manifests as phantom React/hydration errors).
+  # The hashed workbox-*.js runtime it imports is immutable and is still
+  # long-cached by Next's default asset headers.
+  - pattern: '/sw.js'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
