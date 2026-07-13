@@ -1,3 +1,4 @@
+# Wrote /tmp/opencode/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -5,43 +6,42 @@ import { NextRequest, NextResponse } from "next/server";
  *
  * Why this exists
  * ---------------
- * Sayari's CORS allowlist only includes `http://localhost:3000`. When
- * the deployed PWA (any other origin) POSTs the multipart form
- * directly, the browser strips the response and the `fetch` call
- * rejects with `TypeError: Failed to fetch` — even though the WAV
- * was successfully written server-side. Our client maps that to
- * `AudioUploadError(isNetwork=true)` and shows the offline snackbar,
- * which is wrong: the upload actually worked.
+ * Sayari's CORS allowlist does not include the deployed PWA origin. When
+ * the browser POSTs the multipart form directly, it strips the response and
+ * the `fetch` call rejects with `TypeError: Failed to fetch` — even though
+ * the WAV was successfully written server-side. Proxying through this
+ * Route Handler means the browser only ever talks to its own origin, the
+ * response is fully visible, and we get accurate success/failure signals.
  *
- * Server-to-server calls have no CORS. By proxying the multipart
- * stream through this Next.js Route Handler, the browser only ever
- * talks to its own origin, the response is fully visible, and we get
- * accurate success/failure signals back to the recorder UI.
+ * Auth (added 2026)
+ * -----------------
+ * Sayari's `/api/audio/upload` is no longer public: it requires an
+ * `X-Upload-Key` header (or a Firebase Bearer token). This proxy injects the
+ * key from the server-side `SAYARI_UPLOAD_KEY` env var — it is NEVER exposed
+ * to the browser (do not use a NEXT_PUBLIC_ variable for it).
  *
  * Streaming + memory
  * ------------------
- * The recorder produces ~1–2 MB WAVs (16 kHz mono PCM16, ~30 s).
- * We forward the request body as-is (`request.body` is a
- * `ReadableStream`). `duplex: "half"` is required by the fetch spec
- * when sending a stream. We do NOT parse multipart on this side —
- * boundary stays intact, so Sayari sees the exact bytes the browser
- * built. Status code, body, and error responses are tunnelled back
- * verbatim so the existing client error-handling still applies.
- *
- * We rely on the platform's request timeout (Vercel: 10 s on hobby,
- * up to 300 s on Pro). The client has its own 45 s `AbortController`
- * which will fire first on slow Railway cold starts; that aborts
- * the proxy fetch via the linked signal below.
+ * The recorder produces ~1–2 MB WAVs (16 kHz mono PCM16, ~30 s). We forward
+ * the request body as-is (`request.body` is a `ReadableStream`).
+ * `duplex: "half"` is required by the fetch spec when sending a stream. We do
+ * NOT parse multipart here — the boundary stays intact, so Sayari sees the
+ * exact bytes the browser built. Status code, body and error responses are
+ * tunnelled back verbatim so the existing client error-handling still applies.
  */
 
-const DEFAULT_BASE_URL =
-  "https://sayari-afriklang-backend-prod-production.up.railway.app";
+// Sayari backend — migrated off Railway to AWS EC2 (api.sayari.afriklang.com).
+const DEFAULT_BASE_URL = "https://api.sayari.afriklang.com";
 
 const BASE_URL = (
   process.env.SAYARI_BASE_URL ??
   process.env.NEXT_PUBLIC_SAYARI_BASE_URL ??
   DEFAULT_BASE_URL
 ).replace(/\/+$/, "");
+
+// Shared upload key for the independent mobile collector. Server-side only.
+// Set this in Amplify → App settings → Environment variables (SAYARI_UPLOAD_KEY).
+const UPLOAD_KEY = process.env.SAYARI_UPLOAD_KEY ?? "";
 
 // Force the Node runtime — the Edge runtime's fetch doesn't support
 // streaming request bodies the same way and has tighter limits.
@@ -60,19 +60,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (!UPLOAD_KEY) {
+    // Fail fast with a clear server error rather than letting the upstream
+    // reject with a confusing 401. Signals a misconfigured deployment.
+    return NextResponse.json(
+      { error: "server_misconfigured", message: "SAYARI_UPLOAD_KEY is not set" },
+      { status: 500 },
+    );
+  }
+
   let upstream: Response;
   try {
     upstream = await fetch(upstreamUrl, {
       method: "POST",
-      // Forward only the headers Sayari needs. Specifically we MUST
-      // forward the original `content-type` because it carries the
-      // multipart boundary; without it the upstream parser fails.
-      // We deliberately do NOT forward `host`, `cookie`, or auth
-      // headers — Sayari is a public endpoint and the request from
-      // the browser carries our origin's cookies which are
-      // irrelevant (and a leak risk) upstream.
+      // Forward only what Sayari needs. We MUST forward the original
+      // `content-type` because it carries the multipart boundary, and the
+      // `X-Upload-Key` so the hardened endpoint accepts the request. We
+      // deliberately do NOT forward `host`, `cookie` or browser auth headers.
       headers: {
         "content-type": contentType,
+        "X-Upload-Key": UPLOAD_KEY,
         ...(request.headers.get("content-length")
           ? { "content-length": request.headers.get("content-length")! }
           : {}),
@@ -86,21 +93,18 @@ export async function POST(request: NextRequest) {
     } as RequestInit);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    // Upstream unreachable from the server (DNS, refused, etc.) —
-    // surface as 502 so the client treats it as a real failure
-    // rather than an offline state. The client's `isNetwork` flag
-    // keys off `status === 0`, not 502, so this won't show the
-    // misleading "you're offline" snackbar.
+    // Upstream unreachable from the server (DNS, refused, etc.) — surface as
+    // 502 so the client treats it as a real failure rather than an offline
+    // state. The client's `isNetwork` flag keys off `status === 0`, not 502.
     return NextResponse.json(
       { error: "upstream_fetch_failed", message: msg },
       { status: 502 },
     );
   }
 
-  // Tunnel the upstream response back. We pass `upstream.body`
-  // straight through so the response streams without buffering.
-  // Strip hop-by-hop and CORS-related headers — Next will set
-  // appropriate same-origin defaults.
+  // Tunnel the upstream response back. Pass `upstream.body` straight through so
+  // the response streams without buffering. Strip hop-by-hop and CORS-related
+  // headers — Next will set appropriate same-origin defaults.
   const headers = new Headers();
   const passthrough = ["content-type", "content-length", "cache-control"];
   for (const h of passthrough) {
