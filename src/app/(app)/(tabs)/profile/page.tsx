@@ -34,6 +34,8 @@ import { useEffect, useState } from "react";
 
 import { ScreenBackground } from "@/components/screen-background";
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
+import { WoodButton } from "@/components/game/wood-button";
+import { WoodPanel } from "@/components/game/wood-panel";
 import { NicknameSheet } from "@/components/nickname-sheet";
 import { useSetAppLocale } from "@/hooks/use-set-app-locale";
 import type { Locale } from "@/i18n/locales";
@@ -45,9 +47,6 @@ import {
   useLearningLanguage,
 } from "@/stores/learning-language";
 import { useNickname } from "@/stores/nickname";
-
-const PRIMARY = "#00539F";
-const RED = "#E53935";
 
 // Baked at build time. The PWA has no native package metadata, so
 // we expose the package.json version directly. (Next inlines
@@ -77,10 +76,7 @@ export default function ProfilePage() {
         className="flex-1 overflow-y-auto px-4 pt-4"
         style={{ paddingBottom: BOTTOM_NAV_RESERVED_PX + 16 }}
       >
-        <h1
-          className="px-1 text-[32px] font-black text-white"
-          style={{ letterSpacing: "-0.5px" }}
-        >
+        <h1 className="text-outline px-1 font-game text-[30px] tracking-wide text-cream">
           {t("profileTitle")}
         </h1>
         <div className="h-4" />
@@ -140,18 +136,20 @@ function SectionCard({
   return (
     <div className="flex flex-col">
       <span
-        className="px-2 pb-1.5 text-[12px] font-extrabold text-white/70"
-        style={{ letterSpacing: "1.2px" }}
+        className="px-2 pb-1.5 text-[12px] font-extrabold text-cream/75"
+        style={{ letterSpacing: "1.2px", textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
       >
         {title.toUpperCase()}
       </span>
-      <div className="overflow-hidden rounded-2xl bg-white">{children}</div>
+      <WoodPanel grass={false} contentClassName="overflow-hidden py-1">
+        {children}
+      </WoodPanel>
     </div>
   );
 }
 
 function Divider() {
-  return <div className="h-px w-full bg-black/[0.06]" />;
+  return <div className="mx-4 h-px bg-ink/20" />;
 }
 
 function Tile({
@@ -171,13 +169,19 @@ function Tile({
       type="button"
       onClick={onTap ?? undefined}
       disabled={!tappable}
-      className="flex w-full items-center px-4 py-3.5 text-left transition-colors active:bg-black/[0.04] disabled:cursor-default"
+      className="flex w-full items-center px-4 py-3.5 text-left transition-colors active:bg-black/10 disabled:cursor-default"
     >
-      <span className="flex h-6 w-6 items-center justify-center" style={{ color: PRIMARY }}>
+      <span
+        className="flex h-6 w-6 items-center justify-center"
+        style={{
+          color: "var(--color-grass-deep)",
+          filter: "drop-shadow(0 1px 0 rgba(255,235,205,0.4))",
+        }}
+      >
         {leading}
       </span>
       <div className="w-3" />
-      <span className="flex-1 text-[16px] font-bold text-black/85">{label}</span>
+      <span className="flex-1 text-[16px] font-bold text-ink">{label}</span>
       <TrailingValue>{trailing}</TrailingValue>
       {tappable && (
         <>
@@ -191,9 +195,7 @@ function Tile({
 
 function TrailingValue({ children }: { children: React.ReactNode }) {
   return (
-    <span
-      className="line-clamp-1 max-w-[55%] text-right text-[14px] font-semibold text-black/60"
-    >
+    <span className="line-clamp-1 max-w-[55%] text-right text-[14px] font-semibold text-ink/70">
       {children}
     </span>
   );
@@ -292,16 +294,21 @@ function ConsentRow({
 
   return (
     <div className="flex items-center px-4 py-3">
-      <span style={{ color: PRIMARY }}>
+      <span
+        style={{
+          color: "var(--color-grass-deep)",
+          filter: "drop-shadow(0 1px 0 rgba(255,235,205,0.4))",
+        }}
+      >
         <MicIcon />
       </span>
       <div className="w-3" />
       <div className="flex flex-1 flex-col">
-        <span className="text-[16px] font-bold text-black/85">
+        <span className="text-[16px] font-bold text-ink">
           {t("profileConsentLabel")}
         </span>
         <div className="h-0.5" />
-        <span className="text-[12px] text-black/60">
+        <span className="text-[12px] font-medium text-ink/70">
           {granted
             ? t("profileConsentSublabelGranted")
             : t("profileConsentSublabelRevoked")}
@@ -326,14 +333,24 @@ function ToggleSwitch({
       aria-checked={checked}
       onClick={onChange}
       className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors"
-      style={{
-        backgroundColor: checked ? PRIMARY : "#CCCCCC",
-      }}
+      style={
+        checked
+          ? {
+              background:
+                "linear-gradient(180deg, var(--color-grass-dark) 0%, var(--color-grass-light) 100%)",
+              boxShadow: "inset 0 1.5px 3px rgba(0,0,0,0.25)",
+            }
+          : {
+              background: "rgba(0,0,0,0.3)",
+              boxShadow: "inset 0 1.5px 3px rgba(0,0,0,0.35)",
+            }
+      }
     >
       <span
-        className="inline-block h-6 w-6 rounded-full bg-white shadow transition-transform"
+        className="inline-block h-6 w-6 rounded-full bg-cream shadow transition-transform"
         style={{
           transform: checked ? "translateX(22px)" : "translateX(2px)",
+          boxShadow: "0 1.5px 2px rgba(0,0,0,0.35)",
         }}
       />
     </button>
@@ -395,12 +412,38 @@ function SheetShell({
         onClick={onClose}
         className="absolute inset-0 bg-black/50"
       />
-      <div className="relative mx-auto flex w-full max-w-[480px] flex-col rounded-t-[20px] bg-white pb-safe">
-        <div className="flex justify-center pt-2">
-          <span className="block h-1 w-10 rounded bg-black/25" />
+      <div className="relative mx-auto flex w-full max-w-[480px] flex-col pb-safe">
+        {/* Wooden sheet: carved rim + lit plank face (top corners only). */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 -z-10"
+          style={{
+            background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
+            borderRadius: "24px 22px 0 0 / 22px 24px 0 0",
+            boxShadow: "0 -6px 18px rgba(0,0,0,0.4)",
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="absolute -z-10"
+          style={{
+            inset: "4px 4px 0 4px",
+            background:
+              "linear-gradient(180deg, var(--color-wood-panel-light) 0%, var(--color-wood-panel-dark) 100%)",
+            borderRadius: "20px 18px 0 0 / 18px 20px 0 0",
+            boxShadow: "inset 0 3px 0 rgba(255,235,200,0.35)",
+          }}
+        />
+        <div className="flex justify-center pt-2.5">
+          <span className="block h-1.5 w-10 rounded-full bg-ink/40" />
         </div>
         <div className="h-3" />
-        <h2 className="px-4 text-[18px] font-extrabold text-black/85">{title}</h2>
+        <h2
+          className="px-4 font-game text-[19px] tracking-wide text-cream"
+          style={{ textShadow: "0 1.5px 0 rgba(92,48,24,0.7)" }}
+        >
+          {title}
+        </h2>
         <div className="h-2" />
         <div className="flex flex-col">{children}</div>
         <div className="h-3" />
@@ -422,19 +465,24 @@ function SheetOption({
     <button
       type="button"
       onClick={onTap}
-      className="flex w-full items-center px-5 py-3.5 text-left transition-colors active:bg-black/[0.04]"
+      className="flex w-full items-center px-5 py-3.5 text-left transition-colors active:bg-black/10"
     >
       <span
         className="flex-1 text-[16px]"
         style={{
-          color: selected ? PRIMARY : "rgba(0,0,0,0.85)",
+          color: selected ? "var(--color-ink)" : "rgba(92,48,24,0.8)",
           fontWeight: selected ? 800 : 500,
         }}
       >
         {label}
       </span>
       {selected && (
-        <span style={{ color: PRIMARY }}>
+        <span
+          style={{
+            color: "var(--color-grass-deep)",
+            filter: "drop-shadow(0 1px 0 rgba(255,235,205,0.4))",
+          }}
+        >
           <CheckIcon />
         </span>
       )}
@@ -532,37 +580,40 @@ function RevokeConfirmDialog({ onClose }: { onClose: () => void }) {
         onClick={onClose}
         className="absolute inset-0 bg-black/50"
       />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white p-5">
-        <h2 className="text-[20px] font-extrabold text-black/85">
+      <WoodPanel grass={false} className="relative w-full max-w-sm" contentClassName="p-5">
+        <h2
+          className="font-game text-[20px] tracking-wide text-cream"
+          style={{ textShadow: "0 1.5px 0 rgba(92,48,24,0.7)" }}
+        >
           {t("profileConsentRevokeTitle")}
         </h2>
         <div className="h-2" />
-        <p className="text-[14px] text-black/70">
+        <p className="text-[14px] font-medium leading-snug text-cream/90">
           {t("profileConsentRevokeBody")}
         </p>
         <div className="h-4" />
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-2 text-[14px] font-bold"
-            style={{ color: PRIMARY }}
+            className="rounded-full px-4 py-2 text-[14px] font-bold text-cream/90"
+            style={{ textShadow: "0 1px 0 rgba(92,48,24,0.6)" }}
           >
             {t("commonCancel")}
           </button>
-          <button
-            type="button"
+          <WoodButton
+            tone="red"
+            size="sm"
+            grass={false}
             onClick={() => {
               revoke();
               onClose();
             }}
-            className="rounded-full px-4 py-2 text-[14px] font-bold text-white"
-            style={{ backgroundColor: RED }}
           >
             {t("profileConsentRevokeConfirm")}
-          </button>
+          </WoodButton>
         </div>
-      </div>
+      </WoodPanel>
     </div>
   );
 }
@@ -605,7 +656,7 @@ function InfoIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(0,0,0,0.4)" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(92,48,24,0.5)" aria-hidden>
       <path d="M9.29 6.71a1 1 0 000 1.41L13.17 12l-3.88 3.88a1 1 0 101.42 1.41l4.59-4.59a1 1 0 000-1.41L10.71 6.71a1 1 0 00-1.42 0z" />
     </svg>
   );

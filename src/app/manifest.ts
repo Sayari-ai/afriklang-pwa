@@ -3,8 +3,9 @@ import type { MetadataRoute } from "next";
 /**
  * Web app manifest served at `/manifest.webmanifest`.
  *
- * Brand color matches the Flutter mobile app (#00539F). Icons reference
- * the placeholder set under `public/icons`; replace those PNGs with the
+ * Colors match the "wood & grass" game theme (dark maroon board —
+ * see --color-surface in globals.css). Icons reference the
+ * placeholder set under `public/icons`; replace those PNGs with the
  * real Afriklang artwork when assets land.
  */
 export default function manifest(): MetadataRoute.Manifest {
@@ -17,8 +18,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#00539F",
-    theme_color: "#00539F",
+    background_color: "#3E2B28",
+    theme_color: "#3E2B28",
     icons: [
       // Afriklang brand logo. SVG is fully scalable so a single asset
       // covers every install surface (home screen, app switcher, etc.).

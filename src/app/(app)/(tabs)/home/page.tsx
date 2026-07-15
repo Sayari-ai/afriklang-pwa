@@ -1,46 +1,33 @@
 "use client";
 
 /**
- * Home tab — gamified zig-zag adventure map.
+ * Home tab — gamified zig-zag adventure map ("wood & grass" theme).
  *
- * Direct port of the `_MapTab` widget tree in
- * `lib/features/home/home_screen.dart:144-468`. Concretely:
- *   - A background image (bg.png, 1608×3496) tiled vertically, one
- *     copy per cycle. `LevelNode`s are positioned absolutely in
- *     normalized coordinates (`NODE_POSITIONS`) inside a scroll
- *     container, so the user scrolls the nodes + bg as one — same
- *     vibe as Duolingo's path.
- *   - A floating points pill at the top, fixed above the scroll
- *     (matches `_PointsHeader`).
+ * Layout is a direct port of the `_MapTab` widget tree in
+ * `lib/features/home/home_screen.dart:144-468`, reskinned with the
+ * game UI kit:
+ *   - The map sits on the dark "game board" backdrop (grid +
+ *     vignette) instead of the old bg.png artwork.
+ *   - `LevelNode`s render as wooden medallions (`LevelBadge`) nested
+ *     in grass — completed levels carry their earned 1–3 star arc,
+ *     the current level pulses with a gold glow, locked levels wear
+ *     the green padlock.
+ *   - A dotted cream trail connects the nodes in play order, like a
+ *     classic level path.
+ *   - The floating points pill is now a wooden `ResourceCounter`
+ *     with a gold coin and the same animated count-up.
  *   - Tap on `current` or `completed` → navigate to `/level/[id]`.
  *     Tap on `locked` → snackbar + shake animation.
  *
  * Multi-cycle layout:
- *   - The repo now hands us `bundle: PathDefinition[]` — one entry
- *     per cycle the device has been issued, in cycle-ascending order.
- *     We render every cycle in a single continuous scroll, with the
+ *   - The repo hands us `bundle: PathDefinition[]` — one entry per
+ *     cycle the device has been issued, in cycle-ascending order. We
+ *     render every cycle in a single continuous scroll, with the
  *     oldest cycle (cycle 1) at the **bottom** of the scroller (so
- *     `scrollTop = scrollHeight` on mount keeps level 1 visible, same
- *     as before) and any newer cycles stacked above. Each cycle gets
- *     its own copy of the `bg.png` artwork and the same 8
+ *     `scrollTop = scrollHeight` on mount keeps level 1 visible) and
+ *     any newer cycles stacked above. Each cycle reuses the same 8
  *     `NODE_POSITIONS`, with the level ids lifted from that cycle's
- *     `levels[]`. Level ids are globally unique across cycles (per
- *     the backend contract) so id-based lookups keep working.
- *
- * What's intentionally simplified for the web port:
- *   - The Flutter version computes a `cover` image scale that picks
- *     `max(viewportW/1608, viewportH/3496)` so the artwork covers
- *     both axes. On the PWA we let the map width track the viewport
- *     width (`100%`) and height follow from the aspect ratio × cycle
- *     count.
- *   - The strawberry mascot's hand-painted CustomPaint is replaced
- *     by an inline SVG that captures the shape (red body, green
- *     leaves, eyes, smile). Close enough for parity at thumbnail
- *     size; not worth shipping a Konva/canvas dependency for one
- *     mascot.
- *   - The "Force-reassign" debug long-press is omitted — the
- *     Profile tab already exposes a `Reset` affordance per Flutter's
- *     plan, so we don't need a second entry point.
+ *     `levels[]`.
  *
  * Hydration: the parent `(app)` layout's `<AppRouteGuard>` blocks
  * rendering until stores are hydrated, so `usePathRepo.bundle` is
@@ -49,13 +36,15 @@
  * `reset()` and the next `boot()`.
  */
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
+import { LevelBadge } from "@/components/game/level-badge";
+import { ResourceCounter } from "@/components/game/resource-counter";
 import { NicknameSheet } from "@/components/nickname-sheet";
+import { GameBoardBackdrop } from "@/components/screen-background";
 import { type LevelDefinition } from "@/lib/content/models";
 import { formatCycleLevelParam } from "@/lib/content/cycle-level";
 import { useNickname } from "@/stores/nickname";
@@ -112,11 +101,10 @@ const NODE_POSITIONS: ReadonlyArray<{ dx: number; dy: number }> = [
   { dx: 0.74, dy: 0.2 },
 ];
 
-/** bg.png intrinsic dimensions — pinned here so the container can
- *  reserve the right height (ratio = 3496/1608 ≈ 2.174). */
-const MAP_W = 1608;
-const MAP_H = 3496;
-const MAP_ASPECT = MAP_H / MAP_W;
+/** Virtual map proportions per cycle. Inherited from the retired
+ *  bg.png artwork (1608×3496 → ratio ≈ 2.174) so node spacing and the
+ *  scroll feel stay identical after the reskin. */
+const MAP_ASPECT = 3496 / 1608;
 
 // ---------------------------------------------------------------------------
 // Page
@@ -216,6 +204,26 @@ export default function HomePage() {
 
   const totalPoints = progress?.totalPoints ?? 0;
 
+  // Dotted trail between consecutive nodes (play order). `levels` is
+  // already emitted in play order — cycle-ascending, level-ascending —
+  // so pairing neighbours also bridges cycle boundaries.
+  const trailDots = useMemo(() => {
+    const dots: Array<{ x: number; y: number; key: string }> = [];
+    for (let i = 1; i < levels.length; i++) {
+      const a = levels[i - 1];
+      const b = levels[i];
+      for (let k = 1; k <= 3; k++) {
+        const f = k / 4;
+        dots.push({
+          x: a.dx + (b.dx - a.dx) * f,
+          y: a.dy + (b.dy - a.dy) * f,
+          key: `${a.cycle}-${a.id}-${k}`,
+        });
+      }
+    }
+    return dots;
+  }, [levels]);
+
   // Scroll-to-bottom on mount so the active level is on screen.
   // (Map is laid out top→down, with level 1 at the bottom — same
   // semantic as the Flutter `jumpTo(maxScrollExtent)` call.)
@@ -282,23 +290,12 @@ export default function HomePage() {
     nicknameHydrated && nicknameValue === null && !nicknamePrompted;
 
   return (
-    <div className="relative min-h-dvh w-full overflow-hidden bg-[#7BC96F]">
-      {/* Background — a single bg.png tile pinned to the viewport.
-          It does NOT scroll with the nodes; the level curve scrolls
-          over it. Sits in a layer below the scroller (z-0). The page
-          bg (#7BC96F) shows through any letterboxing. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0"
-      >
-        <Image
-          src="/images/bg.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
+    <div className="relative min-h-dvh w-full overflow-hidden bg-surface">
+      {/* Game-board backdrop (grid + vignette), pinned to the
+          viewport. It does NOT scroll with the nodes; the level path
+          scrolls over it. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+        <GameBoardBackdrop />
       </div>
 
       {/* Scrollable nodes. Padded at the bottom so the last visible
@@ -313,11 +310,26 @@ export default function HomePage() {
         {/* Node container: width 100%, height = width × aspect ×
             cycleCount. Each cycle gets one copy of the 8 node
             positions, stacked top-to-bottom with cycle 1 at the
-            *bottom*. The bg lives outside this scroller (above). */}
+            *bottom*. */}
         <div
           className="relative w-full"
           style={{ paddingTop: `${MAP_ASPECT * cycleCount * 100}%` }}
         >
+          {/* Dotted trail — under the nodes. */}
+          {trailDots.map((d) => (
+            <span
+              key={d.key}
+              aria-hidden
+              className="absolute h-2 w-2 rounded-full"
+              style={{
+                left: `calc(${d.x * 100}% - 4px)`,
+                top: `calc(${d.y * 100}% - 4px)`,
+                background: "rgba(255,246,224,0.32)",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+              }}
+            />
+          ))}
+
           {/* Level nodes. Each anchored absolutely in the map's own
               coordinate system. `dy` is already in global (whole-map)
               normalized space — see the `useMemo` above. */}
@@ -355,15 +367,12 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Floating points pill — fixed to viewport, not scroll. */}
+      {/* Floating points counter — fixed to viewport, not scroll. */}
       <div
         className="absolute inset-x-4 top-0 z-10"
-        style={{ marginTop: "calc(env(safe-area-inset-top) + 8px)" }}
+        style={{ marginTop: "calc(env(safe-area-inset-top) + 10px)" }}
       >
-        <PointsHeader
-          points={totalPoints}
-          pointsLabel={t("homePointsLabel")}
-        />
+        <PointsHeader points={totalPoints} pointsLabel={t("homePointsLabel")} />
       </div>
 
       {/* First-run nickname prompt. Lives at the page root so its
@@ -404,20 +413,11 @@ function PointsHeader({
   const animated = useAnimatedNumber(points, 900);
 
   return (
-    <div
-      className="flex h-16 items-center gap-2 rounded-full px-5 shadow-lg phone-sm:h-14 phone-sm:px-4"
-      style={{ backgroundColor: "var(--color-brand-primary)" }}
-    >
-      <p className="min-w-0 flex-1 truncate text-[22px] text-white phone-sm:text-[18px]">
-        <span className="font-black">+{animated} </span>
-        <span className="font-medium">{pointsLabel}</span>
-      </p>
-      {/* Streak pill intentionally removed: the backend has no streak
-          yet and the old pill was hardcoded to "🔥 0" (a permanently
-          broken-looking mechanic). Re-add here when the Phase-2
-          server-side streak lands — the slot is this flex row's
-          trailing edge. */}
-    </div>
+    <ResourceCounter
+      icon="coin"
+      value={`+${animated}`}
+      suffix={pointsLabel}
+    />
   );
 }
 
@@ -478,6 +478,23 @@ function LevelNodeView({
     onLaunch();
   };
 
+  // Completed levels carry a 3-star "completion quality" rating. The
+  // mapping squashes the user's submitted/total ratio into 3 slots:
+  //   - clean sweep (submittedCount === totalSteps) → 3 filled stars
+  //   - partial run → ceil(ratio * 3), min 1
+  // When the entry has no client-side completion data (legacy or
+  // cross-device), default to 3 filled stars.
+  const knownPartial =
+    typeof node.submittedCount === "number" &&
+    typeof node.totalSteps === "number" &&
+    node.totalSteps > 0;
+  const stars = knownPartial
+    ? Math.max(
+        1,
+        Math.min(3, Math.ceil((node.submittedCount! / node.totalSteps!) * 3)),
+      )
+    : 3;
+
   return (
     <button
       type="button"
@@ -485,180 +502,49 @@ function LevelNodeView({
       aria-label={`Level ${node.id}`}
       className="relative block h-20 w-20 cursor-pointer"
       style={{
-        animation: shake
-          ? "afk-shake 0.45s ease"
-          : undefined,
-        // Re-trigger by changing key via a custom property that
-        // depends on `shake` count. Cheap.
-        animationName: shake ? `afk-shake-${shake % 2}` : undefined,
+        // Alternate between two identical keyframe sets so a repeat
+        // tap re-triggers the wobble. Keyframes live in globals.css.
+        animation: shake ? `afk-shake-${shake % 2} 0.45s ease` : undefined,
       }}
     >
-      {node.status === "locked" && <LockedNode />}
-      {node.status === "completed" && (
-        <CompletedNode
-          submittedCount={node.submittedCount}
-          totalSteps={node.totalSteps}
-        />
-      )}
+      <LevelBadge level={node.id} state={node.status} stars={stars} />
+
+      {/* "Tap to start" call-out floating above the current node —
+          a mini wooden plank tooltip. `w-max` so longer translations
+          (FR "Touchez pour commencer") widen the plank rather than
+          wrapping over the badge. */}
       {node.status === "current" && (
-        <CurrentNode id={node.id} tapLabel={tapToStartLabel} />
+        <span className="absolute left-1/2 top-[-38px] z-20 block w-max max-w-[80vw] -translate-x-1/2 phone-sm:max-w-[160px]">
+          <span className="relative block px-3 py-1.5">
+            <span
+              aria-hidden
+              className="absolute inset-0"
+              style={{
+                background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
+                borderRadius: "10px 9px 10px 9px / 9px 10px 8px 10px",
+                boxShadow: "0 3px 6px rgba(0,0,0,0.4)",
+              }}
+            />
+            <span
+              aria-hidden
+              className="absolute"
+              style={{
+                inset: "2px 2px 4px 2px",
+                background:
+                  "linear-gradient(180deg, var(--color-wood-light) 0%, var(--color-wood-mid) 100%)",
+                borderRadius: "8px 7px 8px 7px / 7px 8px 6px 8px",
+              }}
+            />
+            <span
+              className="relative z-10 font-game text-[12px] leading-none text-cream"
+              style={{ textShadow: "0 1px 0 rgba(92,48,24,0.8)" }}
+            >
+              {tapToStartLabel}
+            </span>
+          </span>
+        </span>
       )}
-
-      {/* Inline keyframes — defined inside the page so we don't
-          touch globals.css for one animation. */}
-      <style>{`
-        @keyframes afk-shake-0 {
-          0% { transform: translateX(0); }
-          20% { transform: translateX(-8px); }
-          40% { transform: translateX(7px); }
-          60% { transform: translateX(-5px); }
-          80% { transform: translateX(3px); }
-          100% { transform: translateX(0); }
-        }
-        @keyframes afk-shake-1 {
-          0% { transform: translateX(0); }
-          20% { transform: translateX(8px); }
-          40% { transform: translateX(-7px); }
-          60% { transform: translateX(5px); }
-          80% { transform: translateX(-3px); }
-          100% { transform: translateX(0); }
-        }
-      `}</style>
     </button>
-  );
-}
-
-function LockedNode() {
-  return (
-    <div className="relative h-full w-full">
-      <DashedRing color="rgba(255,255,255,0.9)" />
-      <div className="absolute inset-1 flex items-center justify-center rounded-full bg-[#6B6B6B] shadow-[0_3px_6px_rgba(0,0,0,0.33)]">
-        <LockIcon />
-      </div>
-    </div>
-  );
-}
-
-function CompletedNode({
-  submittedCount,
-  totalSteps,
-}: {
-  submittedCount?: number;
-  totalSteps?: number;
-}) {
-  // 3-star "completion quality" rating. The mapping squashes the
-  // user's submitted/total ratio into 3 slots so that:
-  //   - a clean sweep (submittedCount === totalSteps) → 3 filled stars
-  //   - a partial run → ceil(ratio * 3) filled stars, e.g.
-  //       1/4 submitted → 1 filled, 2 outline
-  //       2/4 → 2 filled, 1 outline
-  //       3/4 → 3 filled, 0 outline (full bar visible only at 4/4)
-  // When the entry has no client-side completion data (legacy or
-  // cross-device), default to 3 filled stars.
-  //
-  // Visual: per design, completed levels are rendered as *just stars*
-  // — no green disc, no dashed ring, no halo. The stars sit directly
-  // on the map background, so the cluster needs a soft shadow to keep
-  // them legible against the green path. The 80×80 button slot is
-  // preserved for layout (so positions don't shift), and the row is
-  // centered inside it.
-  const knownPartial =
-    typeof submittedCount === "number" &&
-    typeof totalSteps === "number" &&
-    totalSteps > 0;
-  const filled = knownPartial
-    ? Math.max(
-        1,
-        Math.min(3, Math.ceil((submittedCount! / totalSteps!) * 3)),
-      )
-    : 3;
-  return (
-    <div className="relative flex h-full w-full items-center justify-center">
-      <ThreeStarRow filled={filled} />
-    </div>
-  );
-}
-
-function ThreeStarRow({ filled }: { filled: number }) {
-  // Three small stars centered in the 80×80 node slot. Stars sit
-  // directly on the green map background (no disc behind them), so
-  // they get a soft drop-shadow for legibility and a subtle white
-  // stroke ring on filled stars — the same trick used on the points
-  // pill numerals.
-  const slots = [0, 1, 2];
-  return (
-    <div
-      className="flex items-center gap-0.5"
-      style={{ filter: "drop-shadow(0 2px 3px rgba(0,0,0,0.35))" }}
-    >
-      {slots.map((i) => (
-        <SmallStarIcon key={i} filled={i < filled} />
-      ))}
-    </div>
-  );
-}
-
-function SmallStarIcon({ filled }: { filled: boolean }) {
-  // Filled = gold with a thin white outline so the star pops off the
-  // green map. Outline-only = white stroke (no fill), matching the
-  // "missed slot" look you'd find in classic 3-star rating UIs.
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-6 w-6"
-      fill={filled ? "#FFC83D" : "none"}
-      stroke="white"
-      strokeWidth={filled ? 1.25 : 2}
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.7 7.1L12 17.6 5.7 21.3l1.7-7.1L2 9.5l7.1-.6L12 2z" />
-    </svg>
-  );
-}
-
-function CurrentNode({ id, tapLabel }: { id: number; tapLabel: string }) {
-  return (
-    <div className="relative h-full w-full">
-      {/* Outward ripple ring — pure CSS keyframe scaling an absolutely
-          positioned border. */}
-      <span
-        aria-hidden
-        className="absolute inset-0 -m-4 animate-[afk-ripple_1.4s_ease-in-out_infinite_alternate] rounded-full border-[3px] border-white/70"
-      />
-      <div
-        className="absolute inset-1.5 flex animate-[afk-pulse_1.4s_ease-in-out_infinite_alternate] items-center justify-center rounded-full border-[4px] border-white"
-        style={{
-          backgroundColor: "var(--color-brand-primary)",
-        }}
-      >
-        <span className="text-[36px] font-black text-white leading-none">
-          {id}
-        </span>
-      </div>
-      {/* "Tap to start" call-out floating above. `whitespace-nowrap`
-          so a longer translation (e.g. FR "Touchez pour commencer")
-          extends the pill horizontally rather than wrapping to a
-          second line and covering the level number underneath. */}
-      <div className="absolute left-1/2 top-[-34px] max-w-[80vw] -translate-x-1/2 whitespace-nowrap rounded-xl bg-white px-2.5 py-1 text-center shadow phone-sm:whitespace-normal phone-sm:max-w-[140px]">
-        <span
-          className="text-[12px] font-extrabold"
-          style={{ color: "var(--color-brand-primary)" }}
-        >
-          {tapLabel}
-        </span>
-      </div>
-      <style>{`
-        @keyframes afk-pulse {
-          from { transform: scale(1); }
-          to { transform: scale(1.08); }
-        }
-        @keyframes afk-ripple {
-          from { transform: scale(1); opacity: 0.7; }
-          to { transform: scale(1.75); opacity: 0; }
-        }
-      `}</style>
-    </div>
   );
 }
 
@@ -666,48 +552,12 @@ function CurrentNode({ id, tapLabel }: { id: number; tapLabel: string }) {
 // Decorative bits
 // ---------------------------------------------------------------------------
 
-function DashedRing({ color }: { color: string }) {
-  // 22 dashes around the circumference, ratio 0.55 — same as the
-  // `_DashedCirclePainter` in Dart. Implemented with SVG so there's
-  // no canvas/JS overhead per node.
-  const radius = 38; // 80/2 - 2px stroke padding
-  const circ = 2 * Math.PI * radius;
-  // Each dash occupies (1/22) of the circumference; visible portion
-  // 0.55 × dash, gap 0.45 × dash.
-  const dashLen = (circ / 22) * 0.55;
-  const gapLen = (circ / 22) * 0.45;
-  return (
-    <svg
-      viewBox="0 0 80 80"
-      className="absolute inset-0 h-full w-full"
-      aria-hidden
-    >
-      <circle
-        cx="40"
-        cy="40"
-        r={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth="3"
-        strokeDasharray={`${dashLen} ${gapLen}`}
-      />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-9 w-9" fill="#B5B5B5" aria-hidden>
-      <path d="M12 2a5 5 0 00-5 5v3H6a2 2 0 00-2 2v9a2 2 0 002 2h12a2 2 0 002-2v-9a2 2 0 00-2-2h-1V7a5 5 0 00-5-5zm-3 8V7a3 3 0 116 0v3H9z" />
-    </svg>
-  );
-}
-
 function Mascot() {
   // Bobbing strawberry. Animation is a tiny Y translate on a 1.8 s
   // ease-in-out-alternate loop, matching the Flutter sin-curve.
+  // Keyframes live in globals.css.
   return (
-    <div className="animate-[afk-bob_1.8s_ease-in-out_infinite_alternate]">
+    <div className="motion-safe:animate-[afk-bob_1.8s_ease-in-out_infinite_alternate]">
       <svg viewBox="0 0 110 120" width="110" height="120" aria-hidden>
         {/* Body */}
         <path
@@ -732,22 +582,10 @@ function Mascot() {
         <circle cx={46.2} cy={55.2} r={3.5} fill="black" />
         <circle cx={70.4} cy={55.2} r={3.5} fill="black" />
         {/* Mouth */}
-        <path
-          d="M41.8 72 Q55 93.6 68.2 72 Z"
-          fill="#6A1B1B"
-        />
+        <path d="M41.8 72 Q55 93.6 68.2 72 Z" fill="#6A1B1B" />
         {/* Tongue */}
-        <path
-          d="M48.4 81.6 Q55 93.6 61.6 81.6 Z"
-          fill="#FF80AB"
-        />
+        <path d="M48.4 81.6 Q55 93.6 61.6 81.6 Z" fill="#FF80AB" />
       </svg>
-      <style>{`
-        @keyframes afk-bob {
-          from { transform: translateY(-3px); }
-          to { transform: translateY(3px); }
-        }
-      `}</style>
     </div>
   );
 }

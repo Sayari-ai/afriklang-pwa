@@ -41,8 +41,12 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ArrowLeft } from "lucide-react";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { WoodIconButton } from "@/components/game/wood-icon-button";
+import { WoodMedallion } from "@/components/game/wood-medallion";
+import { GrassRing } from "@/components/game/grass";
 import { ScreenBackground } from "@/components/screen-background";
 import { uploadAudio, AudioUploadError } from "@/lib/api/audio";
 import { EdgeFunctionError } from "@/lib/api/edge";
@@ -755,7 +759,7 @@ export default function LevelPage({
         <div className="flex flex-col items-center px-6 pb-6 phone-sm:px-4 phone-sm:pb-4">
           {isRecording && (
             <>
-              <p className="text-[20px] font-semibold text-white phone-sm:text-[18px]">
+              <p className="text-outline font-game text-[22px] text-cream phone-sm:text-[19px]">
                 {formatElapsed(elapsedSec)}
               </p>
               <div className="h-4" />
@@ -781,7 +785,10 @@ export default function LevelPage({
                 onClick={toggleRecord}
               />
               <div className="h-3" />
-              <p className="text-[18px] font-semibold text-white">
+              <p
+                className="text-[18px] font-bold text-cream"
+                style={{ textShadow: "0 1.5px 0 rgba(0,0,0,0.45)" }}
+              >
                 {isRecording ? t("levelTapToStop") : t("levelTapToRecord")}
               </p>
             </>
@@ -810,23 +817,14 @@ function TopBar({
   skipLabel: string;
 }) {
   return (
-    <div className="flex items-center px-2 pt-2">
-      <button
-        type="button"
+    <div className="flex items-center gap-1 px-3 pt-3">
+      <WoodIconButton
+        icon={ArrowLeft}
+        label="Back"
+        size={44}
+        grass={false}
         onClick={onBack}
-        aria-label="Back"
-        className="flex h-12 w-12 items-center justify-center text-white"
-      >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path
-            d="M15 18l-6-6 6-6"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
+      />
       <div className="flex flex-1 justify-center">
         {/* Step bar — 60% width to match Flutter's FractionallySizedBox.
             On very narrow phones, give it more room so dots stay legible. */}
@@ -837,7 +835,8 @@ function TopBar({
       <button
         type="button"
         onClick={onSkip}
-        className="px-3 py-2 text-[18px] font-semibold text-white phone-sm:px-2 phone-sm:text-[15px]"
+        className="px-3 py-2 font-game text-[17px] tracking-wide text-cream phone-sm:px-2 phone-sm:text-[15px]"
+        style={{ textShadow: "0 1.5px 0 rgba(0,0,0,0.5)" }}
       >
         {skipLabel}
       </button>
@@ -846,7 +845,8 @@ function TopBar({
 }
 
 function StepBar({ total, current }: { total: number; current: number }) {
-  // Track green at #66BB6A, idle grey at #CFCFCF — Flutter `_StepBar`.
+  // Grass-green segments in a dark carved groove; the "head" segment
+  // carries a lit dot — game-kit spin on Flutter's `_StepBar`.
   return (
     <div className="flex h-3 items-center gap-1.5">
       {Array.from({ length: total }).map((_, i) => {
@@ -855,14 +855,29 @@ function StepBar({ total, current }: { total: number; current: number }) {
         return (
           <div key={i} className="relative flex-1">
             <div
-              className="h-1.5 w-full rounded-[3px]"
-              style={{ backgroundColor: filled ? "#66BB6A" : "#CFCFCF" }}
+              className="h-2 w-full rounded-[4px]"
+              style={
+                filled
+                  ? {
+                      background:
+                        "linear-gradient(180deg, var(--color-ribbon-light) 0%, var(--color-grass-light) 100%)",
+                      boxShadow: "0 1px 0 var(--color-grass-deep)",
+                    }
+                  : {
+                      background: "rgba(0,0,0,0.35)",
+                      boxShadow: "inset 0 1.5px 2px rgba(0,0,0,0.5)",
+                    }
+              }
             />
             {isHead && (
               <span
                 aria-hidden
-                className="absolute right-[-4px] top-1/2 h-3 w-3 -translate-y-1/2 rounded-full"
-                style={{ backgroundColor: "#66BB6A" }}
+                className="absolute right-[-4px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle at 40% 35%, var(--color-ribbon-light), var(--color-grass-light))",
+                  boxShadow: "0 0 0 2px var(--color-grass-deep)",
+                }}
               />
             )}
           </div>
@@ -889,36 +904,48 @@ function QuestionContent({
 }) {
   return (
     <div className="flex flex-col items-center px-6 phone-sm:px-4">
-      <h1
-        className="whitespace-pre-line text-center text-[32px] font-black leading-tight text-white phone-sm:text-[24px]"
-        style={{ letterSpacing: "-0.3px" }}
-      >
+      <h1 className="text-outline whitespace-pre-line text-center font-game text-[30px] leading-tight tracking-wide text-cream phone-sm:text-[23px]">
         {titleTemplate}
       </h1>
       <div className="h-3" />
-      <p className="text-center text-[18px] font-medium text-white phone-sm:text-[15px]">
+      <p
+        className="text-center text-[18px] font-bold text-cream/95 phone-sm:text-[15px]"
+        style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+      >
         {promptEn}
       </p>
       <div className="h-4" />
-      {/* Square card. `aspect-square` keeps it 1:1 regardless of the
-          underlying image; `object-cover` clips. */}
+      {/* Square wooden picture frame. `aspect-square` keeps it 1:1
+          regardless of the underlying image; `object-cover` clips. */}
       <div
-        className="relative aspect-square w-full max-w-md overflow-hidden rounded-[28px] bg-white p-2 shadow-[0_8px_20px_rgba(0,0,0,0.33)]"
+        className="relative aspect-square w-full max-w-md rounded-[28px] p-[7px] shadow-[0_10px_22px_rgba(0,0,0,0.45)]"
+        style={{
+          background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
+        }}
       >
-        <div className="relative h-full w-full overflow-hidden rounded-[22px] bg-[#EFEFEF]">
-          {/* `unoptimized` because Supabase Storage URLs are public
-              and we don't need Next's image optimisation for this
-              one-shot render. Saves us configuring a remote pattern
-              just for this. (Already configured for *.supabase.co
-              actually, but `unoptimized` cuts a roundtrip.) */}
-          <Image
-            src={imageUrl}
-            alt={promptEn}
-            fill
-            sizes="(max-width: 600px) 100vw, 480px"
-            className="object-cover"
-            unoptimized
-          />
+        <div
+          className="relative h-full w-full rounded-[23px] p-2"
+          style={{
+            background:
+              "linear-gradient(180deg, var(--color-wood-light) 0%, var(--color-wood-dark) 100%)",
+            boxShadow: "inset 0 2px 0 rgba(255,235,205,0.4)",
+          }}
+        >
+          <div className="relative h-full w-full overflow-hidden rounded-[16px] bg-[#2b1c15]">
+            {/* `unoptimized` because Supabase Storage URLs are public
+                and we don't need Next's image optimisation for this
+                one-shot render. Saves us configuring a remote pattern
+                just for this. (Already configured for *.supabase.co
+                actually, but `unoptimized` cuts a roundtrip.) */}
+            <Image
+              src={imageUrl}
+              alt={promptEn}
+              fill
+              sizes="(max-width: 600px) 100vw, 480px"
+              className="object-cover"
+              unoptimized
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -936,17 +963,19 @@ function RecordButton({
   recording: boolean;
   onClick: () => void;
 }) {
-  // Idle green #66BB6A → active red #E53935 (matches Flutter tokens).
+  // Idle green → active red (legacy affordance tokens), now rendered
+  // as a glossy "button core" set into a wooden medallion with grass.
   const color = recording ? "#E53935" : "#66BB6A";
+  const coreGradient = recording
+    ? "radial-gradient(circle at 50% 32%, #f0705e 0%, #e53935 55%, #b8281d 100%)"
+    : "radial-gradient(circle at 50% 32%, #8ed491 0%, #66bb6a 55%, #4a9a4e 100%)";
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={recording ? "Stop recording" : "Start recording"}
-      className="relative flex h-[100px] w-[100px] items-center justify-center rounded-full phone-sm:h-[88px] phone-sm:w-[88px]"
+      className="relative isolate flex h-[108px] w-[108px] items-center justify-center rounded-full phone-sm:h-[94px] phone-sm:w-[94px]"
       style={{
-        backgroundColor: color,
-        boxShadow: `0 0 18px 2px ${color}80`,
         // Kill the iOS Safari 300ms tap delay AND prevent the touch
         // landing on the inner <svg>/<span> children from being
         // re-routed away from the button. Without this, on iPhone +
@@ -956,9 +985,24 @@ function RecordButton({
         touchAction: "manipulation",
       }}
     >
+      <GrassRing />
+      {/* Wooden medallion base — decorative; taps land on the button. */}
+      <span className="pointer-events-none absolute inset-0">
+        <WoodMedallion className="h-full w-full" />
+      </span>
+      {/* Glossy colored core. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute rounded-full"
+        style={{
+          inset: "16%",
+          background: coreGradient,
+          boxShadow: `0 0 18px 2px ${color}80, inset 0 3px 0 rgba(255,255,255,0.35), inset 0 -4px 6px rgba(0,0,0,0.25)`,
+        }}
+      />
       {/* `pointer-events: none` on the icon ensures every tap on the
           circle hits the <button>, never an animated child. */}
-      <span className="pointer-events-none flex items-center justify-center">
+      <span className="pointer-events-none relative z-10 flex items-center justify-center">
         {recording ? <WaveformIcon /> : <MicIcon />}
       </span>
     </button>
@@ -1083,17 +1127,37 @@ function ActionButton({
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full transition-opacity disabled:cursor-not-allowed phone-sm:h-[64px] phone-sm:w-[64px]"
+        aria-label={label}
+        className="relative isolate flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full transition-opacity disabled:cursor-not-allowed phone-sm:h-[66px] phone-sm:w-[66px]"
         style={{
-          backgroundColor: color,
-          boxShadow: `0 0 14px 1px ${color}73`,
-          opacity: disabled && !busy ? 0.5 : 1,
+          opacity: disabled && !busy ? 0.55 : 1,
+          touchAction: "manipulation",
         }}
       >
-        {busy ? <ActionSpinner /> : icon}
+        {/* Wooden medallion base + glossy colored core. */}
+        <span className="pointer-events-none absolute inset-0">
+          <WoodMedallion className="h-full w-full" />
+        </span>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute rounded-full"
+          style={{
+            inset: "16%",
+            background: `radial-gradient(circle at 50% 30%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 55%), radial-gradient(circle at 50% 90%, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 60%), ${color}`,
+            boxShadow: `0 0 12px 1px ${color}73, inset 0 2px 0 rgba(255,255,255,0.35), inset 0 -3px 5px rgba(0,0,0,0.28)`,
+          }}
+        />
+        <span className="pointer-events-none relative z-10 flex items-center justify-center">
+          {busy ? <ActionSpinner /> : icon}
+        </span>
       </button>
       <div className="h-2" />
-      <span className="line-clamp-2 text-center text-[15px] font-semibold text-white phone-sm:text-[13px]">{label}</span>
+      <span
+        className="line-clamp-2 text-center text-[15px] font-bold text-cream phone-sm:text-[13px]"
+        style={{ textShadow: "0 1px 0 rgba(0,0,0,0.5)" }}
+      >
+        {label}
+      </span>
     </div>
   );
 }

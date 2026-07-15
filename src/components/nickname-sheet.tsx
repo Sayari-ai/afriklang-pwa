@@ -29,6 +29,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { WoodButton } from "@/components/game/wood-button";
 import { setNickname } from "@/lib/api/nickname";
 import { EdgeFunctionError } from "@/lib/api/edge";
 import { track } from "@/lib/api/events";
@@ -39,8 +40,6 @@ import {
   useNickname,
 } from "@/stores/nickname";
 import { useSnackbar } from "@/stores/snackbar";
-
-const PRIMARY = "#00539F";
 
 export type NicknameSheetMode = "first-run" | "edit";
 
@@ -177,18 +176,39 @@ export function NicknameSheet({
         }}
         className="absolute inset-0 bg-black/50"
       />
-      <div className="relative mx-auto flex w-full max-w-[480px] flex-col rounded-t-[20px] bg-white pb-safe">
-        <div className="flex justify-center pt-2">
-          <span className="block h-1 w-10 rounded bg-black/25" />
+      <div className="relative mx-auto flex w-full max-w-[480px] flex-col pb-safe">
+        {/* Wooden sheet: carved rim + lit plank face (top corners only). */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 -z-10"
+          style={{
+            background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
+            borderRadius: "24px 22px 0 0 / 22px 24px 0 0",
+            boxShadow: "0 -6px 18px rgba(0,0,0,0.4)",
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="absolute -z-10"
+          style={{
+            inset: "4px 4px 0 4px",
+            background:
+              "linear-gradient(180deg, var(--color-wood-panel-light) 0%, var(--color-wood-panel-dark) 100%)",
+            borderRadius: "20px 18px 0 0 / 18px 20px 0 0",
+            boxShadow: "inset 0 3px 0 rgba(255,235,200,0.35)",
+          }}
+        />
+        <div className="flex justify-center pt-2.5">
+          <span className="block h-1.5 w-10 rounded-full bg-ink/40" />
         </div>
         <div className="h-3" />
-        <h2 className="px-5 text-[18px] font-extrabold text-black/85">
+        <h2 className="px-5 font-game text-[19px] tracking-wide text-cream" style={{ textShadow: "0 1.5px 0 rgba(92,48,24,0.7)" }}>
           {mode === "first-run"
             ? t("nicknameSheetTitleFirstRun")
             : t("nicknameSheetTitleEdit")}
         </h2>
         <div className="h-1.5" />
-        <p className="px-5 text-[13px] text-black/60">
+        <p className="px-5 text-[13px] font-medium text-cream/85">
           {t("nicknameSheetSubtitle")}
         </p>
         <div className="h-3" />
@@ -213,19 +233,15 @@ export function NicknameSheet({
             maxLength={maxLengthAttr}
             placeholder={t("nicknameSheetPlaceholder")}
             disabled={submitting}
-            className="w-full rounded-xl border border-black/10 bg-black/[0.03] px-4 py-3 text-[16px] text-black/85 outline-none transition-colors focus:border-[color:var(--c)] focus:bg-white"
-            style={
-              {
-                ["--c" as string]: PRIMARY,
-              } as React.CSSProperties
-            }
+            className="w-full rounded-xl border-2 border-ink/50 bg-black/20 px-4 py-3 text-[16px] font-semibold text-cream placeholder:text-cream/40 outline-none transition-colors focus:border-grass-light focus:bg-black/25"
+            style={{ boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3)" }}
           />
           <div className="h-1.5" />
           <div className="flex min-h-[16px] items-center justify-between">
-            <span className="text-[12px] text-red-600">
+            <span className="text-[12px] font-bold text-[#ffb3a0]">
               {errorCopy ?? ""}
             </span>
-            <span className="text-[12px] text-black/40">
+            <span className="text-[12px] font-medium text-cream/60">
               {[...draft.replace(/\s+/g, " ").trim()].length}/
               {NICKNAME_MAX_LENGTH}
             </span>
@@ -234,7 +250,7 @@ export function NicknameSheet({
 
         <div className="h-4" />
 
-        <div className="flex items-center justify-end gap-2 px-5">
+        <div className="flex items-center justify-end gap-3 px-5">
           <button
             type="button"
             onClick={() => {
@@ -243,20 +259,21 @@ export function NicknameSheet({
               onClose();
             }}
             disabled={submitting}
-            className="rounded-full px-4 py-2 text-[14px] font-bold disabled:opacity-50"
-            style={{ color: PRIMARY }}
+            className="rounded-full px-4 py-2 text-[14px] font-bold text-cream/90 disabled:opacity-50"
+            style={{ textShadow: "0 1px 0 rgba(92,48,24,0.6)" }}
           >
             {dismissLabel}
           </button>
-          <button
-            type="button"
+          <WoodButton
+            tone="green"
+            size="sm"
+            grass={false}
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className="rounded-full px-4 py-2 text-[14px] font-bold text-white disabled:opacity-50"
-            style={{ backgroundColor: PRIMARY }}
+            loading={submitting}
           >
             {submitLabel}
-          </button>
+          </WoodButton>
         </div>
         <div className="h-4" />
       </div>

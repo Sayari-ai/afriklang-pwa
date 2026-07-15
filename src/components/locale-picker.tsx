@@ -58,15 +58,18 @@ export function LocalePicker({ className }: { className?: string }) {
             role="radio"
             aria-checked={isActive}
             onClick={() => setLocale(pill.value)}
-            className="rounded-full px-4 py-2 text-sm font-bold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            className="rounded-full px-4 py-2 text-sm font-bold transition-all duration-150"
             style={{
-              backgroundColor: isActive
-                ? "#ffffff"
-                : "rgba(255,255,255,0.10)",
-              color: isActive ? "var(--color-primary)" : "#ffffff",
+              background: isActive
+                ? "linear-gradient(180deg, var(--color-ribbon-light) 0%, var(--color-ribbon-mid) 100%)"
+                : "rgba(0,0,0,0.25)",
+              color: isActive ? "var(--color-grass-deep)" : "var(--color-cream)",
               border: isActive
-                ? "1px solid #ffffff"
-                : "1px solid rgba(255,255,255,0.30)",
+                ? "2px solid var(--color-grass-dark)"
+                : "2px solid rgba(233,160,91,0.35)",
+              boxShadow: isActive
+                ? "0 2px 0 var(--color-grass-deep)"
+                : "inset 0 2px 4px rgba(0,0,0,0.25)",
             }}
           >
             {pill.label}

@@ -38,13 +38,37 @@ export function SnackbarHost() {
         // pill whenever a fresh message arrives, restarting the entry
         // transition from scratch.
         key={seq}
-        className="max-w-md rounded-2xl bg-[#323232] px-4 py-3 text-[15px] font-medium text-white shadow-lg transition-all duration-200"
+        className="relative max-w-md px-5 py-3 text-[15px] font-bold text-cream transition-all duration-200"
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? "translateY(0)" : "translateY(8px)",
         }}
       >
-        {message ?? "\u00a0"}
+        {/* Wooden slat backdrop (carved rim + lit face). */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 -z-10"
+          style={{
+            background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
+            borderRadius: "16px 14px 15px 14px / 14px 16px 13px 15px",
+            boxShadow: "0 6px 12px rgba(0,0,0,0.45)",
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="absolute -z-10"
+          style={{
+            inset: "3px 3px 6px 3px",
+            background:
+              "linear-gradient(180deg, var(--color-wood-light) 0%, var(--color-wood-mid) 60%, var(--color-wood-dark) 100%)",
+            borderRadius: "13px 11px 12px 11px / 11px 13px 10px 12px",
+            boxShadow:
+              "inset 0 2px 0 rgba(255,235,205,0.4), inset 0 -3px 5px rgba(0,0,0,0.18)",
+          }}
+        />
+        <span style={{ textShadow: "0 1px 0 rgba(92,48,24,0.6)" }}>
+          {message ?? "\u00a0"}
+        </span>
       </div>
     </div>
   );

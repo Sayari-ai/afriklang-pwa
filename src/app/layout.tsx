@@ -3,7 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 
 import { AppHydration } from "@/components/app-hydration";
-import { satoshi } from "@/lib/fonts";
+import { lilita, satoshi } from "@/lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,7 +33,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#00539F",
+  // Dark maroon "game board" surface — matches --color-surface in
+  // globals.css so the browser chrome blends into the backdrop.
+  themeColor: "#3E2B28",
   width: "device-width",
   initialScale: 1,
   // PWAs need to extend under the iOS safe-area for the kiosk-style look
@@ -60,7 +62,7 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className={`${satoshi.variable} h-full`}>
+    <html lang={locale} className={`${satoshi.variable} ${lilita.variable} h-full`}>
       {/*
         suppressHydrationWarning: some browser extensions (ColorZilla,
         Grammarly, LastPass, dark-mode helpers) inject attributes on

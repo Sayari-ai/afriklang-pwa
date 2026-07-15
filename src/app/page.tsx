@@ -44,6 +44,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
+import { GameBoardBackdrop } from "@/components/screen-background";
 import { useConsent } from "@/stores/consent";
 import { useOnboarding } from "@/stores/onboarding";
 import { usePathRepo } from "@/stores/path-repo";
@@ -100,15 +101,13 @@ export default function SplashGatePage() {
     return () => window.clearTimeout(id);
   }, [hydrated, onboardingDone, pathReady, consentGranted, router]);
 
-  // Splash UI: brand-blue background, centred logo. Matches
-  // `splash_screen.dart:27-43` (Align(0, -0.15), 45 % width).
+  // Splash UI: dark game-board backdrop, centred logo. Same geometry
+  // as `splash_screen.dart:27-43` (Align(0, -0.15), 45 % width).
   return (
-    <div
-      className="flex min-h-dvh w-full items-center justify-center"
-      style={{ backgroundColor: "var(--color-brand-primary)" }}
-    >
+    <div className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-surface">
+      <GameBoardBackdrop />
       <div
-        className="flex w-full justify-center"
+        className="relative flex w-full justify-center"
         style={{ transform: "translateY(-7.5%)" }}
       >
         <div className="w-[45vw] max-w-[280px]">

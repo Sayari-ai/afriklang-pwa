@@ -62,3 +62,71 @@ export const AppColors = {
 } as const;
 
 export type AppColor = keyof typeof AppColors;
+
+/**
+ * "Wood & grass" game-kit palette — the visual reskin's source of
+ * truth, mirrored 1:1 by the CSS variables in `src/app/globals.css`
+ * (`--color-wood-*`, `--color-grass-*`, ...). Prefer the CSS vars /
+ * Tailwind tokens in components; import this object only where a JS
+ * value is required (canvas, SVG gradient stops, manifest).
+ */
+export const GameColors = {
+  // Wood
+  woodLight: "#E9A05B",
+  woodMid: "#C97B3D",
+  woodDark: "#9E5B2C",
+  woodRim: "#6E3C1D",
+  woodShadow: "#45250F",
+  woodPanelLight: "#DD9354",
+  woodPanelDark: "#C47737",
+
+  // Grass & ribbon
+  grassLight: "#8CC63F",
+  grassDark: "#4C8F2F",
+  grassDeep: "#3E7A26",
+  ribbonLight: "#C9EC6B",
+  ribbonMid: "#8DC63F",
+  ribbonDark: "#5B9E2D",
+
+  // Collectibles
+  starGold: "#FFC93C",
+  starOrange: "#F2A03D",
+  starRim: "#B36A24",
+  starEmpty: "#5C3A24",
+  heartRed: "#E84357",
+  heartEmpty: "#40261C",
+  coinGold: "#FFCF4D",
+  coinRim: "#D98E2B",
+
+  // Glossy "2D game icon" accents (lock shackle, shield face, wizard
+  // hat, hourglass glass, halo discs) — gold+purple pack style.
+  goldLight: "#FFE08A",
+  goldDeep: "#E8941F",
+  goldOutline: "#A85F14",
+  purpleLight: "#B18CEB",
+  purple: "#8E5BD9",
+  purpleDark: "#6B3FB8",
+  purpleDeep: "#53309E",
+  glassLight: "#C9F0FF",
+  glassBlue: "#4FB3EE",
+  glassDeep: "#2E86C1",
+  halo: "#EDE7FB",
+
+  // Board surface & text
+  surface: "#3E2B28",
+  surfaceDeep: "#332220",
+  cream: "#FFF6E0",
+  ink: "#5C3018",
+
+  /** Celebration confetti — greens, golds and wood oranges. */
+  confetti: [
+    "#8CC63F",
+    "#FFC93C",
+    "#F2A03D",
+    "#C9EC6B",
+    "#E84357",
+    "#FFF6E0",
+  ] as const,
+} as const;
+
+export type GameColor = keyof typeof GameColors;

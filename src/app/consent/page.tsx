@@ -34,6 +34,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState } from "react";
 
+import { GameIconHalo, GameShield } from "@/components/game/glossy-icons";
+import { WoodButton } from "@/components/game/wood-button";
 import { ScreenBackground } from "@/components/screen-background";
 import { track } from "@/lib/api/events";
 import { useConsent } from "@/stores/consent";
@@ -79,15 +81,22 @@ export default function ConsentPage() {
   return (
     <ScreenBackground overlay="strong">
       <div className="flex min-h-dvh w-full flex-col px-6">
-        <div className="h-6" />
-        <h1
-          className="whitespace-pre-line text-[40px] font-black leading-tight text-white phone-sm:text-[30px]"
-          style={{ letterSpacing: "-0.5px" }}
-        >
+        <div className="h-4" />
+        {/* Privacy shield — glossy game-icon header. */}
+        <div className="flex justify-center">
+          <GameIconHalo size={104}>
+            <GameShield className="h-[68%] w-[68%]" />
+          </GameIconHalo>
+        </div>
+        <div className="h-2" />
+        <h1 className="text-outline whitespace-pre-line font-game text-[36px] leading-tight tracking-wide text-cream phone-sm:text-[28px]">
           {t("consentTitle")}
         </h1>
         <div className="h-3" />
-        <p className="text-[18px] font-normal leading-snug text-white phone-sm:text-[15px]">
+        <p
+          className="text-[18px] font-medium leading-snug text-cream/95 phone-sm:text-[15px]"
+          style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+        >
           {t("consentSubtitle")}
         </p>
         <div className="h-8" />
@@ -110,14 +119,14 @@ export default function ConsentPage() {
             onClick={() => setWhatIfOpen((v) => !v)}
             aria-expanded={whatIfOpen}
             aria-controls={whatIfBodyId}
-            className="py-1 text-[15px] font-bold text-white underline underline-offset-4 phone-sm:text-[13px]"
+            className="py-1 text-[15px] font-bold text-cream underline underline-offset-4 phone-sm:text-[13px]"
           >
             {t("consentWhatIfDeclineAction")}
           </button>
           {whatIfOpen && (
             <p
               id={whatIfBodyId}
-              className="pt-2 text-[15px] font-normal leading-snug text-white/85 phone-sm:text-[13px]"
+              className="pt-2 text-[15px] font-normal leading-snug text-cream/85 phone-sm:text-[13px]"
             >
               {t("consentWhatIfDeclineBody")}
             </p>
@@ -134,29 +143,27 @@ export default function ConsentPage() {
             type="checkbox"
             checked={ageConfirmed}
             onChange={(e) => setAgeConfirmed(e.target.checked)}
-            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-white"
+            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-grass-light"
           />
-          <span className="text-[15px] font-medium leading-snug text-white phone-sm:text-[13px]">
+          <span className="text-[15px] font-medium leading-snug text-cream phone-sm:text-[13px]">
             {t("consentAgeConfirmLabel")}
           </span>
         </label>
 
         <div className="h-4" />
-        <button
-          type="button"
+        <WoodButton
+          tone="green"
+          size="lg"
+          fullWidth
           onClick={accept}
           disabled={busy || !ageConfirmed}
+          loading={busy}
           aria-busy={busy}
-          className="flex h-16 w-full items-center justify-center rounded-[36px] text-[24px] font-bold transition-opacity disabled:cursor-not-allowed disabled:opacity-60 phone-sm:h-14 phone-sm:text-[18px]"
-          style={{
-            backgroundColor: busy ? "rgba(255,255,255,0.7)" : "#FFFFFF",
-            color: "var(--color-brand-primary)",
-          }}
         >
-          {busy ? <Spinner /> : agreeLabel}
-        </button>
+          {agreeLabel}
+        </WoodButton>
         <div className="h-3" />
-        <p className="text-center text-[13px] font-normal text-white/70">
+        <p className="text-center text-[13px] font-normal text-cream/70">
           {/* `consentDisclaimer` takes one ICU param — the literal label
               of the agree button — so the disclaimer self-references
               the CTA without us hardcoding "I agree" twice. */}
@@ -175,27 +182,15 @@ function Bullet({ children }: { children: React.ReactNode }) {
           first line. Matches `_Bullet` `EdgeInsets.only(top: 8)`. */}
       <span
         aria-hidden
-        className="mt-2 inline-block h-2 w-2 shrink-0 rounded-full bg-white"
+        className="mt-2 inline-block h-2 w-2 shrink-0 rounded-full"
+        style={{
+          background: "var(--color-grass-light)",
+          boxShadow: "0 1px 0 var(--color-grass-deep)",
+        }}
       />
-      <span className="text-[17px] font-medium leading-snug text-white phone-sm:text-[14px]">
+      <span className="text-[17px] font-medium leading-snug text-cream phone-sm:text-[14px]">
         {children}
       </span>
     </li>
-  );
-}
-
-function Spinner() {
-  // 22-px brand-blue ring on white, matching the Flutter
-  // `CircularProgressIndicator` swap-in (`consent_screen.dart:118-126`).
-  return (
-    <span
-      role="progressbar"
-      aria-label="Working"
-      className="block h-[22px] w-[22px] animate-spin rounded-full border-[2.5px] border-transparent"
-      style={{
-        borderTopColor: "var(--color-brand-primary)",
-        borderRightColor: "var(--color-brand-primary)",
-      }}
-    />
   );
 }

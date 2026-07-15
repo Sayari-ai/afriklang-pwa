@@ -23,6 +23,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { WoodButton } from "@/components/game/wood-button";
+import { WoodPanel } from "@/components/game/wood-panel";
 import { track } from "@/lib/api/events";
 import { useInstallPrompt } from "@/stores/install-prompt";
 
@@ -64,39 +66,45 @@ export function InstallPromptCard() {
   };
 
   return (
-    <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-left">
-      <h2 className="text-[16px] font-bold text-white">
+    <WoodPanel grass={false} contentClassName="p-4 text-left">
+      <h2
+        className="font-game text-[17px] tracking-wide text-cream"
+        style={{ textShadow: "0 1.5px 0 rgba(92,48,24,0.7)" }}
+      >
         {t("installCardTitle")}
       </h2>
       <div className="h-1" />
-      <p className="text-[13px] leading-snug text-white/80">
+      <p className="text-[13px] font-medium leading-snug text-cream/90">
         {t("installCardBody")}
       </p>
 
       {showIosSteps && (
-        <ol className="mt-3 flex list-decimal flex-col gap-1 pl-5 text-[13px] leading-snug text-white">
+        <ol className="mt-3 flex list-decimal flex-col gap-1 pl-5 text-[13px] font-medium leading-snug text-cream">
           <li>{t("installCardIosStep1")}</li>
           <li>{t("installCardIosStep2")}</li>
         </ol>
       )}
 
       <div className="mt-3 flex items-center gap-3">
-        <button
-          type="button"
+        <WoodButton
+          tone="green"
+          size="sm"
+          grass={false}
+          fullWidth
+          className="flex-1"
           onClick={onPrimary}
-          className="flex h-11 flex-1 items-center justify-center rounded-full bg-white px-4 text-[14px] font-bold"
-          style={{ color: "var(--color-brand-primary)" }}
         >
           {t("installCardCta")}
-        </button>
+        </WoodButton>
         <button
           type="button"
           onClick={onNotNow}
-          className="h-11 shrink-0 px-3 text-[14px] font-semibold text-white/70"
+          className="h-11 shrink-0 px-3 text-[14px] font-bold text-cream/75"
+          style={{ textShadow: "0 1px 0 rgba(92,48,24,0.6)" }}
         >
           {t("installCardNotNow")}
         </button>
       </div>
-    </div>
+    </WoodPanel>
   );
 }

@@ -8,6 +8,7 @@
  * We declare every weight + italic combo the mobile app ships with,
  * so future screens can use w300..w900 without revisiting this file.
  */
+import { Lilita_One } from "next/font/google";
 import localFont from "next/font/local";
 
 export const satoshi = localFont({
@@ -25,4 +26,21 @@ export const satoshi = localFont({
     { path: "../../public/fonts/Satoshi-Black.otf",       weight: "900", style: "normal" },
     { path: "../../public/fonts/Satoshi-BlackItalic.otf", weight: "900", style: "italic" },
   ],
+});
+
+/**
+ * Lilita One — the chunky rounded "game" display face used by the
+ * wood-and-grass UI kit (button labels, level numerals, scores,
+ * ribbon titles). Single weight (400) by design: the glyphs are
+ * already fat, and the outlined look comes from the `text-outline`
+ * utility in globals.css, not from font weight.
+ *
+ * Exposed as `--font-lilita`, mapped to the Tailwind `font-game`
+ * utility via the `--font-game` @theme token.
+ */
+export const lilita = Lilita_One({
+  variable: "--font-lilita",
+  display: "swap",
+  weight: "400",
+  subsets: ["latin", "latin-ext"],
 });

@@ -50,22 +50,20 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 
+import { CoinIcon } from "@/components/game/game-icons";
+import { RibbonBanner } from "@/components/game/ribbon";
+import { StarRating } from "@/components/game/star-rating";
+import { WoodButton } from "@/components/game/wood-button";
 import { InstallPromptCard } from "@/components/install-prompt-card";
 import { ScreenBackground } from "@/components/screen-background";
+import { GameColors } from "@/lib/colors";
 import { track } from "@/lib/api/events";
 import { requestPersistentStorage } from "@/lib/storage/persistence";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
 
-// Confetti palette — same six tokens as the Flutter version.
-const CONFETTI_COLORS = [
-  "#E53935", // red
-  "#FFC02E", // amber
-  "#66BB6A", // green
-  "#2196F3", // blue
-  "#E91E63", // pink
-  "#9C27B0", // purple
-] as const;
+// Confetti palette — game-kit greens, golds and wood oranges.
+const CONFETTI_COLORS = GameColors.confetti;
 
 export default function LevelCompletePage({
   params,
@@ -92,6 +90,15 @@ export default function LevelCompletePage({
   // missing — e.g. older URLs from before partial credit existed.
   const isPartial = search.get("partial") === "1";
   const submitted = parseIntSafe(search.get("submitted"), total);
+
+  // Star rating for the hero — same 3-slot mapping the map badges use:
+  // clean sweep → 3 stars, partial → ceil(ratio × 3), min 1.
+  const earnedStars = isPartial
+    ? Math.max(
+        1,
+        Math.min(3, Math.ceil((submitted / Math.max(1, total)) * 3)),
+      )
+    : 3;
 
   // Cycle-complete variant. When the level page detected (via the
   // repo's `completeLevel` return) that this was the final level of
@@ -194,28 +201,31 @@ export default function LevelCompletePage({
             content so it can rain down behind the points numeral. */}
         <ConfettiBurst />
 
-        {/* Centered hero block (points + headline + encouragement). */}
+        {/* Centered hero block (stars + points + headline + copy). */}
         <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-          <span
-            className="block max-w-full break-words font-black leading-none"
-            style={{
-              color: "#FFC02E",
-              // Fluid: 64px on tiny phones, scales up to 96px around 480px.
-              fontSize: "clamp(64px, 22vw, 96px)",
-              fontWeight: 900,
-              letterSpacing: "-2px",
-            }}
-          >
-            +{points}
-          </span>
-          <div className="h-8" />
-          <h1 className="text-[28px] font-bold text-white phone-sm:text-[22px]">
+          {/* Earned stars — same 3-slot mapping as the map badges. */}
+          <StarRating filled={earnedStars} size={52} />
+          <div className="h-6" />
+          <div className="flex items-center justify-center gap-3">
+            <CoinIcon className="h-[0.7em] w-[0.7em] shrink-0" style={{ fontSize: "clamp(56px, 18vw, 84px)" }} />
+            <span
+              className="text-outline block max-w-full break-words font-game leading-none text-star-gold"
+              style={{
+                // Fluid: 56px on tiny phones, scales up around 480px.
+                fontSize: "clamp(56px, 18vw, 84px)",
+              }}
+            >
+              +{points}
+            </span>
+          </div>
+          <div className="h-7" />
+          <RibbonBanner className="h-14 w-full max-w-[340px]" textClassName="text-[22px] phone-sm:text-[18px]">
             {headline}
-          </h1>
-          <div className="h-4" />
+          </RibbonBanner>
+          <div className="h-5" />
           <p
-            className="text-[16px] font-normal leading-snug text-white phone-sm:text-[14px]"
-            style={{ lineHeight: 1.4 }}
+            className="text-[16px] font-medium leading-snug text-cream/95 phone-sm:text-[14px]"
+            style={{ lineHeight: 1.4, textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
           >
             {/*
               Cycle-complete variant gets its own subtitle — the
@@ -228,28 +238,28 @@ export default function LevelCompletePage({
           </p>
         </div>
 
-        {/* CTA. Variant-dependent label + handler. White pill with
-            green text — matches the Flutter style. Disabled while
-            `advancing` (cycle-complete only) so the user can't double
-            -submit a `paths_assign`. */}
-        <div className="flex flex-col gap-4 px-6 pb-6">
+        {/* CTA. Variant-dependent label + handler. Wooden game button
+            — disabled while `advancing` (cycle-complete only) so the
+            user can't double-submit a `paths_assign`. */}
+        <div className="flex flex-col gap-5 px-6 pb-6">
           {/* Add-to-home-screen offer at the peak-motivation moment.
               Self-gating: renders nothing when installed, dismissed
               recently, or no install path exists on this browser. */}
           <InstallPromptCard />
-          <button
-            type="button"
+          <WoodButton
+            tone="green"
+            size="lg"
+            fullWidth
             onClick={isCycleComplete ? onAdvanceCycle : onNext}
             disabled={isCycleComplete && (advancing || !online)}
-            className="flex h-[60px] w-full items-center justify-center rounded-full bg-white text-[20px] font-bold transition-opacity active:opacity-80 disabled:opacity-60"
-            style={{ color: "#66BB6A" }}
+            loading={isCycleComplete && advancing}
           >
             {isCycleComplete
               ? advancing
                 ? t("cycleAdvancePending")
                 : t("levelCompleteCycleStartNext")
               : t("levelCompleteNextMission")}
-          </button>
+          </WoodButton>
         </div>
       </div>
     </ScreenBackground>
@@ -265,14 +275,23 @@ function AllGreenStepBar({ total, submitted }: { total: number; submitted: numbe
   const n = Math.max(1, total);
   const filled = Math.max(0, Math.min(n, submitted));
   return (
-    <div className="flex h-1.5 items-center gap-1.5">
+    <div className="flex h-2 items-center gap-1.5">
       {Array.from({ length: n }).map((_, i) => (
         <div
           key={i}
-          className="h-1.5 flex-1 rounded-[3px]"
-          style={{
-            backgroundColor: i < filled ? "#66BB6A" : "rgba(255,255,255,0.25)",
-          }}
+          className="h-2 flex-1 rounded-[4px]"
+          style={
+            i < filled
+              ? {
+                  background:
+                    "linear-gradient(180deg, var(--color-ribbon-light) 0%, var(--color-grass-light) 100%)",
+                  boxShadow: "0 1px 0 var(--color-grass-deep)",
+                }
+              : {
+                  background: "rgba(0,0,0,0.35)",
+                  boxShadow: "inset 0 1.5px 2px rgba(0,0,0,0.5)",
+                }
+          }
         />
       ))}
     </div>

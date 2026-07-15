@@ -25,11 +25,14 @@
  *     decides where to go next.
  */
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { RewardIllustration } from "@/components/game/reward-illustration";
+import { WoodButton } from "@/components/game/wood-button";
+import { WoodIconButton } from "@/components/game/wood-icon-button";
 import { ScreenBackground } from "@/components/screen-background";
 import { track } from "@/lib/api/events";
 import {
@@ -120,31 +123,23 @@ export default function OnboardingPage() {
     <ScreenBackground>
       <div className="flex min-h-dvh w-full flex-col">
         {/* Top bar */}
-        <div className="flex h-14 items-center px-2 pt-[env(safe-area-inset-top)]">
+        <div className="flex h-14 items-center px-3 pt-[env(safe-area-inset-top)]">
           {showBack && (
-            <button
-              type="button"
+            <WoodIconButton
+              icon={ArrowLeft}
+              label="Back"
+              size={44}
+              grass={false}
               onClick={goBack}
-              aria-label="Back"
-              className="flex h-12 w-12 items-center justify-center rounded-full text-white"
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M15 18l-6-6 6-6"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+            />
           )}
           <div className="flex-1" />
           {showSkip && (
             <button
               type="button"
               onClick={skip}
-              className="px-4 py-2 text-[22px] font-bold text-white phone-sm:text-[18px]"
+              className="px-4 py-2 font-game text-[20px] tracking-wide text-cream phone-sm:text-[17px]"
+              style={{ textShadow: "0 1.5px 0 rgba(0,0,0,0.5)" }}
             >
               {t("commonSkip")}
             </button>
@@ -187,28 +182,23 @@ function IntroPage({ onCta }: { onCta: () => void }) {
   const t = useTranslations();
   return (
     <div className="flex w-full flex-col items-center justify-center gap-10 text-center">
-      <Image
-        src="/images/Dollar Coin.png"
-        alt=""
-        width={440}
-        height={440}
-        priority
-        className="h-[220px] w-auto object-contain phone-sm:h-[170px]"
-      />
+      {/* Glossy treasure-coin hero (SVG — replaces the old flat
+          Dollar-Coin PNG). Decorative; the headline carries meaning. */}
+      <RewardIllustration className="h-[230px] w-auto phone-sm:h-[180px]" />
       <div className="flex flex-col gap-3">
-        <h1
-          className="text-[40px] font-black leading-tight text-white phone-sm:text-[30px]"
-          style={{ letterSpacing: "-0.5px" }}
-        >
+        <h1 className="text-outline font-game text-[38px] leading-tight tracking-wide text-cream phone-sm:text-[29px]">
           {t("onboardingIntroTitle")}
         </h1>
-        <p className="text-[24px] font-medium leading-snug text-white phone-sm:text-[18px]">
+        <p
+          className="text-[22px] font-medium leading-snug text-cream/95 phone-sm:text-[17px]"
+          style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+        >
           {t("onboardingIntroSubtitle")}
         </p>
       </div>
-      <PrimaryButton filled onClick={onCta}>
+      <WoodButton tone="green" size="lg" fullWidth onClick={onCta}>
         {t("onboardingIntroCta")}
-      </PrimaryButton>
+      </WoodButton>
     </div>
   );
 }
@@ -228,13 +218,13 @@ function LanguagePickerPage({
   return (
     <div className="flex w-full flex-col justify-center gap-8">
       <div className="flex flex-col gap-3">
-        <h1
-          className="whitespace-pre-line text-[40px] font-black leading-tight text-white phone-sm:text-[30px]"
-          style={{ letterSpacing: "-0.5px" }}
-        >
+        <h1 className="text-outline whitespace-pre-line font-game text-[38px] leading-tight tracking-wide text-cream phone-sm:text-[29px]">
           {t("onboardingLanguagePickerTitle")}
         </h1>
-        <p className="text-[18px] font-medium text-white/70 phone-sm:text-[15px]">
+        <p
+          className="text-[18px] font-medium text-cream/80 phone-sm:text-[15px]"
+          style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+        >
           {t("onboardingLanguagePickerSubtitle")}
         </p>
       </div>
@@ -254,13 +244,15 @@ function LanguagePickerPage({
         style={{ opacity: canAdvance ? 1 : 0.5 }}
         className="transition-opacity duration-200"
       >
-        <PrimaryButton
-          filled={false}
+        <WoodButton
+          tone="wood"
+          size="lg"
+          fullWidth
           onClick={onNext}
           disabled={!canAdvance}
         >
           {t("commonNext")}
-        </PrimaryButton>
+        </WoodButton>
       </div>
     </div>
   );
@@ -284,17 +276,40 @@ function LanguageChip({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className="flex items-center gap-2.5 rounded-full border-[1.5px] border-white px-5 py-3 transition-colors duration-200 phone-sm:px-3.5 phone-sm:py-2.5"
-      style={{
-        backgroundColor: selected ? "var(--color-brand-primary)" : "transparent",
-      }}
+      className="flex items-center gap-2.5 rounded-full px-5 py-3 transition-all duration-200 phone-sm:px-3.5 phone-sm:py-2.5"
+      style={
+        selected
+          ? {
+              background:
+                "linear-gradient(180deg, var(--color-ribbon-light) 0%, var(--color-ribbon-mid) 100%)",
+              border: "2px solid var(--color-grass-dark)",
+              boxShadow: "0 3px 0 var(--color-grass-deep)",
+            }
+          : {
+              background: "rgba(0,0,0,0.25)",
+              border: "2px solid rgba(233,160,91,0.4)",
+              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.25)",
+            }
+      }
     >
       <span className="text-[22px] leading-none phone-sm:text-[18px]">{language.flagEmoji}</span>
       <span className="flex flex-col items-start leading-tight">
-        <span className="text-[22px] font-bold text-white phone-sm:text-[17px]">
+        <span
+          className="text-[22px] font-bold phone-sm:text-[17px]"
+          style={{
+            color: selected ? "var(--color-grass-deep)" : "var(--color-cream)",
+          }}
+        >
           {language.displayName}
         </span>
-        <span className="text-[13px] font-medium text-white/70 phone-sm:text-[11px]">
+        <span
+          className="text-[13px] font-medium phone-sm:text-[11px]"
+          style={{
+            color: selected
+              ? "rgba(62,122,38,0.8)"
+              : "rgba(255,246,224,0.7)",
+          }}
+        >
           {language.country}
         </span>
       </span>
@@ -319,43 +334,14 @@ function PageIndicator({
             className="h-2 rounded-full transition-all duration-250"
             style={{
               width: active ? 22 : 8,
-              backgroundColor: active
-                ? "var(--color-brand-primary)"
-                : "#FFFFFF",
+              background: active
+                ? "linear-gradient(180deg, var(--color-ribbon-light) 0%, var(--color-grass-light) 100%)"
+                : "rgba(255,246,224,0.45)",
+              boxShadow: active ? "0 1.5px 0 var(--color-grass-deep)" : "none",
             }}
           />
         );
       })}
     </div>
-  );
-}
-
-function PrimaryButton({
-  children,
-  onClick,
-  filled,
-  disabled = false,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  filled: boolean;
-  disabled?: boolean;
-}) {
-  // Match `_PrimaryButton` (`onboarding_screen.dart:925-960`):
-  //   filled  → brand-blue background, white text
-  //   outline → white background, brand-blue text
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="h-16 w-full rounded-[36px] text-[24px] font-medium transition-opacity disabled:cursor-not-allowed disabled:opacity-50 phone-sm:h-14 phone-sm:text-[18px]"
-      style={{
-        backgroundColor: filled ? "var(--color-brand-primary)" : "#FFFFFF",
-        color: filled ? "#FFFFFF" : "var(--color-brand-primary)",
-      }}
-    >
-      {children}
-    </button>
   );
 }

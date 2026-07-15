@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { WoodButton } from "@/components/game/wood-button";
 import { ScreenBackground } from "@/components/screen-background";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { usePathRepo } from "@/stores/path-repo";
@@ -101,13 +102,13 @@ function LoadingBody() {
   return (
     <div className="flex max-w-sm flex-col items-center gap-6 text-center">
       <Spinner />
-      <h1
-        className="whitespace-pre-line text-[32px] font-black leading-tight text-white"
-        style={{ letterSpacing: "-0.5px" }}
-      >
+      <h1 className="text-outline whitespace-pre-line font-game text-[30px] leading-tight tracking-wide text-cream">
         {t("pathSetupLoadingTitle")}
       </h1>
-      <p className="text-[16px] font-medium text-white">
+      <p
+        className="text-[16px] font-medium text-cream/95"
+        style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+      >
         {t("pathSetupLoadingSubtitle")}
       </p>
     </div>
@@ -131,7 +132,7 @@ function ErrorBody({
         width="64"
         height="64"
         fill="none"
-        className="self-center text-white"
+        className="self-center text-cream"
         aria-hidden
       >
         <path
@@ -142,35 +143,36 @@ function ErrorBody({
           strokeLinejoin="round"
         />
       </svg>
-      <h1
-        className="whitespace-pre-line text-[32px] font-black leading-tight text-white"
-        style={{ letterSpacing: "-0.5px" }}
-      >
+      <h1 className="text-outline whitespace-pre-line font-game text-[30px] leading-tight tracking-wide text-cream">
         {t("pathSetupErrorTitle")}
       </h1>
-      <p className="whitespace-pre-line text-[14px] font-medium leading-snug text-white">
+      <p
+        className="whitespace-pre-line text-[14px] font-medium leading-snug text-cream/95"
+        style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+      >
         {message}
       </p>
-      <button
-        type="button"
+      <WoodButton
+        tone="green"
+        size="md"
+        fullWidth
+        className="mt-4"
         onClick={onRetry}
-        className="mt-4 h-14 rounded-[28px] bg-white text-[20px] font-bold"
-        style={{ color: "var(--color-brand-primary)" }}
       >
         {t("pathSetupRetryButton")}
-      </button>
+      </WoodButton>
     </div>
   );
 }
 
 function Spinner() {
-  // 48 px white ring with a transparent quadrant — pure CSS so we
+  // 48 px cream ring with a transparent quadrant — pure CSS so we
   // don't drag in another dependency.
   return (
     <span
       role="progressbar"
       aria-label="Loading"
-      className="block h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"
+      className="block h-12 w-12 animate-spin rounded-full border-4 border-cream/30 border-t-cream"
     />
   );
 }

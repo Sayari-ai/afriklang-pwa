@@ -3,14 +3,10 @@
 /**
  * Bottom navigation bar for the protected `(app)` route group.
  *
- * Visual port of `_BottomNav` in
- * `lib/features/home/home_screen.dart:966-1019`:
- *   - White pill (radius 40) with soft shadow.
- *   - 4 items: Home / Leaderboard / Notifications / Profile.
- *   - Selected item: 56×56 brand-blue circle, white icon, slight
- *     scale-up (1.12).
- *   - Unselected: grey icon (#9E9E9E), no background.
- *   - 250 ms `easeOutBack`-ish transition between states.
+ * Game-kit reskin of the original white Flutter pill: a wooden plank
+ * bar (dark carved rim + lit face) floating above the board. The
+ * active tab glyph glows grass-green inside a soft green well; idle
+ * glyphs are carved cream.
  *
  * We figure out the active tab from the current pathname so the nav
  * stays in sync with browser back/forward and deep links — there's
@@ -72,10 +68,29 @@ export function BottomNav() {
       // while still sitting inside the mobile-sized column on desktop.
       className="pointer-events-none fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 px-4 pb-3 phone-sm:px-2"
     >
-      <div
-        className="pointer-events-auto mx-auto flex h-[72px] max-w-md items-center justify-between rounded-[40px] bg-white px-3 phone-sm:h-[64px] phone-sm:px-2"
-        style={{ boxShadow: "0 6px 16px rgba(0,0,0,0.2)" }}
-      >
+      <div className="pointer-events-auto relative mx-auto flex h-[72px] max-w-md items-center justify-between px-3 phone-sm:h-[64px] phone-sm:px-2">
+        {/* Wooden plank: carved rim + lit face. */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
+            borderRadius: "38px 34px 37px 35px / 34px 38px 33px 37px",
+            boxShadow: "0 8px 16px rgba(0,0,0,0.45)",
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="absolute"
+          style={{
+            inset: "4px 4px 8px 4px",
+            background:
+              "linear-gradient(180deg, var(--color-wood-light) 0%, var(--color-wood-mid) 55%, var(--color-wood-dark) 100%)",
+            borderRadius: "34px 30px 33px 31px / 30px 34px 29px 33px",
+            boxShadow:
+              "inset 0 3px 0 rgba(255,235,205,0.4), inset 0 -4px 6px rgba(0,0,0,0.18)",
+          }}
+        />
         {TABS.map((tab) => {
           const active = isActive(pathname, tab.matchPrefix);
           const Icon = tab.icon;
@@ -86,16 +101,28 @@ export function BottomNav() {
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
               prefetch
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-200 ease-out phone-sm:h-12 phone-sm:w-12"
+              className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-200 ease-out phone-sm:h-12 phone-sm:w-12"
               style={{
-                backgroundColor: active ? "var(--color-brand-primary)" : "transparent",
+                background: active
+                  ? "radial-gradient(circle at 50% 35%, rgba(140,198,63,0.35), rgba(76,143,47,0.18) 68%, transparent 75%)"
+                  : "transparent",
+                boxShadow: active
+                  ? "inset 0 2px 4px rgba(62,122,38,0.45)"
+                  : "none",
                 transform: active ? "scale(1.06)" : "scale(1)",
               }}
             >
               <Icon
                 size={28}
-                strokeWidth={2.25}
-                color={active ? "#FFFFFF" : "#9E9E9E"}
+                strokeWidth={2.5}
+                // Hex, not var(): lucide's `color` prop becomes the SVG
+                // `stroke` attribute, which doesn't resolve CSS vars.
+                color={active ? "#8CC63F" : "rgba(255,246,224,0.55)"}
+                style={{
+                  filter: active
+                    ? "drop-shadow(0 1.5px 0 var(--color-grass-deep))"
+                    : "drop-shadow(0 1px 0 rgba(92,48,24,0.6))",
+                }}
               />
             </Link>
           );

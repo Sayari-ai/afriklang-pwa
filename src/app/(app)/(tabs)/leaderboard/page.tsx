@@ -35,11 +35,19 @@
  */
 
 import { useTranslations } from "next-intl";
+import { RefreshCw } from "lucide-react";
 import { useEffect, useRef } from "react";
 import useSWR from "swr";
 
 import { ScreenBackground } from "@/components/screen-background";
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
+import {
+  GameHourglass,
+  GameIconHalo,
+  GameTrophy,
+} from "@/components/game/glossy-icons";
+import { WoodButton } from "@/components/game/wood-button";
+import { WoodIconButton } from "@/components/game/wood-icon-button";
 import { getLeaderboard } from "@/lib/api/leaderboard";
 import {
   type LeaderboardEntry,
@@ -49,11 +57,6 @@ import {
 import { useDeviceIdentity } from "@/stores/device-identity";
 import { useNickname } from "@/stores/nickname";
 import { usePathRepo } from "@/stores/path-repo";
-
-// Brand primary — kept inline rather than imported to avoid a one-shot
-// dep on `colors.ts` (the rest of this screen uses tokens that aren't
-// in AppColors anyway: gold/silver/bronze).
-const PRIMARY = "#00539F";
 
 const GOLD = "#FFD700";
 const SILVER = "#C0C0C0";
@@ -159,7 +162,7 @@ function LoadingState() {
       <span
         role="progressbar"
         aria-label="Loading"
-        className="block h-10 w-10 animate-spin rounded-full border-[3px] border-white/30 border-t-white"
+        className="block h-10 w-10 animate-spin rounded-full border-[3px] border-cream/30 border-t-cream"
       />
     </div>
   );
@@ -178,20 +181,15 @@ function ErrorState({
     <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
       <CloudOffIcon />
       <div className="h-3" />
-      <h2 className="text-[22px] font-black text-white">
+      <h2 className="text-outline font-game text-[24px] tracking-wide text-cream">
         {t("leaderboardErrorTitle")}
       </h2>
       <div className="h-2" />
-      <p className="text-[14px] text-white/85">{message}</p>
-      <div className="h-4" />
-      <button
-        type="button"
-        onClick={onRetry}
-        className="rounded-full bg-white px-6 py-3 text-[16px] font-bold"
-        style={{ color: PRIMARY }}
-      >
+      <p className="text-[14px] font-medium text-cream/90">{message}</p>
+      <div className="h-5" />
+      <WoodButton tone="green" size="md" grass={false} onClick={onRetry}>
         {t("commonRetry")}
-      </button>
+      </WoodButton>
     </div>
   );
 }
@@ -202,14 +200,16 @@ function EmptyState({
   t: ReturnType<typeof useTranslations>;
 }) {
   return (
-    <div className="flex flex-col items-center px-8 pt-32 text-center">
-      <HourglassIcon />
+    <div className="flex flex-col items-center px-8 pt-24 text-center">
+      <GameIconHalo size={132}>
+        <GameHourglass className="h-[64%] w-[64%]" />
+      </GameIconHalo>
       <div className="h-3" />
-      <h2 className="text-[22px] font-black text-white">
+      <h2 className="text-outline font-game text-[24px] tracking-wide text-cream">
         {t("leaderboardEmptyTitle")}
       </h2>
       <div className="h-1.5" />
-      <p className="text-[14px] text-white/70">
+      <p className="text-[14px] font-medium text-cream/80">
         {t("leaderboardEmptySubtitle")}
       </p>
     </div>
@@ -363,21 +363,17 @@ function Header({
 }) {
   return (
     <div className="flex items-center gap-3 px-5 pt-4 pb-2 phone-sm:px-4">
-      <TrophyIcon size={36} color="#FFC107" />
-      <h1
-        className="min-w-0 flex-1 truncate text-[32px] font-black text-white phone-sm:text-[24px]"
-        style={{ letterSpacing: "-0.5px" }}
-      >
+      <GameTrophy size={40} className="shrink-0" />
+      <h1 className="text-outline min-w-0 flex-1 truncate font-game text-[30px] tracking-wide text-cream phone-sm:text-[23px]">
         {t("leaderboardTitle")}
       </h1>
-      <button
-        type="button"
+      <WoodIconButton
+        icon={RefreshCw}
+        label="Refresh leaderboard"
+        size={40}
+        grass={false}
         onClick={onRefresh}
-        aria-label="Refresh leaderboard"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
-      >
-        <RefreshIcon />
-      </button>
+      />
     </div>
   );
 }
@@ -460,7 +456,7 @@ function PodiumColumn({
     <div className="flex flex-col items-center">
       {showCrown && (
         <div className="pb-1">
-          <TrophyIcon size={28} color={GOLD} />
+          <GameTrophy size={32} />
         </div>
       )}
       <div
@@ -484,7 +480,7 @@ function PodiumColumn({
           />
         )}
         <div
-          className={`relative flex h-full w-full items-center justify-center rounded-full border-[3px] border-white ${
+          className={`relative flex h-full w-full items-center justify-center rounded-full border-[3px] border-cream ${
             isMe ? "afk-podium-pulse" : ""
           }`}
           style={{
@@ -574,28 +570,41 @@ function PodiumColumn({
       <div className="h-1.5" />
       <p
         className="line-clamp-1 text-center text-[12px] font-bold"
-        style={{ color: entry.isMe ? "#FFD740" : "#FFFFFF" }}
+        style={{
+          color: entry.isMe ? "#FFD740" : "var(--color-cream)",
+          textShadow: "0 1px 0 rgba(0,0,0,0.5)",
+        }}
       >
         {entry.nickname}
       </p>
       <div className="h-1.5" />
+      {/* Wooden plinth with a medal-coloured cap. */}
       <div
         className="flex w-full flex-col items-center px-1.5 pt-2"
         style={{
           height,
-          background: `linear-gradient(to bottom, ${medalColor}F2, ${medalColor}80)`,
-          borderTopLeftRadius: 8,
-          borderTopRightRadius: 8,
+          background:
+            "linear-gradient(180deg, var(--color-wood-panel-light) 0%, var(--color-wood-panel-dark) 100%)",
+          border: "2px solid var(--color-wood-rim)",
+          borderBottom: "none",
+          borderTop: `6px solid ${medalColor}`,
+          borderTopLeftRadius: 10,
+          borderTopRightRadius: 10,
+          boxShadow:
+            "inset 0 2px 0 rgba(255,235,200,0.35), 0 6px 10px rgba(0,0,0,0.3)",
         }}
       >
-        <span className="text-[22px] font-black text-black/85">
+        <span className="text-outline font-game text-[22px] text-cream">
           #{entry.rank}
         </span>
         <div className="h-1" />
-        <span className="text-[14px] font-bold text-black/85">
+        <span
+          className="text-[14px] font-bold text-cream"
+          style={{ textShadow: "0 1px 0 rgba(92,48,24,0.6)" }}
+        >
           {entry.points}
         </span>
-        <span className="text-[10px] text-black/55">
+        <span className="text-[10px] font-semibold text-cream/70">
           {t("leaderboardPointsAbbrev")}
         </span>
       </div>
@@ -616,51 +625,77 @@ function RankRow({
 }) {
   const me = entry.isMe;
   const monogram = entry.nickname ? entry.nickname[0]!.toUpperCase() : "?";
+  // "Me" rows sit on a lit wooden plank (dark ink text); everyone
+  // else gets a carved dark slot (cream text).
+  const textColor = me ? "var(--color-ink)" : "var(--color-cream)";
   return (
     <div
       className="flex items-center rounded-[14px] px-3 py-2.5"
-      style={{
-        backgroundColor: me ? "#FFFFFF" : "rgba(255,255,255,0.12)",
-        border: me
-          ? "2px solid #FFD740"
-          : "1px solid rgba(255,255,255,0.18)",
-        color: me ? PRIMARY : "#FFFFFF",
-      }}
+      style={
+        me
+          ? {
+              background:
+                "linear-gradient(180deg, var(--color-wood-panel-light) 0%, var(--color-wood-panel-dark) 100%)",
+              border: "2px solid #FFD740",
+              boxShadow:
+                "inset 0 2px 0 rgba(255,235,200,0.4), 0 3px 6px rgba(0,0,0,0.3)",
+              color: textColor,
+            }
+          : {
+              background: "rgba(0,0,0,0.25)",
+              border: "1.5px solid rgba(233,160,91,0.28)",
+              boxShadow: "inset 0 2px 4px rgba(0,0,0,0.25)",
+              color: textColor,
+            }
+      }
     >
       <span
-        className="text-[16px] font-black"
-        style={{ width: 32, color: me ? PRIMARY : "#FFFFFF" }}
+        className="font-game text-[16px]"
+        style={{ width: 34, color: textColor }}
       >
         #{entry.rank}
       </span>
       <div className="w-2" />
       <div
         className="flex h-9 w-9 items-center justify-center rounded-full"
-        style={{ backgroundColor: me ? PRIMARY : "rgba(255,255,255,0.24)" }}
+        style={
+          me
+            ? {
+                background:
+                  "linear-gradient(180deg, #b5e162 0%, var(--color-grass-light) 100%)",
+                boxShadow: "0 1.5px 0 var(--color-grass-deep)",
+              }
+            : { backgroundColor: "rgba(255,246,224,0.22)" }
+        }
       >
-        <span className="text-[16px] font-black text-white">{monogram}</span>
+        <span
+          className="text-[16px] font-black"
+          style={{ color: me ? "var(--color-grass-deep)" : "var(--color-cream)" }}
+        >
+          {monogram}
+        </span>
       </div>
       <div className="w-3" />
       <span
         className="line-clamp-1 min-w-0 flex-1 text-[15px]"
         style={{
-          color: me ? PRIMARY : "#FFFFFF",
+          color: textColor,
           fontWeight: me ? 800 : 600,
         }}
       >
         {entry.nickname}
       </span>
       <span
-        className="shrink-0 text-[16px] font-black"
-        style={{ color: me ? PRIMARY : "#FFFFFF" }}
+        className="shrink-0 font-game text-[16px]"
+        style={{ color: textColor }}
       >
         {entry.points}
       </span>
       <span className="w-1" />
       <span
-        className="shrink-0 text-[12px]"
+        className="shrink-0 text-[12px] font-semibold"
         style={{
-          color: me ? `${PRIMARY}B3` : "rgba(255,255,255,0.7)",
+          color: me ? "rgba(92,48,24,0.7)" : "rgba(255,246,224,0.7)",
         }}
       >
         {t("leaderboardPointsAbbrev")}
@@ -683,28 +718,44 @@ function StickyMe({
   const monogram = me.nickname ? me.nickname[0]!.toUpperCase() : "?";
   return (
     <div
-      className="absolute inset-x-0 bg-white px-5 py-3.5"
+      className="absolute inset-x-0 px-5 py-3.5"
       style={{
         bottom: BOTTOM_NAV_RESERVED_PX,
-        boxShadow: "0 -4px 16px rgba(0,0,0,0.25)",
+        background:
+          "linear-gradient(180deg, var(--color-wood-panel-light) 0%, var(--color-wood-panel-dark) 100%)",
+        borderTop: "3px solid var(--color-wood-rim)",
+        boxShadow:
+          "inset 0 2px 0 rgba(255,235,200,0.35), 0 -4px 16px rgba(0,0,0,0.35)",
       }}
     >
       <div className="flex items-center">
         <div
           className="flex h-11 w-11 items-center justify-center rounded-full"
-          style={{ backgroundColor: PRIMARY }}
+          style={{
+            background:
+              "linear-gradient(180deg, #b5e162 0%, var(--color-grass-light) 100%)",
+            boxShadow: "0 2px 0 var(--color-grass-deep)",
+          }}
         >
-          <span className="text-[20px] font-black text-white">{monogram}</span>
+          <span
+            className="text-[20px] font-black"
+            style={{ color: "var(--color-grass-deep)" }}
+          >
+            {monogram}
+          </span>
         </div>
         <div className="w-3" />
         <div className="flex min-w-0 flex-1 flex-col">
           <span
             className="line-clamp-1 text-[15px] font-black"
-            style={{ color: PRIMARY }}
+            style={{ color: "var(--color-ink)" }}
           >
             {t("leaderboardYouLine", { nickname: me.nickname })}
           </span>
-          <span className="text-[13px] font-semibold text-black/85">
+          <span
+            className="text-[13px] font-semibold"
+            style={{ color: "rgba(92,48,24,0.75)" }}
+          >
             {t("leaderboardYouRankOf", {
               rank: me.rank,
               totalDevices: me.totalDevices,
@@ -713,9 +764,16 @@ function StickyMe({
         </div>
         <div
           className="rounded-[20px] px-3 py-1.5"
-          style={{ backgroundColor: PRIMARY }}
+          style={{
+            background:
+              "linear-gradient(180deg, var(--color-ribbon-light) 0%, var(--color-ribbon-mid) 100%)",
+            boxShadow: "0 2px 0 var(--color-grass-deep)",
+          }}
         >
-          <span className="text-[14px] font-black text-white">
+          <span
+            className="text-[14px] font-black"
+            style={{ color: "var(--color-grass-deep)" }}
+          >
             {t("leaderboardYouPointsPill", { points: me.points })}
           </span>
         </div>
@@ -728,40 +786,11 @@ function StickyMe({
 // Inline icons (avoid extra deps for one-shot SVGs)
 // ---------------------------------------------------------------------------
 
-function TrophyIcon({ size, color }: { size: number; color: string }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill={color}
-      aria-hidden
-    >
-      <path d="M19 4h-2V2H7v2H5a2 2 0 00-2 2v2c0 2.21 1.79 4 4 4 .57 1.07 1.49 1.93 2.6 2.42L9 18H7v2h10v-2h-2l-.6-3.58A4.99 4.99 0 0017 10c2.21 0 4-1.79 4-4V6a2 2 0 00-2-2zM5 8V6h2v2c0 .35.04.69.1 1.02C5.95 8.65 5 7.42 5 6V8zm14 0c0 1.42-.95 2.65-2.1 3.02.06-.33.1-.67.1-1.02V6h2v2z" />
-    </svg>
-  );
-}
-
 function CloudOffIcon() {
+  // Hex, not var(): SVG `fill` attributes don't resolve CSS vars.
   return (
-    <svg width="56" height="56" viewBox="0 0 24 24" fill="white" aria-hidden>
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="#FFF6E0" aria-hidden>
       <path d="M19.35 10.04A7.49 7.49 0 0012 4c-1.4 0-2.7.39-3.82 1.06l1.49 1.49C10.4 6.2 11.18 6 12 6a5.5 5.5 0 015.5 5.5v.5H19a3 3 0 011.95 5.27l1.42 1.42A4.99 4.99 0 0024 14a5 5 0 00-4.65-3.96zM3 5.27l2.77 2.77A4.99 4.99 0 003 13a5 5 0 005 5h11.73l2 2L23 18.73 4.27 4 3 5.27z" />
-    </svg>
-  );
-}
-
-function HourglassIcon() {
-  return (
-    <svg width="56" height="56" viewBox="0 0 24 24" fill="white" aria-hidden>
-      <path d="M6 2v6c0 1.79.71 3.42 1.86 4.59L9.36 14H8v6h8v-6h-1.36l1.5-1.41A6.46 6.46 0 0018 8V2H6zm10 6c0 1.34-.53 2.55-1.41 3.41L13 13l1.59 1.59A4.46 4.46 0 0116 18H8c0-1.34.53-2.55 1.41-3.41L11 13l-1.59-1.59A4.46 4.46 0 018 8V4h8v4z" />
-    </svg>
-  );
-}
-
-function RefreshIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="white" aria-hidden>
-      <path d="M17.65 6.35A8 8 0 1019.46 15h-2.1a6 6 0 11-1.4-6.24L13 12h7V5l-2.35 1.35z" />
     </svg>
   );
 }
