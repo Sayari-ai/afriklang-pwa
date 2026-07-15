@@ -21,14 +21,24 @@ import { useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { isSupportedLocale, type Locale } from "@/i18n/locales";
+import { track } from "@/lib/api/events";
 import { runStorageMigrations } from "@/lib/storage/migrations";
 import { startProgressQueueRunner } from "@/lib/storage/progress-queue-runner";
 import { useAppLocale } from "@/stores/app-locale";
 import { useConsent } from "@/stores/consent";
 import { useDeviceIdentity } from "@/stores/device-identity";
+import {
+  initInstallPromptCapture,
+  useInstallPrompt,
+} from "@/stores/install-prompt";
 import { useLearningLanguage } from "@/stores/learning-language";
 import { useNickname } from "@/stores/nickname";
 import { useOnboarding } from "@/stores/onboarding";
+
+// Session-once guard for the `app_open` event. The hydration effect
+// re-runs on locale switches (deps include `t`); the analytics event
+// must not.
+let appOpenTracked = false;
 
 export function AppHydration() {
   // `useLocale()` returns the locale that next-intl resolved server-side
@@ -63,6 +73,13 @@ export function AppHydration() {
     useOnboarding.getState().hydrate();
     useNickname.getState().hydrate();
 
+    // 2b. Install-prompt state: hydrate the dismissal window +
+    //     standalone/iOS detection, and start capturing the Chromium
+    //     `beforeinstallprompt` event (it can fire before any screen
+    //     that wants to offer installation mounts). Both idempotent.
+    useInstallPrompt.getState().hydrate();
+    initInstallPromptCapture();
+
     // 3. Locale: server already picked one — record it as the
     //    `effective` value. The persisted override (if any) is read
     //    eagerly inside the store's initializer, so no work needed here
@@ -82,6 +99,16 @@ export function AppHydration() {
         syncFailed: t("progressQueuedSyncFailedSnack"),
       }),
     });
+
+    // 5. Analytics: one `app_open` per browser session. `standalone`
+    //    distinguishes installed-PWA launches from plain tab visits —
+    //    the key metric for the Phase-1 install prompt.
+    if (!appOpenTracked) {
+      appOpenTracked = true;
+      track("app_open", {
+        standalone: window.matchMedia("(display-mode: standalone)").matches,
+      });
+    }
   }, [serverLocale, t]);
 
   return null;

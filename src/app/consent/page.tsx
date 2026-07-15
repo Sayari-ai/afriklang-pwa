@@ -3,10 +3,18 @@
 /**
  * Consent screen — port of `lib/features/consent/consent_screen.dart`.
  *
- * One-time mandatory gate after path-setup. There is deliberately no
- * "decline" path: the app's whole point is recording voice, so without
- * consent there's nothing to do. We show five bullets explaining what
- * the user is agreeing to, plus a single "I agree" CTA.
+ * One-time gate after path-setup. The app's whole point is recording
+ * voice, so there is no in-app "decline and continue" mode — but the
+ * gate is honest about that instead of silent:
+ *
+ *   - Four bullets explain what the user is agreeing to.
+ *   - A "What if I don't agree?" disclosure states plainly that
+ *     nothing is recorded or uploaded until they agree, and that they
+ *     can leave and come back anytime (autonomy without a fake
+ *     alternative path).
+ *   - The former "18+" bullet is now an *active* checkbox — consent
+ *     to the age term is confirmed, not just displayed. The "I agree"
+ *     CTA stays disabled until it's ticked.
  *
  * On grant:
  *   - `useConsent.grant()` stamps `granted=true` + `granted_at` (if not
@@ -24,15 +32,19 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { ScreenBackground } from "@/components/screen-background";
+import { track } from "@/lib/api/events";
 import { useConsent } from "@/stores/consent";
 
 export default function ConsentPage() {
   const router = useRouter();
   const t = useTranslations();
   const [busy, setBusy] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [whatIfOpen, setWhatIfOpen] = useState(false);
+  const whatIfBodyId = useId();
 
   // Re-entry guard. Mirrors the onboarding screen's: a returning user
   // who manually navigates to `/consent` after granting should be sent
@@ -49,9 +61,10 @@ export default function ConsentPage() {
   }, [consentHydrated, consentGranted, router]);
 
   const accept = () => {
-    if (busy) return;
+    if (busy || !ageConfirmed) return;
     setBusy(true);
     useConsent.getState().grant();
+    track("consent_granted");
     router.replace("/home");
   };
 
@@ -87,17 +100,54 @@ export default function ConsentPage() {
             <Bullet>{t("consentBulletReview")}</Bullet>
             <Bullet>{t("consentBulletAnonymous")}</Bullet>
             <Bullet>{t("consentBulletRevoke")}</Bullet>
-            <Bullet>{t("consentBulletAge")}</Bullet>
           </ul>
+
+          {/* Honest "no consent, no missions" disclosure. Not a decline
+              CTA (there is no alternative mode to route to) but a plain
+              statement of what happens if the user walks away. */}
+          <button
+            type="button"
+            onClick={() => setWhatIfOpen((v) => !v)}
+            aria-expanded={whatIfOpen}
+            aria-controls={whatIfBodyId}
+            className="py-1 text-[15px] font-bold text-white underline underline-offset-4 phone-sm:text-[13px]"
+          >
+            {t("consentWhatIfDeclineAction")}
+          </button>
+          {whatIfOpen && (
+            <p
+              id={whatIfBodyId}
+              className="pt-2 text-[15px] font-normal leading-snug text-white/85 phone-sm:text-[13px]"
+            >
+              {t("consentWhatIfDeclineBody")}
+            </p>
+          )}
         </div>
+
+        <div className="h-4" />
+
+        {/* Active age confirmation — gates the CTA. A checkbox the user
+            must tick beats a bullet they may never read: the age term
+            is *confirmed*, not just displayed. */}
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={ageConfirmed}
+            onChange={(e) => setAgeConfirmed(e.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-white"
+          />
+          <span className="text-[15px] font-medium leading-snug text-white phone-sm:text-[13px]">
+            {t("consentAgeConfirmLabel")}
+          </span>
+        </label>
 
         <div className="h-4" />
         <button
           type="button"
           onClick={accept}
-          disabled={busy}
+          disabled={busy || !ageConfirmed}
           aria-busy={busy}
-          className="flex h-16 w-full items-center justify-center rounded-[36px] text-[24px] font-bold disabled:cursor-not-allowed phone-sm:h-14 phone-sm:text-[18px]"
+          className="flex h-16 w-full items-center justify-center rounded-[36px] text-[24px] font-bold transition-opacity disabled:cursor-not-allowed disabled:opacity-60 phone-sm:h-14 phone-sm:text-[18px]"
           style={{
             backgroundColor: busy ? "rgba(255,255,255,0.7)" : "#FFFFFF",
             color: "var(--color-brand-primary)",

@@ -46,6 +46,7 @@ import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScreenBackground } from "@/components/screen-background";
 import { uploadAudio, AudioUploadError } from "@/lib/api/audio";
 import { EdgeFunctionError } from "@/lib/api/edge";
+import { track } from "@/lib/api/events";
 import { swapQuestion } from "@/lib/api/questions";
 import { buildRecordingFilename } from "@/lib/audio/filename";
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
@@ -168,6 +169,14 @@ export default function LevelPage({
   // `onSkip` on the last step + the back button + the unmount cleanup
   // can race; we only ever want one `completeLevel` call per visit.
   const completionDispatchedRef = useRef(false);
+  // Analytics: one `level_start` per screen visit (StrictMode double
+  // effects + swap-induced re-renders must not re-fire it).
+  const levelStartTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!level || levelStartTrackedRef.current) return;
+    levelStartTrackedRef.current = true;
+    track("level_start", { cycle, level_id: levelId });
+  }, [level, cycle, levelId]);
 
   const question = questions[step - 1];
   const isRecording = phase === "recording";
@@ -440,6 +449,11 @@ export default function LevelPage({
     // below (and by `onSkip` / the back button) to decide whether the
     // level should be persisted as a full or partial completion.
     submittedCountRef.current += 1;
+    track("recording_submitted", {
+      cycle,
+      level_id: levelId,
+      q_index: question.qIndex,
+    });
 
     if (isLast) {
       // Decide whether this run was a full sweep (every question
@@ -475,6 +489,15 @@ export default function LevelPage({
           .getState()
           .show(t("homeCouldNotSaveProgressSnack", { error: msg }));
       }
+      track("level_complete", {
+        cycle,
+        level_id: levelId,
+        partial: isPartial,
+        points: awardedPoints,
+        submitted,
+        total: totalSteps,
+        cycle_complete: cycleComplete,
+      });
       const params = new URLSearchParams({
         points: String(awardedPoints),
         total: String(totalSteps),
@@ -533,6 +556,14 @@ export default function LevelPage({
     const online =
       typeof navigator === "undefined" ? true : navigator.onLine;
     const currentQ = questions[step - 1];
+
+    track("skip_used", {
+      cycle,
+      level_id: levelId,
+      // "swap" = server-side question replacement attempt; "plain" =
+      // legacy advance-without-credit (offline or no question).
+      mode: online && currentQ ? "swap" : "plain",
+    });
 
     if (!online || !currentQ) {
       // Offline (or defensive: no current question to swap) — keep the
@@ -648,6 +679,15 @@ export default function LevelPage({
         .getState()
         .show(t("homeCouldNotSaveProgressSnack", { error: msg }));
     }
+    track("level_complete", {
+      cycle,
+      level_id: levelId,
+      partial: true,
+      points: awardedPoints,
+      submitted,
+      total: totalSteps,
+      cycle_complete: cycleComplete,
+    });
     const params = new URLSearchParams({
       points: String(awardedPoints),
       total: String(totalSteps),

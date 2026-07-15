@@ -10,7 +10,9 @@
  * implementation small).
  *
  * Pages (matches `_pages` in the Dart file):
- *   1. intro          — illustration + "Get your first $20" + filled CTA.
+ *   1. intro          — illustration + "Get rewarded" hook + filled CTA.
+ *                       (Copy deliberately promises no specific dollar
+ *                       amount — there is no payout mechanism yet.)
  *   2. languagePicker — chip grid + outline CTA. CTA is gated on a
  *                       selection (`onboarding_screen.dart:113-119`).
  *
@@ -29,6 +31,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { ScreenBackground } from "@/components/screen-background";
+import { track } from "@/lib/api/events";
 import {
   type LearningLanguage,
   SUPPORTED_LEARNING_LANGUAGES,
@@ -102,6 +105,9 @@ export default function OnboardingPage() {
 
   const finish = () => {
     useOnboarding.getState().markComplete();
+    track("onboarding_complete", {
+      learning_language: useLearningLanguage.getState().iso,
+    });
     router.replace("/path-setup");
   };
 

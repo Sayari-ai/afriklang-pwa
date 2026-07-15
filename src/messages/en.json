@@ -5,19 +5,11 @@
   "commonUnknownError": "Unknown error",
   "commonCancel": "Cancel",
 
-  "onboardingIntroTitle": "Get your first $20",
+  "onboardingIntroTitle": "Get rewarded",
   "onboardingIntroSubtitle": "speaking in your language.",
   "onboardingIntroCta": "Let's start",
   "onboardingLanguagePickerTitle": "Which language\nare you learning?",
   "onboardingLanguagePickerSubtitle": "Pick one. You can switch later.",
-  "onboardingWalletTitle": "Let's set your\nwallet",
-  "onboardingPhoneHint": "Your phone number",
-  "onboardingPasscodeTitle": "Enter the passcode",
-  "onboardingPasscodeSubtitle": "We sent you a 4 digit passcode on SMS.",
-  "onboardingPasscodeConfirm": "Confirm",
-  "onboardingPasscodeResendPrompt": "Didn't receive it? ",
-  "onboardingPasscodeResendAction": "Resend",
-  "onboardingPasscodeResentSnack": "Passcode resent",
 
   "pathSetupBackendNotConfigured": "Backend is not configured.\nSet NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.",
   "pathSetupLoadingTitle": "Preparing your\nadventure…",
@@ -31,13 +23,14 @@
   "consentBulletReview": "Recordings may be reviewed by people working on the dataset.",
   "consentBulletAnonymous": "You will not be identified by name. We only store an anonymous device ID.",
   "consentBulletRevoke": "You can revoke this consent later from the app settings; future recordings will stop being uploaded.",
-  "consentBulletAge": "You must be at least 18 years old, or have a parent or guardian agree on your behalf.",
+  "consentAgeConfirmLabel": "I confirm I'm at least 18 years old, or have a parent or guardian's agreement.",
+  "consentWhatIfDeclineAction": "What if I don't agree?",
+  "consentWhatIfDeclineBody": "AfrikLang missions are voice recordings, so the app can't work without your permission. Nothing is recorded or uploaded until you agree. You can leave now and come back anytime — your path will be waiting.",
   "consentAgreeButton": "I agree",
   "consentDisclaimer": "By tapping \"{action}\" you confirm you have read the points above.",
 
   "homeTabNotifications": "Notifications",
   "homeTabProfile": "Profile",
-  "homeTabComingSoon": "{tabTitle}\n(coming soon)",
   "homeAdventureNotLoadedSnack": "Adventure not loaded yet",
   "homeLevelHasNoQuestionsSnack": "Level {levelId} has no questions",
   "homeLevelLockedSnack": "Level {levelId} is locked",
@@ -46,7 +39,6 @@
   "homeLevelTapToStart": "Tap to start",
 
   "levelMicPermissionRequired": "Microphone permission is required to record.",
-  "levelMicOpenSettingsAction": "Open settings",
   "levelCouldNotStartRecording": "Could not start recording: {error}",
   "levelCouldNotStopRecording": "Could not stop recording: {error}",
   "levelCouldNotPlayRecording": "Could not play recording: {error}",
@@ -67,7 +59,7 @@
   "levelSubmitUploading": "Uploading…",
 
   "levelCompleteCongrats": "Congratulations",
-  "levelCompleteEncouragement": "You're closer to getting your first {amount}",
+  "levelCompleteEncouragement": "Every recording helps build the future of your language.",
   "levelCompleteNextMission": "Next mission",
   "levelCompleteCycleTitle": "Path complete!",
   "levelCompleteCycleSubtitle": "You finished every level on this path. Ready for a fresh challenge?",
@@ -75,6 +67,13 @@
   "cycleAdvancePending": "Loading…",
   "cycleAdvanceOfflineSnack": "You need to be online to start the next path.",
   "cycleAdvanceFailedSnack": "Couldn't start the next path: {error}",
+
+  "installCardTitle": "Keep your progress safe",
+  "installCardBody": "Add AfrikLang to your home screen so your points and levels stay saved on this device.",
+  "installCardCta": "Add to Home Screen",
+  "installCardNotNow": "Not now",
+  "installCardIosStep1": "Tap the Share button in your browser's toolbar.",
+  "installCardIosStep2": "Choose \"Add to Home Screen\".",
 
   "leaderboardErrorTitle": "Couldn't load leaderboard",
   "leaderboardTitle": "Leaderboard",
@@ -123,11 +122,5 @@
 
   "notificationsTitle": "Notifications",
   "notificationsEmptyTitle": "Nothing yet",
-  "notificationsEmptySubtitle": "Your level unlocks and rank changes will show up here.",
-  "notificationsSampleLevelUnlockedTitle": "New level unlocked",
-  "notificationsSampleLevelUnlockedBody": "Level 2 is ready. Tap the map to start.",
-  "notificationsSampleBadgeTitle": "First recording uploaded",
-  "notificationsSampleBadgeBody": "Thanks for contributing to the language dataset.",
-  "notificationsSampleRankTitle": "You climbed the leaderboard",
-  "notificationsSampleRankBody": "You're now in the top 100. Keep going!"
+  "notificationsEmptySubtitle": "Your level unlocks and rank changes will show up here."
 }

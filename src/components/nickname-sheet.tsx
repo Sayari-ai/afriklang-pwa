@@ -31,6 +31,7 @@ import { useTranslations } from "next-intl";
 
 import { setNickname } from "@/lib/api/nickname";
 import { EdgeFunctionError } from "@/lib/api/edge";
+import { track } from "@/lib/api/events";
 import { useDeviceIdentity } from "@/stores/device-identity";
 import {
   NICKNAME_MAX_LENGTH,
@@ -112,6 +113,7 @@ export function NicknameSheet({
       // case-fold), reflect that locally so the next read matches
       // what other devices will see.
       if (echoed !== validation.value) persistLocal(echoed);
+      track("nickname_saved", { mode });
       onClose();
     } catch (err) {
       // Surface a snackbar; keep the local value. The user can

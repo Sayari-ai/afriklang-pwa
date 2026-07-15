@@ -5,19 +5,11 @@
   "commonUnknownError": "Erreur inconnue",
   "commonCancel": "Annuler",
 
-  "onboardingIntroTitle": "Gagnez vos premiers 20 $",
+  "onboardingIntroTitle": "Soyez récompensé·e",
   "onboardingIntroSubtitle": "en parlant votre langue.",
   "onboardingIntroCta": "C'est parti",
   "onboardingLanguagePickerTitle": "Quelle langue\napprenez-vous ?",
   "onboardingLanguagePickerSubtitle": "Choisissez-en une. Vous pourrez en changer plus tard.",
-  "onboardingWalletTitle": "Configurez votre\nportefeuille",
-  "onboardingPhoneHint": "Votre numéro de téléphone",
-  "onboardingPasscodeTitle": "Saisissez le code",
-  "onboardingPasscodeSubtitle": "Nous vous avons envoyé un code à 4 chiffres par SMS.",
-  "onboardingPasscodeConfirm": "Confirmer",
-  "onboardingPasscodeResendPrompt": "Pas reçu ? ",
-  "onboardingPasscodeResendAction": "Renvoyer",
-  "onboardingPasscodeResentSnack": "Code renvoyé",
 
   "pathSetupBackendNotConfigured": "Le backend n'est pas configuré.\nDéfinissez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY dans .env.local.",
   "pathSetupLoadingTitle": "Préparation de votre\naventure…",
@@ -31,13 +23,14 @@
   "consentBulletReview": "Les enregistrements peuvent être écoutés par les personnes qui travaillent sur ces jeux de données.",
   "consentBulletAnonymous": "Vous ne serez pas identifié·e par votre nom. Nous ne stockons qu'un identifiant d'appareil anonyme.",
   "consentBulletRevoke": "Vous pouvez retirer votre consentement à tout moment depuis les paramètres ; les futurs enregistrements ne seront alors plus envoyés.",
-  "consentBulletAge": "Vous devez avoir au moins 18 ans, ou obtenir l'accord d'un parent ou tuteur.",
+  "consentAgeConfirmLabel": "Je confirme avoir au moins 18 ans, ou l'accord d'un parent ou tuteur.",
+  "consentWhatIfDeclineAction": "Et si je refuse ?",
+  "consentWhatIfDeclineBody": "Les missions AfrikLang sont des enregistrements vocaux : l'application ne peut pas fonctionner sans votre autorisation. Rien n'est enregistré ni envoyé tant que vous n'acceptez pas. Vous pouvez quitter maintenant et revenir à tout moment — votre parcours vous attendra.",
   "consentAgreeButton": "J'accepte",
   "consentDisclaimer": "En appuyant sur « {action} » vous confirmez avoir lu les points ci-dessus.",
 
   "homeTabNotifications": "Notifications",
   "homeTabProfile": "Profil",
-  "homeTabComingSoon": "{tabTitle}\n(bientôt disponible)",
   "homeAdventureNotLoadedSnack": "Aventure pas encore chargée",
   "homeLevelHasNoQuestionsSnack": "Le niveau {levelId} n'a pas de questions",
   "homeLevelLockedSnack": "Le niveau {levelId} est verrouillé",
@@ -46,7 +39,6 @@
   "homeLevelTapToStart": "Touchez pour commencer",
 
   "levelMicPermissionRequired": "L'autorisation du micro est requise pour enregistrer.",
-  "levelMicOpenSettingsAction": "Ouvrir les paramètres",
   "levelCouldNotStartRecording": "Impossible de démarrer l'enregistrement : {error}",
   "levelCouldNotStopRecording": "Impossible d'arrêter l'enregistrement : {error}",
   "levelCouldNotPlayRecording": "Impossible de lire l'enregistrement : {error}",
@@ -67,7 +59,7 @@
   "levelSubmitUploading": "Envoi…",
 
   "levelCompleteCongrats": "Félicitations",
-  "levelCompleteEncouragement": "Vous vous rapprochez de vos premiers {amount}",
+  "levelCompleteEncouragement": "Chaque enregistrement aide à construire l'avenir de votre langue.",
   "levelCompleteNextMission": "Mission suivante",
   "levelCompleteCycleTitle": "Parcours terminé !",
   "levelCompleteCycleSubtitle": "Vous avez terminé tous les niveaux de ce parcours. Prêt(e) pour un nouveau défi ?",
@@ -75,6 +67,13 @@
   "cycleAdvancePending": "Chargement…",
   "cycleAdvanceOfflineSnack": "Vous devez être en ligne pour démarrer le prochain parcours.",
   "cycleAdvanceFailedSnack": "Impossible de démarrer le prochain parcours : {error}",
+
+  "installCardTitle": "Protégez votre progression",
+  "installCardBody": "Ajoutez AfrikLang à votre écran d'accueil pour que vos points et niveaux restent enregistrés sur cet appareil.",
+  "installCardCta": "Ajouter à l'écran d'accueil",
+  "installCardNotNow": "Pas maintenant",
+  "installCardIosStep1": "Touchez le bouton Partager dans la barre du navigateur.",
+  "installCardIosStep2": "Choisissez « Sur l'écran d'accueil ».",
 
   "leaderboardErrorTitle": "Impossible de charger le classement",
   "leaderboardTitle": "Classement",
@@ -123,11 +122,5 @@
 
   "notificationsTitle": "Notifications",
   "notificationsEmptyTitle": "Rien pour l'instant",
-  "notificationsEmptySubtitle": "Vos déblocages de niveau et changements de classement apparaîtront ici.",
-  "notificationsSampleLevelUnlockedTitle": "Nouveau niveau débloqué",
-  "notificationsSampleLevelUnlockedBody": "Le niveau 2 est prêt. Touchez la carte pour commencer.",
-  "notificationsSampleBadgeTitle": "Premier enregistrement envoyé",
-  "notificationsSampleBadgeBody": "Merci de contribuer au jeu de données linguistique.",
-  "notificationsSampleRankTitle": "Vous gagnez des places au classement",
-  "notificationsSampleRankBody": "Vous êtes maintenant dans le top 100. Continuez !"
+  "notificationsEmptySubtitle": "Vos déblocages de niveau et changements de classement apparaîtront ici."
 }

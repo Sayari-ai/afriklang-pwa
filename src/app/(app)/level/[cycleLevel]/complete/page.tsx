@@ -34,9 +34,9 @@
  *
  * Visuals:
  *   - Same dark scrim background (`overlay="strong"` → 0xCC overlay).
- *   - Massive amber `+N` numeral, white headline, bilingual encouragement
- *     with a bold `$20` span (rendered via a sentinel split, mirroring
- *     Flutter's `\u0000AMOUNT\u0000`).
+ *   - Massive amber `+N` numeral, white headline, purpose-driven
+ *     encouragement line (every recording contributes to the language
+ *     dataset — honest copy, no monetary promise).
  *   - All-green step bar pinned to the top.
  *   - White pill CTA at the bottom. Label depends on the variant:
  *     "Next mission" for the per-level variant, "Start next cycle"
@@ -50,14 +50,12 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 
+import { InstallPromptCard } from "@/components/install-prompt-card";
 import { ScreenBackground } from "@/components/screen-background";
+import { track } from "@/lib/api/events";
+import { requestPersistentStorage } from "@/lib/storage/persistence";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
-
-// Encouragement is a templated ICU string with a `{amount}` slot. We
-// render it with a control-char sentinel, then split around the
-// sentinel so the amount can become a bold <strong>$20</strong> span.
-const AMOUNT_SENTINEL = "\u0000AMOUNT\u0000";
 
 // Confetti palette — same six tokens as the Flutter version.
 const CONFETTI_COLORS = [
@@ -130,18 +128,12 @@ export default function LevelCompletePage({
   // round-trip can't be re-triggered by an impatient double-tap.
   const [advancing, setAdvancing] = useState(false);
 
-  // Render the encouragement once with the sentinel, then split into
-  // [before, after] around it. This avoids rebuilding the string on
-  // every render and keeps the bold span structure stable.
-  const [encouragementBefore, encouragementAfter] = useMemo(() => {
-    const rendered = t("levelCompleteEncouragement", { amount: AMOUNT_SENTINEL });
-    const idx = rendered.indexOf(AMOUNT_SENTINEL);
-    if (idx < 0) return [rendered, ""];
-    return [
-      rendered.slice(0, idx),
-      rendered.slice(idx + AMOUNT_SENTINEL.length),
-    ];
-  }, [t]);
+  // Phase-1 durability: the user just invested real effort — ask the
+  // browser to protect our storage bucket from best-effort eviction.
+  // One-shot per session, silently no-ops where unsupported.
+  useEffect(() => {
+    void requestPersistentStorage();
+  }, []);
 
   // Headline variants. For cycle-complete we want a punchier, more
   // celebratory string ("Path complete!") so the user understands the
@@ -176,6 +168,7 @@ export default function LevelCompletePage({
     setAdvancing(true);
     try {
       await usePathRepo.getState().advanceCycle();
+      track("cycle_advance");
       router.replace("/home");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -225,19 +218,13 @@ export default function LevelCompletePage({
             style={{ lineHeight: 1.4 }}
           >
             {/*
-              Cycle-complete variant gets its own subtitle (no $20
-              sentinel split) — the per-level encouragement copy
-              doesn't fit the "you finished the whole path" beat.
+              Cycle-complete variant gets its own subtitle — the
+              per-level encouragement copy doesn't fit the "you
+              finished the whole path" beat.
             */}
-            {isCycleComplete ? (
-              t("levelCompleteCycleSubtitle")
-            ) : (
-              <>
-                {encouragementBefore}
-                <strong className="font-bold">$20</strong>
-                {encouragementAfter}
-              </>
-            )}
+            {isCycleComplete
+              ? t("levelCompleteCycleSubtitle")
+              : t("levelCompleteEncouragement")}
           </p>
         </div>
 
@@ -245,7 +232,11 @@ export default function LevelCompletePage({
             green text — matches the Flutter style. Disabled while
             `advancing` (cycle-complete only) so the user can't double
             -submit a `paths_assign`. */}
-        <div className="px-6 pb-6">
+        <div className="flex flex-col gap-4 px-6 pb-6">
+          {/* Add-to-home-screen offer at the peak-motivation moment.
+              Self-gating: renders nothing when installed, dismissed
+              recently, or no install path exists on this browser. */}
+          <InstallPromptCard />
           <button
             type="button"
             onClick={isCycleComplete ? onAdvanceCycle : onNext}

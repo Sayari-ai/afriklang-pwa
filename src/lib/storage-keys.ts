@@ -57,6 +57,14 @@ export const StorageKeys = {
   nicknamePrompted: "afriklang.nickname.v1.prompted",
 
   /**
+   * ISO-8601 timestamp of the last time the user dismissed the
+   * add-to-home-screen prompt card. Used to respect the dismissal for
+   * a cool-off window instead of nagging on every celebration screen.
+   * Absent == never dismissed.
+   */
+  installPromptDismissedAt: "afriklang.install_prompt.v1.dismissed_at",
+
+  /**
    * Integer schema version for client-side persisted state. Bumped
    * whenever a non-additive change to localStorage / IndexedDB layout
    * ships, and read on every boot by `runStorageMigrations()` to

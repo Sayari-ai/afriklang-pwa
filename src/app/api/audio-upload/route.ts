@@ -17,7 +17,9 @@ import { NextRequest, NextResponse } from "next/server";
  * Sayari's `/api/audio/upload` is no longer public: it requires an
  * `X-Upload-Key` header (or a Firebase Bearer token). This proxy injects the
  * key from the server-side `SAYARI_UPLOAD_KEY` env var — it is NEVER exposed
- * to the browser (do not use a NEXT_PUBLIC_ variable for it).
+ * to the browser (do not use a NEXT_PUBLIC_ variable for it). The `SAYARI_`
+ * prefix also matters: amplify.yml only copies NEXT_PUBLIC_* and SAYARI_*
+ * vars into .env.production for the SSR compute.
  *
  * Streaming + memory
  * ------------------
@@ -40,7 +42,19 @@ const BASE_URL = (
 
 // Shared upload key for the independent mobile collector. Server-side only.
 // Set this in Amplify → App settings → Environment variables (SAYARI_UPLOAD_KEY).
-const UPLOAD_KEY = process.env.SAYARI_UPLOAD_KEY ?? "";
+//
+// `.trim()` guards against copy-paste whitespace/newlines in the env
+// value — undici rejects invalid header bytes with a TypeError whose
+// message can embed the header value, which the 502 path would echo.
+const UPLOAD_KEY = process.env.SAYARI_UPLOAD_KEY?.trim() ?? "";
+
+if (!UPLOAD_KEY) {
+  // Also flag the misconfiguration at module load (server boot logs),
+  // not just per-request — uploads cannot succeed without the key.
+  console.warn(
+    "[audio-upload] SAYARI_UPLOAD_KEY is not set; uploads will be rejected.",
+  );
+}
 
 // Force the Node runtime — the Edge runtime's fetch doesn't support
 // streaming request bodies the same way and has tighter limits.
@@ -76,6 +90,8 @@ export async function POST(request: NextRequest) {
       // `content-type` because it carries the multipart boundary, and the
       // `X-Upload-Key` so the hardened endpoint accepts the request. We
       // deliberately do NOT forward `host`, `cookie` or browser auth headers.
+      // The `X-Upload-Key` is injected server-side from env, never taken
+      // from the incoming request.
       headers: {
         "content-type": contentType,
         "X-Upload-Key": UPLOAD_KEY,

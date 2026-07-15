@@ -412,12 +412,11 @@ function PointsHeader({
         <span className="font-black">+{animated} </span>
         <span className="font-medium">{pointsLabel}</span>
       </p>
-      {/* Streak pill (cosmetic — backend has no streak yet, hardcoded
-          to 0 to match Flutter). */}
-      <div className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 phone-sm:h-8 phone-sm:px-2.5">
-        <span className="text-[18px] leading-none">🔥</span>
-        <span className="text-[16px] font-bold text-white">0</span>
-      </div>
+      {/* Streak pill intentionally removed: the backend has no streak
+          yet and the old pill was hardcoded to "🔥 0" (a permanently
+          broken-looking mechanic). Re-add here when the Phase-2
+          server-side streak lands — the slot is this flex row's
+          trailing edge. */}
     </div>
   );
 }
