@@ -15,12 +15,19 @@ export const metadata: Metadata = {
   },
   description:
     "Learn African languages through bite-sized, gamified speaking lessons.",
-  // Browser tab favicon. Points at the same SVG used by the PWA
-  // manifest so the brand mark is consistent across install surfaces.
+  // Browser tab favicon + iOS home-screen icon. The SVG covers modern
+  // tabs; apple-touch-icon must be an opaque PNG (iOS ignores SVG),
+  // rasterized by `scripts/generate-icons.mjs`.
   icons: {
     icon: [{ url: "/icons/Logo.svg", type: "image/svg+xml" }],
     shortcut: [{ url: "/icons/Logo.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icons/Logo.svg", type: "image/svg+xml" }],
+    apple: [
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
   },
   appleWebApp: {
     capable: true,

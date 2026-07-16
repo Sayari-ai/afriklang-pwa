@@ -34,8 +34,13 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
+import { HomeInstallSheet } from "@/components/install-sheet";
 import { NicknameSheet } from "@/components/nickname-sheet";
 import { CountryFlag } from "@/components/ui/country-flag";
+import {
+  CycleDecor,
+  GameMapBackdrop,
+} from "@/components/ui/game-map-backdrop";
 import { CoinIcon } from "@/components/ui/icons";
 import { Mascot } from "@/components/ui/mascot";
 import { PathNode } from "@/components/ui/path-node";
@@ -254,7 +259,11 @@ export default function HomePage() {
     nicknameHydrated && nicknameValue === null && !nicknamePrompted;
 
   return (
-    <div className="flex h-dvh w-full flex-col">
+    <div className="relative isolate flex h-dvh w-full flex-col">
+      {/* Joyful game-map scene (sky, sun, hills, clouds) pinned
+          behind the scroller the path floats over the landscape. */}
+      <GameMapBackdrop />
+
       {/* Stat bar pinned above the scroller (flag + points). */}
       <StatBar points={totalPoints} />
 
@@ -264,7 +273,7 @@ export default function HomePage() {
         className="flex-1 overflow-y-auto overscroll-y-contain"
         style={{ paddingBottom: BOTTOM_NAV_RESERVED_PX }}
       >
-        {cycleGroups.map((group) => (
+        {cycleGroups.map((group, ci) => (
           <section key={group.cycle}>
             <div className="px-4 pb-1 pt-4">
               <UnitBanner
@@ -279,6 +288,9 @@ export default function HomePage() {
               className="relative w-full"
               style={{ paddingTop: `${CYCLE_ASPECT * 100}%` }}
             >
+              {/* Scenery scrolls with the band (balloon, birds,
+                  sparkles on the serpentine's empty flanks). */}
+              <CycleDecor index={ci} />
               {group.nodes.map((node) => {
                 const isCurrent =
                   currentNode !== null &&
@@ -356,6 +368,11 @@ export default function HomePage() {
           }}
         />
       )}
+
+      {/* Proactive install ask (once per session, 14-day cool-off,
+          self-gating). Suppressed while the nickname sheet owns the
+          screen two competing sheets would be hostile. */}
+      <HomeInstallSheet suppressed={showNicknameSheet} />
     </div>
   );
 }

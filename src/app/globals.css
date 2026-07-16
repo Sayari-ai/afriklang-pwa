@@ -205,6 +205,16 @@
   }
 }
 
+/* Slow horizontal cloud drift (game-map backdrop). */
+@keyframes afk-drift {
+  from {
+    transform: translateX(-14px);
+  }
+  to {
+    transform: translateX(14px);
+  }
+}
+
 @keyframes afk-shake-0 {
   0% {
     transform: translateX(0);
