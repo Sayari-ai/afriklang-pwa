@@ -94,8 +94,8 @@ export function BottomNav() {
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
               prefetch
-              className={`flex h-12 items-center justify-center rounded-xl px-5 transition-colors duration-150 phone-sm:px-4 ${
-                active ? "border-2 border-blue-border bg-blue-light" : ""
+              className={`flex h-12 items-center justify-center rounded-xl border-2 px-5 transition-colors duration-150 phone-sm:px-4 ${
+                active ? "border-blue-border bg-blue-light" : "border-transparent"
               }`}
             >
               <Icon
