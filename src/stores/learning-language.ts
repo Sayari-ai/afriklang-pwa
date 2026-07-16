@@ -10,10 +10,12 @@
  *
  * The store deliberately holds only the ISO code; the full record is
  * resolved through `findLanguageByIso()` so the catalogue stays the
- * single source of truth for emoji + country labels.
+ * single source of truth for display-name + country labels. (Flags
+ * are drawn by `src/components/ui/country-flag.tsx`, keyed on the
+ * same ISO the emoji field was retired with the premium SVG flags.)
  *
  * The catalogue is exported as a frozen array so React's referential
- * equality on selectors holds — no accidental rerenders if a caller
+ * equality on selectors holds no accidental rerenders if a caller
  * does `useLearningLanguage(s => s.list)`.
  */
 
@@ -25,24 +27,23 @@ import { StorageKeys } from "@/lib/storage-keys";
 export interface LearningLanguage {
   /**
    * ISO 639-1, falling back to 639-3 where 639-1 has no entry (Fon).
-   * This is what Sayari and the recording filename consume.
+   * This is what Sayari and the recording filename consume and what
+   * `<CountryFlag>` keys its artwork on.
    */
   iso: "tw" | "fon" | "wo";
   /** Localisation-independent display name. */
   displayName: string;
   /** Country of origin, shown under the chip in the picker. */
   country: string;
-  /** Country flag emoji. */
-  flagEmoji: string;
 }
 
 export const SUPPORTED_LEARNING_LANGUAGES: readonly LearningLanguage[] = Object.freeze([
-  { iso: "tw", displayName: "Twi", country: "Ghana", flagEmoji: "🇬🇭" },
-  { iso: "fon", displayName: "Fon", country: "Benin", flagEmoji: "🇧🇯" },
-  { iso: "wo", displayName: "Wolof", country: "Senegal", flagEmoji: "🇸🇳" },
+  { iso: "tw", displayName: "Twi", country: "Ghana" },
+  { iso: "fon", displayName: "Fon", country: "Benin" },
+  { iso: "wo", displayName: "Wolof", country: "Senegal" },
 ]);
 
-/** Lookup by ISO. Returns `null` if unknown — caller decides default. */
+/** Lookup by ISO. Returns `null` if unknown caller decides default. */
 export function findLanguageByIso(iso: string | null): LearningLanguage | null {
   if (!iso) return null;
   return SUPPORTED_LEARNING_LANGUAGES.find((l) => l.iso === iso) ?? null;
@@ -51,7 +52,7 @@ export function findLanguageByIso(iso: string | null): LearningLanguage | null {
 interface LearningLanguageState {
   /** Selected ISO, or `null` if the user has not yet chosen. */
   iso: LearningLanguage["iso"] | null;
-  /** Resolved record — `null` until selection. */
+  /** Resolved record `null` until selection. */
   selected: LearningLanguage | null;
   /** True once we've read from localStorage. */
   hydrated: boolean;

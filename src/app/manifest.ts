@@ -3,10 +3,10 @@ import type { MetadataRoute } from "next";
 /**
  * Web app manifest served at `/manifest.webmanifest`.
  *
- * Colors match the "wood & grass" game theme (dark maroon board —
- * see --color-surface in globals.css). Icons reference the
- * placeholder set under `public/icons`; replace those PNGs with the
- * real Afriklang artwork when assets land.
+ * Colors match the flat light theme (white surface see --color-bg
+ * in globals.css). Icons reference the placeholder set under
+ * `public/icons`; replace those PNGs with the real Afriklang artwork
+ * when assets land.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -18,8 +18,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#3E2B28",
-    theme_color: "#3E2B28",
+    background_color: "#F7F5FB",
+    theme_color: "#F7F5FB",
     icons: [
       // Afriklang brand logo. SVG is fully scalable so a single asset
       // covers every install surface (home screen, app switcher, etc.).

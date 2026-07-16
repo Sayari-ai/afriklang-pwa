@@ -1,132 +1,87 @@
 /**
- * Brand color tokens — single source of truth for the PWA.
+ * Color tokens single source of truth for the PWA's JS-side colors.
  *
- * Mirrors `lib/core/theme/app_colors.dart` (which only declares
- * `AppColors.primary = #00539F`) plus the inline ARGB literals used
- * across the Flutter screens (map, level, podium, overlays, etc.).
+ * Mirrors the CSS variables in `src/app/globals.css` 1:1. Prefer the
+ * CSS vars / Tailwind tokens in components; import this object only
+ * where a JS value is required (SVG presentation attributes, canvas,
+ * manifest) SVG `fill`/`stroke` attributes don't resolve `var()`.
  *
- * Hex values are quoted verbatim from the Dart source so the visual
- * design stays pixel-identical. Do not "tidy up" colors here without
- * updating Flutter in lockstep.
+ * Brand palette: #00539F (blue primary), #F88D43 (orange reward
+ * accent), #321E53 (deep-purple brand ink, tints every neutral),
+ * #FFFFFF (surface). Red stays reserved for record/destructive
+ * (color-as-affordance). Every family ships a `Deep` shade the
+ * hard bottom edge of 3D-pressed buttons and path nodes.
+ */
+export const Palette = {
+  // Brand blue primary
+  primary: "#00539F",
+  primaryDeep: "#003C74",
+  primaryLight: "#DCEBF9",
+  primaryText: "#00539F",
+
+  // Blue aliases (selection system; same ramp as primary)
+  blue: "#00539F",
+  blueDeep: "#003C74",
+  blueLight: "#DCEBF9",
+  blueBorder: "#93BFE6",
+
+  // Red (semantic: record/stop, destructive)
+  red: "#FF4B4B",
+  redDeep: "#EA2B2B",
+  redLight: "#FFDFE0",
+
+  // Brand orange reward accent. (`yellow*` names kept for
+  // compatibility; there is no yellow in the brand kit.)
+  yellow: "#F88D43",
+  yellowDeep: "#DB6F26",
+  yellowLight: "#FEEDDD",
+  orange: "#F88D43",
+  orangeDeep: "#DB6F26",
+  orangeSoft: "#FFAF7E",
+
+  // Brand purple (mascot, unit banners, decorative accents)
+  purple: "#6D51A6",
+  purpleDeep: "#321E53",
+
+  // Neutrals purple-tinted from #321E53
+  text: "#321E53",
+  textMuted: "#6E6285",
+  textFaint: "#A9A1BC",
+  border: "#E8E4F0",
+  bgSubtle: "#F7F5FB",
+  bg: "#FFFFFF",
+  white: "#FFFFFF",
+
+  // Leaderboard medals metallic stays metallic (universal meaning
+  // beats brand purity for rank 1-3).
+  medalGold: "#FFC800",
+  medalSilver: "#C0C0C0",
+  medalBronze: "#CD7F32",
+
+  /** Celebration confetti brand blue/orange/purple mix + tints. */
+  confetti: [
+    "#00539F",
+    "#F88D43",
+    "#6D51A6",
+    "#321E53",
+    "#93BFE6",
+    "#FFAF7E",
+  ] as const,
+} as const;
+
+export type PaletteColor = keyof typeof Palette;
+
+/**
+ * Legacy affordance tokens gameplay logic where color IS the
+ * affordance (record red, submit = primary). Values point at the
+ * brand palette; the names keep intent readable at call sites.
  */
 export const AppColors = {
-  /** Brand blue. The only token formally declared in Dart. */
-  primary: "#00539F",
-
-  // Map / world view ------------------------------------------------------
-  /** Tile background under the level map (cartoony green). */
-  mapBackground: "#7BC96F",
-  /** Strawberry mascot body color. */
-  mascotBody: "#E53935",
-  /** Step bar fill / completed-state green. */
-  stepBarGreen: "#66BB6A",
-  /** Step bar empty track. */
-  stepBarTrack: "#CFCFCF",
-  /** Locked node fill + lock icon tint. */
-  lockedNodeFill: "#6B6B6B",
-  lockedNodeIcon: "#B5B5B5",
-
-  // Level review actions --------------------------------------------------
-  retakeRed: "#E53935",
-  listenBlue: "#2196F3",
-  submitGreen: "#66BB6A",
-
-  // Recording states ------------------------------------------------------
-  /** Mic idle (between recordings). */
-  recordIdle: "#66BB6A",
-  /** Mic actively recording. */
-  recordActive: "#E53935",
-
-  // Reward / leaderboard --------------------------------------------------
-  /** Bright yellow points number on the level-complete screen. */
-  pointsReward: "#FFC02E",
-  podiumGold: "#FFD700",
-  podiumSilver: "#C0C0C0",
-  podiumBronze: "#CD7F32",
-
-  // Overlays --------------------------------------------------------------
-  /** Onboarding / leaderboard / profile background scrim (60% black). */
-  bgOverlay60: "rgba(0, 0, 0, 0.6)",
-  /** Level / level-complete background scrim (80% black). */
-  bgOverlay80: "rgba(0, 0, 0, 0.8)",
-
-  // Confetti palette ------------------------------------------------------
-  confetti: [
-    "#E53935",
-    "#FFC02E",
-    "#66BB6A",
-    "#2196F3",
-    "#E91E63",
-    "#9C27B0",
-  ] as const,
+  retakeRed: Palette.red,
+  listenAccent: Palette.orange,
+  submitPrimary: Palette.primary,
+  recordIdle: Palette.primary,
+  recordActive: Palette.red,
 } as const;
 
 export type AppColor = keyof typeof AppColors;
-
-/**
- * "Wood & grass" game-kit palette — the visual reskin's source of
- * truth, mirrored 1:1 by the CSS variables in `src/app/globals.css`
- * (`--color-wood-*`, `--color-grass-*`, ...). Prefer the CSS vars /
- * Tailwind tokens in components; import this object only where a JS
- * value is required (canvas, SVG gradient stops, manifest).
- */
-export const GameColors = {
-  // Wood
-  woodLight: "#E9A05B",
-  woodMid: "#C97B3D",
-  woodDark: "#9E5B2C",
-  woodRim: "#6E3C1D",
-  woodShadow: "#45250F",
-  woodPanelLight: "#DD9354",
-  woodPanelDark: "#C47737",
-
-  // Grass & ribbon
-  grassLight: "#8CC63F",
-  grassDark: "#4C8F2F",
-  grassDeep: "#3E7A26",
-  ribbonLight: "#C9EC6B",
-  ribbonMid: "#8DC63F",
-  ribbonDark: "#5B9E2D",
-
-  // Collectibles
-  starGold: "#FFC93C",
-  starOrange: "#F2A03D",
-  starRim: "#B36A24",
-  starEmpty: "#5C3A24",
-  heartRed: "#E84357",
-  heartEmpty: "#40261C",
-  coinGold: "#FFCF4D",
-  coinRim: "#D98E2B",
-
-  // Glossy "2D game icon" accents (lock shackle, shield face, wizard
-  // hat, hourglass glass, halo discs) — gold+purple pack style.
-  goldLight: "#FFE08A",
-  goldDeep: "#E8941F",
-  goldOutline: "#A85F14",
-  purpleLight: "#B18CEB",
-  purple: "#8E5BD9",
-  purpleDark: "#6B3FB8",
-  purpleDeep: "#53309E",
-  glassLight: "#C9F0FF",
-  glassBlue: "#4FB3EE",
-  glassDeep: "#2E86C1",
-  halo: "#EDE7FB",
-
-  // Board surface & text
-  surface: "#3E2B28",
-  surfaceDeep: "#332220",
-  cream: "#FFF6E0",
-  ink: "#5C3018",
-
-  /** Celebration confetti — greens, golds and wood oranges. */
-  confetti: [
-    "#8CC63F",
-    "#FFC93C",
-    "#F2A03D",
-    "#C9EC6B",
-    "#E84357",
-    "#FFF6E0",
-  ] as const,
-} as const;
-
-export type GameColor = keyof typeof GameColors;

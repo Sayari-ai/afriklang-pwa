@@ -69,7 +69,7 @@ alter table public.device_progress enable row level security;
 -- cycle the device was issued. Idempotent for an existing device.
 --
 -- The 24h soft rate-limit lives in the Edge Function (it's a UX concern,
--- not a correctness one — the idempotent fast path here always returns
+-- not a correctness one the idempotent fast path here always returns
 -- the existing assignment if one exists).
 -- =====================================================================
 create or replace function public.assign_path(p_device_id uuid)

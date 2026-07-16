@@ -12,7 +12,7 @@
  * and `leaderboard_api.dart`.
  *
  * We pass `device_id` as a body field for POSTs and a query parameter
- * for GETs — exactly like the Flutter calls.
+ * for GETs exactly like the Flutter calls.
  */
 
 import { FunctionsHttpError } from "@supabase/supabase-js";
@@ -70,11 +70,11 @@ export async function invokeEdge<T = unknown>(
         const m = json?.message ?? json?.error;
         if (typeof m === "string" && m.length > 0) detail = m;
       } catch {
-        // body wasn't JSON — keep the default message
+        // body wasn't JSON keep the default message
       }
       throw new EdgeFunctionError(fn, status, `${fn} failed (${status}): ${detail}`);
     }
-    // Non-HTTP errors (network/timeout/etc.) — no status available.
+    // Non-HTTP errors (network/timeout/etc.) no status available.
     throw new EdgeFunctionError(fn, 0, `${fn} failed: ${error.message}`);
   }
 

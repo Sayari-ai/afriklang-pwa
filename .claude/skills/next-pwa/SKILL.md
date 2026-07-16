@@ -5,7 +5,7 @@ description: Configure and maintain the @ducanh2912/next-pwa wrapper around next
 
 # @ducanh2912/next-pwa@^10.2.9
 
-Fork/successor of the original `next-pwa` (shadowwalker/next-pwa is unmaintained). Wraps `next.config.ts` to emit a Workbox-generated service worker into `public/sw.js` at build time, plus a Workbox runtime under `public/workbox-*.js`. The README itself nudges new projects toward `@serwist/next` — we are intentionally not migrating yet because `@ducanh2912/next-pwa` still ships and our config is small.
+Fork/successor of the original `next-pwa` (shadowwalker/next-pwa is unmaintained). Wraps `next.config.ts` to emit a Workbox-generated service worker into `public/sw.js` at build time, plus a Workbox runtime under `public/workbox-*.js`. The README itself nudges new projects toward `@serwist/next` we are intentionally not migrating yet because `@ducanh2912/next-pwa` still ships and our config is small.
 
 ## When to use
 
@@ -21,7 +21,7 @@ Do NOT use for:
 
 - The PWA manifest. That lives at `src/app/manifest.ts` and is served by Next as `/manifest.webmanifest`.
 - The favicon / app icons. Those are referenced from `src/app/layout.tsx` `metadata.icons`.
-- Push notifications, background sync, periodic sync — not configured in this project.
+- Push notifications, background sync, periodic sync not configured in this project.
 
 ## Setup in this project
 
@@ -56,7 +56,7 @@ Outputs (production build only):
 
 Manifest is independent: `src/app/manifest.ts` exports a Next 15+ `MetadataRoute.Manifest` object served at `/manifest.webmanifest`. The PWA plugin does not generate or read it.
 
-`reactStrictMode: true` is set in `next.config.ts:28` — relevant because StrictMode double-invokes effects in dev, which can mask service-worker registration timing bugs that only show up in prod.
+`reactStrictMode: true` is set in `next.config.ts:28` relevant because StrictMode double-invokes effects in dev, which can mask service-worker registration timing bugs that only show up in prod.
 
 ## API reference
 
@@ -237,18 +237,18 @@ Root cause: an old `sw.js` still controlled the tab, served a precached `_next/s
 
 Mitigations we apply:
 
-1. `skipWaiting: false` — new SW waits until all tabs reload, so a session never mid-mixes old + new chunks.
-2. Default `cleanUpOutdatedCaches: true` — old precache buckets are deleted on activate.
-3. The default Next/Workbox precache excludes are `[/\/_next\/static\/.*(?<!\.p)\.woff2/, /\.map$/, /^manifest.*\.js$/]` — do not over-broaden these without thinking, but be aware that runtime caches you add can themselves go stale.
+1. `skipWaiting: false` new SW waits until all tabs reload, so a session never mid-mixes old + new chunks.
+2. Default `cleanUpOutdatedCaches: true` old precache buckets are deleted on activate.
+3. The default Next/Workbox precache excludes are `[/\/_next\/static\/.*(?<!\.p)\.woff2/, /\.map$/, /^manifest.*\.js$/]` do not over-broaden these without thinking, but be aware that runtime caches you add can themselves go stale.
 4. When debugging in prod, the only reliable client-side reset is DevTools → Application → Service Workers → "Unregister", then hard reload. Tell users to close all tabs of the app.
 
 If you ever toggle `skipWaiting: true`, ship an `UpdatePrompt`-style UX too, otherwise users hit this again.
 
 ### App Router quirks
 
-- `register: true` injects a `<script>` tag — fine with App Router. If you wrote your own root `<Document>` (Pages Router idiom), that path doesn't apply here.
+- `register: true` injects a `<script>` tag fine with App Router. If you wrote your own root `<Document>` (Pages Router idiom), that path doesn't apply here.
 - Auto-detected document fallback expects `app/~offline/page.tsx` (note the tilde). With Pages Router it was `pages/_offline.tsx`.
-- `dest: "public"` is non-negotiable on App Router — Next's static asset pipeline is what serves `sw.js` at the origin.
+- `dest: "public"` is non-negotiable on App Router Next's static asset pipeline is what serves `sw.js` at the origin.
 
 ### Next 16 specifics
 
@@ -257,16 +257,16 @@ If you ever toggle `skipWaiting: true`, ship an `UpdatePrompt`-style UX too, oth
   export default withPWA(withNextIntl(nextConfig));
   ```
   `next.config.ts:51-53` documents the order. Reversing it has historically broken next-intl's plugin detection.
-- `allowedDevOrigins` (`next.config.ts:41`) is unrelated to PWA but lives in the same file; do not collapse the PWA wrapper around a stray `module.exports = {}` — that historic mistake clobbered exports before plugins could attach (see comment in `next.config.ts:35-40`).
+- `allowedDevOrigins` (`next.config.ts:41`) is unrelated to PWA but lives in the same file; do not collapse the PWA wrapper around a stray `module.exports = {}` that historic mistake clobbered exports before plugins could attach (see comment in `next.config.ts:35-40`).
 - Turbopack: as of 10.2.9 the plugin is webpack-only. `next dev --turbo` runs without the SW (and we already disable in dev). Production builds use webpack regardless, so this is fine for now.
 
 ### Other footguns
 
 - The package has not had a release since Sep 2024 (10.2.9). For new projects the README itself recommends migrating to `@serwist/next`.
 - `disable: true` does NOT remove an already-installed SW from a returning user's browser. Ship a one-shot unregister script if you ever need to fully back the PWA out.
-- `runtimeCaching` entries are evaluated in order and the FIRST match wins. Put narrow `urlPattern`s before broad ones — and if you spread `defaultRuntimeCaching`, decide whether your overrides go before or after.
+- `runtimeCaching` entries are evaluated in order and the FIRST match wins. Put narrow `urlPattern`s before broad ones and if you spread `defaultRuntimeCaching`, decide whether your overrides go before or after.
 - `urlPattern` can be a `RegExp` or a function `({ url, request, sameOrigin }) => boolean`. Functions are easier to reason about than complex regexes.
-- `workboxOptions.exclude` defaults exclude `.map$` — if you ship a custom worker make sure you don't accidentally re-include source maps in the precache manifest.
+- `workboxOptions.exclude` defaults exclude `.map$` if you ship a custom worker make sure you don't accidentally re-include source maps in the precache manifest.
 
 ## References
 

@@ -1,33 +1,25 @@
 "use client";
 
 /**
- * Home tab — gamified zig-zag adventure map ("wood & grass" theme).
+ * Home tab the serpentine learning path (flat redesign).
  *
- * Layout is a direct port of the `_MapTab` widget tree in
- * `lib/features/home/home_screen.dart:144-468`, reskinned with the
- * game UI kit:
- *   - The map sits on the dark "game board" backdrop (grid +
- *     vignette) instead of the old bg.png artwork.
- *   - `LevelNode`s render as wooden medallions (`LevelBadge`) nested
- *     in grass — completed levels carry their earned 1–3 star arc,
- *     the current level pulses with a gold glow, locked levels wear
- *     the green padlock.
- *   - A dotted cream trail connects the nodes in play order, like a
- *     classic level path.
- *   - The floating points pill is now a wooden `ResourceCounter`
- *     with a gold coin and the same animated count-up.
+ * Duolingo-style path layout:
+ *   - White background, sticky stat bar up top (learning-language
+ *     flag + animated points counter).
+ *   - One section per issued cycle, ordered cycle-ascending
+ *     **top-down**: cycle 1 opens the page, newer cycles append
+ *     below the natural reading/scrolling direction.
+ *   - Each section opens with a green `UnitBanner` ("Path N") and
+ *     lays its 8 levels on a gentle S-curve of flat 3D `PathNode`s:
+ *     completed = gold + check + earned star arc, current = green +
+ *     star + ripple + bouncing START bubble, locked = gray + padlock.
+ *   - The parrot mascot bobs beside the current node.
  *   - Tap on `current` or `completed` → navigate to `/level/[id]`.
  *     Tap on `locked` → snackbar + shake animation.
  *
- * Multi-cycle layout:
- *   - The repo hands us `bundle: PathDefinition[]` — one entry per
- *     cycle the device has been issued, in cycle-ascending order. We
- *     render every cycle in a single continuous scroll, with the
- *     oldest cycle (cycle 1) at the **bottom** of the scroller (so
- *     `scrollTop = scrollHeight` on mount keeps level 1 visible) and
- *     any newer cycles stacked above. Each cycle reuses the same 8
- *     `NODE_POSITIONS`, with the level ids lifted from that cycle's
- *     `levels[]`.
+ * On mount the scroller centers the active node (`scrollIntoView`),
+ * so returning users land on their frontier regardless of how many
+ * cycles they've stacked up.
  *
  * Hydration: the parent `(app)` layout's `<AppRouteGuard>` blocks
  * rendering until stores are hydrated, so `usePathRepo.bundle` is
@@ -37,16 +29,23 @@
  */
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
-import { LevelBadge } from "@/components/game/level-badge";
-import { ResourceCounter } from "@/components/game/resource-counter";
 import { NicknameSheet } from "@/components/nickname-sheet";
-import { GameBoardBackdrop } from "@/components/screen-background";
+import { CountryFlag } from "@/components/ui/country-flag";
+import { CoinIcon } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
+import { PathNode } from "@/components/ui/path-node";
+import { UnitBanner } from "@/components/ui/unit-banner";
 import { type LevelDefinition } from "@/lib/content/models";
 import { formatCycleLevelParam } from "@/lib/content/cycle-level";
+import {
+  findLanguageByIso,
+  useLearningLanguage,
+} from "@/stores/learning-language";
 import { useNickname } from "@/stores/nickname";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
@@ -60,28 +59,23 @@ type LevelStatus = "completed" | "current" | "locked";
 interface LevelNode {
   /**
    * The cycle this level belongs to. Together with `id` forms the
-   * composite identity of a level — level ids are 1..8 *within a
+   * composite identity of a level level ids are 1..8 *within a
    * cycle* and NOT globally unique. React `key` and `progress` lookups
    * must use both fields.
    */
   cycle: number;
   id: number;
   status: LevelStatus;
-  /** Normalized x ∈ [0,1] within the map. */
+  /** Normalized x ∈ [0,1] within the cycle's path container. */
   dx: number;
-  /**
-   * Normalized y ∈ [0,1] within the entire stacked map (i.e. across
-   * every cycle). Computed from the per-cycle `dy` plus a
-   * cycle-index offset so that cycle 1 sits at the bottom of the
-   * scroller and newer cycles stack above. See `useMemo` below.
-   */
+  /** Normalized y ∈ [0,1] within the cycle's path container. */
   dy: number;
   /**
    * For `completed` levels only: number of questions the user actually
    * submitted recordings for. Drives the 3-star rating on the node.
    * Undefined if the entry came from the backend without a client-side
    * completion event (e.g. cross-device progress, or a level completed
-   * before the partial-credit feature shipped) — render as "fully
+   * before the partial-credit feature shipped) render as "fully
    * completed" (3 filled stars) in that case.
    */
   submittedCount?: number;
@@ -89,22 +83,31 @@ interface LevelNode {
   totalSteps?: number;
 }
 
-/** Hand-tuned positions, identical to `_kNodePositions` in Dart. */
+interface CycleGroup {
+  cycle: number;
+  nodes: LevelNode[];
+}
+
+/**
+ * Hand-tuned serpentine positions (top-down): level 1 starts on the
+ * center line right under the unit banner, the path sweeps left,
+ * returns through center, sweeps right and eases back toward center
+ * so the next cycle's level 1 continues the curve seamlessly.
+ */
 const NODE_POSITIONS: ReadonlyArray<{ dx: number; dy: number }> = [
-  { dx: 0.62, dy: 0.88 },
-  { dx: 0.22, dy: 0.8 },
-  { dx: 0.4, dy: 0.7 },
-  { dx: 0.78, dy: 0.62 },
-  { dx: 0.3, dy: 0.52 },
-  { dx: 0.62, dy: 0.43 },
-  { dx: 0.42, dy: 0.32 },
-  { dx: 0.74, dy: 0.2 },
+  { dx: 0.5, dy: 0.1 },
+  { dx: 0.32, dy: 0.215 },
+  { dx: 0.24, dy: 0.33 },
+  { dx: 0.34, dy: 0.445 },
+  { dx: 0.52, dy: 0.56 },
+  { dx: 0.68, dy: 0.675 },
+  { dx: 0.76, dy: 0.79 },
+  { dx: 0.62, dy: 0.905 },
 ];
 
-/** Virtual map proportions per cycle. Inherited from the retired
- *  bg.png artwork (1608×3496 → ratio ≈ 2.174) so node spacing and the
- *  scroll feel stay identical after the reskin. */
-const MAP_ASPECT = 3496 / 1608;
+/** Path-container height = width × this ratio (per cycle). ~100px of
+ *  vertical rhythm between nodes at the 480px frame width. */
+const CYCLE_ASPECT = 1.78;
 
 // ---------------------------------------------------------------------------
 // Page
@@ -116,29 +119,16 @@ export default function HomePage() {
 
   // We subscribe to the entire repo so any background mutation
   // (e.g. `completeLevel` from the level screen returning) re-renders
-  // the map. Cheap — it's a single object identity.
+  // the map. Cheap it's a single object identity.
   const bundle = usePathRepo((s) => s.bundle);
   const progress = usePathRepo((s) => s.progress);
 
-  // Cycle count drives container height + per-cycle vertical offsets.
-  // `bundle` is sorted cycle-ascending in the repo; we treat index 0
-  // as the *oldest* cycle (cycle 1, on first run) and stack newer
-  // cycles above. At least one — defensive for the brief window
-  // between `reset()` and the next `boot()`.
-  const cycleCount = Math.max(1, bundle?.length ?? 1);
-
-  // Derive nodes from the live progress vector. `useMemo` so the
-  // mascot-position lookup downstream is stable across renders that
-  // don't actually change progress. We iterate every cycle in the
-  // bundle, emit one node per (cycle, position-in-cycle) pair, and
-  // stamp a global `dy` that places cycle 1 at the bottom and newer
-  // cycles above. Falls back to a single synthetic cycle (level ids
-  // 1..8) when the bundle is briefly null, matching the legacy
-  // single-cycle behaviour.
-  const levels = useMemo<LevelNode[]>(() => {
-    const out: LevelNode[] = [];
-    // Synthetic fallback so the page still renders something during
-    // the boot ↔ reset window. Only used when `bundle` is null.
+  // Derive per-cycle node groups from the live progress vector.
+  // `bundle` is sorted cycle-ascending in the repo; we render it in
+  // that order top-down (cycle 1 first). Falls back to a single
+  // synthetic cycle (level ids 1..8) when the bundle is briefly null,
+  // matching the legacy single-cycle behaviour.
+  const cycleGroups = useMemo<CycleGroup[]>(() => {
     const cycles =
       bundle && bundle.length > 0
         ? bundle
@@ -154,22 +144,13 @@ export default function HomePage() {
               })),
             },
           ];
-    for (let ci = 0; ci < cycles.length; ci++) {
-      const cycle = cycles[ci];
-      // Cycle 0 (oldest) → bottom of the scroll. The y-offset is
-      // measured from the *top* (CSS convention), so the oldest
-      // cycle gets the largest top offset.
-      const cycleTopOffset = (cycles.length - 1 - ci) / cycles.length;
-      // Each cycle occupies 1/cycles.length of the global y-range.
-      // The per-cycle `dy` from `NODE_POSITIONS` is in [0,1] within
-      // that band, so we scale and shift.
-      const bandHeight = 1 / cycles.length;
-
+    return cycles.map((cycle) => {
+      const nodes: LevelNode[] = [];
       for (let i = 0; i < NODE_POSITIONS.length; i++) {
         const def = cycle.levels[i];
-        // Cycle should always carry exactly 8 levels per the backend
+        // Cycles should always carry exactly 8 levels per the backend
         // contract, but guard so a malformed payload doesn't crash
-        // the render — skip the missing slot.
+        // the render skip the missing slot.
         if (!def) continue;
         const id = def.levelId;
         // Composite-key lookup: same level id can appear in cycle 1
@@ -188,49 +169,43 @@ export default function HomePage() {
             ? "current"
             : "locked";
         const pos = NODE_POSITIONS[i];
-        out.push({
+        nodes.push({
           cycle: cycle.cycle,
           id,
           status,
           submittedCount: entry?.submittedCount,
           totalSteps: entry?.totalSteps,
           dx: pos.dx,
-          dy: cycleTopOffset + pos.dy * bandHeight,
+          dy: pos.dy,
         });
       }
-    }
-    return out;
+      return { cycle: cycle.cycle, nodes };
+    });
   }, [bundle, progress]);
 
   const totalPoints = progress?.totalPoints ?? 0;
 
-  // Dotted trail between consecutive nodes (play order). `levels` is
-  // already emitted in play order — cycle-ascending, level-ascending —
-  // so pairing neighbours also bridges cycle boundaries.
-  const trailDots = useMemo(() => {
-    const dots: Array<{ x: number; y: number; key: string }> = [];
-    for (let i = 1; i < levels.length; i++) {
-      const a = levels[i - 1];
-      const b = levels[i];
-      for (let k = 1; k <= 3; k++) {
-        const f = k / 4;
-        dots.push({
-          x: a.dx + (b.dx - a.dx) * f,
-          y: a.dy + (b.dy - a.dy) * f,
-          key: `${a.cycle}-${a.id}-${k}`,
-        });
-      }
-    }
-    return dots;
-  }, [levels]);
+  // The START bubble + mascot anchor to the active cycle's current
+  // node. Each cycle can have at most one `current` row, but the user
+  // may have multiple cycles active in `bundle` (cheap to defend
+  // against). Prefer the highest-cycle current that's the one the
+  // user is "on".
+  const currentNode = useMemo<LevelNode | null>(() => {
+    const all = cycleGroups.flatMap((g) => g.nodes);
+    return (
+      all
+        .filter((n) => n.status === "current")
+        .sort((a, b) => b.cycle - a.cycle)[0] ??
+      all[0] ??
+      null
+    );
+  }, [cycleGroups]);
 
-  // Scroll-to-bottom on mount so the active level is on screen.
-  // (Map is laid out top→down, with level 1 at the bottom — same
-  // semantic as the Flutter `jumpTo(maxScrollExtent)` call.)
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  // Center the active node on mount so returning users land on their
+  // frontier no matter how many cycles are stacked above it.
+  const currentNodeRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    const el = scrollerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    currentNodeRef.current?.scrollIntoView({ block: "center" });
   }, []);
 
   const launchLevel = (node: LevelNode) => {
@@ -244,7 +219,7 @@ export default function HomePage() {
       useSnackbar.getState().show(t("homeAdventureNotLoadedSnack"));
       return;
     }
-    // Resolve by composite (cycle, levelId) — flattening + level-id
+    // Resolve by composite (cycle, levelId) flattening + level-id
     // match alone would silently launch a same-numbered level from a
     // different cycle once the user has advanced.
     const cycleDef = bundle.find((c) => c.cycle === node.cycle);
@@ -261,17 +236,6 @@ export default function HomePage() {
     router.push(`/level/${seg}`);
   };
 
-  // The "Tap to start" pulse anchors to the active cycle's current
-  // node. Each cycle can have at most one `current` row, but the user
-  // may have multiple cycles active in `bundle` (i.e. they advanced
-  // mid-completion of a previous cycle, which the backend doesn't
-  // currently allow but is cheap to defend against). Prefer the
-  // highest-cycle current — that's the one the user is "on".
-  const currentNode =
-    levels
-      .filter((n) => n.status === "current")
-      .sort((a, b) => b.cycle - a.cycle)[0] ?? levels[0];
-
   // First-visit nickname prompt. Derived directly from the store
   // rather than a local `useState`: opening means "no nickname set
   // *and* prompt has not been shown", and the sheet's own dismiss /
@@ -282,7 +246,7 @@ export default function HomePage() {
   // to `false` pre-hydrate and we'd open the sheet for a user who
   // already dismissed it. `<AppRouteGuard>` blocks render until the
   // *onboarding* store is hydrated, but the nickname store hydrates
-  // independently in `<AppHydration>` — wait for it explicitly.
+  // independently in `<AppHydration>` wait for it explicitly.
   const nicknameHydrated = useNickname((s) => s.hydrated);
   const nicknameValue = useNickname((s) => s.value);
   const nicknamePrompted = useNickname((s) => s.prompted);
@@ -290,95 +254,94 @@ export default function HomePage() {
     nicknameHydrated && nicknameValue === null && !nicknamePrompted;
 
   return (
-    <div className="relative min-h-dvh w-full overflow-hidden bg-surface">
-      {/* Game-board backdrop (grid + vignette), pinned to the
-          viewport. It does NOT scroll with the nodes; the level path
-          scrolls over it. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-        <GameBoardBackdrop />
-      </div>
+    <div className="flex h-dvh w-full flex-col">
+      {/* Stat bar pinned above the scroller (flag + points). */}
+      <StatBar points={totalPoints} />
 
-      {/* Scrollable nodes. Padded at the bottom so the last visible
-          row clears the floating bottom-nav. */}
+      {/* Scrollable path. Padded at the bottom so the last node
+          clears the fixed bottom-nav. */}
       <div
-        ref={scrollerRef}
-        className="relative z-[1] h-dvh w-full overflow-y-auto overscroll-y-contain"
-        style={{
-          paddingBottom: BOTTOM_NAV_RESERVED_PX,
-        }}
+        className="flex-1 overflow-y-auto overscroll-y-contain"
+        style={{ paddingBottom: BOTTOM_NAV_RESERVED_PX }}
       >
-        {/* Node container: width 100%, height = width × aspect ×
-            cycleCount. Each cycle gets one copy of the 8 node
-            positions, stacked top-to-bottom with cycle 1 at the
-            *bottom*. */}
-        <div
-          className="relative w-full"
-          style={{ paddingTop: `${MAP_ASPECT * cycleCount * 100}%` }}
-        >
-          {/* Dotted trail — under the nodes. */}
-          {trailDots.map((d) => (
-            <span
-              key={d.key}
-              aria-hidden
-              className="absolute h-2 w-2 rounded-full"
-              style={{
-                left: `calc(${d.x * 100}% - 4px)`,
-                top: `calc(${d.y * 100}% - 4px)`,
-                background: "rgba(255,246,224,0.32)",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
-              }}
-            />
-          ))}
-
-          {/* Level nodes. Each anchored absolutely in the map's own
-              coordinate system. `dy` is already in global (whole-map)
-              normalized space — see the `useMemo` above. */}
-          {levels.map((node) => (
-            <div
-              // Composite key — `node.id` alone collides across cycles
-              // (level 1 of cycle 1 and level 1 of cycle 2 are both
-              // rendered when the user has advanced).
-              key={`${node.cycle}-${node.id}`}
-              className="absolute"
-              style={{
-                // 80×80 node, anchor centre-to-coordinate
-                left: `calc(${node.dx * 100}% - 40px)`,
-                top: `calc(${node.dy * 100}% - 40px)`,
-              }}
-            >
-              <LevelNodeView
-                node={node}
-                onLaunch={() => launchLevel(node)}
-                tapToStartLabel={t("homeLevelTapToStart")}
+        {cycleGroups.map((group) => (
+          <section key={group.cycle}>
+            <div className="px-4 pb-1 pt-4">
+              <UnitBanner
+                title={t("homePathTitle", { cycle: group.cycle })}
+                subtitle={t("homePathSubtitle")}
               />
             </div>
-          ))}
 
-          {/* Mascot — bobs gently next to the current level node. */}
-          <div
-            className="pointer-events-none absolute"
-            style={{
-              left: `calc(${currentNode.dx * 100}% + 20px)`,
-              top: `calc(${currentNode.dy * 100}% - 40px)`,
-            }}
-          >
-            <Mascot />
-          </div>
-        </div>
-      </div>
+            {/* Path container: width 100%, height = width × aspect.
+                Nodes anchor absolutely in its coordinate system. */}
+            <div
+              className="relative w-full"
+              style={{ paddingTop: `${CYCLE_ASPECT * 100}%` }}
+            >
+              {group.nodes.map((node) => {
+                const isCurrent =
+                  currentNode !== null &&
+                  node.cycle === currentNode.cycle &&
+                  node.id === currentNode.id &&
+                  node.status === "current";
+                return (
+                  <div
+                    // Composite key `node.id` alone collides across
+                    // cycles (level 1 of cycle 1 and level 1 of cycle
+                    // 2 are both rendered once the user advances).
+                    key={`${node.cycle}-${node.id}`}
+                    ref={isCurrent ? currentNodeRef : undefined}
+                    className="absolute"
+                    style={{
+                      // 80×80 anchor box, centre-to-coordinate.
+                      left: `calc(${node.dx * 100}% - 40px)`,
+                      top: `calc(${node.dy * 100}% - 40px)`,
+                    }}
+                  >
+                    <LevelNodeView
+                      node={node}
+                      onLaunch={() => launchLevel(node)}
+                      bubbleLabel={
+                        isCurrent ? t("homeStartBubble") : undefined
+                      }
+                    />
+                  </div>
+                );
+              })}
 
-      {/* Floating points counter — fixed to viewport, not scroll. */}
-      <div
-        className="absolute inset-x-4 top-0 z-10"
-        style={{ marginTop: "calc(env(safe-area-inset-top) + 10px)" }}
-      >
-        <PointsHeader points={totalPoints} pointsLabel={t("homePointsLabel")} />
+              {/* Mascot bobs gently next to the current level node
+                  (flips to the node's left when the path swings
+                  right so it never clips the frame edge). */}
+              {currentNode !== null &&
+                group.nodes.some(
+                  (n) =>
+                    n.cycle === currentNode.cycle &&
+                    n.id === currentNode.id &&
+                    n.status === "current",
+                ) && (
+                  <div
+                    className="pointer-events-none absolute"
+                    style={{
+                      left:
+                        currentNode.dx > 0.6
+                          ? `calc(${currentNode.dx * 100}% - 130px)`
+                          : `calc(${currentNode.dx * 100}% + 42px)`,
+                      top: `calc(${currentNode.dy * 100}% - 52px)`,
+                    }}
+                  >
+                    <Mascot size={88} />
+                  </div>
+                )}
+            </div>
+          </section>
+        ))}
       </div>
 
       {/* First-run nickname prompt. Lives at the page root so its
           fixed-position scrim covers the whole shell, not just the
           scroll container. The sheet is visible whenever the store
-          says we haven't shown it yet — it dismisses itself by
+          says we haven't shown it yet it dismisses itself by
           flipping `prompted` (via `markPrompted()`), which makes the
           predicate above evaluate to `false` and unmounts this. */}
       {showNicknameSheet && (
@@ -398,31 +361,62 @@ export default function HomePage() {
 }
 
 // ---------------------------------------------------------------------------
-// Header
+// Stat bar
 // ---------------------------------------------------------------------------
 
-function PointsHeader({
-  points,
-  pointsLabel,
-}: {
-  points: number;
-  pointsLabel: string;
-}) {
-  // Tween the displayed value when `points` changes — same flavour as
+function StatBar({ points }: { points: number }) {
+  const t = useTranslations();
+  // Show the *effective* course: if the user skipped the language
+  // picker, recordings default to Wolof (`isoOrDefault`) so the
+  // chip must say so too, not render an empty globe.
+  const selected = useLearningLanguage((s) => s.selected);
+  const language = selected ?? findLanguageByIso("wo");
+
+  // Tween the displayed value when `points` changes same flavour as
   // Flutter's `TweenAnimationBuilder<int>`. 900 ms easeOutCubic.
   const animated = useAnimatedNumber(points, 900);
 
   return (
-    <ResourceCounter
-      icon="coin"
-      value={`+${animated}`}
-      suffix={pointsLabel}
-    />
+    <header
+      className="z-10 border-b-2 border-border bg-bg px-5 pb-2.5 phone-sm:px-4"
+      style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}
+    >
+      <div className="flex items-center justify-between">
+        {/* Learning-language chip tappable: the natural place to
+            look for "switch course" is the flag (the profile row is
+            where it actually lives). */}
+        <Link
+          href="/profile"
+          aria-label={t("profileLearningLanguageLabel")}
+          className="flex items-center gap-2 rounded-xl px-1 py-1 transition-opacity active:opacity-60"
+        >
+          <CountryFlag
+            iso={language?.iso ?? null}
+            size={30}
+            className="shrink-0"
+          />
+          <span className="text-[15px] font-extrabold text-text-muted">
+            {language?.displayName ?? ""}
+          </span>
+        </Link>
+
+        {/* Points counter. */}
+        <span
+          className="flex items-center gap-1.5"
+          aria-label={`${points} ${t("homePointsLabel")}`}
+        >
+          <CoinIcon className="h-6 w-6 shrink-0" />
+          <span className="text-[17px] font-extrabold text-orange-deep">
+            {animated}
+          </span>
+        </span>
+      </div>
+    </header>
   );
 }
 
 /**
- * Tiny tween hook — counts `target` up from the previous value over
+ * Tiny tween hook counts `target` up from the previous value over
  * `durationMs` with an ease-out-cubic curve. Pure CSS won't do here
  * because we want the formatted text to update each frame, not just
  * an opacity/transform.
@@ -462,12 +456,14 @@ function useAnimatedNumber(target: number, durationMs: number): number {
 function LevelNodeView({
   node,
   onLaunch,
-  tapToStartLabel,
+  bubbleLabel,
 }: {
   node: LevelNode;
   onLaunch: () => void;
-  tapToStartLabel: string;
+  /** START bubble copy only set for the active current node. */
+  bubbleLabel?: string;
 }) {
+  const t = useTranslations();
   const [shake, setShake] = useState(0);
 
   const handleClick = () => {
@@ -495,97 +491,32 @@ function LevelNodeView({
       )
     : 3;
 
+  // Localized, state-aware label glyph-only nodes are mute to
+  // screen readers otherwise, and "locked" is critical context
+  // before activating.
+  const nodeLabel =
+    node.status === "completed"
+      ? t("homeLevelNodeCompleted", { levelId: node.id })
+      : node.status === "current"
+        ? t("homeLevelNodeCurrent", { levelId: node.id })
+        : t("homeLevelNodeLocked", { levelId: node.id });
+
   return (
     <button
       type="button"
       onClick={handleClick}
-      aria-label={`Level ${node.id}`}
-      className="relative block h-20 w-20 cursor-pointer"
+      aria-label={nodeLabel}
+      aria-disabled={node.status === "locked" || undefined}
+      // `group` lets the PathNode face depress onto its edge on press.
+      className="group relative flex h-20 w-20 cursor-pointer items-center justify-center"
       style={{
         // Alternate between two identical keyframe sets so a repeat
         // tap re-triggers the wobble. Keyframes live in globals.css.
         animation: shake ? `afk-shake-${shake % 2} 0.45s ease` : undefined,
+        touchAction: "manipulation",
       }}
     >
-      <LevelBadge level={node.id} state={node.status} stars={stars} />
-
-      {/* "Tap to start" call-out floating above the current node —
-          a mini wooden plank tooltip. `w-max` so longer translations
-          (FR "Touchez pour commencer") widen the plank rather than
-          wrapping over the badge. */}
-      {node.status === "current" && (
-        <span className="absolute left-1/2 top-[-38px] z-20 block w-max max-w-[80vw] -translate-x-1/2 phone-sm:max-w-[160px]">
-          <span className="relative block px-3 py-1.5">
-            <span
-              aria-hidden
-              className="absolute inset-0"
-              style={{
-                background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
-                borderRadius: "10px 9px 10px 9px / 9px 10px 8px 10px",
-                boxShadow: "0 3px 6px rgba(0,0,0,0.4)",
-              }}
-            />
-            <span
-              aria-hidden
-              className="absolute"
-              style={{
-                inset: "2px 2px 4px 2px",
-                background:
-                  "linear-gradient(180deg, var(--color-wood-light) 0%, var(--color-wood-mid) 100%)",
-                borderRadius: "8px 7px 8px 7px / 7px 8px 6px 8px",
-              }}
-            />
-            <span
-              className="relative z-10 font-game text-[12px] leading-none text-cream"
-              style={{ textShadow: "0 1px 0 rgba(92,48,24,0.8)" }}
-            >
-              {tapToStartLabel}
-            </span>
-          </span>
-        </span>
-      )}
+      <PathNode state={node.status} stars={stars} bubbleLabel={bubbleLabel} />
     </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Decorative bits
-// ---------------------------------------------------------------------------
-
-function Mascot() {
-  // Bobbing strawberry. Animation is a tiny Y translate on a 1.8 s
-  // ease-in-out-alternate loop, matching the Flutter sin-curve.
-  // Keyframes live in globals.css.
-  return (
-    <div className="motion-safe:animate-[afk-bob_1.8s_ease-in-out_infinite_alternate]">
-      <svg viewBox="0 0 110 120" width="110" height="120" aria-hidden>
-        {/* Body */}
-        <path
-          d="M55 114 C5.5 84 11 30 55 33.6 C99 30 104.5 84 55 114 Z"
-          fill="#E53935"
-        />
-        {/* Seeds */}
-        {[
-          [33, 84],
-          [49.5, 98.4],
-          [71.5, 84],
-          [60.5, 66],
-          [38.5, 66],
-        ].map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r={2.5} fill="#FFE57F" />
-        ))}
-        {/* Leaves */}
-        <path d="M55 6 L27.5 36 L82.5 36 Z" fill="#43A047" />
-        {/* Eyes */}
-        <circle cx={44} cy={54} r={8} fill="white" />
-        <circle cx={68.2} cy={54} r={8} fill="white" />
-        <circle cx={46.2} cy={55.2} r={3.5} fill="black" />
-        <circle cx={70.4} cy={55.2} r={3.5} fill="black" />
-        {/* Mouth */}
-        <path d="M41.8 72 Q55 93.6 68.2 72 Z" fill="#6A1B1B" />
-        {/* Tongue */}
-        <path d="M48.4 81.6 Q55 93.6 61.6 81.6 Z" fill="#FF80AB" />
-      </svg>
-    </div>
   );
 }

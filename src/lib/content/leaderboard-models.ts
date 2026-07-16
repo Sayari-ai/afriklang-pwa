@@ -67,7 +67,7 @@ export function parseLeaderboardSnapshot(raw: unknown): LeaderboardSnapshot {
 }
 
 /**
- * True iff the caller's row is already present in the top list — in
+ * True iff the caller's row is already present in the top list in
  * which case the UI doesn't need to render a separate "You" footer.
  */
 export function meInTop(snapshot: LeaderboardSnapshot): boolean {

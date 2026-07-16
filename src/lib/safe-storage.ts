@@ -2,7 +2,7 @@
  * Tiny localStorage wrapper that no-ops on the server.
  *
  * Stores import this directly rather than going through Zustand's
- * `persist` middleware — every store has tiny, schema-stable state and
+ * `persist` middleware every store has tiny, schema-stable state and
  * we want full control over keys (they need to match Flutter's
  * SharedPreferences exactly). Zustand's middleware would prefix or
  * version the values without that match.
@@ -29,7 +29,7 @@ export const safeStorage = {
     try {
       window.localStorage.setItem(name, value);
     } catch {
-      // Quota errors are non-fatal — best effort.
+      // Quota errors are non-fatal best effort.
     }
   },
   removeItem(name: string): void {

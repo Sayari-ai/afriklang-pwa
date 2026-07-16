@@ -1,45 +1,41 @@
 "use client";
 
 /**
- * Profile tab — port of `lib/features/profile/profile_screen.dart`.
+ * Profile tab settings (flat redesign).
  *
- * Three sections, each rendered as a labelled white rounded card:
+ * Three sections, each a labelled white bordered card:
  *   1. Preferences
  *      - App language: System / English / Français → bottom-sheet picker
  *        wired to `useSetAppLocale()` (writes cookie + localStorage,
  *        then `router.refresh()` so next-intl swaps message bundles).
  *      - Learning language: Twi / Fon / Wolof → bottom-sheet picker.
+ *      - Nickname → shared NicknameSheet (edit mode).
  *   2. Privacy
  *      - Recording consent toggle. Re-grant is one-tap (the user has
  *        already seen the disclosure during onboarding). Revoking
  *        opens a confirm dialog with a red "Revoke" CTA.
  *   3. About
- *      - Version row. Pulled from `package.json` via a build-time
- *        constant (`process.env.NEXT_PUBLIC_APP_VERSION`) with a
- *        fallback to the `package.json` `version` baked at compile
- *        time. Web has no `buildNumber`; we render `version (web)`.
+ *      - Version row. Web has no `buildNumber`; we render `version (web)`.
  *
- * Differences from Flutter:
- *   - `showModalBottomSheet` → fixed-position overlay with a
- *     translucent scrim. Tapping the scrim cancels (same UX).
- *   - `Switch.adaptive` → custom CSS toggle in brand primary.
- *   - `package_info_plus` → static `APP_VERSION` (Next 16 doesn't
- *     bundle native package metadata; this is honest about the runtime).
- *   - `_LocaleOverride` is `Locale | null`; the sheet returns
- *     `LocaleOverride | undefined` (undefined = dismissed).
+ * Sheets are built on the shared `<Sheet>` shell; the confirm dialog
+ * is a centered white card over a scrim.
  */
 
 import { useTranslations } from "next-intl";
+import { LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { ScreenBackground } from "@/components/screen-background";
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
-import { WoodButton } from "@/components/game/wood-button";
-import { WoodPanel } from "@/components/game/wood-panel";
 import { NicknameSheet } from "@/components/nickname-sheet";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { CountryFlag } from "@/components/ui/country-flag";
+import { Sheet } from "@/components/ui/sheet";
 import { useSetAppLocale } from "@/hooks/use-set-app-locale";
 import type { Locale } from "@/i18n/locales";
+import { track } from "@/lib/api/events";
 import { useAppLocale, type LocaleOverride } from "@/stores/app-locale";
+import { useAuth } from "@/stores/auth";
 import { useConsent } from "@/stores/consent";
 import {
   SUPPORTED_LEARNING_LANGUAGES,
@@ -61,6 +57,7 @@ type SheetSpec =
   | { kind: "learning-language" }
   | { kind: "nickname" }
   | { kind: "revoke-confirm" }
+  | { kind: "logout-confirm" }
   | null;
 
 export default function ProfilePage() {
@@ -71,12 +68,15 @@ export default function ProfilePage() {
   const [sheet, setSheet] = useState<SheetSpec>(null);
 
   return (
-    <ScreenBackground overlay="strong">
+    <div
+      className="flex h-dvh w-full flex-col"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div
         className="flex-1 overflow-y-auto px-4 pt-4"
         style={{ paddingBottom: BOTTOM_NAV_RESERVED_PX + 16 }}
       >
-        <h1 className="text-outline px-1 font-game text-[30px] tracking-wide text-cream">
+        <h1 className="px-1 text-[26px] font-extrabold text-text">
           {t("profileTitle")}
         </h1>
         <div className="h-4" />
@@ -101,6 +101,14 @@ export default function ProfilePage() {
 
         <div className="h-4" />
 
+        <SectionCard title={t("profileSectionAccount")}>
+          <AccountRow />
+          <Divider />
+          <LogoutRow onTap={() => setSheet({ kind: "logout-confirm" })} />
+        </SectionCard>
+
+        <div className="h-4" />
+
         <SectionCard title={t("profileSectionAbout")}>
           <VersionRow />
         </SectionCard>
@@ -118,7 +126,10 @@ export default function ProfilePage() {
       {sheet?.kind === "revoke-confirm" && (
         <RevokeConfirmDialog onClose={() => setSheet(null)} />
       )}
-    </ScreenBackground>
+      {sheet?.kind === "logout-confirm" && (
+        <LogoutConfirmDialog onClose={() => setSheet(null)} />
+      )}
+    </div>
   );
 }
 
@@ -135,21 +146,16 @@ function SectionCard({
 }) {
   return (
     <div className="flex flex-col">
-      <span
-        className="px-2 pb-1.5 text-[12px] font-extrabold text-cream/75"
-        style={{ letterSpacing: "1.2px", textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
-      >
-        {title.toUpperCase()}
+      <span className="px-2 pb-1.5 text-[12px] font-extrabold uppercase tracking-[1.2px] text-text-faint">
+        {title}
       </span>
-      <WoodPanel grass={false} contentClassName="overflow-hidden py-1">
-        {children}
-      </WoodPanel>
+      <Card className="overflow-hidden py-1">{children}</Card>
     </div>
   );
 }
 
 function Divider() {
-  return <div className="mx-4 h-px bg-ink/20" />;
+  return <div className="mx-4 h-0.5 bg-border/70" />;
 }
 
 function Tile({
@@ -169,19 +175,15 @@ function Tile({
       type="button"
       onClick={onTap ?? undefined}
       disabled={!tappable}
-      className="flex w-full items-center px-4 py-3.5 text-left transition-colors active:bg-black/10 disabled:cursor-default"
+      className="flex w-full items-center px-4 py-3.5 text-left transition-colors active:bg-bg-subtle disabled:cursor-default"
     >
-      <span
-        className="flex h-6 w-6 items-center justify-center"
-        style={{
-          color: "var(--color-grass-deep)",
-          filter: "drop-shadow(0 1px 0 rgba(255,235,205,0.4))",
-        }}
-      >
+      {/* Leading glyphs wear the mid brand purple decorative accent;
+          blue stays reserved for interactive/selected states. */}
+      <span className="flex h-6 w-6 items-center justify-center text-purple">
         {leading}
       </span>
       <div className="w-3" />
-      <span className="flex-1 text-[16px] font-bold text-ink">{label}</span>
+      <span className="flex-1 text-[16px] font-bold text-text">{label}</span>
       <TrailingValue>{trailing}</TrailingValue>
       {tappable && (
         <>
@@ -195,7 +197,7 @@ function Tile({
 
 function TrailingValue({ children }: { children: React.ReactNode }) {
   return (
-    <span className="line-clamp-1 max-w-[55%] text-right text-[14px] font-semibold text-ink/70">
+    <span className="line-clamp-1 max-w-[55%] text-right text-[14px] font-semibold text-text-muted">
       {children}
     </span>
   );
@@ -232,9 +234,14 @@ function AppLanguageRow({ onTap }: { onTap: () => void }) {
 function LearningLanguageRow({ onTap }: { onTap: () => void }) {
   const t = useTranslations();
   const selected = useLearningLanguage((s) => s.selected);
-  const trailing = selected
-    ? `${selected.flagEmoji} ${selected.displayName}`
-    : t("profileLearningLanguageNotSet");
+  const trailing = selected ? (
+    <span className="inline-flex items-center gap-1.5 align-middle">
+      <CountryFlag iso={selected.iso} size={24} className="shrink-0" />
+      <span>{selected.displayName}</span>
+    </span>
+  ) : (
+    t("profileLearningLanguageNotSet")
+  );
   return (
     <Tile
       leading={<SchoolIcon />}
@@ -251,7 +258,7 @@ function LearningLanguageRow({ onTap }: { onTap: () => void }) {
 
 function NicknameRow({ onTap }: { onTap: () => void }) {
   const t = useTranslations();
-  // Reactive — flips from "Not set" to the chosen value as soon as
+  // Reactive flips from "Not set" to the chosen value as soon as
   // the user submits the sheet. We don't show the server-assigned
   // fallback here because it's not known on the profile screen
   // (would require a leaderboard fetch); keep this row strictly
@@ -294,21 +301,16 @@ function ConsentRow({
 
   return (
     <div className="flex items-center px-4 py-3">
-      <span
-        style={{
-          color: "var(--color-grass-deep)",
-          filter: "drop-shadow(0 1px 0 rgba(255,235,205,0.4))",
-        }}
-      >
-        <MicIcon />
+      <span className="flex h-6 w-6 items-center justify-center text-purple">
+        <MicGlyph />
       </span>
       <div className="w-3" />
       <div className="flex flex-1 flex-col">
-        <span className="text-[16px] font-bold text-ink">
+        <span className="text-[16px] font-bold text-text">
           {t("profileConsentLabel")}
         </span>
         <div className="h-0.5" />
-        <span className="text-[12px] font-medium text-ink/70">
+        <span className="text-[12px] font-semibold text-text-muted">
           {granted
             ? t("profileConsentSublabelGranted")
             : t("profileConsentSublabelRevoked")}
@@ -332,27 +334,83 @@ function ToggleSwitch({
       role="switch"
       aria-checked={checked}
       onClick={onChange}
-      className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors"
-      style={
-        checked
-          ? {
-              background:
-                "linear-gradient(180deg, var(--color-grass-dark) 0%, var(--color-grass-light) 100%)",
-              boxShadow: "inset 0 1.5px 3px rgba(0,0,0,0.25)",
-            }
-          : {
-              background: "rgba(0,0,0,0.3)",
-              boxShadow: "inset 0 1.5px 3px rgba(0,0,0,0.35)",
-            }
-      }
+      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+        checked ? "bg-primary" : "bg-border"
+      }`}
     >
       <span
-        className="inline-block h-6 w-6 rounded-full bg-cream shadow transition-transform"
+        className="inline-block h-6 w-6 rounded-full bg-white transition-transform"
         style={{
           transform: checked ? "translateX(22px)" : "translateX(2px)",
-          boxShadow: "0 1.5px 2px rgba(0,0,0,0.35)",
+          boxShadow: "0 1.5px 2px rgba(0,0,0,0.25)",
         }}
       />
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Account rows
+// ---------------------------------------------------------------------------
+
+/**
+ * Signed-in identity row (non-interactive): purple monogram disc +
+ * Google display name with the email as a sublabel. Falls back to
+ * the email as the headline (then to a generic label) Google
+ * accounts don't always expose a name.
+ */
+function AccountRow() {
+  const t = useTranslations();
+  const user = useAuth((s) => s.user);
+
+  const headline = user?.name ?? user?.email ?? t("profileAccountGoogleFallback");
+  const sublabel = user?.name ? user.email : null;
+  const monogram = (headline[0] ?? "?").toUpperCase();
+
+  return (
+    <div className="flex items-center px-4 py-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple">
+        <span className="text-[17px] font-extrabold text-white">
+          {monogram}
+        </span>
+      </span>
+      <div className="w-3" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <span className="line-clamp-1 text-[16px] font-bold text-text">
+          {headline}
+        </span>
+        {sublabel && (
+          <span className="line-clamp-1 text-[12px] font-semibold text-text-muted">
+            {sublabel}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Log-out trigger row. Red the one leave-the-app action on the
+ * screen so it must not read like just another preference. Opens
+ * the confirm dialog (an accidental tap costs a full OAuth
+ * round-trip to undo).
+ */
+function LogoutRow({ onTap }: { onTap: () => void }) {
+  const t = useTranslations();
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      className="flex w-full items-center px-4 py-3.5 text-left transition-colors active:bg-bg-subtle"
+    >
+      <span className="flex h-6 w-6 items-center justify-center">
+        {/* lucide defaults stroke to currentColor hex not needed here. */}
+        <LogOut size={22} strokeWidth={2.5} className="text-red" aria-hidden />
+      </span>
+      <div className="w-3" />
+      <span className="flex-1 text-[16px] font-bold text-red">
+        {t("profileLogoutLabel")}
+      </span>
     </button>
   );
 }
@@ -380,109 +438,34 @@ function VersionRow() {
 // Bottom sheets
 // ---------------------------------------------------------------------------
 
-function SheetShell({
-  title,
-  children,
-  onClose,
-}: {
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  // Lock body scroll while open + close on Escape.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      {/* Scrim. Tapping it dismisses. */}
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/50"
-      />
-      <div className="relative mx-auto flex w-full max-w-[480px] flex-col pb-safe">
-        {/* Wooden sheet: carved rim + lit plank face (top corners only). */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 -z-10"
-          style={{
-            background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
-            borderRadius: "24px 22px 0 0 / 22px 24px 0 0",
-            boxShadow: "0 -6px 18px rgba(0,0,0,0.4)",
-          }}
-        />
-        <span
-          aria-hidden="true"
-          className="absolute -z-10"
-          style={{
-            inset: "4px 4px 0 4px",
-            background:
-              "linear-gradient(180deg, var(--color-wood-panel-light) 0%, var(--color-wood-panel-dark) 100%)",
-            borderRadius: "20px 18px 0 0 / 18px 20px 0 0",
-            boxShadow: "inset 0 3px 0 rgba(255,235,200,0.35)",
-          }}
-        />
-        <div className="flex justify-center pt-2.5">
-          <span className="block h-1.5 w-10 rounded-full bg-ink/40" />
-        </div>
-        <div className="h-3" />
-        <h2
-          className="px-4 font-game text-[19px] tracking-wide text-cream"
-          style={{ textShadow: "0 1.5px 0 rgba(92,48,24,0.7)" }}
-        >
-          {title}
-        </h2>
-        <div className="h-2" />
-        <div className="flex flex-col">{children}</div>
-        <div className="h-3" />
-      </div>
-    </div>
-  );
-}
-
 function SheetOption({
   label,
   selected,
   onTap,
+  leading,
 }: {
   label: string;
   selected: boolean;
   onTap: () => void;
+  /** Optional glyph before the label (e.g. a country flag). */
+  leading?: React.ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onTap}
-      className="flex w-full items-center px-5 py-3.5 text-left transition-colors active:bg-black/10"
+      className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors active:bg-bg-subtle"
     >
+      {leading}
       <span
-        className="flex-1 text-[16px]"
-        style={{
-          color: selected ? "var(--color-ink)" : "rgba(92,48,24,0.8)",
-          fontWeight: selected ? 800 : 500,
-        }}
+        className={`flex-1 text-[16px] ${
+          selected ? "font-extrabold text-blue" : "font-semibold text-text"
+        }`}
       >
         {label}
       </span>
       {selected && (
-        <span
-          style={{
-            color: "var(--color-grass-deep)",
-            filter: "drop-shadow(0 1px 0 rgba(255,235,205,0.4))",
-          }}
-        >
+        <span className="text-blue">
           <CheckIcon />
         </span>
       )}
@@ -503,7 +486,7 @@ function AppLanguageSheet({ onClose }: { onClose: () => void }) {
   const isOverride = (v: Locale): boolean => override === v;
 
   return (
-    <SheetShell title={t("profileAppLanguageLabel")} onClose={onClose}>
+    <Sheet title={t("profileAppLanguageLabel")} onClose={onClose}>
       <SheetOption
         label={t("profileAppLanguageSystem")}
         selected={override === null}
@@ -519,7 +502,7 @@ function AppLanguageSheet({ onClose }: { onClose: () => void }) {
         selected={isOverride("fr")}
         onTap={() => pick("fr")}
       />
-    </SheetShell>
+    </Sheet>
   );
 }
 
@@ -534,19 +517,22 @@ function LearningLanguageSheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <SheetShell
+    <Sheet
       title={t("profileLearningLanguageSheetTitle")}
       onClose={onClose}
     >
       {SUPPORTED_LEARNING_LANGUAGES.map((lang) => (
         <SheetOption
           key={lang.iso}
-          label={`${lang.flagEmoji}  ${lang.displayName} — ${lang.country}`}
+          leading={
+            <CountryFlag iso={lang.iso} size={30} className="shrink-0" />
+          }
+          label={`${lang.displayName} ${lang.country}`}
           selected={selected?.iso === lang.iso}
           onTap={() => pick(lang)}
         />
       ))}
-    </SheetShell>
+    </Sheet>
   );
 }
 
@@ -576,19 +562,16 @@ function RevokeConfirmDialog({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
       <button
         type="button"
-        aria-label="Cancel"
+        aria-label={t("commonCancel")}
         onClick={onClose}
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40"
       />
-      <WoodPanel grass={false} className="relative w-full max-w-sm" contentClassName="p-5">
-        <h2
-          className="font-game text-[20px] tracking-wide text-cream"
-          style={{ textShadow: "0 1.5px 0 rgba(92,48,24,0.7)" }}
-        >
+      <Card className="relative w-full max-w-sm p-5">
+        <h2 className="text-[19px] font-extrabold text-text">
           {t("profileConsentRevokeTitle")}
         </h2>
         <div className="h-2" />
-        <p className="text-[14px] font-medium leading-snug text-cream/90">
+        <p className="text-[14px] font-semibold leading-snug text-text-muted">
           {t("profileConsentRevokeBody")}
         </p>
         <div className="h-4" />
@@ -596,24 +579,114 @@ function RevokeConfirmDialog({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-2 text-[14px] font-bold text-cream/90"
-            style={{ textShadow: "0 1px 0 rgba(92,48,24,0.6)" }}
+            className="rounded-xl px-4 py-2 text-[14px] font-extrabold uppercase tracking-[0.8px] text-text-faint transition-opacity active:opacity-60"
           >
             {t("commonCancel")}
           </button>
-          <WoodButton
-            tone="red"
+          <Button
+            variant="danger"
             size="sm"
-            grass={false}
             onClick={() => {
               revoke();
               onClose();
             }}
           >
             {t("profileConsentRevokeConfirm")}
-          </WoodButton>
+          </Button>
         </div>
-      </WoodPanel>
+      </Card>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Logout-confirm dialog
+// ---------------------------------------------------------------------------
+
+/**
+ * Confirm dialog for logging out. Reassures that device-local
+ * progress survives (the Google session is only the access key 
+ * `device_id` keys all backend data, so nothing is wiped).
+ *
+ * On confirm: `useAuth.signOut()`. The auth listener flips `user` to
+ * null, `<AppRouteGuard>` bounces to the splash gate, and the gate
+ * forwards to `/login` no manual navigation needed here. Errors
+ * are swallowed: the store clears the local session in its `finally`
+ * even when the server round-trip fails, so the redirect happens
+ * regardless.
+ */
+function LogoutConfirmDialog({ onClose }: { onClose: () => void }) {
+  const t = useTranslations();
+  const [busy, setBusy] = useState(false);
+
+  // Body-lock + Escape, same as the sheet (but not while signing out).
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose, busy]);
+
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    track("logout");
+    try {
+      await useAuth.getState().signOut();
+      // No onClose(): the route guard unmounts this screen the
+      // moment `user` goes null closing early would flash the
+      // profile without its dialog for a frame.
+    } catch {
+      // Local session is already cleared by the store's `finally`;
+      // the guard redirect proceeds regardless.
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+      <button
+        type="button"
+        aria-label={t("commonCancel")}
+        onClick={() => {
+          if (!busy) onClose();
+        }}
+        className="absolute inset-0 bg-black/40"
+      />
+      <Card className="relative w-full max-w-sm p-5">
+        <h2 className="text-[19px] font-extrabold text-text">
+          {t("profileLogoutConfirmTitle")}
+        </h2>
+        <div className="h-2" />
+        <p className="text-[14px] font-semibold leading-snug text-text-muted">
+          {t("profileLogoutConfirmBody")}
+        </p>
+        <div className="h-4" />
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="rounded-xl px-4 py-2 text-[14px] font-extrabold uppercase tracking-[0.8px] text-text-faint transition-opacity active:opacity-60 disabled:opacity-50"
+          >
+            {t("commonCancel")}
+          </button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => void confirm()}
+            disabled={busy}
+            loading={busy}
+          >
+            {t("profileLogoutConfirmAction")}
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }
@@ -638,7 +711,7 @@ function SchoolIcon() {
   );
 }
 
-function MicIcon() {
+function MicGlyph() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M12 14c1.66 0 3-1.34 3-3V5a3 3 0 00-6 0v6c0 1.66 1.34 3 3 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V21h2v-3.08A7 7 0 0019 11h-2z" />
@@ -656,7 +729,7 @@ function InfoIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(92,48,24,0.5)" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="#A9A1BC" aria-hidden>
       <path d="M9.29 6.71a1 1 0 000 1.41L13.17 12l-3.88 3.88a1 1 0 101.42 1.41l4.59-4.59a1 1 0 000-1.41L10.71 6.71a1 1 0 00-1.42 0z" />
     </svg>
   );

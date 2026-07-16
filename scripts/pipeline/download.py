@@ -35,7 +35,7 @@ def download_to_cache(url: str) -> Path:
 
     Idempotent on URL: if a cached copy exists, returns it without redownload.
     """
-    # Quick resolve based on URL alone — but we don't know content-type yet,
+    # Quick resolve based on URL alone but we don't know content-type yet,
     # so first do a HEAD-ish probe via streamed GET.
     with requests.get(url, stream=True, timeout=30, headers={"User-Agent": USER_AGENT}) as resp:
         resp.raise_for_status()

@@ -23,7 +23,7 @@
 -- `advance_path()` call.
 --
 -- Fix: pre-compute the next rotation values into local variables, so
--- the UPDATE only references column names + locals — no bare
+-- the UPDATE only references column names + locals no bare
 -- expression that PG could resolve to the OUT parameter. The OUT
 -- parameter name `cycle` itself is preserved so the JSON return shape
 -- stays binary-compatible with the deployed Flutter app and the PWA.

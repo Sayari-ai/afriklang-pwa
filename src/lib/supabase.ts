@@ -11,11 +11,22 @@
  *     (the `pathSetupBackendNotConfigured` ICU message we already ported).
  *
  * Storage / auth options:
- *   - `persistSession: false` — we don't use Supabase auth; every Edge
- *     Function authenticates with the anon key plus our own
- *     `device_id` payload field. Persisting an empty session would just
- *     pollute localStorage.
- *   - `autoRefreshToken: false` — same reason.
+ *   - `persistSession: true` Google sign-in (Supabase Auth) is now
+ *     required before path-setup, so the session must survive reloads.
+ *     supabase-js stores it under its own `sb-<ref>-auth-token`
+ *     localStorage key (managed by the SDK, not `StorageKeys`).
+ *   - `autoRefreshToken: true` keep the session alive in the
+ *     background while the PWA is open.
+ *   - `detectSessionInUrl: true` + `flowType: "pkce"` the Google
+ *     OAuth redirect lands back on `/login?code=...`; the client
+ *     exchanges the code for a session on initialization. PKCE is
+ *     safe here because `signInWithOAuth` navigates the *same*
+ *     browsing context, so the code verifier persisted in
+ *     localStorage is available when the redirect returns.
+ *
+ * Edge Functions keep authenticating with the anon key plus our own
+ * `device_id` payload field `user_id` attribution is a server-side
+ * concern (see `supabase/migrations/00007_events.sql`).
  *
  * We expose the bare client (`supabase`) plus a `functions` helper that
  * matches the Flutter call-site shape (`functions.invoke(name, ...)`)
@@ -33,7 +44,7 @@ export const isSupabaseConfigured =
 let _client: SupabaseClient | null = null;
 
 /**
- * Returns the singleton client. Throws if env vars aren't set —
+ * Returns the singleton client. Throws if env vars aren't set 
  * callers should gate behind `isSupabaseConfigured` first.
  */
 export function getSupabase(): SupabaseClient {
@@ -46,9 +57,10 @@ export function getSupabase(): SupabaseClient {
   if (_client) return _client;
   _client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
     },
   });
   return _client;

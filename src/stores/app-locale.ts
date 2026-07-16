@@ -13,7 +13,7 @@
  * Persistence is split between two layers, by design:
  *   1. A cookie (`afriklang.app_locale.v1`) read by `src/i18n/request.ts`
  *      on the server so the very first SSR render uses the right
- *      messages — no FOUC of English text on a French phone.
+ *      messages no FOUC of English text on a French phone.
  *   2. localStorage under the same key for parity with Flutter's
  *      SharedPreferences and to survive cookie clears on iOS Safari.
  *
@@ -54,7 +54,7 @@ function readPersistedOverride(): LocaleOverride {
 
 /**
  * Cookie writer. We use a 1-year max-age and `SameSite=Lax` so it
- * survives top-level navigations but not cross-site iframes — same
+ * survives top-level navigations but not cross-site iframes same
  * profile next-intl recommends in `node_modules/next-intl/.../docs`.
  *
  * `path=/` so every route sees it, including the manifest endpoint.

@@ -29,12 +29,12 @@ If any of the three fields is missing or empty, reply with a single-line error a
 
 Keys MUST be `camelCase` and MUST start with a section prefix that matches the screen / feature where the string is used. Existing prefixes in the catalog include:
 
-- `common*` — reusable UI words (`commonRetry`, `commonCancel`, `commonNext`)
-- `onboarding*` — onboarding flow (`onboardingIntroTitle`)
-- `pathSetup*` — path-setup screen
-- `consent*` — consent gate
-- `home*` — home / tabs
-- `level*` — level / recording screen (`levelGetReady`, `levelTapToRecord`)
+- `common*` reusable UI words (`commonRetry`, `commonCancel`, `commonNext`)
+- `onboarding*` onboarding flow (`onboardingIntroTitle`)
+- `pathSetup*` path-setup screen
+- `consent*` consent gate
+- `home*` home / tabs
+- `level*` level / recording screen (`levelGetReady`, `levelTapToRecord`)
 - `profile*`, `settings*`, etc.
 
 If the proposed key:
@@ -51,10 +51,10 @@ If you are unsure about the convention, load the **`i18n-add-string`** skill for
 
 1. **Read both files** (`src/messages/en.json` and `src/messages/fr.json`).
 2. **Uniqueness check.** Search both files for the proposed key as a JSON property name (`"key":`). If it exists in either file, abort with a single-line error showing which file already has it and the existing value. Do **not** overwrite.
-3. **Determine insertion point.** Look at the file structure — the catalog is grouped into blank-line-separated sections by prefix (e.g. all `level*` keys together). Insert the new entry at the **end of the section** matching its prefix. If no section exists yet for the prefix, append a new blank-line-separated block at the end of the file (before the closing `}`).
+3. **Determine insertion point.** Look at the file structure the catalog is grouped into blank-line-separated sections by prefix (e.g. all `level*` keys together). Insert the new entry at the **end of the section** matching its prefix. If no section exists yet for the prefix, append a new blank-line-separated block at the end of the file (before the closing `}`).
 4. **Preserve formatting.** The catalog uses 2-space indent, double-quoted keys and values, and trailing-comma-free JSON. Match it exactly. The previous-last entry of the section gets a trailing comma added; the new entry is the new last and gets none if it sits right before a section break.
-5. **Escape correctly.** Inside the string values, `"` becomes `\"` and `\n` literal stays as `\n` (next-intl handles these as embedded newlines — see existing entries like `onboardingLanguagePickerTitle`). ICU placeholder syntax (`{name}`, `{count, plural, ...}`) is passed through verbatim.
-6. **Apply the same insertion to both files.** The two catalogs must always have the **identical set of keys** — that's the whole reason this agent exists.
+5. **Escape correctly.** Inside the string values, `"` becomes `\"` and `\n` literal stays as `\n` (next-intl handles these as embedded newlines see existing entries like `onboardingLanguagePickerTitle`). ICU placeholder syntax (`{name}`, `{count, plural, ...}`) is passed through verbatim.
+6. **Apply the same insertion to both files.** The two catalogs must always have the **identical set of keys** that's the whole reason this agent exists.
 7. **Validate.** After both edits, mentally re-parse the JSON. If you have any doubt, run `npx tsc --noEmit` to catch any `t("...")` call sites that reference the key with mismatched arguments. (You don't need to run tsc if the key is brand new and not yet referenced anywhere.)
 
 # Output
@@ -67,7 +67,7 @@ Added i18n key: <key>
 - src/messages/fr.json: "<fr value>"
 ```
 
-On refusal / error, reply with a single line starting with `Refused:` or `Error:` and the reason. Do not partially apply changes — if you cannot add to both files, add to neither.
+On refusal / error, reply with a single line starting with `Refused:` or `Error:` and the reason. Do not partially apply changes if you cannot add to both files, add to neither.
 
 # Hard rules
 

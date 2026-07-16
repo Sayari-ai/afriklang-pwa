@@ -18,7 +18,7 @@
  * Why a separate store from the audio-upload queue?
  *   - Different payload shape (no Blob).
  *   - Different ordering semantics: progress writes are per-device
- *     ordered (FIFO is mandatory — `completed` must reach the backend
+ *     ordered (FIFO is mandatory `completed` must reach the backend
  *     before the dependent `current` promotion). Audio uploads are
  *     independent and can drain out-of-order if needed.
  *   - Different drop-handling: dropping a queued audio loses one
@@ -28,7 +28,7 @@
  *
  * Storage shape: a single per-item key in IDB (via idb-keyval), with a
  * monotonic `seq` field that the drainer uses to enforce FIFO order
- * across all items — even when keys are removed in the middle.
+ * across all items even when keys are removed in the middle.
  */
 
 import { createStore, del, entries, get, set, type UseStore } from "idb-keyval";
@@ -41,7 +41,7 @@ const STORE_NAME = StorageKeys.progressQueueStore;
 
 // Why a *separate* IndexedDB database from the audio upload queue?
 // `idb-keyval`'s `createStore(db, store)` opens the database at
-// version 1 with exactly that one store — there's no migration path
+// version 1 with exactly that one store there's no migration path
 // to add a second store later. If both queues shared the
 // `"afriklang"` database, whichever runner booted first would lock
 // the schema to its own store, and the other's `transaction()` calls
@@ -62,7 +62,7 @@ function store(): UseStore {
  * Persisted record of a single `progress_set` call that needs to be
  * replayed against the backend. The `seq` field is a monotonic
  * sequence number assigned at enqueue time so the drainer can iterate
- * in strict insertion order — `Date.now()` collisions are possible
+ * in strict insertion order `Date.now()` collisions are possible
  * when two writes are enqueued in the same tick (the `complete` +
  * `promote-next-locked` pair always lands inside one synchronous
  * block), so we add a per-process counter on top.
@@ -72,7 +72,7 @@ function store(): UseStore {
  * up-converted in-place to `cycle = 1` (the only legal value at the
  * time v1 was written, since the multi-cycle backend hadn't shipped
  * yet). We deliberately do NOT do an eager IDB-wide migration on
- * boot — the queue is short-lived (anything older than a few days
+ * boot the queue is short-lived (anything older than a few days
  * gets snapped on the 5-attempt cap) and rewriting on read keeps the
  * code path single-purpose.
  */
@@ -105,7 +105,7 @@ function nextSeq(): number {
  *
  * Each call gets a fresh seq; even two writes that share the same
  * `(cycle, levelId, status)` (e.g. retrying the same completion)
- * become distinct queue entries. That's deliberate — the backend's
+ * become distinct queue entries. That's deliberate the backend's
  * `progress_set` is idempotent on the level row, so a duplicate
  * replay just rewrites the same final state.
  */
@@ -173,7 +173,7 @@ export async function removeProgressWrite(id: string): Promise<void> {
  * Reads the raw on-disk row (NOT the upgraded view) so that a v1 row
  * stays a v1 row on disk after a bump. Rewriting it as v2 would
  * change the schema in place without going through `enqueue`, which
- * is a footgun if we ever ship a v3 — keep the upgrade surface
+ * is a footgun if we ever ship a v3 keep the upgrade surface
  * exclusively at the read boundary.
  */
 export async function bumpProgressAttempts(id: string): Promise<number> {
@@ -205,7 +205,7 @@ function isQueuedProgressWrite(v: unknown): v is QueuedProgressWrite {
 }
 
 /**
- * Up-convert a v1 row to v2 in-memory. NOT persisted — we leave the
+ * Up-convert a v1 row to v2 in-memory. NOT persisted we leave the
  * legacy row on disk and let the runner drop it on success or on
  * `MAX_REPLAY_ATTEMPTS`. Persisting a converted copy would change the
  * id (which encodes cycle), breaking the runner's `removeProgressWrite`

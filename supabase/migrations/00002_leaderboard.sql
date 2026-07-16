@@ -59,7 +59,7 @@ grant execute on function public.award_points(uuid, smallint) to service_role;
 
 -- =====================================================================
 -- leaderboard_top: aggregate per-device totals and dense_rank by points.
--- A view (not a materialized one) — the dataset is small (one row per
+-- A view (not a materialized one) the dataset is small (one row per
 -- device) and we want results to reflect the latest completion instantly.
 -- =====================================================================
 create or replace view public.leaderboard_top as
@@ -71,5 +71,5 @@ create or replace view public.leaderboard_top as
   from public.device_progress dp
   group by dp.device_id;
 
--- The view inherits RLS from the base table — it's accessed via service role
+-- The view inherits RLS from the base table it's accessed via service role
 -- only (Edge Functions). Anon clients still can't read it directly.

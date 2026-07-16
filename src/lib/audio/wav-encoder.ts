@@ -2,8 +2,8 @@
  * WAV PCM16 encoder.
  *
  * The Sayari ingest pipeline expects 16 kHz mono PCM16 WAV. The browser
- * doesn't ship a WAV encoder — `MediaRecorder` only emits compressed
- * formats — so we capture Float32 frames via an AudioWorklet (see
+ * doesn't ship a WAV encoder `MediaRecorder` only emits compressed
+ * formats so we capture Float32 frames via an AudioWorklet (see
  * `public/audio/pcm-recorder.worklet.js`) and run them through this
  * module to produce a `Blob` ready for `uploadAudio()`.
  *
@@ -68,7 +68,7 @@ function writeAscii(view: DataView, offset: number, text: string): void {
 /**
  * Wraps PCM16 samples in a WAV container. Caller is responsible for
  * having already resampled to 16 kHz (we don't trust the browser's
- * AudioContext rate here — see recorder.ts for the rate negotiation).
+ * AudioContext rate here see recorder.ts for the rate negotiation).
  */
 export function encodeWav(
   samples: Int16Array,
@@ -111,7 +111,7 @@ export function encodeWav(
  * 16 kHz (the destination rate is what the ASR backend expects).
  *
  * Used as a fallback when an iOS Safari AudioContext refuses to honour
- * the requested 16 kHz `sampleRate` constructor option — Safari clamps
+ * the requested 16 kHz `sampleRate` constructor option Safari clamps
  * to the device hardware rate (typically 44.1 / 48 kHz) and we have
  * to downsample on the way out.
  */

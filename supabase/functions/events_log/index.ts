@@ -9,7 +9,7 @@
 // Guardrails (this endpoint is anon-invokable, so it validates hard):
 //   * event names must match ^[a-z][a-z0-9_]{0,63}$ (also DB-checked);
 //   * max 20 events per request;
-//   * props must be a plain JSON object, ≤ 2 KB serialized — otherwise
+//   * props must be a plain JSON object, ≤ 2 KB serialized otherwise
 //     the props are dropped (event still logged) rather than rejected;
 //   * timestamps are server-side only (client clocks are unreliable).
 //

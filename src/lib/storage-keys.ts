@@ -72,7 +72,7 @@ export const StorageKeys = {
    * `src/lib/storage/migrations.ts` for the migration list.
    *
    * Stored as a base-10 integer string ("1", "2", ...). Absent on
-   * pre-migration installs — treated as version 0 by the runner so
+   * pre-migration installs treated as version 0 by the runner so
    * the first migration always fires.
    */
   schemaVersion: "afriklang.schema_version",

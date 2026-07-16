@@ -17,9 +17,9 @@
  *
  * Throws `EdgeFunctionError`. Two non-success codes are meaningful to
  * the caller:
- *   - **409 swap_pool_exhausted** — every question at this level_id has
+ *   - **409 swap_pool_exhausted** every question at this level_id has
  *     already been served. Caller should fall back to plain skip.
- *   - **0 (network)** — offline / DNS / CORS. Caller should fall back
+ *   - **0 (network)** offline / DNS / CORS. Caller should fall back
  *     to plain skip (the level page already does this when
  *     `navigator.onLine === false` *before* invoking).
  *

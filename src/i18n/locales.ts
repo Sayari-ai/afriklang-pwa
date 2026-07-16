@@ -27,7 +27,7 @@ export function isSupportedLocale(value: unknown): value is Locale {
 /**
  * Resolve a candidate locale string (cookie value, `Accept-Language`
  * primary tag, etc.) to one of our supported locales, or fall back to
- * the default. Strips any region subtag — `'en-US'` becomes `'en'`.
+ * the default. Strips any region subtag `'en-US'` becomes `'en'`.
  */
 export function resolveLocale(candidate: string | undefined | null): Locale {
   if (!candidate) return DEFAULT_LOCALE;

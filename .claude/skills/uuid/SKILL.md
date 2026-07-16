@@ -10,21 +10,21 @@ description: RFC 9562/4122 UUID generation. USE FOR: generating v4 (random) devi
 The project uses `uuid` to generate **stable opaque identifiers** in the browser:
 - The `device_id` UUID issued on first launch and persisted across sessions (sent in every Edge Function payload as the auth/identity surrogate).
 - Per-recording IDs embedded in audio upload filenames (`Lang_Speaker_Date_Topic.wav` plus a UUID).
-- Any other opaque "I need a globally-unique handle" — queue IDs, in-flight request IDs, etc.
+- Any other opaque "I need a globally-unique handle" queue IDs, in-flight request IDs, etc.
 
 `v4` (cryptographically-random) is the canonical choice in this codebase. Reach for the others only when you have a specific reason:
-- **v1 / v6 / v7** — sortable by creation time (v7 is RFC 9562's recommended modern choice).
-- **v3 / v5** — deterministic from `(name, namespace)`. v5 (SHA-1) is preferred over v3 (MD5).
-- **NIL / MAX** — sentinel values for "no UUID" / "any UUID".
+- **v1 / v6 / v7** sortable by creation time (v7 is RFC 9562's recommended modern choice).
+- **v3 / v5** deterministic from `(name, namespace)`. v5 (SHA-1) is preferred over v3 (MD5).
+- **NIL / MAX** sentinel values for "no UUID" / "any UUID".
 
 Don't use `uuid` for:
-- Short shareable codes (use `nanoid` — UUIDs are 36 chars and ugly)
+- Short shareable codes (use `nanoid` UUIDs are 36 chars and ugly)
 - Cryptographic secrets (UUIDs leak version + variant bits)
 - Database primary keys generated server-side (let Postgres do `gen_random_uuid()`)
 
 ## API reference
 
-`uuid@11` is **ESM-only** with **named imports only** (no default export). TypeScript types ship with the package — do **not** install `@types/uuid` (uninstall if present).
+`uuid@11` is **ESM-only** with **named imports only** (no default export). TypeScript types ship with the package do **not** install `@types/uuid` (uninstall if present).
 
 ```ts
 import { v4 as uuidv4 } from "uuid";              // standard
@@ -43,14 +43,14 @@ uuidv4(); // "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
 ```
 
 Options (rarely needed):
-- `random: Uint8Array` — 16 pre-generated random bytes.
-- `rng: () => Uint8Array` — alternative source of 16 random bytes.
+- `random: Uint8Array` 16 pre-generated random bytes.
+- `rng: () => Uint8Array` alternative source of 16 random bytes.
 
 If `buffer` is supplied, the binary form is written into it and the buffer is returned.
 
 ### `v1(options?, buffer?, offset?): string | Uint8Array`
 
-Timestamp + random node UUID. Sortable-ish by time, but the timestamp is at the **end** of the high bits — string-sorting doesn't match time order. Prefer v6 or v7 if you need sortability.
+Timestamp + random node UUID. Sortable-ish by time, but the timestamp is at the **end** of the high bits string-sorting doesn't match time order. Prefer v6 or v7 if you need sortability.
 
 Options: `node`, `clockseq`, `msecs`, `nsecs`, `random`, `rng`. See README.
 
@@ -60,7 +60,7 @@ MD5-based deterministic UUID. **Use v5 instead** unless you need v3 for legacy c
 
 ### `v5(name, namespace, buffer?, offset?): string | Uint8Array`
 
-SHA-1-based deterministic UUID. Same `(name, namespace)` always produces the same UUID — useful for derived IDs.
+SHA-1-based deterministic UUID. Same `(name, namespace)` always produces the same UUID useful for derived IDs.
 
 ```ts
 import { v5 as uuidv5 } from "uuid";
@@ -130,7 +130,7 @@ NIL; // "00000000-0000-0000-0000-000000000000"
 MAX; // "ffffffff-ffff-ffff-ffff-ffffffffffff"
 ```
 
-Sentinels — useful for "absent" or "wildcard" semantics.
+Sentinels useful for "absent" or "wildcard" semantics.
 
 ## Common patterns (project-specific)
 
@@ -148,7 +148,7 @@ function ensureDeviceId(): string {
 }
 ```
 
-The real implementation lives in the `useDeviceIdentity` Zustand store (see `src/stores/device-identity.ts`) — same idea, gated by `safe-storage` for SSR.
+The real implementation lives in the `useDeviceIdentity` Zustand store (see `src/stores/device-identity.ts`) same idea, gated by `safe-storage` for SSR.
 
 ### Audio upload filename
 
@@ -180,7 +180,7 @@ function isValidV4(s: unknown): s is string {
 ### v11 breaking changes (from v9/v10)
 
 - **ESM-only.** No more CommonJS-first build. Bundlers that don't honor `exports` field fail. Modern Next/Vite are fine.
-- **Named imports only — no default export.** `import uuid from "uuid"` is broken. Use `import { v4 } from "uuid"`.
+- **Named imports only no default export.** `import uuid from "uuid"` is broken. Use `import { v4 } from "uuid"`.
 - **TypeScript types are bundled.** Remove `@types/uuid` from `devDependencies`; it conflicts.
 - **Binary UUIDs are now `Uint8Array`** (was `Buffer`-or-Array). Affects callers of `parse()`, `stringify()`, and `options.buf`/`buffer` arguments.
 - **Node-only build removed.** The package detects environment from `globalThis.crypto` rather than shipping separate browser/node bundles.
@@ -188,13 +188,13 @@ function isValidV4(s: unknown): s is string {
 
 ### General
 
-- **No `@types/uuid` in v11.** Remove if it lingers — type collisions otherwise.
+- **No `@types/uuid` in v11.** Remove if it lingers type collisions otherwise.
 - **`v4()` requires `crypto.getRandomValues`.** Available in modern browsers and Node ≥ 16. React Native needs `react-native-get-random-values` imported **before** `uuid`.
-- **UUID strings are 36 characters** (32 hex + 4 dashes). Don't truncate — collision rates skyrocket.
+- **UUID strings are 36 characters** (32 hex + 4 dashes). Don't truncate collision rates skyrocket.
 - **v4 is **not** sortable.** Two UUIDs minted a millisecond apart can sort in either order. Use v7 if you need sortable.
 - **`version()` throws on invalid input.** Always pre-check with `validate()`.
 - **`parse()` throws on invalid input** too.
-- **Don't use UUIDs as cryptographic tokens.** They embed version (4 bits) and variant (2 bits) — only 122 bits of randomness in v4. Use `crypto.getRandomValues(new Uint8Array(32))` for secrets.
+- **Don't use UUIDs as cryptographic tokens.** They embed version (4 bits) and variant (2 bits) only 122 bits of randomness in v4. Use `crypto.getRandomValues(new Uint8Array(32))` for secrets.
 - **Server-side generation is preferable for DB PKs.** `gen_random_uuid()` in Postgres avoids client clock skew (matters for v1/v6/v7).
 
 ## References

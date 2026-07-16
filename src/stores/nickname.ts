@@ -13,7 +13,7 @@
  *     committing a name and not get re-prompted on every cold start.
  *
  * Why a dedicated store rather than folding this into `useOnboarding`?
- *   - The prompt fires *after* onboarding finished — it lives on the
+ *   - The prompt fires *after* onboarding finished it lives on the
  *     map screen, not in the `/onboarding` route. Coupling the two
  *     would muddy the gating logic in `<AppRouteGuard>` and the
  *     splash decision tree.
@@ -28,7 +28,7 @@
  *   - Trim leading/trailing whitespace.
  *   - Collapse runs of whitespace to a single space.
  *   - Min 2 characters, max 20 characters after normalisation.
- *   - Unicode allowed — users will want to write their own names in
+ *   - Unicode allowed users will want to write their own names in
  *     non-Latin scripts.
  */
 
@@ -47,7 +47,7 @@ export type NicknameValidation =
 /**
  * Normalises and validates a nickname candidate.
  *
- * Pure — no store access — so the prompt UI can call it on every
+ * Pure no store access so the prompt UI can call it on every
  * keystroke to drive the inline error message and Submit-button
  * disabled state without dragging a hook in.
  */
@@ -75,7 +75,7 @@ interface NicknameState {
   set: (next: string) => void;
   /** Marks the first-run prompt as having been shown. Idempotent. */
   markPrompted: () => void;
-  /** Test/reset hook — clears both keys. */
+  /** Test/reset hook clears both keys. */
   reset: () => void;
 }
 

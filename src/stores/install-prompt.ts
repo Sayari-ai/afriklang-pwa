@@ -9,19 +9,19 @@
  * NON-installed sites. Installing to the home screen exempts the app
  * from that eviction (and marks the storage bucket durable on
  * Chromium), so "install" is literally the progress-preservation
- * feature on iOS — not just an engagement nicety.
+ * feature on iOS not just an engagement nicety.
  *
  * Two install paths, one store:
  *   * Chromium (Android/desktop): the browser fires
  *     `beforeinstallprompt`; we `preventDefault()` and stash the event
  *     so the UI can re-trigger the native sheet at a moment of our
- *     choosing (the celebration screen — peak motivation).
+ *     choosing (the celebration screen peak motivation).
  *   * iOS Safari: no API. We can only detect iOS + not-installed and
  *     show Share → "Add to Home Screen" instructions.
  *
- * Anti-nagging contract (see the Intent anti-pattern catalog —
+ * Anti-nagging contract (see the Intent anti-pattern catalog 
  * "Nagging", Category 5): a dismissal is persisted with a timestamp
- * and respected for `REOFFER_AFTER_DAYS`. The card never interrupts —
+ * and respected for `REOFFER_AFTER_DAYS`. The card never interrupts 
  * it renders inline on the celebration screen, never as a modal.
  *
  * Store follows the project's dual-API idiom: reactive via
@@ -69,7 +69,7 @@ interface InstallPromptState {
   /**
    * Re-trigger the native Chromium install sheet. Resolves with the
    * user's outcome; "unavailable" when the deferred event is missing
-   * (iOS, or already consumed — Chromium only lets it fire once).
+   * (iOS, or already consumed Chromium only lets it fire once).
    */
   promptNative: () => Promise<"accepted" | "dismissed" | "unavailable">;
   /** Persist a "Not now" and start the re-offer cool-off window. */
@@ -139,7 +139,7 @@ export const useInstallPrompt = create<InstallPromptState>((set, get) => ({
       if (outcome === "accepted") {
         track("install_prompt_accepted");
       } else {
-        // Declining the OS sheet counts as a dismissal — start the
+        // Declining the OS sheet counts as a dismissal start the
         // cool-off window rather than re-offering next level.
         get().dismiss();
       }
@@ -158,7 +158,7 @@ export const useInstallPrompt = create<InstallPromptState>((set, get) => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Global capture — called once from <AppHydration>
+// Global capture called once from <AppHydration>
 // ---------------------------------------------------------------------------
 
 let captureRegistered = false;
@@ -168,9 +168,9 @@ let captureRegistered = false;
  * safe to call from an effect that re-runs.
  *
  *   * `beforeinstallprompt` fires early (often before any UI wants it)
- *     — we stash the event for later replay.
+ *     we stash the event for later replay.
  *   * `appinstalled` fires on successful install from ANY path (our
- *     prompt, browser menu, iOS Share sheet) — flip standalone state
+ *     prompt, browser menu, iOS Share sheet) flip standalone state
  *     and record the win.
  */
 export function initInstallPromptCapture(): void {

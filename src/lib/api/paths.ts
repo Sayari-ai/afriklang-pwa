@@ -4,12 +4,12 @@
  * Path content endpoints.
  *
  * Mirrors `lib/core/api/paths_api.dart`:
- *   - `assignPath`     — POST `paths_assign`,   body `{ device_id }`
- *   - `advanceCycleApi` — POST `paths_assign`,  body `{ device_id, advance: true }`
- *   - `getPath`        — GET  `paths_get?multicycle=1`, query `?device_id=`
+ *   - `assignPath`     POST `paths_assign`,   body `{ device_id }`
+ *   - `advanceCycleApi` POST `paths_assign`,  body `{ device_id, advance: true }`
+ *   - `getPath`        GET  `paths_get?multicycle=1`, query `?device_id=`
  *
  * Server-side `paths_assign`:
- *   - Without `advance`: idempotent — returns the device's TOP cycle's
+ *   - Without `advance`: idempotent returns the device's TOP cycle's
  *     `(path_id, cycle)`. Used on first boot (cycle 1) and on every
  *     subsequent boot to re-confirm the current top cycle.
  *   - With `advance: true`: invokes the `advance_path()` SQL RPC. Picks
@@ -44,7 +44,7 @@ export async function assignPath(deviceId: string): Promise<PathAssignment> {
 /**
  * Re-issue the device's path with `cycle = top_cycle + 1`. Throws on
  * 409 (`cycle_incomplete`) if the user hasn't finished their current
- * cycle yet — `path-repo.advanceCycle` catches and surfaces a snackbar.
+ * cycle yet `path-repo.advanceCycle` catches and surfaces a snackbar.
  */
 export async function advanceCycleApi(
   deviceId: string,

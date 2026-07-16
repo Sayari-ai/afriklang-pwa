@@ -1,5 +1,5 @@
 /**
- * Layout for the protected app shell — `/home`, `/leaderboard`,
+ * Layout for the protected app shell `/home`, `/leaderboard`,
  * `/notifications`, `/profile`, and the level/celebration routes.
  *
  * Mirrors `lib/features/home/home_screen.dart:131-134` (Scaffold +
@@ -30,7 +30,7 @@ export default function AppGroupLayout({ children }: { children: ReactNode }) {
     <AppRouteGuard>
       {children}
       {/* Single host for ephemeral notices ("Level locked", upload
-          errors, etc.) — replaces Flutter's `ScaffoldMessenger`. */}
+          errors, etc.) replaces Flutter's `ScaffoldMessenger`. */}
       <SnackbarHost />
     </AppRouteGuard>
   );

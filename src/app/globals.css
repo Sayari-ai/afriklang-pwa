@@ -4,7 +4,7 @@
 /* Custom variants & utilities                                        */
 /* ------------------------------------------------------------------ */
 
-/* Narrow-phone variant — applies on viewports up to 379px wide
+/* Narrow-phone variant applies on viewports up to 379px wide
    (iPhone SE 1st gen 320px, Galaxy Fold cover 280px, smaller Androids).
    Use as `phone-sm:text-2xl` to override base styles on tiny screens. */
 @custom-variant phone-sm (@media (max-width: 379px));
@@ -16,187 +16,123 @@
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
 }
 
-/* Chunky "sticker" outline for game-font text (button labels, level
-   numerals, scores). Fakes a stroke with an 8-direction text-shadow
-   ring plus a solid drop below for depth — more reliable than
-   -webkit-text-stroke, which eats into thin glyph areas. Sized in em
-   so it scales with the font. Override the color with
-   `[--outline-color:...]` when the text sits on a green ribbon. */
-@utility text-outline {
-  --outline-color: var(--color-ink);
-  text-shadow:
-    -0.045em -0.045em 0 var(--outline-color),
-    0.045em -0.045em 0 var(--outline-color),
-    -0.045em 0.045em 0 var(--outline-color),
-    0.045em 0.045em 0 var(--outline-color),
-    -0.06em 0 0 var(--outline-color),
-    0.06em 0 0 var(--outline-color),
-    0 -0.06em 0 var(--outline-color),
-    0 0.06em 0 var(--outline-color),
-    0 0.12em 0 var(--outline-color);
-}
-
 /* ------------------------------------------------------------------ */
-/* Afriklang design tokens                                            */
+/* Afriklang design tokens brand palette                             */
 /*                                                                    */
-/* Two families:                                                      */
-/*   1. Legacy Flutter-port tokens (brand blue, review action colors, */
-/*      recording states...) still consumed by gameplay logic where   */
-/*      color IS the affordance (record red, submit green).           */
-/*   2. The "wood & grass" game-kit palette that drives the visual    */
-/*      reskin (src/components/game/*). Extracted from the game UI    */
-/*      kit mockup: warm wood browns, grass greens, ribbon lime,      */
-/*      star golds, on a dark maroon board.                           */
-/* Exposed both as raw CSS variables (for inline style usage and      */
-/* gradients) and as Tailwind v4 @theme tokens so utilities like      */
-/* `bg-wood-mid`, `text-cream`, etc. work.                            */
+/* Brand colors: #00539F (blue), #F88D43 (orange), #321E53 (deep      */
+/* purple), #FFFFFF (white). The system derives a full ramp from      */
+/* them:                                                              */
+/*   - BLUE is the primary: CTAs, active path node, progress,         */
+/*     selection states, toggles, focus.                              */
+/*   - ORANGE is the reward accent: points, coins, stars, completed   */
+/*     nodes, celebration, the Listen action.                         */
+/*   - DEEP PURPLE is the brand ink: headings/body text, unit         */
+/*     banners, mascot, and it tints every neutral (borders, muted    */
+/*     text, subtle wells) so even the grays feel branded.            */
+/*   - WHITE is the surface.                                          */
+/*   - RED stays reserved for record/stop + destructive color-as-    */
+/*     affordance conventions beat brand purity there.                */
+/* Every family ships a `-deep` shade (the hard bottom edge of 3D-    */
+/* pressed buttons and path nodes) and, where selection/feedback      */
+/* surfaces need it, a `-light` tint + `-border` pair.                */
+/*                                                                    */
+/* Exposed both as raw CSS variables (for inline gradients/shadows)   */
+/* and as Tailwind v4 @theme tokens so utilities like `bg-primary`,   */
+/* `text-text-muted`, `border-border` work.                           */
+/*                                                                    */
+/* JS mirror: `src/lib/colors.ts` (SVG attributes can't resolve       */
+/* var()). Keep the two in lockstep.                                  */
 /* ------------------------------------------------------------------ */
 
 :root {
-  /* Brand */
+  /* --- Brand blue (primary actions, active path node) -------------- */
   --color-primary: #00539f;
-  /* Alias used throughout the components — kept in sync with
-     --color-primary so existing inline `var(--color-brand-primary)`
-     references resolve. */
-  --color-brand-primary: var(--color-primary);
+  --color-primary-deep: #003c74;
+  --color-primary-light: #dcebf9;
+  /* Praise/emphasis text sitting on the light-blue tint. */
+  --color-primary-text: #00539f;
 
-  /* --- Game kit: wood ------------------------------------------- */
-  --color-wood-light: #e9a05b; /* top bevel / lit face */
-  --color-wood-mid: #c97b3d; /* main body */
-  --color-wood-dark: #9e5b2c; /* lower body shade */
-  --color-wood-rim: #6e3c1d; /* carved dark edge ring */
-  --color-wood-shadow: #45250f; /* ground/drop shadow tint */
-  --color-wood-panel-light: #dd9354; /* big board top */
-  --color-wood-panel-dark: #c47737; /* big board bottom */
+  /* --- Blue aliases (info, listen→moved to orange, selection) ------ */
+  /* The selection system (rows, pickers, nav tile) was built on the  */
+  /* `blue-*` names; they now resolve to the same brand-blue ramp as  */
+  /* `primary` a deliberate monochrome-primary system. Accents come */
+  /* from orange and purple instead.                                  */
+  --color-blue: #00539f;
+  --color-blue-deep: #003c74;
+  --color-blue-light: #dcebf9;
+  --color-blue-border: #93bfe6;
 
-  /* --- Game kit: grass & ribbon ---------------------------------- */
-  --color-grass-light: #8cc63f;
-  --color-grass-dark: #4c8f2f;
-  --color-grass-deep: #3e7a26; /* icon outlines / darkest blades */
-  --color-ribbon-light: #c9ec6b;
-  --color-ribbon-mid: #8dc63f;
-  --color-ribbon-dark: #5b9e2d;
+  /* --- Red (record/stop, destructive semantic, off-brand) --------- */
+  --color-red: #ff4b4b;
+  --color-red-deep: #ea2b2b;
+  --color-red-light: #ffdfe0;
 
-  /* --- Game kit: stars / hearts / coin ---------------------------- */
-  --color-star-gold: #ffc93c;
-  --color-star-orange: #f2a03d;
-  --color-star-rim: #b36a24;
-  --color-star-empty: #5c3a24;
-  --color-heart-red: #e84357;
-  --color-heart-empty: #40261c;
-  --color-coin-gold: #ffcf4d;
-  --color-coin-rim: #d98e2b;
+  /* --- Brand orange (rewards: stars, points, completed nodes) ------ */
+  /* The `yellow-*` names are kept for compatibility; they resolve to */
+  /* the brand-orange ramp (there is no yellow in the brand kit).     */
+  --color-yellow: #f88d43;
+  --color-yellow-deep: #db6f26;
+  --color-yellow-light: #feeddd;
+  --color-orange: #f88d43;
+  --color-orange-deep: #db6f26;
 
-  /* --- Game kit: glossy icon accents (gold+purple pack) ----------- */
-  --color-gold-light: #ffe08a;
-  --color-gold-deep: #e8941f;
-  --color-gold-outline: #a85f14;
-  --color-purple-light: #b18ceb;
-  --color-purple: #8e5bd9;
-  --color-purple-dark: #6b3fb8;
-  --color-purple-deep: #53309e;
-  --color-glass-light: #c9f0ff;
-  --color-glass-blue: #4fb3ee;
-  --color-glass-deep: #2e86c1;
-  --color-halo: #ede7fb;
+  /* --- Brand purple (mascot, unit banners, decorative accents) ----- */
+  --color-purple: #6d51a6; /* mid tone derived from #321E53 */
+  --color-purple-deep: #321e53; /* the brand dark itself */
 
-  /* --- Game kit: board surface & text ----------------------------- */
-  --color-surface: #3e2b28; /* dark maroon board */
-  --color-surface-deep: #332220; /* "strong" variant / vignette */
-  --color-cream: #fff6e0; /* primary text on wood/board */
-  --color-ink: #5c3018; /* text outline / carved lettering */
+  /* --- Neutrals purple-tinted so even grays feel branded --------- */
+  --color-text: #321e53; /* primary copy = brand ink */
+  --color-text-muted: #6e6285; /* secondary copy */
+  --color-text-faint: #a9a1bc; /* tertiary / disabled */
+  --color-border: #e8e4f0; /* card borders, dividers */
+  --color-bg-subtle: #f7f5fb; /* subtle wells */
+  --color-bg: #ffffff; /* page background */
 
-  /* Map */
-  --color-map-bg: #7bc96f;
-  --color-mascot-body: #e53935;
-  --color-step-bar: #66bb6a;
-  --color-step-bar-track: #cfcfcf;
-  --color-locked-node: #6b6b6b;
-  --color-locked-icon: #b5b5b5;
-
-  /* Level review */
-  --color-retake: #e53935;
-  --color-listen: #2196f3;
-  --color-submit: #66bb6a;
-
-  /* Recording states */
-  --color-record-idle: #66bb6a;
-  --color-record-active: #e53935;
-
-  /* Rewards / podium */
-  --color-points-reward: #ffc02e;
-  --color-podium-gold: #ffd700;
-  --color-podium-silver: #c0c0c0;
-  --color-podium-bronze: #cd7f32;
-
-  /* Overlays (matching Flutter's 0x99 / 0xCC ARGB literals). */
-  --color-bg-overlay-60: rgba(0, 0, 0, 0.6);
-  --color-bg-overlay-80: rgba(0, 0, 0, 0.8);
+  /* --- Legacy affordance aliases ----------------------------------- */
+  /* Gameplay logic where color IS the affordance. Kept as named      */
+  /* tokens so intent stays readable at the call site.                */
+  --color-retake: var(--color-red);
+  --color-listen: var(--color-orange);
+  --color-submit: var(--color-primary);
+  --color-record-idle: var(--color-primary);
+  --color-record-active: var(--color-red);
 }
 
 @theme inline {
-  /* Make Satoshi the default sans-serif. The CSS variable is set by
-     `next/font/local` in src/lib/fonts.ts and applied to <html>. */
-  --font-sans: var(--font-satoshi);
-  /* Chunky rounded game display face (Lilita One) — `font-game`. */
-  --font-game: var(--font-lilita), var(--font-satoshi), sans-serif;
+  /* Nunito everywhere. The CSS variable is set by `next/font/google`
+     in src/lib/fonts.ts and applied to <html>. Weight is applied
+     per-usage via `font-bold`/`font-extrabold`/`font-black`. */
+  --font-sans: var(--font-nunito);
 
   --color-primary: var(--color-primary);
-
-  /* Game kit */
-  --color-wood-light: var(--color-wood-light);
-  --color-wood-mid: var(--color-wood-mid);
-  --color-wood-dark: var(--color-wood-dark);
-  --color-wood-rim: var(--color-wood-rim);
-  --color-wood-shadow: var(--color-wood-shadow);
-  --color-wood-panel-light: var(--color-wood-panel-light);
-  --color-wood-panel-dark: var(--color-wood-panel-dark);
-  --color-grass-light: var(--color-grass-light);
-  --color-grass-dark: var(--color-grass-dark);
-  --color-grass-deep: var(--color-grass-deep);
-  --color-ribbon-light: var(--color-ribbon-light);
-  --color-ribbon-mid: var(--color-ribbon-mid);
-  --color-ribbon-dark: var(--color-ribbon-dark);
-  --color-star-gold: var(--color-star-gold);
-  --color-star-orange: var(--color-star-orange);
-  --color-star-rim: var(--color-star-rim);
-  --color-star-empty: var(--color-star-empty);
-  --color-heart-red: var(--color-heart-red);
-  --color-heart-empty: var(--color-heart-empty);
-  --color-coin-gold: var(--color-coin-gold);
-  --color-coin-rim: var(--color-coin-rim);
-  --color-gold-light: var(--color-gold-light);
-  --color-gold-deep: var(--color-gold-deep);
-  --color-gold-outline: var(--color-gold-outline);
-  --color-purple-light: var(--color-purple-light);
+  --color-primary-deep: var(--color-primary-deep);
+  --color-primary-light: var(--color-primary-light);
+  --color-primary-text: var(--color-primary-text);
+  --color-blue: var(--color-blue);
+  --color-blue-deep: var(--color-blue-deep);
+  --color-blue-light: var(--color-blue-light);
+  --color-blue-border: var(--color-blue-border);
+  --color-red: var(--color-red);
+  --color-red-deep: var(--color-red-deep);
+  --color-red-light: var(--color-red-light);
+  --color-yellow: var(--color-yellow);
+  --color-yellow-deep: var(--color-yellow-deep);
+  --color-yellow-light: var(--color-yellow-light);
+  --color-orange: var(--color-orange);
+  --color-orange-deep: var(--color-orange-deep);
   --color-purple: var(--color-purple);
-  --color-purple-dark: var(--color-purple-dark);
   --color-purple-deep: var(--color-purple-deep);
-  --color-glass-light: var(--color-glass-light);
-  --color-glass-blue: var(--color-glass-blue);
-  --color-glass-deep: var(--color-glass-deep);
-  --color-halo: var(--color-halo);
-  --color-surface: var(--color-surface);
-  --color-surface-deep: var(--color-surface-deep);
-  --color-cream: var(--color-cream);
-  --color-ink: var(--color-ink);
-
-  /* Legacy Flutter-port tokens */
-  --color-map-bg: var(--color-map-bg);
-  --color-mascot-body: var(--color-mascot-body);
-  --color-step-bar: var(--color-step-bar);
-  --color-step-bar-track: var(--color-step-bar-track);
-  --color-locked-node: var(--color-locked-node);
-  --color-locked-icon: var(--color-locked-icon);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-faint: var(--color-text-faint);
+  --color-border: var(--color-border);
+  --color-bg-subtle: var(--color-bg-subtle);
+  --color-bg: var(--color-bg);
   --color-retake: var(--color-retake);
   --color-listen: var(--color-listen);
   --color-submit: var(--color-submit);
   --color-record-idle: var(--color-record-idle);
   --color-record-active: var(--color-record-active);
-  --color-points-reward: var(--color-points-reward);
-  --color-podium-gold: var(--color-podium-gold);
-  --color-podium-silver: var(--color-podium-silver);
-  --color-podium-bronze: var(--color-podium-bronze);
 }
 
 /* ------------------------------------------------------------------ */
@@ -213,6 +149,17 @@
   }
   to {
     transform: translateY(3px);
+  }
+}
+
+/* START speech-bubble float (larger amplitude than afk-bob, single
+   axis, ease-in-out both ways). */
+@keyframes afk-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-6px);
   }
 }
 
@@ -245,6 +192,16 @@
   50% {
     transform: scale(1.15);
     opacity: 1;
+  }
+}
+
+/* Bottom feedback sheet entry (post-submit "Nice job!"). */
+@keyframes afk-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
   }
 }
 
@@ -296,10 +253,10 @@
 
 html,
 body {
-  /* Anchor at the dark board color so route transitions never flash
-     system white; desktop letterbox gutters read as the same board. */
-  background: var(--color-surface-deep);
-  color: var(--color-cream);
+  /* A step deeper than the app canvas (--color-bg-subtle) so desktop
+     letterbox gutters read as chrome and the phone column pops. */
+  background: #edeaf4;
+  color: var(--color-text);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   /* Better text rendering on macOS / iOS Safari for the heavy weights. */
   -webkit-font-smoothing: antialiased;
@@ -322,9 +279,9 @@ body {
 }
 
 /* Re-enable focus rings (Tailwind v4 doesn't strip them by default but
-   we explicitly want them visible-on-keyboard for a11y). Grass green
-   reads much better than brand blue on the dark wood surfaces. */
+   we explicitly want them visible-on-keyboard for a11y). Brand blue
+   reads clearly on the white surfaces. */
 :focus-visible {
-  outline: 2px solid var(--color-grass-light);
+  outline: 2px solid var(--color-blue);
   outline-offset: 2px;
 }

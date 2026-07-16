@@ -1,0 +1,75 @@
+# Supabase project config AUTH ONLY (Google sign-in).
+#
+# This repo did not have a config.toml before the Google-auth project:
+# migrations and Edge Functions deploy fine without one
+# (`supabase db push`, `supabase functions deploy <fn> --project-ref
+# elosonbrvmsfgrxemtso`). This file exists solely so the Auth provider
+# + redirect allowlist are code-reviewed instead of dashboard-drift.
+#
+# It is deliberately PARTIAL: only the keys we own are declared, to
+# keep the `config push` diff surface minimal. Do not paste the full
+# `supabase init` template in here.
+#
+# Applying it to the hosted project:
+#
+#   set -a; source .env; set +a       # config push does NOT auto-load .env
+#   supabase config push --project-ref elosonbrvmsfgrxemtso
+#
+#   * REQUIRES SUPABASE_AUTH_SITE_URL and the two
+#     SUPABASE_AUTH_EXTERNAL_GOOGLE_* vars to be set (see .env.example)
+#     a missing var substitutes an EMPTY string, and an empty
+#     site_url / client_id would break login in prod.
+#   * The CLI shows a diff and asks for confirmation first. Review it:
+#     only the keys declared below should appear.
+#
+# Dashboard equivalent (if you'd rather click):
+#   Authentication -> Providers -> Google        (client ID + secret)
+#   Authentication -> URL Configuration          (site URL + redirects)
+#
+# Local `supabase start` is unaffected by missing env vars until you
+# actually exercise the Google flow (dev normally signs in against the
+# hosted project anyway, since NEXT_PUBLIC_SUPABASE_URL points there).
+
+project_id = "afriklang-pwa"
+
+[auth]
+# Public origin of the deployed PWA. The app sends users back to
+# `<origin>/login` after Google (see `signInWithGoogle()` in
+# src/stores/auth.ts); GoTrue only honours that redirect if it matches
+# site_url or the allowlist below.
+site_url = "env(SUPABASE_AUTH_SITE_URL)"
+additional_redirect_urls = [
+  # Local dev.
+  "http://localhost:3000/login",
+  "http://127.0.0.1:3000/login",
+  # LAN dev origin over HTTPS (`npm run dev:https` uses
+  # `next dev --experimental-https`; host matches allowedDevOrigins in
+  # next.config.ts). HTTPS is required so the phone gets a secure
+  # context WebCrypto (PKCE sha256) and getUserMedia (mic) both
+  # need it, and Google OAuth only honours this exact redirect.
+  "https://192.168.100.17:3000/login",
+]
+
+# ── Pinned remote values ─────────────────────────────────────────────
+# Declaring [auth] makes `config push` compare the WHOLE auth subtree
+# against CLI defaults, not just the keys above. The blocks below pin
+# settings that already exist on the hosted project but differ from
+# CLI defaults — without them a push would silently flip these
+# (verified against the remote diff, 2026-07). Don't remove.
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+[auth.external.google]
+enabled = true
+# Values live in .env (gitignored); template in .env.example.
+# Google Cloud Console redirect URI must be:
+#   https://elosonbrvmsfgrxemtso.supabase.co/auth/v1/callback
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"

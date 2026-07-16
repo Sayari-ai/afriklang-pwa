@@ -19,6 +19,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
+import { useAuth } from "@/stores/auth";
 import { useConsent } from "@/stores/consent";
 import { useOnboarding } from "@/stores/onboarding";
 import { usePathRepo } from "@/stores/path-repo";
@@ -27,24 +28,37 @@ export function AppRouteGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const hydrated = useOnboarding((s) => s.hydrated);
+  const authHydrated = useAuth((s) => s.hydrated);
   const onboardingDone = useOnboarding((s) => s.complete);
+  const signedIn = useAuth((s) => s.user !== null);
   const consentGranted = useConsent((s) => s.granted);
   const pathReady = usePathRepo((s) => s.isReady);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !authHydrated) return;
     // Any missing precondition → punt to the splash gate, which owns
     // the canonical decision tree. We don't replicate it here: doing
     // so would be a second source of truth that drifts.
-    if (!onboardingDone || !pathReady || !consentGranted) {
+    if (!onboardingDone || !signedIn || !pathReady || !consentGranted) {
       router.replace("/");
     }
-  }, [hydrated, onboardingDone, pathReady, consentGranted, router]);
+  }, [
+    hydrated,
+    authHydrated,
+    onboardingDone,
+    signedIn,
+    pathReady,
+    consentGranted,
+    router,
+  ]);
 
   // Block rendering until we know the user is allowed to be here.
   // This avoids a flash of authenticated UI on a cold deep link.
-  if (!hydrated) return null;
-  if (!onboardingDone || !pathReady || !consentGranted) return null;
+  // Auth hydration is async (session restore / OAuth code exchange),
+  // so it has its own flag to wait on.
+  if (!hydrated || !authHydrated) return null;
+  if (!onboardingDone || !signedIn || !pathReady || !consentGranted)
+    return null;
 
   return <>{children}</>;
 }
