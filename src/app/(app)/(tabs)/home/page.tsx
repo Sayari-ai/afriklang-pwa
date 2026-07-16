@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Home tab — gamified zig-zag adventure map ("wood & grass" theme).
+ * Home tab gamified zig-zag adventure map ("wood & grass" theme).
  *
  * Layout is a direct port of the `_MapTab` widget tree in
  * `lib/features/home/home_screen.dart:144-468`, reskinned with the
@@ -9,7 +9,7 @@
  *   - The map sits on the dark "game board" backdrop (grid +
  *     vignette) instead of the old bg.png artwork.
  *   - `LevelNode`s render as wooden medallions (`LevelBadge`) nested
- *     in grass — completed levels carry their earned 1–3 star arc,
+ *     in grass completed levels carry their earned 1–3 star arc,
  *     the current level pulses with a gold glow, locked levels wear
  *     the green padlock.
  *   - A dotted cream trail connects the nodes in play order, like a
@@ -20,7 +20,7 @@
  *     Tap on `locked` → snackbar + shake animation.
  *
  * Multi-cycle layout:
- *   - The repo hands us `bundle: PathDefinition[]` — one entry per
+ *   - The repo hands us `bundle: PathDefinition[]` one entry per
  *     cycle the device has been issued, in cycle-ascending order. We
  *     render every cycle in a single continuous scroll, with the
  *     oldest cycle (cycle 1) at the **bottom** of the scroller (so
@@ -42,6 +42,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
 import { LevelBadge } from "@/components/game/level-badge";
+import { Mascot } from "@/components/game/mascot";
 import { ResourceCounter } from "@/components/game/resource-counter";
 import { NicknameSheet } from "@/components/nickname-sheet";
 import { GameBoardBackdrop } from "@/components/screen-background";
@@ -60,7 +61,7 @@ type LevelStatus = "completed" | "current" | "locked";
 interface LevelNode {
   /**
    * The cycle this level belongs to. Together with `id` forms the
-   * composite identity of a level — level ids are 1..8 *within a
+   * composite identity of a level level ids are 1..8 *within a
    * cycle* and NOT globally unique. React `key` and `progress` lookups
    * must use both fields.
    */
@@ -81,7 +82,7 @@ interface LevelNode {
    * submitted recordings for. Drives the 3-star rating on the node.
    * Undefined if the entry came from the backend without a client-side
    * completion event (e.g. cross-device progress, or a level completed
-   * before the partial-credit feature shipped) — render as "fully
+   * before the partial-credit feature shipped) render as "fully
    * completed" (3 filled stars) in that case.
    */
   submittedCount?: number;
@@ -116,14 +117,14 @@ export default function HomePage() {
 
   // We subscribe to the entire repo so any background mutation
   // (e.g. `completeLevel` from the level screen returning) re-renders
-  // the map. Cheap — it's a single object identity.
+  // the map. Cheap it's a single object identity.
   const bundle = usePathRepo((s) => s.bundle);
   const progress = usePathRepo((s) => s.progress);
 
   // Cycle count drives container height + per-cycle vertical offsets.
   // `bundle` is sorted cycle-ascending in the repo; we treat index 0
   // as the *oldest* cycle (cycle 1, on first run) and stack newer
-  // cycles above. At least one — defensive for the brief window
+  // cycles above. At least one defensive for the brief window
   // between `reset()` and the next `boot()`.
   const cycleCount = Math.max(1, bundle?.length ?? 1);
 
@@ -169,7 +170,7 @@ export default function HomePage() {
         const def = cycle.levels[i];
         // Cycle should always carry exactly 8 levels per the backend
         // contract, but guard so a malformed payload doesn't crash
-        // the render — skip the missing slot.
+        // the render skip the missing slot.
         if (!def) continue;
         const id = def.levelId;
         // Composite-key lookup: same level id can appear in cycle 1
@@ -205,7 +206,7 @@ export default function HomePage() {
   const totalPoints = progress?.totalPoints ?? 0;
 
   // Dotted trail between consecutive nodes (play order). `levels` is
-  // already emitted in play order — cycle-ascending, level-ascending —
+  // already emitted in play order cycle-ascending, level-ascending 
   // so pairing neighbours also bridges cycle boundaries.
   const trailDots = useMemo(() => {
     const dots: Array<{ x: number; y: number; key: string }> = [];
@@ -225,7 +226,7 @@ export default function HomePage() {
   }, [levels]);
 
   // Scroll-to-bottom on mount so the active level is on screen.
-  // (Map is laid out top→down, with level 1 at the bottom — same
+  // (Map is laid out top→down, with level 1 at the bottom same
   // semantic as the Flutter `jumpTo(maxScrollExtent)` call.)
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -244,7 +245,7 @@ export default function HomePage() {
       useSnackbar.getState().show(t("homeAdventureNotLoadedSnack"));
       return;
     }
-    // Resolve by composite (cycle, levelId) — flattening + level-id
+    // Resolve by composite (cycle, levelId) flattening + level-id
     // match alone would silently launch a same-numbered level from a
     // different cycle once the user has advanced.
     const cycleDef = bundle.find((c) => c.cycle === node.cycle);
@@ -266,7 +267,7 @@ export default function HomePage() {
   // may have multiple cycles active in `bundle` (i.e. they advanced
   // mid-completion of a previous cycle, which the backend doesn't
   // currently allow but is cheap to defend against). Prefer the
-  // highest-cycle current — that's the one the user is "on".
+  // highest-cycle current that's the one the user is "on".
   const currentNode =
     levels
       .filter((n) => n.status === "current")
@@ -282,7 +283,7 @@ export default function HomePage() {
   // to `false` pre-hydrate and we'd open the sheet for a user who
   // already dismissed it. `<AppRouteGuard>` blocks render until the
   // *onboarding* store is hydrated, but the nickname store hydrates
-  // independently in `<AppHydration>` — wait for it explicitly.
+  // independently in `<AppHydration>` wait for it explicitly.
   const nicknameHydrated = useNickname((s) => s.hydrated);
   const nicknameValue = useNickname((s) => s.value);
   const nicknamePrompted = useNickname((s) => s.prompted);
@@ -315,7 +316,7 @@ export default function HomePage() {
           className="relative w-full"
           style={{ paddingTop: `${MAP_ASPECT * cycleCount * 100}%` }}
         >
-          {/* Dotted trail — under the nodes. */}
+          {/* Dotted trail under the nodes. */}
           {trailDots.map((d) => (
             <span
               key={d.key}
@@ -332,10 +333,10 @@ export default function HomePage() {
 
           {/* Level nodes. Each anchored absolutely in the map's own
               coordinate system. `dy` is already in global (whole-map)
-              normalized space — see the `useMemo` above. */}
+              normalized space see the `useMemo` above. */}
           {levels.map((node) => (
             <div
-              // Composite key — `node.id` alone collides across cycles
+              // Composite key `node.id` alone collides across cycles
               // (level 1 of cycle 1 and level 1 of cycle 2 are both
               // rendered when the user has advanced).
               key={`${node.cycle}-${node.id}`}
@@ -354,7 +355,7 @@ export default function HomePage() {
             </div>
           ))}
 
-          {/* Mascot — bobs gently next to the current level node. */}
+          {/* Mascot bobs gently next to the current level node. */}
           <div
             className="pointer-events-none absolute"
             style={{
@@ -367,7 +368,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Floating points counter — fixed to viewport, not scroll. */}
+      {/* Floating points counter fixed to viewport, not scroll. */}
       <div
         className="absolute inset-x-4 top-0 z-10"
         style={{ marginTop: "calc(env(safe-area-inset-top) + 10px)" }}
@@ -378,7 +379,7 @@ export default function HomePage() {
       {/* First-run nickname prompt. Lives at the page root so its
           fixed-position scrim covers the whole shell, not just the
           scroll container. The sheet is visible whenever the store
-          says we haven't shown it yet — it dismisses itself by
+          says we haven't shown it yet it dismisses itself by
           flipping `prompted` (via `markPrompted()`), which makes the
           predicate above evaluate to `false` and unmounts this. */}
       {showNicknameSheet && (
@@ -408,7 +409,7 @@ function PointsHeader({
   points: number;
   pointsLabel: string;
 }) {
-  // Tween the displayed value when `points` changes — same flavour as
+  // Tween the displayed value when `points` changes same flavour as
   // Flutter's `TweenAnimationBuilder<int>`. 900 ms easeOutCubic.
   const animated = useAnimatedNumber(points, 900);
 
@@ -422,7 +423,7 @@ function PointsHeader({
 }
 
 /**
- * Tiny tween hook — counts `target` up from the previous value over
+ * Tiny tween hook counts `target` up from the previous value over
  * `durationMs` with an ease-out-cubic curve. Pure CSS won't do here
  * because we want the formatted text to update each frame, not just
  * an opacity/transform.
@@ -509,7 +510,7 @@ function LevelNodeView({
     >
       <LevelBadge level={node.id} state={node.status} stars={stars} />
 
-      {/* "Tap to start" call-out floating above the current node —
+      {/* "Tap to start" call-out floating above the current node 
           a mini wooden plank tooltip. `w-max` so longer translations
           (FR "Touchez pour commencer") widen the plank rather than
           wrapping over the badge. */}
@@ -551,41 +552,5 @@ function LevelNodeView({
 // ---------------------------------------------------------------------------
 // Decorative bits
 // ---------------------------------------------------------------------------
-
-function Mascot() {
-  // Bobbing strawberry. Animation is a tiny Y translate on a 1.8 s
-  // ease-in-out-alternate loop, matching the Flutter sin-curve.
-  // Keyframes live in globals.css.
-  return (
-    <div className="motion-safe:animate-[afk-bob_1.8s_ease-in-out_infinite_alternate]">
-      <svg viewBox="0 0 110 120" width="110" height="120" aria-hidden>
-        {/* Body */}
-        <path
-          d="M55 114 C5.5 84 11 30 55 33.6 C99 30 104.5 84 55 114 Z"
-          fill="#E53935"
-        />
-        {/* Seeds */}
-        {[
-          [33, 84],
-          [49.5, 98.4],
-          [71.5, 84],
-          [60.5, 66],
-          [38.5, 66],
-        ].map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r={2.5} fill="#FFE57F" />
-        ))}
-        {/* Leaves */}
-        <path d="M55 6 L27.5 36 L82.5 36 Z" fill="#43A047" />
-        {/* Eyes */}
-        <circle cx={44} cy={54} r={8} fill="white" />
-        <circle cx={68.2} cy={54} r={8} fill="white" />
-        <circle cx={46.2} cy={55.2} r={3.5} fill="black" />
-        <circle cx={70.4} cy={55.2} r={3.5} fill="black" />
-        {/* Mouth */}
-        <path d="M41.8 72 Q55 93.6 68.2 72 Z" fill="#6A1B1B" />
-        {/* Tongue */}
-        <path d="M48.4 81.6 Q55 93.6 61.6 81.6 Z" fill="#FF80AB" />
-      </svg>
-    </div>
-  );
-}
+// (The mascot — Afriklang's talking parrot — lives in
+// `src/components/game/mascot.tsx` alongside the rest of the kit.)
