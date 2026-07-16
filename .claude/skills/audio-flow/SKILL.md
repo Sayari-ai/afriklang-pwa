@@ -55,7 +55,7 @@ src/app/api/audio-upload/route.ts (Node runtime, duplex: 'half')
 Sayari Railway endpoint /api/audio/upload
 ```
 
-The two non-obvious invariants — **iOS gesture preservation** and **at-most-once submit** — are the source of almost every bug in this area. Read them in full before changing anything.
+The two non-obvious invariants **iOS gesture preservation** and **at-most-once submit** are the source of almost every bug in this area. Read them in full before changing anything.
 
 ## INVARIANT 1: iOS Safari user-gesture preservation
 
@@ -70,13 +70,13 @@ iOS Safari (≤17 at time of writing) only honours `navigator.mediaDevices.getUs
 The level screen has a 3-2-1 countdown between tap and recording, which is exactly the "setInterval before getUserMedia" anti-pattern. The fix:
 
 ```ts
-// src/app/(app)/level/[cycleLevel]/page.tsx — beginCountdown()
+// src/app/(app)/level/[cycleLevel]/page.tsx beginCountdown()
 const beginCountdown = useCallback(() => {
   if (phase === "countdown" || phase === "recording") return;
   if (countdownRef.current) return;
 
   // CRITICAL: synchronous getUserMedia call inside the gesture handler.
-  // Don't await — just stash the promise on the ref.
+  // Don't await just stash the promise on the ref.
   if (!pendingStreamRef.current) {
     pendingStreamRef.current = acquireMicStream();
     pendingStreamRef.current.catch(() => {}); // swallow unhandledrejection; startRecording surfaces snackbar
@@ -115,23 +115,23 @@ await rec.start(stream); // WavRecorder.start accepts a preAcquiredStream
 
 `acquireMicStream()` is exported from `src/lib/audio/recorder.ts`. It's a thin wrapper around `getUserMedia` that maps `NotAllowedError` / `NotFoundError` to typed `RecorderError`s. **It must be called synchronously from the click handler.** If you find yourself wanting to put any logic between the tap and the call, push that logic AFTER instead.
 
-`WavRecorder.start(preAcquiredStream?)` is the iOS-safe path. The legacy `WavRecorder.start()` with no args still calls `acquireMicStream` internally — that path works on Chrome / Firefox / Android, but **breaks silently on iOS Safari**.
+`WavRecorder.start(preAcquiredStream?)` is the iOS-safe path. The legacy `WavRecorder.start()` with no args still calls `acquireMicStream` internally that path works on Chrome / Firefox / Android, but **breaks silently on iOS Safari**.
 
 ## INVARIANT 2: At-most-once submit
 
 `uploadAudio()` performs **exactly one POST per call** and never retries internally. This is intentional after we hit duplicate-write bugs.
 
-The story: `/api/audio-upload` proxies to Sayari, which is non-idempotent — successful storage produces a new file. A request that succeeded server-side but had its response truncated (LB timeout after S3 write, connection killed before headers, slow Railway cold start) would, with retry-on-failure, replay the upload and persist the SAME WAV twice. Even though our filenames embed UUID + timestamp, dedupe is the backend's choice.
+The story: `/api/audio-upload` proxies to Sayari, which is non-idempotent successful storage produces a new file. A request that succeeded server-side but had its response truncated (LB timeout after S3 write, connection killed before headers, slow Railway cold start) would, with retry-on-failure, replay the upload and persist the SAME WAV twice. Even though our filenames embed UUID + timestamp, dedupe is the backend's choice.
 
 Concrete consequences for this codebase:
 
 - `uploadAudio` does **one** `fetch()`. No `for (let i = 0; i < retries; i++)` loop. Don't add one.
 - **No client-side retry queue** (no IndexedDB persisted-failed-uploads). The user retries by tapping Submit again. This bounds duplicate-write risk to deliberate user action.
 - Failure UX: snackbar with the friendly message. The user decides whether to tap Submit again.
-- We **do** still apply a 45 s `AbortController` timeout. A timeout *can* technically leave a half-written file on the server — it's a known trade-off vs. letting a hung TCP socket spin forever. Documented in `src/lib/api/audio.ts` doc comment.
+- We **do** still apply a 45 s `AbortController` timeout. A timeout *can* technically leave a half-written file on the server it's a known trade-off vs. letting a hung TCP socket spin forever. Documented in `src/lib/api/audio.ts` doc comment.
 
 ```ts
-// src/lib/api/audio.ts — uploadAudio (skeleton)
+// src/lib/api/audio.ts uploadAudio (skeleton)
 export async function uploadAudio(args: UploadAudioArgs): Promise<void> {
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     throw new AudioUploadError("You appear to be offline. Reconnect and try again.", 0, true);
@@ -144,7 +144,7 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<void> {
   if (args.englishDescription != null) form.append("english_description", args.englishDescription);
   if (args.speakerId != null) form.append("speaker_id", args.speakerId);
   const wavFile = new File([args.file], args.filename, { type: "audio/wav" });
-  form.append("files", wavFile);                  // field name is "files" (plural array — backend contract)
+  form.append("files", wavFile);                  // field name is "files" (plural array backend contract)
 
   const ctrl = new AbortController();
   const timeoutId = setTimeout(() => ctrl.abort(new DOMException("Request timed out", "TimeoutError")), 45_000);
@@ -155,7 +155,7 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<void> {
       method: "POST",
       body: form,
       signal: ctrl.signal,
-      // Do NOT set Content-Type — fetch adds the multipart boundary itself.
+      // Do NOT set Content-Type fetch adds the multipart boundary itself.
     });
   } catch (e) {
     clearTimeout(timeoutId);
@@ -182,25 +182,25 @@ useSnackbar.getState().show(
 
 `isNetwork=true` → offlineSubmitSnack (friendly "you're offline" copy). `isNetwork=false` (5xx, CORS rejection from upstream proxy → 502, etc.) → generic uploadFailedSnack with the upstream message. **Don't conflate these.** A 5xx is not "you're offline".
 
-## The Next API proxy — why it exists
+## The Next API proxy why it exists
 
 `src/app/api/audio-upload/route.ts` is a same-origin proxy. Sayari's CORS allowlist only includes `http://localhost:3000`. Any other browser origin POSTing the multipart form directly gets:
 
 1. The WAV is written successfully server-side.
 2. The browser strips the response (CORS).
 3. `fetch` rejects with `TypeError: Failed to fetch`.
-4. Our client maps this to `isNetwork=true` and shows "you're offline" — **wrong**, the upload worked.
+4. Our client maps this to `isNetwork=true` and shows "you're offline" **wrong**, the upload worked.
 
 Server-to-server has no CORS. So we proxy. Important properties of the proxy:
 
-- `runtime = "nodejs"` — Edge runtime's fetch doesn't support streaming request bodies properly.
-- `dynamic = "force-dynamic"` — never cache.
+- `runtime = "nodejs"` Edge runtime's fetch doesn't support streaming request bodies properly.
+- `dynamic = "force-dynamic"` never cache.
 - Streams `request.body` straight to upstream (`duplex: "half"` is required by the fetch spec when the body is a stream).
-- Forwards only `content-type` (carries the multipart boundary — REQUIRED) and `content-length`. Strips host, cookies, auth.
+- Forwards only `content-type` (carries the multipart boundary REQUIRED) and `content-length`. Strips host, cookies, auth.
 - `request.signal` is plumbed through so client `AbortController` cancels upstream too.
 - Upstream unreachable → return 502 with `{error:"upstream_fetch_failed"}`. The client treats `status !== 0` as `isNetwork=false`, so this won't show the misleading offline snackbar.
 
-`SAYARI_BASE_URL` env var configures upstream; defaults to the Railway URL. Don't put the Sayari URL in `NEXT_PUBLIC_*` client config — the proxy is the only thing that should know it.
+`SAYARI_BASE_URL` env var configures upstream; defaults to the Railway URL. Don't put the Sayari URL in `NEXT_PUBLIC_*` client config the proxy is the only thing that should know it.
 
 ## Sample-rate quirks
 
@@ -219,15 +219,15 @@ const downsampled = inputRate === WAV_TARGET_SAMPLE_RATE
   : resampleLinear(raw, inputRate, WAV_TARGET_SAMPLE_RATE);
 ```
 
-Don't trust the constructor. Don't hard-code 48000 either — Android can be 44100, some headsets 16000 already.
+Don't trust the constructor. Don't hard-code 48000 either Android can be 44100, some headsets 16000 already.
 
 ## AudioWorklet path
 
-The worklet code lives at `public/audio/pcm-recorder.worklet.js` (NOT bundled by webpack — served as a static file because the AudioWorklet spec requires a URL). Loaded via `await ctx.audioWorklet.addModule("/audio/pcm-recorder.worklet.js")`. If you change the worklet:
+The worklet code lives at `public/audio/pcm-recorder.worklet.js` (NOT bundled by webpack served as a static file because the AudioWorklet spec requires a URL). Loaded via `await ctx.audioWorklet.addModule("/audio/pcm-recorder.worklet.js")`. If you change the worklet:
 
 - Edit `public/audio/pcm-recorder.worklet.js` directly.
 - The worklet posts `Float32Array` per render quantum (128 frames). The recorder concatenates these in `chunks: Float32Array[]`.
-- The worklet has no inputs as outputs (we don't connect to `ctx.destination` — that would echo the user's voice into their speakers).
+- The worklet has no inputs as outputs (we don't connect to `ctx.destination` that would echo the user's voice into their speakers).
 
 ## Filename slugs
 
@@ -238,11 +238,11 @@ The worklet code lives at `public/audio/pcm-recorder.worklet.js` (NOT bundled by
 //   iso    = languageIso (e.g. "wo", "tw")
 //   uuid   = speakerId (device UUID)
 //   stamp  = ISO 8601 timestamp
-//   topic  = `pNN-Lx-qy` slug — pathId, levelId, qIndex
+//   topic  = `pNN-Lx-qy` slug pathId, levelId, qIndex
 //
-// The `${slug}` portion is `pNN-Lx-qy` — note: NO cycle prefix.
+// The `${slug}` portion is `pNN-Lx-qy` note: NO cycle prefix.
 // path_id is globally unique (1..20), so the slug is unambiguous
-// across cycles. Don't add cycle to the slug — it would silently
+// across cycles. Don't add cycle to the slug it would silently
 // break the Sayari ingest's filename parser.
 ```
 
@@ -258,7 +258,7 @@ const filename = buildRecordingFilename({
 });
 ```
 
-## Cleanup paths — releasing the OS mic indicator
+## Cleanup paths releasing the OS mic indicator
 
 Three exit paths must release pending streams or the OS mic indicator (red dot on iOS, mic icon in browser tab) sticks around until tab close:
 
@@ -278,7 +278,7 @@ Three exit paths must release pending streams or the OS mic indicator (red dot o
    }, []);
    ```
 
-2. **Skip during countdown** (user tapped Skip before recording started — stream was acquired but never adopted):
+2. **Skip during countdown** (user tapped Skip before recording started stream was acquired but never adopted):
    ```ts
    const pending = pendingStreamRef.current;
    if (pending) {
@@ -287,7 +287,7 @@ Three exit paths must release pending streams or the OS mic indicator (red dot o
    }
    ```
 
-3. **Submit success** — `WavRecorder.stop()` already tears down its own stream + ctx in a `finally`. Don't double-release.
+3. **Submit success** `WavRecorder.stop()` already tears down its own stream + ctx in a `finally`. Don't double-release.
 
 `WavRecorder.dispose()` is idempotent and safe to call from cleanup even if `start()` was never called.
 
@@ -310,9 +310,9 @@ Before you change anything in `src/lib/audio/recorder.ts`, `src/lib/api/audio.ts
 | Symptom | Real cause |
 |---|---|
 | iOS: tap mic, nothing happens, no permission prompt | Gesture token lost (await before `getUserMedia`, or call from `setTimeout`) |
-| "You appear to be offline" but the upload actually worked | CORS-blocked direct call to Sayari — must go through `/api/audio-upload` proxy |
-| Two copies of the WAV in the Sayari bucket for one tap | Client-side retry loop reintroduced — remove it |
+| "You appear to be offline" but the upload actually worked | CORS-blocked direct call to Sayari must go through `/api/audio-upload` proxy |
+| Two copies of the WAV in the Sayari bucket for one tap | Client-side retry loop reintroduced remove it |
 | OS mic indicator stays on after backing out of level | Unmount cleanup didn't release `pendingStreamRef` |
-| Recording is double-speed or half-speed | `ctx.sampleRate` mismatch — confirm resample step ran |
-| `AudioUploadError(status=502)` shown as offline | Wrong — 502 is `isNetwork=false`. Check the throw site. |
+| Recording is double-speed or half-speed | `ctx.sampleRate` mismatch confirm resample step ran |
+| `AudioUploadError(status=502)` shown as offline | Wrong 502 is `isNetwork=false`. Check the throw site. |
 | Worklet `addModule` 404 | Path is `/audio/pcm-recorder.worklet.js`, served from `public/`. Don't put it under `src/`. |

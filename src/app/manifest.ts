@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 /**
  * Web app manifest served at `/manifest.webmanifest`.
  *
- * Colors match the "wood & grass" game theme (dark maroon board —
+ * Colors match the "wood & grass" game theme (dark maroon board 
  * see --color-surface in globals.css). Icons reference the
  * placeholder set under `public/icons`; replace those PNGs with the
  * real Afriklang artwork when assets land.

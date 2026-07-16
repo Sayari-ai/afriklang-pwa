@@ -9,10 +9,10 @@ description: Tiny promise-based IndexedDB key-value store. USE FOR: persisting s
 
 `idb-keyval` is the project's persistence layer for **offline mutation queues**. Two queues use it:
 
-- **Progress-write queue** (`src/lib/storage/progress-queue.ts`) — replays failed `progress_set` Edge Function calls in strict FIFO order once connectivity returns.
-- **Audio-upload queue** (sibling pattern in `src/lib/storage/`) — replays failed Sayari WAV uploads.
+- **Progress-write queue** (`src/lib/storage/progress-queue.ts`) replays failed `progress_set` Edge Function calls in strict FIFO order once connectivity returns.
+- **Audio-upload queue** (sibling pattern in `src/lib/storage/`) replays failed Sayari WAV uploads.
 
-Each queue runs in its **own IndexedDB database** (NOT just a separate object store) for a specific reason — see Gotchas.
+Each queue runs in its **own IndexedDB database** (NOT just a separate object store) for a specific reason see Gotchas.
 
 Reach for `idb-keyval` when you need:
 - Promise-based key/value persistence in the browser
@@ -21,7 +21,7 @@ Reach for `idb-keyval` when you need:
 - A per-feature isolated store
 
 Don't use it for:
-- Cross-tab synchronous reads (use `localStorage` — but note IDB events fire across tabs)
+- Cross-tab synchronous reads (use `localStorage` but note IDB events fire across tabs)
 - Queries / indexes / range scans (use `idb` ~1 KB heavier)
 - Trivial flags that fit in `localStorage`
 - React component state
@@ -38,13 +38,13 @@ await set("hello", "world");
 await set(123, { foo: "bar", blob: someBlob });
 ```
 
-Keys may be `string | number | Date | (typed) array of those`. Values may be anything [structured-clonable](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) — objects, arrays, `Blob`, `File`, `ArrayBuffer`, `Date`, `Map`, `Set`. **Not** functions, DOM nodes, or class instances with prototype.
+Keys may be `string | number | Date | (typed) array of those`. Values may be anything [structured-clonable](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) objects, arrays, `Blob`, `File`, `ArrayBuffer`, `Date`, `Map`, `Set`. **Not** functions, DOM nodes, or class instances with prototype.
 
 ### `get<T>(key, store?): Promise<T | undefined>`
 
 ```ts
 const value = await get<string>("hello");
-// value is `string | undefined` — `undefined` when missing
+// value is `string | undefined` `undefined` when missing
 ```
 
 ### `del(key, store?): Promise<void>`
@@ -143,7 +143,7 @@ function store(): UseStore {
 }
 ```
 
-The store is lazy because `createStore` opens an IDB connection — defer until first use to avoid unnecessary connections in code paths that never queue.
+The store is lazy because `createStore` opens an IDB connection defer until first use to avoid unnecessary connections in code paths that never queue.
 
 ### Append-only queue with monotonic seq
 
@@ -185,7 +185,7 @@ export async function listProgressQueued(): Promise<QueuedProgressWrite[]> {
 }
 ```
 
-Note `entries()` does not guarantee insertion order across all browsers — sort by `seq` explicitly.
+Note `entries()` does not guarantee insertion order across all browsers sort by `seq` explicitly.
 
 ### Schema versioning at the read boundary
 
@@ -198,7 +198,7 @@ function upgradeIfNeeded(row: QueuedProgressWrite): QueuedProgressWrite {
 }
 ```
 
-`idb-keyval` has no schema migrations of its own. Version your records with a `v` field and up-convert on read. Avoid eager IDB-wide migrations on boot — short-lived rows age out naturally.
+`idb-keyval` has no schema migrations of its own. Version your records with a `v` field and up-convert on read. Avoid eager IDB-wide migrations on boot short-lived rows age out naturally.
 
 ### Error handling
 
@@ -213,11 +213,11 @@ try {
 }
 ```
 
-The project's queues swallow `enqueue` failures softly — losing a queued progress write means the local cache gets ahead of the backend, which `boot({ forceRefresh })` reconciles eventually.
+The project's queues swallow `enqueue` failures softly losing a queued progress write means the local cache gets ahead of the backend, which `boot({ forceRefresh })` reconciles eventually.
 
 ## Gotchas
 
-- **Two queues = two databases, not two stores.** `createStore(db, store)` opens at IDB version 1 with exactly that one object store — there is **no migration path** to add another store later. Sharing one DB between progress + audio queues caused `NotFoundError: One of the specified object stores was not found.` See the rationale comment at `src/lib/storage/progress-queue.ts:42-51`.
+- **Two queues = two databases, not two stores.** `createStore(db, store)` opens at IDB version 1 with exactly that one object store there is **no migration path** to add another store later. Sharing one DB between progress + audio queues caused `NotFoundError: One of the specified object stores was not found.` See the rationale comment at `src/lib/storage/progress-queue.ts:42-51`.
 - **Functions cannot be stored.** Structured-clone rejects them. Strip before persist.
 - **Class instances lose their prototype.** What goes in is a plain object on the way out. Re-hydrate via type guards (see `isQueuedProgressWrite()` at `src/lib/storage/progress-queue.ts:187-205`).
 - **`get()` returns `undefined` for missing keys, not `null`.** Don't `=== null`.
@@ -227,7 +227,7 @@ The project's queues swallow `enqueue` failures softly — losing a queued progr
 - **`update()` is the only atomic read-modify-write.** Don't simulate it with `get` + `set`.
 - **Storage quota is shared per origin.** No per-DB limit. Eviction order under pressure: best-effort LRU.
 - **No cross-tab notifications.** A second tab's writes are visible only on next read. Use `BroadcastChannel` if you need eventing.
-- **Tree-shakeable** — import only what you use; ~295 B brotli'd for `get`+`set` only.
+- **Tree-shakeable** import only what you use; ~295 B brotli'd for `get`+`set` only.
 
 ## References
 

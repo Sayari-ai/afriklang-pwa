@@ -16,13 +16,13 @@
 //   }
 //
 // Errors:
-//   400 bad_device_id      — device_id not a UUID
-//   400 bad_payload        — cycle/level_id/q_index out of range or missing
-//   404 cycle_not_assigned — device has no path for this cycle
-//   409 swap_pool_exhausted — every question at this level_id has already
+//   400 bad_device_id      device_id not a UUID
+//   400 bad_payload        cycle/level_id/q_index out of range or missing
+//   404 cycle_not_assigned device has no path for this cycle
+//   409 swap_pool_exhausted every question at this level_id has already
 //                              been served; client should fall back to
 //                              plain skip.
-//   500 rpc_failed         — anything else.
+//   500 rpc_failed         anything else.
 
 import {
   corsHeaders,
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
 
   // Postgres `RETURNS TABLE` over rpc() comes back as an array. The
   // table columns are named `out_*` to avoid colliding with column
-  // references inside the function body — see migration 00006 for
+  // references inside the function body see migration 00006 for
   // the full backstory.
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) {

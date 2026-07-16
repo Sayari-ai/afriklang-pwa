@@ -1,5 +1,5 @@
 /**
- * Brand color tokens — single source of truth for the PWA.
+ * Brand color tokens single source of truth for the PWA.
  *
  * Mirrors `lib/core/theme/app_colors.dart` (which only declares
  * `AppColors.primary = #00539F`) plus the inline ARGB literals used
@@ -64,7 +64,7 @@ export const AppColors = {
 export type AppColor = keyof typeof AppColors;
 
 /**
- * "Wood & grass" game-kit palette — the visual reskin's source of
+ * "Wood & grass" game-kit palette the visual reskin's source of
  * truth, mirrored 1:1 by the CSS variables in `src/app/globals.css`
  * (`--color-wood-*`, `--color-grass-*`, ...). Prefer the CSS vars /
  * Tailwind tokens in components; import this object only where a JS
@@ -99,7 +99,7 @@ export const GameColors = {
   coinRim: "#D98E2B",
 
   // Glossy "2D game icon" accents (lock shackle, shield face, wizard
-  // hat, hourglass glass, halo discs) — gold+purple pack style.
+  // hat, hourglass glass, halo discs) gold+purple pack style.
   goldLight: "#FFE08A",
   goldDeep: "#E8941F",
   goldOutline: "#A85F14",
@@ -118,7 +118,7 @@ export const GameColors = {
   cream: "#FFF6E0",
   ink: "#5C3018",
 
-  /** Celebration confetti — greens, golds and wood oranges. */
+  /** Celebration confetti greens, golds and wood oranges. */
   confetti: [
     "#8CC63F",
     "#FFC93C",

@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * `useSetAppLocale()` — single API the Profile screen (and the smoke
+ * `useSetAppLocale()` single API the Profile screen (and the smoke
  * test) calls when the user picks a language.
  *
  * Flow:
  *   1. Persist the override into the locale store. The store writes
  *      both the cookie (`afriklang.app_locale.v1`) AND the localStorage
  *      mirror, in that order.
- *   2. Call `router.refresh()` — Next 16's documented way to re-run
+ *   2. Call `router.refresh()` Next 16's documented way to re-run
  *      Server Components in the current route without losing client
  *      React state. Our `src/i18n/request.ts` reads the cookie on
  *      every server render, so the next render swaps message bundles.
@@ -21,7 +21,7 @@
  *     also mirror to localStorage in the same atomic step).
  *   - `router.refresh()` re-runs the request config server-side, which
  *     reads the cookie we just wrote. There's nothing for a Server
- *     Action to add — we'd just be paying a round-trip for no work.
+ *     Action to add we'd just be paying a round-trip for no work.
  *
  * Reference: `node_modules/next/dist/docs/01-app/03-api-reference/
  * 04-functions/use-router.md`, line 46 (router.refresh semantics).

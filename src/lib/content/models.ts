@@ -7,7 +7,7 @@
  * the cached payload (read from localStorage) and the network payload
  * go through the same validation path.
  *
- * Network-image-first: there is no `imageAsset` field — every question
+ * Network-image-first: there is no `imageAsset` field every question
  * resolves to a Supabase Storage URL.
  */
 
@@ -54,7 +54,7 @@ export interface ProgressEntry {
    * don't count. Used to render a 3-star "completion quality" rating on
    * the home map. Undefined for levels that came from the backend with
    * no client-side completion event recorded yet (legacy / cross-device
-   * progress) — UI must treat undefined as "fully completed" to stay
+   * progress) UI must treat undefined as "fully completed" to stay
    * compatible with the backend-only state.
    */
   submittedCount?: number;
@@ -81,7 +81,7 @@ export interface PathAssignment {
 // ---------------------------------------------------------------------------
 
 /**
- * Throws a `TypeError` rather than silently coercing — Edge Function
+ * Throws a `TypeError` rather than silently coercing Edge Function
  * payload bugs should be loud, not hidden.
  */
 function asInt(v: unknown, field: string): number {
@@ -272,7 +272,7 @@ export function flattenLevels(
 
 /**
  * The largest `cycle` value present in `bundle`. Treated as the
- * *active* cycle — everything below it is historical. Returns `1` for
+ * *active* cycle everything below it is historical. Returns `1` for
  * an empty bundle (defensive; callers should never see this).
  */
 export function activeCycle(

@@ -3,7 +3,7 @@ import { useId, type CSSProperties } from "react";
 import { GameColors } from "@/lib/colors";
 
 /**
- * GameStar + StarRating — the mockup's chunky bevelled stars.
+ * GameStar + StarRating the mockup's chunky bevelled stars.
  *
  * Filled: gold→orange gradient body with a darker orange rim and a
  * white gloss wedge. Empty: dark chocolate silhouette (the mockup's

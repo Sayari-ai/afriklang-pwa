@@ -1,5 +1,5 @@
 /**
- * Satoshi font family — matches the Flutter app's `assets/fonts/`.
+ * Satoshi font family matches the Flutter app's `assets/fonts/`.
  *
  * Loaded via `next/font/local` so Next.js self-hosts and preloads the
  * weights we use, and exposes the font-family through the CSS variable
@@ -29,7 +29,7 @@ export const satoshi = localFont({
 });
 
 /**
- * Lilita One — the chunky rounded "game" display face used by the
+ * Lilita One the chunky rounded "game" display face used by the
  * wood-and-grass UI kit (button labels, level numerals, scores,
  * ribbon titles). Single weight (400) by design: the glyphs are
  * already fat, and the outlined look comes from the `text-outline`

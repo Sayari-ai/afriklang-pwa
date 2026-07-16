@@ -10,13 +10,13 @@ support provided by [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pw
 - **Styling**: Tailwind CSS v4
 - **PWA**: `@ducanh2912/next-pwa` (Workbox-based service worker)
 - **Bundler**: webpack (forced via `--webpack` because `next-pwa` does not
-  yet support Turbopack — see `package.json` scripts)
+  yet support Turbopack see `package.json` scripts)
 
 ## Getting started
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000 — service worker disabled in dev
+npm run dev      # http://localhost:3000 service worker disabled in dev
 npm run build    # emits public/sw.js + workbox runtime
 npm run start    # serve the production build, install banner becomes available
 npm run lint
@@ -26,7 +26,7 @@ npm run lint
 
 This app is **server-rendered** (App Router with the `/api/audio-upload`
 Route Handler and dynamic pages), so it deploys to Amplify's **SSR/compute
-platform (WEB_COMPUTE)** — not static hosting. Do **not** add
+platform (WEB_COMPUTE)** not static hosting. Do **not** add
 `output: "export"` to `next.config.ts`; Amplify detects SSR from the
 `.next` build output.
 
@@ -39,7 +39,7 @@ platform (WEB_COMPUTE)** — not static hosting. Do **not** add
    artifacts in `.next`). No manual edits needed.
 3. **Node version**: pinned to 20 via [`.nvmrc`](./.nvmrc) (Next.js 16
    requires Node ≥ 20.9). Bump there if you need a newer runtime.
-4. **Environment variables** (App settings → *Environment variables*) —
+4. **Environment variables** (App settings → *Environment variables*) 
    see [`.env.example`](./.env.example):
 
    | Variable | Required | Notes |
@@ -56,13 +56,13 @@ platform (WEB_COMPUTE)** — not static hosting. Do **not** add
 ### Notes / caveats
 
 - **Next.js 16 support**: confirm Amplify's managed SSR runtime supports
-  the Next.js major version before the first deploy — newer majors can lag
+  the Next.js major version before the first deploy newer majors can lag
   Amplify's compute runtime. If unsupported, the build log will say so.
 - The PWA service worker (`public/sw.js`) is regenerated on every build and
   served with `Cache-Control: no-cache` via the `customHeaders` block in
   `amplify.yml`, so deploys don't strand users on a stale worker.
 - `npm ci` requires `package-lock.json` to stay in sync with `package.json`
-  — run `npm install` and commit the lock file whenever deps change, or the
+  run `npm install` and commit the lock file whenever deps change, or the
   Amplify build fails at the install step.
 
 ## PWA wiring

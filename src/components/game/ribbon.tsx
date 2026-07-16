@@ -3,7 +3,7 @@ import { useId, type ReactNode } from "react";
 import { GameColors } from "@/lib/colors";
 
 /**
- * RibbonBanner — the green ribbon from the mockup (score banner /
+ * RibbonBanner the green ribbon from the mockup (score banner /
  * panel title). Stretchy SVG backdrop (folded tails behind, lit
  * band in front) with real centered text on top so i18n strings of
  * any length keep working.

@@ -4,10 +4,10 @@
 -- the depicted concept in the target language, the client requests a
 -- replacement question drawn from path_questions rows belonging to OTHER
 -- path_ids at the SAME level_id, excluding any (path_id, level_id, q_index)
--- the device has ever been served — across all cycles AND prior swaps.
+-- the device has ever been served across all cycles AND prior swaps.
 --
 -- Persistence model: one row per (device_id, cycle, level_id, q_index)
--- swap. The PK enforces "one active swap per slot" — re-swapping the same
+-- swap. The PK enforces "one active swap per slot" re-swapping the same
 -- slot REPLACES the existing swap (caller upserts). The replacement is
 -- another (path_id, q_index) pair pointing at the live path_questions
 -- pool. paths_get LEFT JOINs this table to splice replacements into the
@@ -49,7 +49,7 @@ create index if not exists device_question_swaps_lookup_idx
 --      values at the requested level_id from that cycle's path_id.
 --   2. Plus every (replacement_path_id, replacement_q_index) the device
 --      has already swapped in at the same level_id (any cycle).
---   3. Minus the original q_index of the slot being swapped right now —
+--   3. Minus the original q_index of the slot being swapped right now 
 --      if the user already had a previous swap on this slot, we want to
 --      re-pick freely without the previous replacement excluding itself.
 create or replace function public.swap_question(

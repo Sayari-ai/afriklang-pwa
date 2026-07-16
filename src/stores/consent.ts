@@ -11,7 +11,7 @@
  * Semantics:
  *   - Granting flips `granted=true` and stamps `granted_at` if it
  *     isn't already set (so we keep the original consent date even if
- *     the user toggles off and on again — same as Flutter).
+ *     the user toggles off and on again same as Flutter).
  *   - Revoking flips `granted=false` but **preserves** `granted_at` so
  *     audit logs / Sayari uploads can still report when the original
  *     consent was given.
@@ -64,7 +64,7 @@ export const useConsent = create<ConsentState>((set, get) => ({
 
   revoke: () => {
     safeStorage.setItem(StorageKeys.consentGranted, "false");
-    // Intentionally keep granted_at — see file header.
+    // Intentionally keep granted_at see file header.
     set({ granted: false, hydrated: true });
   },
 }));

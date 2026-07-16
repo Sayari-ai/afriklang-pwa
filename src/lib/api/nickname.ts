@@ -3,7 +3,7 @@
 /**
  * Nickname endpoint.
  *
- * Backend contract (stub — function not yet deployed):
+ * Backend contract (stub function not yet deployed):
  *   POST `nickname_set`
  *     body: { device_id: string, nickname: string }
  *     200:  { nickname: string }   ← server may normalise (e.g. trim)
@@ -12,7 +12,7 @@
  * Until the Edge Function exists, calls will fail with
  * `EdgeFunctionError` (status 0 if the network/CORS bounces it,
  * status 404 once Supabase reports the function is missing). The
- * caller's job is to swallow that and show a snackbar — the local
+ * caller's job is to swallow that and show a snackbar the local
  * `useNickname` store has already persisted the value optimistically,
  * so the UI keeps the chosen name visible. A future retry path can
  * re-fire this against the deployed function without changes here.

@@ -3,11 +3,11 @@ import { useId, type CSSProperties } from "react";
 import { GameColors } from "@/lib/colors";
 
 /**
- * Hearts — the mockup's glossy lives row: shiny red hearts with a
+ * Hearts the mockup's glossy lives row: shiny red hearts with a
  * dark rim, and chocolate-dark "spent" hearts. Colors are hex from
  * `GameColors` (SVG attributes don't resolve CSS `var()`).
  *
- * No lives mechanic is wired into the app yet — this ships as part
+ * No lives mechanic is wired into the app yet this ships as part
  * of the game kit so future features (attempt limits, streak
  * shields...) can drop it in without redesign work.
  */

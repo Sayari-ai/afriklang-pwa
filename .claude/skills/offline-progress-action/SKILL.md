@@ -5,21 +5,21 @@ description: Add a new progress-modifying action that must work offline. Progres
 
 # Adding a queueable offline progress action
 
-This project's progress mutations (`progress_set`) are the only writes that survive offline. The pattern is rigid by design — getting any one piece wrong silently corrupts the user's path state.
+This project's progress mutations (`progress_set`) are the only writes that survive offline. The pattern is rigid by design getting any one piece wrong silently corrupts the user's path state.
 
 Touch all four files **in the same commit**:
 
-1. `src/lib/api/progress.ts` — the actual fetch.
-2. `src/lib/storage/progress-queue.ts` — IDB entry shape.
-3. `src/lib/storage/progress-queue-runner.ts` — replay dispatch.
-4. `src/stores/path-repo.ts` — optimistic update + enqueue-on-failure.
+1. `src/lib/api/progress.ts` the actual fetch.
+2. `src/lib/storage/progress-queue.ts` IDB entry shape.
+3. `src/lib/storage/progress-queue-runner.ts` replay dispatch.
+4. `src/stores/path-repo.ts` optimistic update + enqueue-on-failure.
 
 ## 1. Why progress writes are queued (and audio is not)
 
 Read the comments at:
 
-- `src/lib/storage/progress-queue.ts:1-32` — the rationale for a separate queue
-- `src/app/(app)/level/[cycleLevel]/page.tsx:455-465` — why audio submit is at-most-once
+- `src/lib/storage/progress-queue.ts:1-32` the rationale for a separate queue
+- `src/app/(app)/level/[cycleLevel]/page.tsx:455-465` why audio submit is at-most-once
 
 Summary:
 
@@ -28,7 +28,7 @@ Summary:
 
 If you find yourself wanting to queue audio, **don't.** The user retries by tapping Submit again. Surface a clear "you're offline" snackbar (`levelOfflineSubmitSnack`).
 
-## 2. The triad — required files
+## 2. The triad required files
 
 ### a. API client (`src/lib/api/progress.ts`)
 
@@ -52,7 +52,7 @@ export async function setProgress(args: {
 }
 ```
 
-The server tolerates a missing `cycle` (defaults to top cycle) for legacy clients but **the PWA never relies on that**. The composite (cycle, level_id) is the canonical identity — level_id alone collides across cycles.
+The server tolerates a missing `cycle` (defaults to top cycle) for legacy clients but **the PWA never relies on that**. The composite (cycle, level_id) is the canonical identity level_id alone collides across cycles.
 
 `invokeEdge` (see `src/lib/api/edge.ts`) throws `EdgeFunctionError` on any failure. A pure-network failure has `status === 0`; an HTTP failure has the actual status code.
 
@@ -149,12 +149,12 @@ The synthesized row matches the server's eventual canonical row close enough tha
 Level ids are 1..8 *within a cycle* and **NOT globally unique**. Once a device advances past cycle 1, level 3 of cycle 1 and level 3 of cycle 2 coexist. Every operation that touches a progress entry keys on (cycle, level_id):
 
 ```ts
-// path-repo.ts:439 — splicing a completion in
+// path-repo.ts:439 splicing a completion in
 const splicedEntries = current.entries.map((e) =>
   e.cycle === cycle && e.levelId === levelId ? completedPatched : e,
 );
 
-// path-repo.ts:446 — finding the next locked level
+// path-repo.ts:446 finding the next locked level
 const hasOtherCurrentInCycle = splicedEntries.some(
   (e) => e.status === "current" && e.cycle === cycle,
 );
@@ -166,7 +166,7 @@ Look at `src/stores/path-repo.ts:557-563` for the canonical selector. **If your 
 
 The queue is per-device strict FIFO via the monotonic `seq` field assigned at `enqueueProgressWrite` time. `nextSeq()` starts from `Date.now()` and increments, so seqs are roughly time-ordered across sessions and strictly monotonic within a tab.
 
-`completeLevel` writes two rows in one synchronous block: the `completed` for the just-finished level, then the `current` promotion for the next-locked sibling. Both share the same outer try/catch — but they enqueue separately, in order, so on replay the completion lands before the promotion.
+`completeLevel` writes two rows in one synchronous block: the `completed` for the just-finished level, then the `current` promotion for the next-locked sibling. Both share the same outer try/catch but they enqueue separately, in order, so on replay the completion lands before the promotion.
 
 ## 5. Drop policy
 
@@ -174,11 +174,11 @@ The queue is per-device strict FIFO via the monotonic `seq` field assigned at `e
 - **Network failure with attempts >= 5** → drop + snackbar (`progressQueuedSyncFailedSnack`).
 - **HTTP 4xx/5xx (non-network)** → drop + snackbar **immediately**. Leaving an unrecoverable row in the queue would block every subsequent write, since FIFO is mandatory.
 
-The snackbar copy is injected via `startProgressQueueRunner({ getCopy })` — the runner is non-React and can't call `t()` itself. See the i18n-add-string skill for the pattern.
+The snackbar copy is injected via `startProgressQueueRunner({ getCopy })` the runner is non-React and can't call `t()` itself. See the i18n-add-string skill for the pattern.
 
 ## 6. Flush triggers
 
-The runner wires three events on start (`startProgressQueueRunner` is idempotent — safe to call from layout effects on every mount):
+The runner wires three events on start (`startProgressQueueRunner` is idempotent safe to call from layout effects on every mount):
 
 ```ts
 window.addEventListener("online", () => kickProgressQueue());
@@ -190,7 +190,7 @@ kickProgressQueue(); // catch-up for items left from a prior session
 
 `kickProgressQueue()` is debounced via a 50 ms `setTimeout` so a flurry of events (e.g. `online` immediately followed by `visibilitychange`) coalesces into one drain pass.
 
-`drainOnce` re-checks `navigator.onLine === false` between every item — drop the queue and exit cleanly if the tab loses connectivity mid-pass.
+`drainOnce` re-checks `navigator.onLine === false` between every item drop the queue and exit cleanly if the tab loses connectivity mid-pass.
 
 ## 7. Boot interaction (the flicker hazard)
 
@@ -206,7 +206,7 @@ if (effectiveForceRefresh) {
       effectiveForceRefresh = false; // skip the network leg this boot
     }
   } catch {
-    // IDB inaccessible — assume empty and proceed.
+    // IDB inaccessible assume empty and proceed.
   }
 }
 ```
@@ -224,7 +224,7 @@ function upgradeIfNeeded(row: QueuedProgressWrite): QueuedProgressWrite {
 }
 ```
 
-The on-disk row is **deliberately not** rewritten — see the comment at lines 207–213. Persisting a converted copy would change the id (which encodes cycle), breaking the runner's `removeProgressWrite` call.
+The on-disk row is **deliberately not** rewritten see the comment at lines 207–213. Persisting a converted copy would change the id (which encodes cycle), breaking the runner's `removeProgressWrite` call.
 
 If you bump to **v3**, you must:
 
@@ -232,14 +232,14 @@ If you bump to **v3**, you must:
 2. Update `isQueuedProgressWrite` to accept `v === 1 | 2 | 3`.
 3. Extend `upgradeIfNeeded` to up-convert v1 AND v2 rows.
 4. Update `enqueueProgressWrite` to write `v: 3`.
-5. Decide if the id format changes — if yes, the runner's `removeProgressWrite(item.id)` still works (we use the row's own id), but external code that reconstructs ids by hand (none currently) would break.
+5. Decide if the id format changes if yes, the runner's `removeProgressWrite(item.id)` still works (we use the row's own id), but external code that reconstructs ids by hand (none currently) would break.
 6. **Do NOT** open a new IDB database. Bump within the existing store.
 
-`createStore(DB_NAME, STORE_NAME)` from `idb-keyval` doesn't allow adding object stores after v1, but it does allow adding fields to existing rows — the upgrade-on-read pattern is the only schema migration we need.
+`createStore(DB_NAME, STORE_NAME)` from `idb-keyval` doesn't allow adding object stores after v1, but it does allow adding fields to existing rows the upgrade-on-read pattern is the only schema migration we need.
 
 ## 9. Step-by-step "add a new queueable action" playbook
 
-1. **Confirm it's a progress mutation.** If it's an audio upload, a leaderboard write, or a profile update — **stop**. Those are at-most-once and don't belong in this queue. Open a new queue + runner pair if needed.
+1. **Confirm it's a progress mutation.** If it's an audio upload, a leaderboard write, or a profile update **stop**. Those are at-most-once and don't belong in this queue. Open a new queue + runner pair if needed.
 2. **Extend `LevelProgressStatus`** in `src/lib/content/models.ts` if your new action uses a new status value. Update the parser too.
 3. **Add the API call** in `src/lib/api/progress.ts` (or extend `setProgress` if it's a new status only). Always include `cycle`.
 4. **No queue-shape change is usually needed.** The existing `QueuedProgressWrite` already carries `(cycle, levelId, status)`. Only bump to v3 if you need a new field.
@@ -265,7 +265,7 @@ If you bump to **v3**, you must:
 
 - **Queueing on a 4xx.** The repo wrapper checks `status === 0` (network only) before enqueueing. A 409 from the backend should propagate to the caller, not silently queue.
 - **Keying on `levelId` alone.** Once cycle ≥ 2, you mutate the wrong row. Always `(cycle, levelId)`.
-- **Forgetting to write the cache.** `writeCachedProgress(updated)` after every state change — otherwise a reload reverts to the pre-action state.
+- **Forgetting to write the cache.** `writeCachedProgress(updated)` after every state change otherwise a reload reverts to the pre-action state.
 - **Calling `t()` inside the runner.** No React context. Use the `getCopy` callback pattern (see `progressDrainCopy` in `progress-queue-runner.ts:60-63`).
-- **Skipping the FIFO `stop` outcome.** Returning `continue` on a transient failure means the dependent next-row will land before the failed one lands eventually — leaderboard half-state.
+- **Skipping the FIFO `stop` outcome.** Returning `continue` on a transient failure means the dependent next-row will land before the failed one lands eventually leaderboard half-state.
 - **Sharing the IDB database with the audio queue.** Don't. Each queue gets its own DB (see §2b).

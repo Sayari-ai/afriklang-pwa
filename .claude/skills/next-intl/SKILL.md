@@ -5,7 +5,7 @@ description: i18n with next-intl v4 in App Router mode (no locale-based routing)
 
 # next-intl@^4.11.0 (App Router, no i18n routing)
 
-`next-intl` is the i18n library wired into this project. We run it in its **"Provide a locale" / "no i18n routing"** mode — the URL never contains the locale; instead a cookie (`afriklang.app_locale.v1`) drives `getRequestConfig`, mirroring the Flutter app's `AppLocaleController`. Switching locales calls `router.refresh()`, which re-runs Server Components, which re-reads the cookie, which re-resolves messages.
+`next-intl` is the i18n library wired into this project. We run it in its **"Provide a locale" / "no i18n routing"** mode the URL never contains the locale; instead a cookie (`afriklang.app_locale.v1`) drives `getRequestConfig`, mirroring the Flutter app's `AppLocaleController`. Switching locales calls `router.refresh()`, which re-runs Server Components, which re-reads the cookie, which re-resolves messages.
 
 ## When to use
 
@@ -117,7 +117,7 @@ Imported from `next-intl/server`:
 | `await getFormatter()`           | `{ dateTime, number, relativeTime, list }` | Server equivalent of `useFormatter()`.                                             |
 | `await getNow()` / `await getTimeZone()` | values from request config       | For SSR-stable "now".                                                                  |
 
-### Client-side (Client Components only — files marked `"use client"`)
+### Client-side (Client Components only files marked `"use client"`)
 
 Imported from `next-intl`:
 
@@ -141,7 +141,7 @@ t.raw(key): unknown                                              // returns the 
 t.has(key): boolean                                              // existence check
 ```
 
-ICU MessageFormat is the message syntax — see "Common patterns" below.
+ICU MessageFormat is the message syntax see "Common patterns" below.
 
 ### Plugin (`next-intl/plugin`)
 
@@ -244,11 +244,11 @@ f.relativeTime(thenDate, now);
 f.list(["Yoruba", "Lingala", "Wolof"], { type: "conjunction" });
 ```
 
-`Intl.*` underpins all of this — same option shapes as `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.ListFormat`.
+`Intl.*` underpins all of this same option shapes as `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.ListFormat`.
 
 ### Namespacing (we don't use it; here's how if you do)
 
-Current project keys are flat (`onboardingIntroTitle`, `homeTabProfile`, …) — chosen to mirror the Flutter `.arb` keys exactly. If you ever migrate to nested:
+Current project keys are flat (`onboardingIntroTitle`, `homeTabProfile`, …) chosen to mirror the Flutter `.arb` keys exactly. If you ever migrate to nested:
 
 ```json
 {
@@ -264,7 +264,7 @@ const t = useTranslations("Onboarding");
 t("introTitle");
 ```
 
-Don't half-migrate — pick one style per file.
+Don't half-migrate pick one style per file.
 
 ### Switching locale at runtime (this project's pattern)
 
@@ -280,7 +280,7 @@ return (override) => {
 };
 ```
 
-This is intentional — we don't need locale-prefixed URLs because the experience is single-user, mobile-first, and matches the Flutter app's runtime locale switch.
+This is intentional we don't need locale-prefixed URLs because the experience is single-user, mobile-first, and matches the Flutter app's runtime locale switch.
 
 ### Hydrating a client store with the server-resolved locale
 
@@ -301,17 +301,17 @@ useEffect(() => {
 ## Gotchas
 
 - **Server vs. Client API mismatch**: `useTranslations` only works in Client Components (it reads context). `getTranslations` only works in Server Components / Actions / Metadata (it `await`s request config). Mixing them up gives "useTranslations must be called inside NextIntlClientProvider" or "You're using a hook inside a Server Component".
-- **`Couldn't find next-intl config file`**: the plugin didn't run. In `next.config.ts` make sure `withNextIntl` wraps the config and that nothing else (a stray `module.exports = …`) clobbers `module.exports` first. We hit this earlier in the project — see the comment block at `next.config.ts:35-40`.
+- **`Couldn't find next-intl config file`**: the plugin didn't run. In `next.config.ts` make sure `withNextIntl` wraps the config and that nothing else (a stray `module.exports = …`) clobbers `module.exports` first. We hit this earlier in the project see the comment block at `next.config.ts:35-40`.
 - **`router.refresh()` is the only safe locale switch**: a hard `window.location.reload()` works but loses client React state (open sheets, recordings in progress). `router.refresh()` keeps state and re-runs Server Components only.
-- **Cookie must be set before `router.refresh()`**: `useSetAppLocale` does this in order — store first (which writes cookie sync), then refresh. If you reverse it, the request config reads the old cookie and you see no change.
-- **`SameSite=Lax`, `path=/`, 1-year `max-age`** is what `src/stores/app-locale.ts:62-70` writes. The path matters — without `path=/` the manifest endpoint and route handlers won't see the cookie.
+- **Cookie must be set before `router.refresh()`**: `useSetAppLocale` does this in order store first (which writes cookie sync), then refresh. If you reverse it, the request config reads the old cookie and you see no change.
+- **`SameSite=Lax`, `path=/`, 1-year `max-age`** is what `src/stores/app-locale.ts:62-70` writes. The path matters without `path=/` the manifest endpoint and route handlers won't see the cookie.
 - **Region subtags**: `Accept-Language: fr-CA,en;q=0.5` becomes `fr-ca` → primary tag `fr` → resolved as `fr`. See `src/i18n/locales.ts:32-36`. Don't add `fr-CA.json` expecting it to be picked up.
-- **Missing keys**: by default `t("missing.key")` returns the key string and logs in dev. Override via `getMessageFallback` / `onError` in either `getRequestConfig` (server) or `<NextIntlClientProvider>` (client) — keep them in sync.
+- **Missing keys**: by default `t("missing.key")` returns the key string and logs in dev. Override via `getMessageFallback` / `onError` in either `getRequestConfig` (server) or `<NextIntlClientProvider>` (client) keep them in sync.
 - **JSON typecheck**: TypeScript sees `messages` as `Record<string, string | …>`. For autocomplete on `t("…")` keys, set up TypeScript augmentation: declare `interface IntlMessages extends Messages` from `messages/en.json`. See <https://next-intl.dev/docs/workflows/typescript>.
-- **`suppressHydrationWarning` on `<body>`** in `src/app/layout.tsx:71` is for browser extensions injecting attributes, not for next-intl. Don't move it onto translated content — real translation mismatches MUST surface as hydration errors.
-- **App Router caching**: route segments using `getTranslations` are still statically rendered if the rest of the segment is static. Cookie / `headers()` reads in `request.ts` make routes dynamic — that's fine for this app (everything is per-user) but be aware before adding `getTranslations` to a marketing-style static page.
+- **`suppressHydrationWarning` on `<body>`** in `src/app/layout.tsx:71` is for browser extensions injecting attributes, not for next-intl. Don't move it onto translated content real translation mismatches MUST surface as hydration errors.
+- **App Router caching**: route segments using `getTranslations` are still statically rendered if the rest of the segment is static. Cookie / `headers()` reads in `request.ts` make routes dynamic that's fine for this app (everything is per-user) but be aware before adding `getTranslations` to a marketing-style static page.
 - **Don't import `next-intl/server` in a Client Component** and don't import `next-intl` hooks in a Server Component. The package even ships separate entry points (`react-server` vs `react-client`) so a wrong import errors at build time, but the error message can be cryptic.
-- **Plurals are by locale category, not English categories**: `one`, `few`, `many`, `other`, plus `=N` exact matches. French has different plural rules than English (e.g. `0` is singular in French) — let ICU handle it, don't hard-code `if (count === 1)`.
+- **Plurals are by locale category, not English categories**: `one`, `few`, `many`, `other`, plus `=N` exact matches. French has different plural rules than English (e.g. `0` is singular in French) let ICU handle it, don't hard-code `if (count === 1)`.
 
 ## References
 

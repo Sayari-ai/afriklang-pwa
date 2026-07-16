@@ -6,7 +6,7 @@
  * Renders an honest empty state until a real notifications backend
  * exists. The previous version showed three hard-coded *sample*
  * notifications (level unlocked / badge / rank climb) ported from the
- * Flutter PoC — fabricated content presented as real activity, which
+ * Flutter PoC fabricated content presented as real activity, which
  * erodes trust. Until the Phase-2 feed (streak reminders, rank
  * changes, new-cycle alerts) ships, an empty state is the truthful
  * render.

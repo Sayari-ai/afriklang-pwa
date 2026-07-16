@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Level screen — port of `lib/features/level/level_screen.dart`.
+ * Level screen port of `lib/features/level/level_screen.dart`.
  *
  * Sequences the level's questions one at a time. Each question has
  * three phases:
@@ -14,21 +14,21 @@
  *   - If consent has been revoked since onboarding, refuse with a
  *     snackbar (defence-in-depth: the consent gate already enforces
  *     this, but a user can revoke from Profile mid-level).
- *   - Advance to the next question, or — on the last one — call
+ *   - Advance to the next question, or on the last one call
  *     `usePathRepo.completeLevel(cycle, levelId)` and `router.replace`
  *     to `/level/${cycle}-${levelId}/complete?points=N`.
  *
  * Differences from Flutter:
  *   - No `permission_handler`/`AudioRecorder` adapters; we use the
  *     `WavRecorder` (Phase 5) which speaks AudioWorklet directly.
- *   - We don't write the WAV to a temp file — it lives in memory as a
+ *   - We don't write the WAV to a temp file it lives in memory as a
  *     Blob and is uploaded in-place. The filename is still constructed
  *     via `buildRecordingFilename()` so Sayari sees the canonical
  *     `${iso}_${uuid}_${stamp}_${topic}.wav` shape.
  *   - Playback uses an `<audio>` element with a fresh blob: URL per
  *     review session. The URL is revoked on phase change to release
  *     the blob.
- *   - Page-level `params` arrives async (Next 16) — unwrapped via
+ *   - Page-level `params` arrives async (Next 16) unwrapped via
  *     `React.use()`. We resolve the level definition + question list
  *     via `usePathRepo`, not via prop-drilling like Flutter.
  *
@@ -76,7 +76,7 @@ export default function LevelPage({
   // The `cycleLevel` segment is a composite `${cycle}-${levelId}` key
   // (e.g. `2-3`); see `lib/content/cycle-level.ts`. We tolerate the
   // legacy bare-integer form (`/level/3`) by falling back to cycle 1
-  // — that keeps any pre-multi-cycle deep-links and shared bookmarks
+  // that keeps any pre-multi-cycle deep-links and shared bookmarks
   // alive without a redirect dance.
   params: Promise<{ cycleLevel: string }>;
 }) {
@@ -100,7 +100,7 @@ export default function LevelPage({
   // filenames) and the level definition stay aligned.
   // The shape (`{ level, owningPathId }` with both nullable) is kept
   // single-shape across all branches so the React Compiler can preserve
-  // the memoization — early returns with constructor-literal objects
+  // the memoization early returns with constructor-literal objects
   // confuse its escape analysis.
   const { level, owningPathId } = useMemo(() => {
     let foundLevel: LevelDefinition | null = null;
@@ -124,7 +124,7 @@ export default function LevelPage({
   // here too.
   useEffect(() => {
     if (parsed === null) {
-      // Unparsable param — not even worth a snackbar with a level id.
+      // Unparsable param not even worth a snackbar with a level id.
       router.replace("/home");
       return;
     }
@@ -191,7 +191,7 @@ export default function LevelPage({
   useEffect(() => {
     // Warm the AudioWorklet HTTP cache so the first mic tap doesn't
     // wait on a 200–500 ms network round-trip. Safe to call on every
-    // mount — the helper dedupes via a marker <link> in <head>.
+    // mount the helper dedupes via a marker <link> in <head>.
     prewarmAudioWorklet();
     return () => {
       if (tickerRef.current) clearInterval(tickerRef.current);
@@ -242,7 +242,7 @@ export default function LevelPage({
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
-      // Drop the previous take (if any) — fresh slate for the new
+      // Drop the previous take (if any) fresh slate for the new
       // recording. The blob URL was created lazily in `onListen`, so
       // revoke it if it exists.
       if (playbackUrlRef.current) {
@@ -299,12 +299,12 @@ export default function LevelPage({
     if (phase === "recording") return;
 
     // CRITICAL: synchronous getUserMedia call inside the gesture
-    // handler. Don't await — just stash the promise. If the user
+    // handler. Don't await just stash the promise. If the user
     // denies, `startRecording` will surface the snackbar and reset
     // to idle.
     if (!pendingStreamRef.current) {
       pendingStreamRef.current = acquireMicStream();
-      // Swallow unhandledrejection — `startRecording` re-throws and
+      // Swallow unhandledrejection `startRecording` re-throws and
       // surfaces the snackbar with the proper i18n copy.
       pendingStreamRef.current.catch(() => {});
     }
@@ -358,8 +358,8 @@ export default function LevelPage({
   const onListen = () => {
     if (!recording) return;
     if (!audioRef.current) audioRef.current = new Audio();
-    // Build (or rebuild) a fresh blob: URL. The previous one — if
-    // any — is revoked first so we don't leak object URLs across
+    // Build (or rebuild) a fresh blob: URL. The previous one if
+    // any is revoked first so we don't leak object URLs across
     // multiple Listen taps.
     if (playbackUrlRef.current) {
       URL.revokeObjectURL(playbackUrlRef.current);
@@ -442,7 +442,7 @@ export default function LevelPage({
       return;
     }
 
-    // Upload OK — clear the local blob + URL.
+    // Upload OK clear the local blob + URL.
     if (playbackUrlRef.current) {
       URL.revokeObjectURL(playbackUrlRef.current);
       playbackUrlRef.current = null;
@@ -471,7 +471,7 @@ export default function LevelPage({
 
       // Persist completion (best-effort). If the network call to
       // `progress_set` fails, surface a snackbar but still navigate
-      // to the celebration screen — the next boot will reconcile
+      // to the celebration screen the next boot will reconcile
       // from the backend (Flutter has the same optimistic policy).
       // We capture `cycleComplete` from the repo's return value: when
       // true, the user just finished the last level of the current
@@ -510,7 +510,7 @@ export default function LevelPage({
       if (isPartial) params.set("partial", "1");
       if (cycleComplete) params.set("cycleComplete", "1");
       // Build the composite-key segment via the canonical formatter
-      // — never hand-concatenate. See `lib/content/cycle-level.ts`.
+      // never hand-concatenate. See `lib/content/cycle-level.ts`.
       const seg = formatCycleLevelParam({ cycle, levelId });
       router.replace(`/level/${seg}/complete?${params.toString()}`);
       return;
@@ -528,7 +528,7 @@ export default function LevelPage({
     // Cancel any in-flight recording / playback and clear local state
     // for the *current* question. Skipping never uploads.
     //
-    // Semantics changed: Skip now means "I don't know this word — give
+    // Semantics changed: Skip now means "I don't know this word give
     // me a different one for the same slot". When online we ask the
     // server for a fresh question (`question_swap`), splice it into
     // the cached bundle, and stay on the same step. When offline we
@@ -570,7 +570,7 @@ export default function LevelPage({
     });
 
     if (!online || !currentQ) {
-      // Offline (or defensive: no current question to swap) — keep the
+      // Offline (or defensive: no current question to swap) keep the
       // legacy advance-or-exit behaviour so the user is never stuck.
       fallbackSkip();
       return;
@@ -631,7 +631,7 @@ export default function LevelPage({
   /**
    * Original Skip behaviour preserved for the offline / swap-failed
    * fallback path: advance to next step (or finalise the level on the
-   * last step). Does NOT touch the recorder/mic state — `onSkip` has
+   * last step). Does NOT touch the recorder/mic state `onSkip` has
    * already cleaned those up before delegating here.
    */
   const fallbackSkip = () => {
@@ -640,7 +640,7 @@ export default function LevelPage({
       // End of the level reached via skip. If the user managed to
       // submit at least one recording, the level still counts as a
       // partial completion (half points). Otherwise nothing is
-      // persisted — they just leave the level untouched.
+      // persisted they just leave the level untouched.
       const submitted = submittedCountRef.current;
       if (submitted > 0) {
         void persistPartialAndExit(submitted);
@@ -707,7 +707,7 @@ export default function LevelPage({
    * TopBar back button. If the user has already submitted at least one
    * recording, treat the exit as a partial completion (half points,
    * level marked complete with N/total stars). Otherwise just leave
-   * the level — no progress recorded.
+   * the level no progress recorded.
    */
   const onBack = () => {
     const submitted = submittedCountRef.current;
@@ -723,7 +723,7 @@ export default function LevelPage({
   // ---------------------------------------------------------------
 
   if (!bundle || !level || !question) {
-    // Hydration race / deep link — show a transparent placeholder
+    // Hydration race / deep link show a transparent placeholder
     // while the effect above bounces us home.
     return <ScreenBackground overlay="strong"><div /></ScreenBackground>;
   }
@@ -826,7 +826,7 @@ function TopBar({
         onClick={onBack}
       />
       <div className="flex flex-1 justify-center">
-        {/* Step bar — 60% width to match Flutter's FractionallySizedBox.
+        {/* Step bar 60% width to match Flutter's FractionallySizedBox.
             On very narrow phones, give it more room so dots stay legible. */}
         <div className="w-3/5 phone-sm:w-4/5">
           <StepBar total={totalSteps} current={currentStep} />
@@ -846,7 +846,7 @@ function TopBar({
 
 function StepBar({ total, current }: { total: number; current: number }) {
   // Grass-green segments in a dark carved groove; the "head" segment
-  // carries a lit dot — game-kit spin on Flutter's `_StepBar`.
+  // carries a lit dot game-kit spin on Flutter's `_StepBar`.
   return (
     <div className="flex h-3 items-center gap-1.5">
       {Array.from({ length: total }).map((_, i) => {
@@ -986,7 +986,7 @@ function RecordButton({
       }}
     >
       <GrassRing />
-      {/* Wooden medallion base — decorative; taps land on the button. */}
+      {/* Wooden medallion base decorative; taps land on the button. */}
       <span className="pointer-events-none absolute inset-0">
         <WoodMedallion className="h-full w-full" />
       </span>

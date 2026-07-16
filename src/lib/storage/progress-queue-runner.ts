@@ -13,7 +13,7 @@
  *     per device, because the second write of a completion (`current`
  *     promotion of the next level) is *only* meaningful after the
  *     first write (`completed` for the just-finished level) lands.
- *     A failure on row N must stop the pass — if N+1 succeeded while
+ *     A failure on row N must stop the pass if N+1 succeeded while
  *     N was still pending, the leaderboard would show a half-applied
  *     state.
  *   - Different drop policy: a 4xx from the backend on a queued
@@ -30,7 +30,7 @@
  * Lifecycle parallels the audio runner:
  *
  *   startProgressQueueRunner({ getCopy })
- *     ↳ idempotent — second call refreshes copy only
+ *     ↳ idempotent second call refreshes copy only
  *     ↳ wires `online` + `visibilitychange`
  *     ↳ kicks once for items left from a prior session
  *
@@ -128,7 +128,7 @@ async function drainOnce(): Promise<void> {
         scheduleBackoffKick(item.attempts + 1);
         return;
       }
-      // outcome === "continue" — row was either uploaded or dropped;
+      // outcome === "continue" row was either uploaded or dropped;
       // either way, advance to the next item.
     }
   } finally {
@@ -167,7 +167,7 @@ async function replayItem(
     const isNetwork = e instanceof EdgeFunctionError && e.status === 0;
 
     if (!isNetwork) {
-      // Permanent backend rejection — drop and surface, otherwise the
+      // Permanent backend rejection drop and surface, otherwise the
       // FIFO would block forever on a row the server will never accept.
       await removeProgressWrite(item.id);
       surfaceDropped();

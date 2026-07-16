@@ -14,7 +14,7 @@
  *   - `"edit"` shows a "Cancel" button that just closes the sheet.
  *
  * Layout matches the existing `SheetShell` pattern in `profile/page.tsx`
- * — bottom-anchored card with a translucent scrim, drag-handle, body
+ * bottom-anchored card with a translucent scrim, drag-handle, body
  * lock, and Escape-to-close. We don't lift `SheetShell` into a shared
  * component yet because (a) only two callers, (b) profile's variant
  * has subtle styling differences (font weights on options) that would
@@ -22,7 +22,7 @@
  *
  * Persistence: the sheet writes the local store synchronously
  * (optimistic), then fires the backend `setNickname()`. On backend
- * failure we keep the local value and surface a snackbar — the
+ * failure we keep the local value and surface a snackbar the
  * server-side row is best-effort until the Edge Function ships.
  */
 
@@ -96,7 +96,7 @@ export function NicknameSheet({
 
     const deviceId = useDeviceIdentity.getState().deviceId;
     if (!deviceId) {
-      // Identity not hydrated yet — extremely unlikely on `/home` or
+      // Identity not hydrated yet extremely unlikely on `/home` or
       // `/profile`, both of which sit behind the route guard. Bail
       // gracefully rather than POSTing with `device_id: ""`.
       onClose();
@@ -154,7 +154,7 @@ export function NicknameSheet({
   })();
 
   // Soft cap the textarea via maxLength. This is on top of
-  // `validateNickname` (which is the authoritative gate) — without
+  // `validateNickname` (which is the authoritative gate) without
   // it, mobile keyboards happily let the user paste 5 KB of emoji.
   // Use a slightly larger limit than NICKNAME_MAX_LENGTH because
   // surrogate pairs count for 2 in `maxLength` but 1 in our

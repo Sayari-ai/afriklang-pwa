@@ -89,8 +89,8 @@ python tools/load_path_questions.py \
 ```
 
 Flags:
-- `--only-path N` — load just one path.
-- `--allow-file-urls` — permit `file://` URLs (only useful for offline
+- `--only-path N` load just one path.
+- `--allow-file-urls` permit `file://` URLs (only useful for offline
   staging tests; production rows must be public https URLs).
 
 The loader refuses to write `file://` URLs by default so you can't

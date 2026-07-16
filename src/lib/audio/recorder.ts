@@ -7,7 +7,7 @@
  * Why not `MediaRecorder`?
  *   `MediaRecorder` only emits compressed formats (webm/opus on
  *   Chromium, mp4/aac on Safari). The Sayari ingest expects
- *   uncompressed WAV PCM16 16 kHz mono — same shape Flutter produces.
+ *   uncompressed WAV PCM16 16 kHz mono same shape Flutter produces.
  *   We have to capture raw frames ourselves through an AudioWorklet.
  *
  * Pipeline:
@@ -63,7 +63,7 @@ export type RecorderErrorCode =
   | "unsupported"
   | "internal";
 
-/** Quick browser capability probe — call before opening the level screen. */
+/** Quick browser capability probe call before opening the level screen. */
 export function isAudioRecordingSupported(): boolean {
   if (typeof window === "undefined") return false;
   // Defensive checks: older browsers / locked-down WebViews can ship
@@ -149,7 +149,7 @@ export function acquireMicStream(): Promise<MediaStream> {
 /**
  * Prefetch the AudioWorklet module so that the first user tap on the
  * mic button doesn't pay the network + parse cost (200–500 ms on
- * phones). Safe to call multiple times — `<link rel="prefetch">` is
+ * phones). Safe to call multiple times `<link rel="prefetch">` is
  * the lightest-weight primitive that warms the HTTP cache without
  * needing an AudioContext (which would itself require a user
  * gesture on iOS).
@@ -228,7 +228,7 @@ export class WavRecorder {
     try {
       // The constructor `sampleRate` option is honoured on Chromium /
       // Firefox but ignored on Safari. We read back `ctx.sampleRate`
-      // before encoding and resample if needed — see `stop()`.
+      // before encoding and resample if needed see `stop()`.
       ctx = new AudioContext({ sampleRate: WAV_TARGET_SAMPLE_RATE });
       await ctx.audioWorklet.addModule(WORKLET_URL);
     } catch (e) {
@@ -255,7 +255,7 @@ export class WavRecorder {
     };
 
     source.connect(node);
-    // Do NOT connect the node to `ctx.destination` — that would feed
+    // Do NOT connect the node to `ctx.destination` that would feed
     // the user's voice back into their speakers (echo). The worklet is
     // a sink, the connection above is enough to drive `process()`.
 
@@ -264,7 +264,7 @@ export class WavRecorder {
     // already awaited above). The worklet's process() never runs in
     // suspended state, so the recording would silently capture zero
     // chunks and `stop()` would throw "No audio captured." Defensive
-    // resume — `getUserMedia` itself counts as an extending gesture
+    // resume `getUserMedia` itself counts as an extending gesture
     // so this almost always succeeds.
     if (ctx.state === "suspended") {
       try {

@@ -3,16 +3,16 @@ import { useId } from "react";
 import { GameColors } from "@/lib/colors";
 
 /**
- * RewardIllustration — hero artwork for the onboarding "Get rewarded"
+ * RewardIllustration hero artwork for the onboarding "Get rewarded"
  * page, replacing the old flat Dollar-Coin PNG.
  *
  * Glossy game-icon style (matches `glossy-icons.tsx`): a big gold
  * coin with an embossed star, two smaller coins floating behind,
  * a ground shadow, and twinkling sparkles (one purple, per the
- * pack's accent). Pure SVG — scalable, no binary asset, ~2 KB.
+ * pack's accent). Pure SVG scalable, no binary asset, ~2 KB.
  *
  * Motion: the whole piece bobs gently and the sparkles twinkle with
- * staggered delays — both gated behind `motion-safe:` so
+ * staggered delays both gated behind `motion-safe:` so
  * reduced-motion users get a static illustration.
  *
  * Colors are hex from `GameColors` because SVG presentation

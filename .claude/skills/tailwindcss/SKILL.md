@@ -1,11 +1,11 @@
 ---
 name: tailwindcss
-description: Tailwind CSS v4 (CSS-first, no JS config) — utility-first CSS framework consumed via the @tailwindcss/postcss plugin. USE FOR: writing utilities, defining custom theme tokens, adding @custom-variant / @utility, opacity modifiers, container queries, arbitrary values, dark-mode strategy, debugging unknown classes, migrating v3 patterns. DO NOT USE FOR: editing tailwind.config.js (does not exist in v4), v3-style @tailwind base/components/utilities directives, JIT safelist arrays, the `theme()` plugin API, or anything from `tailwindcss/plugin`.
+description: Tailwind CSS v4 (CSS-first, no JS config) utility-first CSS framework consumed via the @tailwindcss/postcss plugin. USE FOR: writing utilities, defining custom theme tokens, adding @custom-variant / @utility, opacity modifiers, container queries, arbitrary values, dark-mode strategy, debugging unknown classes, migrating v3 patterns. DO NOT USE FOR: editing tailwind.config.js (does not exist in v4), v3-style @tailwind base/components/utilities directives, JIT safelist arrays, the `theme()` plugin API, or anything from `tailwindcss/plugin`.
 ---
 
 # tailwindcss@^4 (+ @tailwindcss/postcss@^4)
 
-> **CRITICAL: This is Tailwind v4, not v3.** v4 is a full rewrite with a **CSS-first** config model. There is **no `tailwind.config.js`**. There are **no `@tailwind base; @tailwind components; @tailwind utilities;` directives**. Most LLM training data shows v3 — assume your instinct is wrong and check this doc first. Browser targets: Safari 16.4+, Chrome 111+, Firefox 128+.
+> **CRITICAL: This is Tailwind v4, not v3.** v4 is a full rewrite with a **CSS-first** config model. There is **no `tailwind.config.js`**. There are **no `@tailwind base; @tailwind components; @tailwind utilities;` directives**. Most LLM training data shows v3 assume your instinct is wrong and check this doc first. Browser targets: Safari 16.4+, Chrome 111+, Firefox 128+.
 
 ## When to use
 - Adding/styling any UI in this PWA (`src/app/**`, `src/components/**`).
@@ -17,7 +17,7 @@ description: Tailwind CSS v4 (CSS-first, no JS config) — utility-first CSS fra
 ## Setup in this project (verbatim)
 
 ### `postcss.config.mjs`
-The only PostCSS plugin is `@tailwindcss/postcss`. v4 handles `@import` resolution and vendor prefixing internally — **do not** add `postcss-import` or `autoprefixer`.
+The only PostCSS plugin is `@tailwindcss/postcss`. v4 handles `@import` resolution and vendor prefixing internally **do not** add `postcss-import` or `autoprefixer`.
 ```js
 const config = {
   plugins: {
@@ -34,7 +34,7 @@ export default config;
 /* Custom narrow-phone variant (≤379px). Use as `phone-sm:text-2xl`. */
 @custom-variant phone-sm (@media (max-width: 379px));
 
-/* Custom utility — Tailwind v4 ships no built-in `pb-safe`. */
+/* Custom utility Tailwind v4 ships no built-in `pb-safe`. */
 @utility pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
 }
@@ -70,7 +70,7 @@ import "./globals.css";
 }
 ```
 
-There is **no** `tailwind.config.js`, `tailwind.config.ts`, or `tailwind.config.mjs` in this repo — and there should not be one.
+There is **no** `tailwind.config.js`, `tailwind.config.ts`, or `tailwind.config.mjs` in this repo and there should not be one.
 
 ## API / feature reference
 
@@ -92,7 +92,7 @@ You can split the import for finer control:
 @import "tailwindcss/utilities.css" layer(utilities);
 ```
 
-### `@theme` — the new "config"
+### `@theme` the new "config"
 v4 configuration lives in CSS. Every `@theme` token becomes both a CSS variable on `:root` **and** a generator for matching utilities.
 
 ```css
@@ -160,7 +160,7 @@ v4 uses **native CSS cascade layers**. The default order is:
 ```css
 @layer theme, base, components, utilities;
 ```
-Use `@layer base { … }` for your own resets/element styles. **Do not** put utilities inside `@layer utilities` — use `@utility` instead.
+Use `@layer base { … }` for your own resets/element styles. **Do not** put utilities inside `@layer utilities` use `@utility` instead.
 
 ### Automatic source detection
 v4 automatically scans the project from the location of the CSS file: it follows `.gitignore`, ignores binary/lockfile/vendor paths, and treats every other text file as a potential class source. **There is no `content: [...]` array.** No purge, no safelist config.
@@ -181,7 +181,7 @@ Default v4 behaviour uses the `prefers-color-scheme` media query under the `dark
 /* Attribute strategy (preferred, plays nicely with SSR) */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 ```
-This project currently has no dark mode — ship a `@custom-variant dark` block in `globals.css` if/when needed.
+This project currently has no dark mode ship a `@custom-variant dark` block in `globals.css` if/when needed.
 
 ### Opacity modifier syntax (universal)
 ```html
@@ -233,14 +233,14 @@ Built-in animations remain `animate-spin`, `animate-ping`, `animate-pulse`, `ani
 ```
 Now `animate-wiggle` exists. Pair with `motion-safe:` / `motion-reduce:` to honour user preferences.
 
-### Container queries — deeper look
+### Container queries deeper look
 ```html
 <article class="@container">
   <header class="@sm:flex @md:gap-6 @lg:grid-cols-2">…</header>
   <p class="@max-md:text-sm">…</p>
 </article>
 ```
-- Default named sizes (`@sm`, `@md`, …) come from `--container-*` tokens — by default the same xs→7xl scale as widths.
+- Default named sizes (`@sm`, `@md`, …) come from `--container-*` tokens by default the same xs→7xl scale as widths.
 - Arbitrary container sizes: `@[28rem]:flex`.
 - Named containers (multiple nested `@container`): `@container/sidebar` then `@md/sidebar:hidden`.
 
@@ -251,7 +251,7 @@ v4 auto-scans following these rules:
 - Skips files whose extension matches a known binary/lockfile/vendor list.
 
 If a class isn't being generated:
-1. **Don't construct class names dynamically** at the substring level — Tailwind matches *whole* class strings in source. `` `bg-${color}-500` `` won't be detected. Use full literals (`bg-red-500`, `bg-blue-500`) or `@source inline("bg-{red,blue,green}-500")`.
+1. **Don't construct class names dynamically** at the substring level Tailwind matches *whole* class strings in source. `` `bg-${color}-500` `` won't be detected. Use full literals (`bg-red-500`, `bg-blue-500`) or `@source inline("bg-{red,blue,green}-500")`.
 2. Make sure the file is checked into git (untracked files matching `.gitignore` rules may be skipped).
 3. Add `@source "../path"` for files outside the project root (e.g. a sibling design-system package).
 
@@ -304,7 +304,7 @@ Not used in this project (we don't have CSS Modules), but if a future component 
 2. Mirror it inside `@theme inline { --color-<name>: var(--color-<name>); }`.
 3. The class `bg-<name>`, `text-<name>`, `border-<name>`, etc. exist immediately.
 
-### Conditional classes (with `clsx` style helpers — none installed yet)
+### Conditional classes (with `clsx` style helpers none installed yet)
 ```tsx
 <div className={`rounded-lg p-4 ${isActive ? "bg-record-active" : "bg-record-idle"}`} />
 ```
@@ -318,7 +318,7 @@ Not used in this project (we don't have CSS Modules), but if a future component 
 
 ## Gotchas (v3 → v4 traps)
 
-1. **No `tailwind.config.js`.** If you create one, Tailwind v4 ignores it unless you opt in with `@config "./tailwind.config.js"` in CSS — and even then `corePlugins`, `safelist`, and `separator` are unsupported. Don't introduce one.
+1. **No `tailwind.config.js`.** If you create one, Tailwind v4 ignores it unless you opt in with `@config "./tailwind.config.js"` in CSS and even then `corePlugins`, `safelist`, and `separator` are unsupported. Don't introduce one.
 2. **No `@tailwind base/components/utilities;`.** Use the single `@import "tailwindcss";`.
 3. **No JS plugin API for the common case.** No `tailwindcss/plugin`, no `addUtilities()`. Use `@utility`, `@custom-variant`, `@theme` from CSS.
 4. **No `content: [...]` / `safelist`.** Source detection is automatic; safelist via `@source inline("…")` if absolutely needed.
@@ -337,12 +337,12 @@ Not used in this project (we don't have CSS Modules), but if a future component 
 12. **Gradients keep prior stops across variants.** `dark:from-blue-500` no longer wipes `to-yellow-400`. Use `dark:via-none` etc. to "unset".
 13. **`hover:` only fires on devices with `(hover: hover)`.** Touch tap no longer triggers `hover:`. If you need legacy behaviour: `@custom-variant hover (&:hover);`.
 14. **`space-x-*` / `space-y-*` / `divide-*` selectors changed** to `> :not(:last-child)`. Prefer `flex gap-*` going forward.
-15. **`@apply` doesn't work in CSS-Modules / Vue `<style>` blocks** without `@reference "../../app.css";` first. In this Next.js project we don't use CSS Modules — keep utilities in JSX className strings.
+15. **`@apply` doesn't work in CSS-Modules / Vue `<style>` blocks** without `@reference "../../app.css";` first. In this Next.js project we don't use CSS Modules keep utilities in JSX className strings.
 16. **No Sass/Less/Stylus.** Tailwind v4 IS your preprocessor. This repo does not use them.
 17. **Important modifier moved to the end**: `bg-red-500!`, not `!bg-red-500` (old form still parses but is deprecated).
 18. **Removed deprecated utilities**: `bg-opacity-*`, `text-opacity-*`, `flex-shrink-*`, `flex-grow-*`, `overflow-ellipsis`, `decoration-slice/clone`. Use the modern equivalents (`bg-black/50`, `shrink-*`, `grow-*`, `text-ellipsis`, `box-decoration-*`).
 19. **`theme()` function in CSS**: prefer the generated CSS variable (`var(--color-red-500)`); when you must use `theme()`, pass the variable name (`theme(--breakpoint-xl)`), not the dotted v3 path (`theme(screens.xl)`).
-20. **Browser support** is modern-only — `@property`, `color-mix()`, cascade layers. Don't try to support IE11/Safari 15.
+20. **Browser support** is modern-only `@property`, `color-mix()`, cascade layers. Don't try to support IE11/Safari 15.
 
 ## References
 - Project setup: `src/app/globals.css`, `postcss.config.mjs`, `package.json`.

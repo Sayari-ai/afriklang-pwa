@@ -3,12 +3,12 @@ import { useId, type CSSProperties, type ReactNode } from "react";
 import { GameColors } from "@/lib/colors";
 
 /**
- * Glossy "2D game icons" — gold + purple feature icons in the style
+ * Glossy "2D game icons" gold + purple feature icons in the style
  * of the reference pack (lock, key, hourglass, shield, message,
  * trophy): fat bevelled shapes, warm gold gradients with bronze
  * outlines, purple accents, blue glass, white gloss highlights.
  *
- * These are FEATURE icons (empty states, headers, badges) — not tiny
+ * These are FEATURE icons (empty states, headers, badges) not tiny
  * UI glyphs. Pair them with <GameIconHalo> to reproduce the pack's
  * soft lavender disc.
  *
@@ -118,7 +118,7 @@ export function GameKey({ className, style }: IconProps) {
         </linearGradient>
       </defs>
       <g transform="rotate(35 48 48)">
-        {/* Ring head — bronze edge, gold body. */}
+        {/* Ring head bronze edge, gold body. */}
         <circle
           cx="48"
           cy="20"
@@ -218,7 +218,7 @@ export function GameHourglass({ className, style }: IconProps) {
         stroke={GameColors.glassDeep}
         strokeWidth="1.6"
       />
-      {/* Sand — settled top pile, falling stream, bottom pile. */}
+      {/* Sand settled top pile, falling stream, bottom pile. */}
       <path
         d="M40 26 H56 C53 32 49 35.5 48 37.5 C47 35.5 43 32 40 26 Z"
         fill={GameColors.starOrange}

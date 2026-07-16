@@ -4,7 +4,7 @@ import { StarRating } from "./star-rating";
 import { WoodMedallion } from "./wood-medallion";
 
 /**
- * LevelBadge — the mockup's circular wooden level medallion, used as
+ * LevelBadge the mockup's circular wooden level medallion, used as
  * the map node. Fills its parent box (the map reserves an 80×80 slot)
  * and decorates outward: stars overhang the top on completed levels,
  * the green padlock overlaps the corner on locked ones.

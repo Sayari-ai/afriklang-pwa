@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Level complete screen — port of `lib/features/level/level_complete_screen.dart`.
+ * Level complete screen port of `lib/features/level/level_complete_screen.dart`.
  *
  * Shown after the last question of a level uploads successfully. The
  * actual `usePathRepo.completeLevel(...)` call happens in the level
@@ -27,7 +27,7 @@
  *                         offline-aware enable state for the CTA.
  *
  * Hardware back / browser back: indistinguishable from the "Next
- * mission" CTA in our case — both routes back to `/home`. The Flutter
+ * mission" CTA in our case both routes back to `/home`. The Flutter
  * version uses `PopScope` to force a `pop(true)` so the home callback
  * runs; we don't need that ceremony because completion is already
  * persisted before we arrive.
@@ -36,12 +36,12 @@
  *   - Same dark scrim background (`overlay="strong"` → 0xCC overlay).
  *   - Massive amber `+N` numeral, white headline, purpose-driven
  *     encouragement line (every recording contributes to the language
- *     dataset — honest copy, no monetary promise).
+ *     dataset honest copy, no monetary promise).
  *   - All-green step bar pinned to the top.
  *   - White pill CTA at the bottom. Label depends on the variant:
  *     "Next mission" for the per-level variant, "Start next cycle"
  *     for the cycle-complete variant.
- *   - CSS-only confetti burst near the top — 24 particles, 6 brand
+ *   - CSS-only confetti burst near the top 24 particles, 6 brand
  *     colors, 3-second one-shot animation. No npm dep.
  */
 
@@ -62,7 +62,7 @@ import { requestPersistentStorage } from "@/lib/storage/persistence";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
 
-// Confetti palette — game-kit greens, golds and wood oranges.
+// Confetti palette game-kit greens, golds and wood oranges.
 const CONFETTI_COLORS = GameColors.confetti;
 
 export default function LevelCompletePage({
@@ -87,11 +87,11 @@ export default function LevelCompletePage({
   // renders the first `submitted` segments green and the rest grey, so
   // the user can see at a glance that they skipped some images. Falls
   // back to a full bar (the legacy behaviour) when the params are
-  // missing — e.g. older URLs from before partial credit existed.
+  // missing e.g. older URLs from before partial credit existed.
   const isPartial = search.get("partial") === "1";
   const submitted = parseIntSafe(search.get("submitted"), total);
 
-  // Star rating for the hero — same 3-slot mapping the map badges use:
+  // Star rating for the hero same 3-slot mapping the map badges use:
   // clean sweep → 3 stars, partial → ceil(ratio × 3), min 1.
   const earnedStars = isPartial
     ? Math.max(
@@ -110,7 +110,7 @@ export default function LevelCompletePage({
   const isCycleComplete = search.get("cycleComplete") === "1";
 
   // Track online/offline so the cycle-complete CTA can disable when
-  // the device is offline — `advanceCycle` POSTs to the backend and
+  // the device is offline `advanceCycle` POSTs to the backend and
   // we don't queue path-assignment writes (the backend issues a new
   // cycle synchronously, so there's nothing meaningful to defer).
   // `navigator.onLine` is unreliable on its own (some browsers stay
@@ -135,7 +135,7 @@ export default function LevelCompletePage({
   // round-trip can't be re-triggered by an impatient double-tap.
   const [advancing, setAdvancing] = useState(false);
 
-  // Phase-1 durability: the user just invested real effort — ask the
+  // Phase-1 durability: the user just invested real effort ask the
   // browser to protect our storage bucket from best-effort eviction.
   // One-shot per session, silently no-ops where unsupported.
   useEffect(() => {
@@ -144,7 +144,7 @@ export default function LevelCompletePage({
 
   // Headline variants. For cycle-complete we want a punchier, more
   // celebratory string ("Path complete!") so the user understands the
-  // scope of what they just achieved — not just "another level done".
+  // scope of what they just achieved not just "another level done".
   const headline = isCycleComplete
     ? t("levelCompleteCycleTitle")
     : t("levelCompleteCongrats");
@@ -197,13 +197,13 @@ export default function LevelCompletePage({
           </div>
         </div>
 
-        {/* Confetti — absolutely positioned over the top of the
+        {/* Confetti absolutely positioned over the top of the
             content so it can rain down behind the points numeral. */}
         <ConfettiBurst />
 
         {/* Centered hero block (stars + points + headline + copy). */}
         <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-          {/* Earned stars — same 3-slot mapping as the map badges. */}
+          {/* Earned stars same 3-slot mapping as the map badges. */}
           <StarRating filled={earnedStars} size={52} />
           <div className="h-6" />
           <div className="flex items-center justify-center gap-3">
@@ -228,7 +228,7 @@ export default function LevelCompletePage({
             style={{ lineHeight: 1.4, textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
           >
             {/*
-              Cycle-complete variant gets its own subtitle — the
+              Cycle-complete variant gets its own subtitle the
               per-level encouragement copy doesn't fit the "you
               finished the whole path" beat.
             */}
@@ -239,7 +239,7 @@ export default function LevelCompletePage({
         </div>
 
         {/* CTA. Variant-dependent label + handler. Wooden game button
-            — disabled while `advancing` (cycle-complete only) so the
+            disabled while `advancing` (cycle-complete only) so the
             user can't double-submit a `paths_assign`. */}
         <div className="flex flex-col gap-5 px-6 pb-6">
           {/* Add-to-home-screen offer at the peak-motivation moment.
@@ -306,11 +306,11 @@ function AllGreenStepBar({ total, submitted }: { total: number; submitted: numbe
  * 24 small confetti rectangles fall from the top center, each with a
  * pre-randomised horizontal drift, rotation, color, and delay. The
  * animation runs once (no `infinite`) so the burst settles after ~3 s
- * and stays static — no JS rAF loop and no `confetti` dep.
+ * and stays static no JS rAF loop and no `confetti` dep.
  *
  * We cannot use `Math.random()` during render under React 19's
  * `react-hooks/purity` rule, so the random pattern is computed via a
- * tiny seedable LCG keyed on the particle index — deterministic, no
+ * tiny seedable LCG keyed on the particle index deterministic, no
  * lint complaints, and visually identical to a fresh random per mount.
  */
 function ConfettiBurst() {
@@ -380,7 +380,7 @@ interface ConfettiParticle {
 function buildParticles(count: number): ConfettiParticle[] {
   const out: ConfettiParticle[] = [];
   // Seedable LCG (numerical recipes constants). Deterministic across
-  // mounts so the visual is identical every time — fine for a
+  // mounts so the visual is identical every time fine for a
   // celebration burst.
   let seed = 0x12345678;
   const next = () => {

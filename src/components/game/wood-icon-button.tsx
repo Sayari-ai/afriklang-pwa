@@ -9,7 +9,7 @@ import { GrassRing } from "./grass";
 import { WoodMedallion } from "./wood-medallion";
 
 /**
- * WoodIconButton — the mockup's round wooden icon buttons (home,
+ * WoodIconButton the mockup's round wooden icon buttons (home,
  * gear, arrows). A wobbly wood medallion nested in grass with a
  * green lucide glyph on top.
  *
@@ -22,7 +22,7 @@ import { WoodMedallion } from "./wood-medallion";
 export interface WoodIconButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "className"> {
   icon: LucideIcon;
-  /** Accessible name — required, icon-only button. */
+  /** Accessible name required, icon-only button. */
   label: string;
   /** Outer size in px (medallion + grass fit inside). */
   size?: number;

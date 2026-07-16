@@ -11,8 +11,8 @@ import { GameColors } from "@/lib/colors";
  * (dark blades behind, light blades in front) that gets positioned,
  * rotated, and scaled by two arrangement helpers:
  *
- *   - <GrassRing />  — clumps around a circle (medallions, icon buttons)
- *   - <GrassEdge />  — clumps along the edges of a pill/panel
+ *   - <GrassRing />  clumps around a circle (medallions, icon buttons)
+ *   - <GrassEdge />  clumps along the edges of a pill/panel
  *
  * Colors are hex from `GameColors` (not CSS vars) because SVG
  * presentation attributes don't resolve `var()`.

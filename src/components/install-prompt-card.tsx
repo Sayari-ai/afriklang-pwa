@@ -3,10 +3,10 @@
 /**
  * Add-to-home-screen offer card (Phase 1 of the retention roadmap).
  *
- * Rendered inline on the level-complete celebration screen — the
+ * Rendered inline on the level-complete celebration screen the
  * moment of peak motivation and the moment the user has something
  * worth protecting (their identity is device-local storage; installing
- * exempts it from Safari's 7-day eviction — see `install-prompt.ts`).
+ * exempts it from Safari's 7-day eviction see `install-prompt.ts`).
  *
  * Behaviour by platform:
  *   * Chromium with a captured `beforeinstallprompt`: the CTA replays

@@ -4,7 +4,7 @@ import { GrassEdge } from "./grass";
 import { RibbonBanner } from "./ribbon";
 
 /**
- * WoodPanel — the mockup's big wooden board: dark carved rim, lit
+ * WoodPanel the mockup's big wooden board: dark carved rim, lit
  * plank face with subtle grain streaks, grass poking out around the
  * edges, and an optional green ribbon title banner overlapping the
  * top edge.
@@ -56,7 +56,7 @@ export function WoodPanel({
               "inset 0 3px 0 rgba(255,235,200,0.35), inset 0 -5px 8px rgba(0,0,0,0.18)",
           }}
         />
-        {/* Grain streaks — stretchy, clipped to the face. */}
+        {/* Grain streaks stretchy, clipped to the face. */}
         <svg
           aria-hidden="true"
           viewBox="0 0 300 200"

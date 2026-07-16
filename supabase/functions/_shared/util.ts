@@ -2,7 +2,7 @@
 //
 // All four functions:
 //   * accept anon-key invocations from the Flutter app (verified by Supabase
-//     gateway via the JWT/anon header — no extra check needed here);
+//     gateway via the JWT/anon header no extra check needed here);
 //   * use the SERVICE_ROLE_KEY internally so they can bypass RLS;
 //   * return JSON with consistent CORS headers.
 

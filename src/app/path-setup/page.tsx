@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Path-setup screen — port of `lib/features/onboarding/path_setup_screen.dart`.
+ * Path-setup screen port of `lib/features/onboarding/path_setup_screen.dart`.
  *
  * Drives the path-repository boot (assign + getPath + getProgress with
  * a localStorage cache fast-path) and shows either a loading spinner
@@ -41,14 +41,14 @@ export default function PathSetupPage() {
 
   // Boot routine. Pulled out into a stable callback so the retry
   // button can re-invoke it. Note that we intentionally do NOT reset
-  // `stage` to loading at the top — the synchronous setState would
+  // `stage` to loading at the top the synchronous setState would
   // trip `react-hooks/set-state-in-effect` on first mount. Instead
   // each entry point flips to loading itself just before calling
   // `start()`. Initial state is already loading, so the cold-start
   // path is a no-op.
   const start = useCallback(async () => {
     // Same short-circuit as `path_setup_screen.dart:47-53`. On the
-    // web a missing config is just as fatal — the Supabase client
+    // web a missing config is just as fatal the Supabase client
     // never gets constructed.
     if (!isSupabaseConfigured) {
       setStage({
@@ -72,7 +72,7 @@ export default function PathSetupPage() {
   // Kick off boot once on mount.
   //
   // We wrap in `queueMicrotask` to keep the synchronous setState
-  // inside the config-missing branch out of the effect body proper —
+  // inside the config-missing branch out of the effect body proper 
   // otherwise `react-hooks/set-state-in-effect` flags it. The boot
   // itself is async anyway; deferring by a microtask is invisible.
   useEffect(() => {
@@ -125,7 +125,7 @@ function ErrorBody({
   const t = useTranslations();
   return (
     <div className="flex w-full max-w-sm flex-col items-stretch gap-4 text-center">
-      {/* Cloud-off icon — inline SVG so we don't pull a per-icon dep
+      {/* Cloud-off icon inline SVG so we don't pull a per-icon dep
           for one screen. */}
       <svg
         viewBox="0 0 24 24"
@@ -166,7 +166,7 @@ function ErrorBody({
 }
 
 function Spinner() {
-  // 48 px cream ring with a transparent quadrant — pure CSS so we
+  // 48 px cream ring with a transparent quadrant pure CSS so we
   // don't drag in another dependency.
   return (
     <span

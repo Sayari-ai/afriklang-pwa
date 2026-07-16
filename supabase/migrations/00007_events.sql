@@ -1,7 +1,7 @@
 -- Product analytics events (Phase 0 of the retention roadmap).
 --
 -- A minimal, privacy-respecting event log keyed on the same anonymous
--- device UUID every other table uses. No PII, no fingerprinting — just
+-- device UUID every other table uses. No PII, no fingerprinting just
 -- named product events with a small JSON props bag, timestamped
 -- server-side. This is what makes retention measurable at all:
 --   * DAU / WAU            → count(distinct device_id) by day/week
@@ -12,7 +12,7 @@
 --   * feature usage        → skip_used, cycle_advance, install_* ...
 --
 -- Design notes:
---   * NO foreign key to device_paths — events legitimately fire before
+--   * NO foreign key to device_paths events legitimately fire before
 --     a path is assigned (app_open on first launch, onboarding steps),
 --     and device_paths' PK is composite (device_id, cycle) anyway.
 --   * `user_id` is a forward-compatibility column for the upcoming

@@ -5,14 +5,14 @@ description: The dual-API Zustand idiom used by every store in this project. Sto
 
 # Zustand store pattern (v5)
 
-Every store in `src/stores/` follows the same shape so consumers can rely on consistent ergonomics. This is a cross-cutting convention — break it only with a comment explaining why.
+Every store in `src/stores/` follows the same shape so consumers can rely on consistent ergonomics. This is a cross-cutting convention break it only with a comment explaining why.
 
 Reference implementations:
 
-- `src/stores/snackbar.ts` — minimal, no persistence (~55 lines)
-- `src/stores/device-identity.ts` — read-or-create persistence (~78 lines)
-- `src/stores/consent.ts` — manual `hydrate()` + `hydrated` flag (~70 lines)
-- `src/stores/path-repo.ts` — full lifecycle, async actions, cross-store calls (~570 lines)
+- `src/stores/snackbar.ts` minimal, no persistence (~55 lines)
+- `src/stores/device-identity.ts` read-or-create persistence (~78 lines)
+- `src/stores/consent.ts` manual `hydrate()` + `hydrated` flag (~70 lines)
+- `src/stores/path-repo.ts` full lifecycle, async actions, cross-store calls (~570 lines)
 
 ## 1. Standard shape
 
@@ -27,7 +27,7 @@ interface FooState {
   // Derived flags (boot-gates, loading, error)
   hydrated: boolean;
   error: string | null;
-  // Actions — defined inline as method-style fields
+  // Actions defined inline as method-style fields
   increment: () => void;
   loadFromBackend: () => Promise<void>;
   reset: () => void;
@@ -82,41 +82,41 @@ useFoo.setState({ bar: 42 });
 
 Examples in the codebase:
 
-- `src/lib/storage/progress-queue-runner.ts:50,118,190` — `useDeviceIdentity.getState()` and `useSnackbar.getState()` from a non-React module.
-- `src/app/(app)/level/[cycleLevel]/page.tsx:425,435,518` — `useConsent.getState()`, `useDeviceIdentity.getState()`, `usePathRepo.getState().completeLevel(...)` inside event handlers (technically within a React tree but called imperatively, not reactively).
+- `src/lib/storage/progress-queue-runner.ts:50,118,190` `useDeviceIdentity.getState()` and `useSnackbar.getState()` from a non-React module.
+- `src/app/(app)/level/[cycleLevel]/page.tsx:425,435,518` `useConsent.getState()`, `useDeviceIdentity.getState()`, `usePathRepo.getState().completeLevel(...)` inside event handlers (technically within a React tree but called imperatively, not reactively).
 
-## 3. Selectors — avoid the v5 footgun
+## 3. Selectors avoid the v5 footgun
 
 Zustand v5 removed the equality-function default. **Object selectors re-render on every state change**, even if the slice didn't change:
 
 ```ts
-// BAD — re-renders whenever ANY field of the store changes
+// BAD re-renders whenever ANY field of the store changes
 const { bar, baz } = useFoo((s) => ({ bar: s.bar, baz: s.baz }));
 ```
 
 Two correct patterns:
 
 ```ts
-// GOOD — one selector per primitive
+// GOOD one selector per primitive
 const bar = useFoo((s) => s.bar);
 const baz = useFoo((s) => s.baz);
 ```
 
 ```ts
-// GOOD — useShallow when you must return an object
+// GOOD useShallow when you must return an object
 import { useShallow } from "zustand/shallow";
 const { bar, baz } = useFoo(useShallow((s) => ({ bar: s.bar, baz: s.baz })));
 ```
 
-Returning `s` directly (no selector) re-renders on every change — never do this.
+Returning `s` directly (no selector) re-renders on every change never do this.
 
-## 4. Persistence — manual, not `persist()` middleware
+## 4. Persistence manual, not `persist()` middleware
 
 This project does **not** use Zustand's `persist()` middleware. We use `safeStorage` (a thin `localStorage` wrapper that no-ops on the server) for synchronous primitive persistence. Reasons:
 
 - `persist()` rehydrates *asynchronously* even from `localStorage`, which means there's a frame where `hydrated === false` and components flicker. Manual reads are sync.
 - The legacy Flutter app reads/writes the same keys with raw `SharedPreferences` shapes; mirroring that mapping is easier with explicit `safeStorage.getItem(StorageKeys.foo)` calls.
-- IDB-backed persistence (the progress queue, audio queue) lives in `src/lib/storage/` as plain async modules — Zustand only mirrors the in-memory view.
+- IDB-backed persistence (the progress queue, audio queue) lives in `src/lib/storage/` as plain async modules Zustand only mirrors the in-memory view.
 
 ### a. Synchronous read on store creation
 
@@ -167,7 +167,7 @@ function ConsentGate({ children }: { children: React.ReactNode }) {
 }
 ```
 
-The boot-gate is critical because the initial server render has `hydrated: false`, so the first client paint must match. Only flip `hydrated: true` inside an effect — never inline during render.
+The boot-gate is critical because the initial server render has `hydrated: false`, so the first client paint must match. Only flip `hydrated: true` inside an effect never inline during render.
 
 ## 5. Reset / testing
 
@@ -193,7 +193,7 @@ const deviceId = useDeviceIdentity.getState().ensure();
 useDeviceIdentity.getState().rotate();
 ```
 
-Same rule for non-store modules calling stores — see `progress-queue-runner.ts:118,190`.
+Same rule for non-store modules calling stores see `progress-queue-runner.ts:118,190`.
 
 ## 7. Method-style actions vs free functions
 
@@ -230,7 +230,7 @@ Use a free function when:
    - Trivial single value → sync read in the initial state object (pattern §4a).
    - Multiple fields or async source → `hydrate()` + `hydrated` boot-gate (pattern §4b). Add a `<XxxGate>` wrapper or call `hydrate()` from a top-level effect.
    - Add a key to `src/lib/storage-keys.ts` rather than hardcoding the string.
-5. **Snackbar integration.** If the action surfaces user-facing errors, accept the message as a parameter — the store cannot call `t()` itself. The caller does:
+5. **Snackbar integration.** If the action surfaces user-facing errors, accept the message as a parameter the store cannot call `t()` itself. The caller does:
 
    ```tsx
    try {
@@ -241,9 +241,9 @@ Use a free function when:
    ```
 
    See `src/app/(app)/level/[cycleLevel]/page.tsx:524-528` for the canonical shape.
-6. **Cross-store calls** — always `useOther.getState()`, never `import { useOther }` and call as a hook.
+6. **Cross-store calls** always `useOther.getState()`, never `import { useOther }` and call as a hook.
 7. **Test the dual API.** Open the store file and confirm both `useFoo((s) => s.bar)` and `useFoo.getState().bar` work. If the action depends on React context (it shouldn't), refactor.
-8. **Verify** — run the triad (see `build-verify` skill):
+8. **Verify** run the triad (see `build-verify` skill):
 
    ```bash
    npx tsc --noEmit && npx eslint . && npx next build --webpack

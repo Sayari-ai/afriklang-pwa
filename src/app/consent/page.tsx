@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Consent screen — port of `lib/features/consent/consent_screen.dart`.
+ * Consent screen port of `lib/features/consent/consent_screen.dart`.
  *
  * One-time gate after path-setup. The app's whole point is recording
- * voice, so there is no in-app "decline and continue" mode — but the
+ * voice, so there is no in-app "decline and continue" mode but the
  * gate is honest about that instead of silent:
  *
  *   - Four bullets explain what the user is agreeing to.
@@ -12,7 +12,7 @@
  *     nothing is recorded or uploaded until they agree, and that they
  *     can leave and come back anytime (autonomy without a fake
  *     alternative path).
- *   - The former "18+" bullet is now an *active* checkbox — consent
+ *   - The former "18+" bullet is now an *active* checkbox consent
  *     to the age term is confirmed, not just displayed. The "I agree"
  *     CTA stays disabled until it's ticked.
  *
@@ -23,7 +23,7 @@
  *     to `/home` from here, but skipping that round-trip avoids a
  *     visible re-render flash.
  *
- * `_busy` mirrors the Flutter state — guards against double-taps. The
+ * `_busy` mirrors the Flutter state guards against double-taps. The
  * `grant()` call is synchronous on the web (writes to localStorage),
  * but we still flip the busy flag so the spinner shows for one frame
  * and the user sees feedback. The `router.replace` is what actually
@@ -51,8 +51,8 @@ export default function ConsentPage() {
   // Re-entry guard. Mirrors the onboarding screen's: a returning user
   // who manually navigates to `/consent` after granting should be sent
   // straight to `/home`, not shown the (mandatory) gate again. We
-  // can't read `granted` synchronously during render — the store is
-  // hydrated by `<AppHydration>` in the root layout — so we wait for
+  // can't read `granted` synchronously during render the store is
+  // hydrated by `<AppHydration>` in the root layout so we wait for
   // the hydrated flag and then either bounce or render the screen.
   const consentHydrated = useConsent((s) => s.hydrated);
   const consentGranted = useConsent((s) => s.granted);
@@ -73,7 +73,7 @@ export default function ConsentPage() {
   const agreeLabel = t("consentAgreeButton");
 
   // Hold render while we figure out whether to bounce. Same pattern as
-  // `<AppRouteGuard>` — avoids a flash of the consent gate on a deep
+  // `<AppRouteGuard>` avoids a flash of the consent gate on a deep
   // link from an already-onboarded user.
   if (!consentHydrated) return null;
   if (consentGranted) return null;
@@ -82,7 +82,7 @@ export default function ConsentPage() {
     <ScreenBackground overlay="strong">
       <div className="flex min-h-dvh w-full flex-col px-6">
         <div className="h-4" />
-        {/* Privacy shield — glossy game-icon header. */}
+        {/* Privacy shield glossy game-icon header. */}
         <div className="flex justify-center">
           <GameIconHalo size={104}>
             <GameShield className="h-[68%] w-[68%]" />
@@ -135,7 +135,7 @@ export default function ConsentPage() {
 
         <div className="h-4" />
 
-        {/* Active age confirmation — gates the CTA. A checkbox the user
+        {/* Active age confirmation gates the CTA. A checkbox the user
             must tick beats a bullet they may never read: the age term
             is *confirmed*, not just displayed. */}
         <label className="flex cursor-pointer items-start gap-3">
@@ -164,8 +164,8 @@ export default function ConsentPage() {
         </WoodButton>
         <div className="h-3" />
         <p className="text-center text-[13px] font-normal text-cream/70">
-          {/* `consentDisclaimer` takes one ICU param — the literal label
-              of the agree button — so the disclaimer self-references
+          {/* `consentDisclaimer` takes one ICU param the literal label
+              of the agree button so the disclaimer self-references
               the CTA without us hardcoding "I agree" twice. */}
           {t("consentDisclaimer", { action: agreeLabel })}
         </p>

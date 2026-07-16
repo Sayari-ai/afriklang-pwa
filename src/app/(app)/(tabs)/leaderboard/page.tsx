@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Leaderboard tab — port of `lib/features/leaderboard/leaderboard_screen.dart`.
+ * Leaderboard tab port of `lib/features/leaderboard/leaderboard_screen.dart`.
  *
  * Layout (from the top):
  *   1. Header: trophy + "Leaderboard" title.
@@ -22,7 +22,7 @@
  *     small "refresh" button in the header (Flutter has a real
  *     `RefreshIndicator` because mobile users expect the gesture).
  *   - `revalidateOnFocus: true` keeps the list fresh when the tab
- *     regains focus — the closest desktop equivalent to PTR.
+ *     regains focus the closest desktop equivalent to PTR.
  *
  * Differences from Flutter:
  *   - No `RefreshIndicator`; explicit refresh button + on-focus
@@ -66,7 +66,7 @@ export default function LeaderboardPage() {
   const t = useTranslations();
 
   // Device id is read once on mount. `ensure()` is idempotent and
-  // safe to call from a Zustand selector — but we want it reactive
+  // safe to call from a Zustand selector but we want it reactive
   // so the SWR key updates if the id is rotated.
   const deviceId = useDeviceIdentity((s) => s.deviceId) ?? useDeviceIdentity.getState().ensure();
 
@@ -87,7 +87,7 @@ export default function LeaderboardPage() {
   // (sum over completed-level entries, recomputed by `path-repo` on
   // every `completeLevel`), and is treated as the canonical number
   // by the UX. The leaderboard endpoint sometimes lags those writes
-  // — either because the queue hasn't drained yet, or because the
+  // either because the queue hasn't drained yet, or because the
   // backend's `leaderboard_get` query reads from a different table
   // that isn't immediately consistent. Calling `mutate()` here
   // forces SWR to refetch as soon as the local total moves, which
@@ -107,7 +107,7 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (localTotalPoints === null) return;
     if (lastSeenLocalTotal.current === null) {
-      // First observed value after hydration — don't trigger a
+      // First observed value after hydration don't trigger a
       // refetch (SWR's initial fetch is already in flight).
       lastSeenLocalTotal.current = localTotalPoints;
       return;
@@ -128,7 +128,7 @@ export default function LeaderboardPage() {
           `<ScreenBackground>` already gives us a full-viewport flex
           column. Re-asserting `min-h-dvh` here would force this
           container to grow with its children, defeating the
-          `flex-1 overflow-y-auto` on the scroll body below — the page
+          `flex-1 overflow-y-auto` on the scroll body below the page
           would scroll the *whole document* instead of just the list.
           `min-h-0` is the standard flexbox unlock that lets a `flex-1`
           child shrink below its content height and trigger overflow. */}
@@ -233,7 +233,7 @@ function LoadedView({
   // first run (`/home` modal) or from `/profile`. Until the backend
   // `nickname_set` Edge Function is deployed, the `nickname_get` /
   // `leaderboard_get` server response still echoes the auto-assigned
-  // name — we substitute the local value on the caller's row(s) and
+  // name we substitute the local value on the caller's row(s) and
   // sticky-me so the user sees their chosen name regardless. Other
   // devices keep showing the server value (cross-device propagation
   // is the backend's job once the function ships).
@@ -243,7 +243,7 @@ function LoadedView({
   // `progress.totalPoints` (sum over `progress.entries[i].points`,
   // recomputed locally by `path-repo` on every `completeLevel`),
   // and the product's stance is that this number is canonical. The
-  // leaderboard endpoint occasionally lags it — either because the
+  // leaderboard endpoint occasionally lags it either because the
   // progress write is still queued (offline), or because the
   // backend's `leaderboard_get` query is read-from-replica /
   // populated by a delayed view. To keep a single visible truth,
@@ -281,7 +281,7 @@ function LoadedView({
   // monograms and pushes real climbers down the page. We keep the
   // sticky "You" card untouched: it still surfaces the caller's real
   // rank/points (even when 0) so a brand-new user gets feedback that
-  // they're on the board — they just don't appear *in* the visible
+  // they're on the board they just don't appear *in* the visible
   // top list until they've scored.
   //
   // Why filter client-side rather than in `parseLeaderboardSnapshot`?
@@ -290,7 +290,7 @@ function LoadedView({
   // this becomes a no-op rather than a contradicting double-filter.
   const top = overriddenTop.filter((e) => e.points > 0);
   if (top.length === 0) {
-    // Snapshot might still include the caller via `snapshot.me` —
+    // Snapshot might still include the caller via `snapshot.me` 
     // render the sticky-me card over the empty state so a new user
     // sees their own zero-row even when no one else qualifies.
     const me = overriddenMe;
@@ -310,7 +310,7 @@ function LoadedView({
   const me = overriddenMe;
   // `meInTop` checks `snapshot.top` (the *unfiltered* list). After
   // hiding zeros, a caller with 0 pts who was technically present in
-  // the API response now disappears from the rendered list — so we
+  // the API response now disappears from the rendered list so we
   // re-derive against the filtered array.
   const meInRenderedTop =
     me !== null && top.some((e) => e.rank === me.rank && e.isMe === true);
@@ -321,7 +321,7 @@ function LoadedView({
       <Header t={t} onRefresh={onRefresh} />
       {/* Scrollable body. The bottom-spacer trick: putting
           `padding-bottom` directly on a `overflow:auto` element is
-          unreliable — Safari and Firefox don't include it in the
+          unreliable Safari and Firefox don't include it in the
           scroll extent, so the last row stops flush with the
           container's bottom edge and gets hidden behind the fixed
           bottom-nav (and the sticky "You" card when present). Pushing
@@ -389,7 +389,7 @@ function Podium({
   top: LeaderboardEntry[];
   t: ReturnType<typeof useTranslations>;
 }) {
-  // Render order on screen: rank 2, rank 1 (center), rank 3 — matches
+  // Render order on screen: rank 2, rank 1 (center), rank 3 matches
   // Flutter `_Podium`. We pick by rank rather than array index in
   // case the backend ever returns an unsorted page.
   const p1 = top.find((e) => e.rank === 1) ?? top[0]!;
@@ -437,7 +437,7 @@ function PodiumColumn({
   const monogram = entry.nickname ? entry.nickname[0]!.toUpperCase() : "?";
   const avatarSize = showCrown ? 72 : 60;
   // When the caller is one of the top 3 we draw extra attention to
-  // their avatar disc with a continuous glow + gentle scale pulse —
+  // their avatar disc with a continuous glow + gentle scale pulse 
   // same flavour as the home-tab `current` level node (`afk-pulse`
   // + ripple), but tuned for a smaller surface and an always-on
   // (rather than tap-to-start) context. Scope is intentionally
@@ -463,13 +463,13 @@ function PodiumColumn({
         className="relative"
         style={{ width: avatarSize, height: avatarSize }}
       >
-        {/* Outward halo ring — only rendered for the caller. Sits
+        {/* Outward halo ring only rendered for the caller. Sits
             *behind* the avatar (z-0) and expands beyond its bounds
             via a negative margin trick (`-inset-2`). `pointer-events`
             off so it never steals taps from a hypothetical future
             avatar press. The breathing animation is gated on
             `prefers-reduced-motion: no-preference` (see the <style>
-            below) — users with motion sensitivity see a static ring. */}
+            below) users with motion sensitivity see a static ring. */}
         {isMe && (
           <span
             aria-hidden
@@ -489,7 +489,7 @@ function PodiumColumn({
             // the caller, the keyframe (when not reduced-motion)
             // overrides this with a breathing version (lower → higher
             // spread). Reduced-motion users keep this static glow,
-            // which is intentional — they still get the medal-tint
+            // which is intentional they still get the medal-tint
             // affordance, just without the animation.
             boxShadow: `0 0 16px 1px ${medalColor}99`,
             // Local custom prop so the keyframe can reference the
@@ -518,7 +518,7 @@ function PodiumColumn({
              *
              * We still emit the \`animation\` declarations
              * unconditionally so the shorthand structure is the
-             * same in both branches — easier to reason about than
+             * same in both branches easier to reason about than
              * conditionally injecting the property.
              */
             .afk-podium-pulse {

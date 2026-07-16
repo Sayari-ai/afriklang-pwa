@@ -4,7 +4,7 @@
  * Renders the current snackbar message from `useSnackbar`.
  *
  * Mounted once in `(app)/layout.tsx`. We deliberately render even when
- * `message` is null so the in/out transitions stay smooth — the
+ * `message` is null so the in/out transitions stay smooth the
  * container's `opacity` and `translate-y` reflect presence.
  *
  * Position:

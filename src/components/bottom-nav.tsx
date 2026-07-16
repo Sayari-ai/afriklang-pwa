@@ -9,7 +9,7 @@
  * glyphs are carved cream.
  *
  * We figure out the active tab from the current pathname so the nav
- * stays in sync with browser back/forward and deep links — there's
+ * stays in sync with browser back/forward and deep links there's
  * no separate `currentIndex` state on the web.
  */
 

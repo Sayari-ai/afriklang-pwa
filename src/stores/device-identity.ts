@@ -26,7 +26,7 @@ interface DeviceIdentityState {
   deviceId: string | null;
   /**
    * Read-or-create. Idempotent. Safe to call from effects on every
-   * render — only generates + persists on the first call per session.
+   * render only generates + persists on the first call per session.
    */
   ensure: () => string;
   /** Dev-only helper: rotate to a fresh UUID (also clears caller cache). */
@@ -63,14 +63,14 @@ export const useDeviceIdentity = create<DeviceIdentityState>((set, get) => ({
 
 /**
  * Synchronous accessor for non-React call sites (API clients, etc.).
- * Throws if called on the server — every caller should be downstream
+ * Throws if called on the server every caller should be downstream
  * of a `'use client'` boundary by the time they need a device id.
  */
 export function getDeviceIdSync(): string {
   if (typeof window === "undefined") {
     throw new Error(
       "getDeviceIdSync() called on the server. Device identity is " +
-        "client-only — gate the call behind a 'use client' component or " +
+        "client-only gate the call behind a 'use client' component or " +
         "a useEffect.",
     );
   }

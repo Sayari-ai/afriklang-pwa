@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // Dark maroon "game board" surface — matches --color-surface in
+  // Dark maroon "game board" surface matches --color-surface in
   // globals.css so the browser chrome blends into the backdrop.
   themeColor: "#3E2B28",
   width: "device-width",
@@ -49,7 +49,7 @@ export const viewport: Viewport = {
  * The PWA mirrors the Flutter app's runtime locale model: a single user
  * preference (System / EN / FR) flips between message bundles without
  * any URL change. We therefore use next-intl in its "without i18n
- * routing" mode — the locale is resolved by the request config in
+ * routing" mode the locale is resolved by the request config in
  * `src/i18n/request.ts` (reads the cookie set by the in-app picker)
  * and re-injected here through the client provider.
  */

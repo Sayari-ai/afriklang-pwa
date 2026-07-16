@@ -7,11 +7,11 @@
  *   - Single-slot stack: a new `show()` replaces the previous message
  *     (matches `ScaffoldMessenger.showSnackBar` default behaviour where
  *     a fresh call animates the existing one out and the new one in).
- *   - Auto-dismiss after `durationMs` (default 2400 ms — close to
+ *   - Auto-dismiss after `durationMs` (default 2400 ms close to
  *     Flutter's 4 s minus the entry/exit animation).
  *   - Imperative API only (`useSnackbar.getState().show(...)`); we do
  *     not subscribe consumers to the message because nobody needs to
- *     read it — only the host renders.
+ *     read it only the host renders.
  *
  * The accompanying `<SnackbarHost>` component is mounted once in
  * `(app)/layout.tsx` so every authenticated screen gets it for free.
@@ -26,7 +26,7 @@ interface SnackbarState {
   seq: number;
   /** Show a message for `durationMs` (default 2400). */
   show: (message: string, durationMs?: number) => void;
-  /** Force-dismiss. Rarely needed — auto-dismiss covers most cases. */
+  /** Force-dismiss. Rarely needed auto-dismiss covers most cases. */
   dismiss: () => void;
 }
 
@@ -39,7 +39,7 @@ export const useSnackbar = create<SnackbarState>((set, get) => ({
     if (dismissTimer) clearTimeout(dismissTimer);
     set({ message, seq: get().seq + 1 });
     dismissTimer = setTimeout(() => {
-      // Only clear if we're still showing the same message — defends
+      // Only clear if we're still showing the same message defends
       // against a stale timer racing a fresh show() call.
       set({ message: null });
       dismissTimer = null;

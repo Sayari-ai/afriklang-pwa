@@ -1,7 +1,7 @@
 // PCM recorder AudioWorkletProcessor.
 //
 // Runs in the AudioWorkletGlobalScope (a separate realtime audio
-// thread). We can't import TypeScript or bundler modules here — this
+// thread). We can't import TypeScript or bundler modules here this
 // file is loaded verbatim by `audioContext.audioWorklet.addModule()`
 // at runtime.
 //

@@ -10,7 +10,7 @@
  *   - the per-level progress vector (`ProgressVector`)
  *
  * Cycles model:
- *   - The first time a device boots, the backend issues cycle 1 — a
+ *   - The first time a device boots, the backend issues cycle 1 a
  *     single `PathDefinition` with 8 levels. Once all 8 are completed,
  *     the user can opt-in (via the cycle-complete celebration screen)
  *     to be issued a new cycle. Calling `advanceCycle()` POSTs
@@ -39,12 +39,12 @@
  *      assign → getPath → getProgress and write both back to disk.
  *   2. `completeLevel(cycle, levelId)` is called by the level screen
  *      when the user finishes a mission. We POST `progress_set` for the
- *      completion (passing the cycle), then — if no other level is
- *      `current` *in the same cycle* — promote the lowest-numbered
+ *      completion (passing the cycle), then if no other level is
+ *      `current` *in the same cycle* promote the lowest-numbered
  *      locked level *in that cycle* to `current`. Returns
  *      `{ promotedId, cycleComplete }`. `cycleComplete` is `true` when
  *      every entry in the just-completed level's cycle is `"completed"`
- *      AND no `locked` entry exists in that cycle to promote — i.e. the
+ *      AND no `locked` entry exists in that cycle to promote i.e. the
  *      user has finished cycle N and there is no cycle N+1 yet. The
  *      level screen routes to the cycle-complete celebration variant
  *      when this flag is set.
@@ -89,7 +89,7 @@ import { useDeviceIdentity } from "@/stores/device-identity";
  *   - offline / unreachable → a synthesized optimistic row, plus an
  *     enqueued progress-set replay for the runner to drain later
  *
- * Real backend errors (4xx/5xx with a status) re-throw — we don't
+ * Real backend errors (4xx/5xx with a status) re-throw we don't
  * want to silently mask, say, a 409 from the level-id being unknown.
  *
  * `cycle` is mandatory. The client always knows which cycle it's
@@ -185,7 +185,7 @@ interface PathRepoState {
    * completed server-side), then refetches `paths_get` + `progress_get`
    * and merges the result into the store.
    *
-   * Online-only — the celebration screen disables the CTA when the
+   * Online-only the celebration screen disables the CTA when the
    * client believes it's offline. Throws on any failure; the caller
    * surfaces a snackbar.
    */
@@ -193,12 +193,12 @@ interface PathRepoState {
   /**
    * Replace the question at `(cycle, levelId, qIndex)` in the in-memory
    * bundle with `replacement`, persist the patched bundle to localStorage,
-   * and notify subscribers. The `qIndex` is the **slot** index (1..7) —
+   * and notify subscribers. The `qIndex` is the **slot** index (1..7) 
    * the original question's position. The replacement may carry a
    * different `promptEn`/`imageUrl` but the slot's `qIndex` is preserved
    * so the audio filename slug `pNN-Lx-qy` keeps pointing at the slot.
    *
-   * No backend call here — the swap was already persisted server-side
+   * No backend call here the swap was already persisted server-side
    * by the `question_swap` edge function call that produced `replacement`.
    * This method just keeps the cached bundle in sync without forcing a
    * full `paths_get` round-trip.
@@ -290,7 +290,7 @@ function writeCachedProgress(vector: ProgressVector): void {
         completed_at: e.completedAt,
         points: e.points,
         cycle: e.cycle,
-        // Client-only fields — backend ignores them on read; we
+        // Client-only fields backend ignores them on read; we
         // round-trip through localStorage so the home map keeps the
         // 3-star rating across reloads.
         submitted_count: e.submittedCount,
@@ -350,7 +350,7 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
         // applied here, replays still pending in the runner). Pulling
         // a fresh `getProgress` now would clobber those optimistic
         // rows back to their old server state, then the queue would
-        // drain and flip them forward again — causing a visible
+        // drain and flip them forward again causing a visible
         // round-trip flicker on the home map. Skip the network leg
         // until the queue empties; on the *next* boot after drain,
         // we'll do a full refresh as usual.
@@ -361,7 +361,7 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
               effectiveForceRefresh = false;
             }
           } catch {
-            // IDB inaccessible — assume empty queue and proceed.
+            // IDB inaccessible assume empty queue and proceed.
           }
         }
 
@@ -435,7 +435,7 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
       //     questions the user actually submitted, so we patch the
       //     locally-cached entry to reflect the half-credit the user
       //     just saw on the celebration screen. Force `cycle` to the
-      //     caller-supplied one — the legacy server response may omit
+      //     caller-supplied one the legacy server response may omit
       //     it (defaulting to 1 in the parser) which would silently
       //     reassign a cycle-2 completion to cycle 1.
       const completedPatched: ProgressEntry = {
@@ -456,7 +456,7 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
       };
 
       // 2. Splice the (patched) completion in. KEYED ON (cycle, levelId)
-      //    — never on levelId alone — because the same levelId exists
+      //    never on levelId alone because the same levelId exists
       //    across cycles.
       const splicedEntries: ProgressEntry[] = current.entries.map((e) =>
         e.cycle === cycle && e.levelId === levelId ? completedPatched : e,
@@ -483,7 +483,7 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
             status: "current",
             // The promotion row carries 0 points by definition (status
             // is `current`, not `completed`), so the fallback value is
-            // unused — pass 0 for clarity.
+            // unused pass 0 for clarity.
             fallbackPoints: 0,
           });
           // Force cycle on the optimistic row (same reasoning as above).
@@ -507,7 +507,7 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
       // 4. Detect "cycle complete": every entry in `cycle` is
       //    `"completed"` AND no level was promoted (the only way
       //    `promotedId` stays null inside the same cycle is when no
-      //    locked sibling existed — i.e. the user just finished the
+      //    locked sibling existed i.e. the user just finished the
       //    last level of the cycle). The two conditions together
       //    avoid a false positive from a cross-cycle promotion that
       //    we don't currently do but might in future.
@@ -519,21 +519,21 @@ export const usePathRepo = create<PathRepoState>((set, get) => {
 
     advanceCycle: async () => {
       const deviceId = useDeviceIdentity.getState().ensure();
-      // Re-issue WITH `advance: true` — that's the explicit-advance
+      // Re-issue WITH `advance: true` that's the explicit-advance
       // signal the server-side `advance_path()` RPC requires. Without
       // the flag, `paths_assign` is idempotent and just returns the
       // current top cycle, so we'd silently never get a new cycle.
       //
       // The RPC rejects with HTTP 409 (`cycle_incomplete`) if the
       // user's current top cycle isn't fully completed yet. The
-      // celebration screen catches and surfaces a snackbar — we
+      // celebration screen catches and surfaces a snackbar we
       // intentionally let the error propagate untransformed.
       await advanceCycleApi(deviceId);
       const [nextBundle, nextProgress] = await Promise.all([
         getPath(deviceId),
         getProgress(deviceId),
       ]);
-      // Merge with whatever we already had locally — see `mergeBundles`
+      // Merge with whatever we already had locally see `mergeBundles`
       // for why this is union-by-cycle and not a wholesale replace.
       // The server now always returns the multi-cycle envelope (we
       // pass `?multicycle=1`), but we still merge defensively in case

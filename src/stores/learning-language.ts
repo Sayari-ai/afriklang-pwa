@@ -13,7 +13,7 @@
  * single source of truth for emoji + country labels.
  *
  * The catalogue is exported as a frozen array so React's referential
- * equality on selectors holds — no accidental rerenders if a caller
+ * equality on selectors holds no accidental rerenders if a caller
  * does `useLearningLanguage(s => s.list)`.
  */
 
@@ -42,7 +42,7 @@ export const SUPPORTED_LEARNING_LANGUAGES: readonly LearningLanguage[] = Object.
   { iso: "wo", displayName: "Wolof", country: "Senegal", flagEmoji: "🇸🇳" },
 ]);
 
-/** Lookup by ISO. Returns `null` if unknown — caller decides default. */
+/** Lookup by ISO. Returns `null` if unknown caller decides default. */
 export function findLanguageByIso(iso: string | null): LearningLanguage | null {
   if (!iso) return null;
   return SUPPORTED_LEARNING_LANGUAGES.find((l) => l.iso === iso) ?? null;
@@ -51,7 +51,7 @@ export function findLanguageByIso(iso: string | null): LearningLanguage | null {
 interface LearningLanguageState {
   /** Selected ISO, or `null` if the user has not yet chosen. */
   iso: LearningLanguage["iso"] | null;
-  /** Resolved record — `null` until selection. */
+  /** Resolved record `null` until selection. */
   selected: LearningLanguage | null;
   /** True once we've read from localStorage. */
   hydrated: boolean;

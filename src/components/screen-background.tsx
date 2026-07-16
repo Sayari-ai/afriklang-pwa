@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
  * Shared screen background used by onboarding, consent, path-setup,
  * level, level-complete, leaderboard, notifications and profile.
  *
- * Game-kit reskin: every screen sits on a dark maroon "game board" —
+ * Game-kit reskin: every screen sits on a dark maroon "game board" 
  * a warm surface lit softly from the top, sprinkled with faint cream
  * polka dots (candy-game texture), and darkened at the corners by a
  * radial vignette.
@@ -34,7 +34,7 @@ export function GameBoardBackdrop() {
             "radial-gradient(120% 85% at 50% 0%, rgba(233,160,91,0.1) 0%, rgba(233,160,91,0) 60%)",
         }}
       />
-      {/* Soft cream polka dots — two offset grids for a diamond lay. */}
+      {/* Soft cream polka dots two offset grids for a diamond lay. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
@@ -47,7 +47,7 @@ export function GameBoardBackdrop() {
           backgroundPosition: "0 0, 56px 56px",
         }}
       />
-      {/* Radial vignette — darkens corners, keeps the center lively. */}
+      {/* Radial vignette darkens corners, keeps the center lively. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
@@ -80,7 +80,7 @@ export function ScreenBackground({
       <div className="absolute inset-0 -z-10">
         <GameBoardBackdrop />
       </div>
-      {/* Body — safe-area aware so notched devices look right. */}
+      {/* Body safe-area aware so notched devices look right. */}
       <div
         className="relative flex flex-1 flex-col"
         style={{

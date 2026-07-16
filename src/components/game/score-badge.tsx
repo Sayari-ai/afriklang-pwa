@@ -5,7 +5,7 @@ import { RibbonBanner } from "./ribbon";
 import { WoodMedallion } from "./wood-medallion";
 
 /**
- * ScoreBadge — the mockup's "score 631" medallion: wooden disc in
+ * ScoreBadge the mockup's "score 631" medallion: wooden disc in
  * grass with a caption carved near the top and a green ribbon
  * wrapping the lower half carrying the value.
  */

@@ -88,7 +88,7 @@ export function EnergyIcon({
   );
 }
 
-/** Glossy padlock — locked level marker. Gold body + purple shackle,
+/** Glossy padlock locked level marker. Gold body + purple shackle,
  *  matching the "2D game icons" pack style. */
 export function PadlockIcon({
   className,
@@ -119,7 +119,7 @@ export function PadlockIcon({
           <stop offset="100%" stopColor={GameColors.purpleDark} />
         </linearGradient>
       </defs>
-      {/* Shackle — purple, with a dark edge and a top highlight. */}
+      {/* Shackle purple, with a dark edge and a top highlight. */}
       <path
         d="M9.5 17 V11.5 C9.5 7.4 12.4 4.5 16 4.5 C19.6 4.5 22.5 7.4 22.5 11.5 V17"
         fill="none"
@@ -141,7 +141,7 @@ export function PadlockIcon({
         strokeWidth="1.2"
         strokeLinecap="round"
       />
-      {/* Body — gold slab with bevel + gloss. */}
+      {/* Body gold slab with bevel + gloss. */}
       <rect
         x="4"
         y="15.5"
@@ -160,7 +160,7 @@ export function PadlockIcon({
         rx="2"
         fill="rgba(255,255,255,0.45)"
       />
-      {/* Keyhole — dark bronze. */}
+      {/* Keyhole dark bronze. */}
       <circle cx="16" cy="24" r="3" fill="#8E5410" />
       <path d="M14.4 25.5 L17.6 25.5 L18.6 31 L13.4 31 Z" fill="#8E5410" />
       <circle cx="15" cy="23" r="0.9" fill="rgba(255,255,255,0.5)" />

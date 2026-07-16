@@ -18,7 +18,7 @@
 --   cycle = N  → the device's N-th path.
 --
 -- The global rotation counter (`paths_rotation.cycle`) still exists and
--- is unchanged in meaning — it just no longer leaks into the per-device
+-- is unchanged in meaning it just no longer leaks into the per-device
 -- column. We retain it so `paths_rotation.next_index` stays well-defined.
 --
 -- For currently-assigned devices we rewrite their `device_paths.cycle`
@@ -150,7 +150,7 @@ grant execute on function public.award_points(uuid, smallint, int) to service_ro
 drop function if exists public.award_points(uuid, smallint);
 
 -- =====================================================================
--- 5. assign_path(): unchanged in spirit — still idempotent. Now returns
+-- 5. assign_path(): unchanged in spirit still idempotent. Now returns
 --    the device's TOP cycle if any, otherwise issues cycle = 1.
 -- =====================================================================
 create or replace function public.assign_path(p_device_id uuid)
@@ -242,7 +242,7 @@ begin
    where device_id = p_device_id;
 
   if v_top_cycle is null then
-    -- Device has never been assigned. Kick out — they should call
+    -- Device has never been assigned. Kick out they should call
     -- paths_assign without `advance` first.
     raise exception 'not_assigned'
       using errcode = 'P0002'; -- no_data_found, used as a sentinel.
@@ -299,7 +299,7 @@ grant execute on function public.advance_path(uuid) to service_role;
 
 -- =====================================================================
 -- 7. device_nicknames: per-device user-chosen leaderboard display name.
---    Optional — when absent the leaderboard falls back to the
+--    Optional when absent the leaderboard falls back to the
 --    deterministic nicknameFor() helper in functions/_shared/util.ts.
 -- =====================================================================
 create table if not exists public.device_nicknames (

@@ -1,6 +1,6 @@
 ---
 name: swr
-description: SWR is a React data-fetching library built around stale-while-revalidate caching. It returns cached data immediately, revalidates in the background, and dedupes concurrent requests sharing the same key. USE FOR: fetching server data inside React components, refresh-on-focus / refresh-on-reconnect UX, optimistic updates via mutate(), pagination via useSWRInfinite, real-time-ish polling via refreshInterval, and any place where you want a hook-shaped replacement for ad-hoc useEffect+fetch+useState. DO NOT USE FOR: outside-React data flow (use the API client directly), one-shot mutations (POST/DELETE — call the API client and then mutate() the affected SWR keys), persistent client state (use Zustand stores in src/stores/), or RSC server-side data loading (this is a client hook).
+description: SWR is a React data-fetching library built around stale-while-revalidate caching. It returns cached data immediately, revalidates in the background, and dedupes concurrent requests sharing the same key. USE FOR: fetching server data inside React components, refresh-on-focus / refresh-on-reconnect UX, optimistic updates via mutate(), pagination via useSWRInfinite, real-time-ish polling via refreshInterval, and any place where you want a hook-shaped replacement for ad-hoc useEffect+fetch+useState. DO NOT USE FOR: outside-React data flow (use the API client directly), one-shot mutations (POST/DELETE call the API client and then mutate() the affected SWR keys), persistent client state (use Zustand stores in src/stores/), or RSC server-side data loading (this is a client hook).
 ---
 
 # swr@^2.4.1
@@ -11,7 +11,7 @@ This project currently uses SWR in **one place**: `src/app/(app)/(tabs)/leaderbo
 
 - It's read-only data backed by an Edge Function (`leaderboard_get`).
 - It benefits from refresh-on-focus (the closest desktop equivalent to mobile pull-to-refresh).
-- Local writes elsewhere (`completeLevel` in path-repo) need to trigger a refetch — `mutate()` does this cleanly.
+- Local writes elsewhere (`completeLevel` in path-repo) need to trigger a refetch `mutate()` does this cleanly.
 
 Everything else in the app uses Zustand stores (`src/stores/`) that own their own fetch+cache lifecycle (`usePathRepo.boot()`, etc.). That's the right call when:
 
@@ -36,19 +36,19 @@ const { data, error, isLoading, isValidating, mutate } = useSWR<T>(
 ```
 
 **Returned fields**:
-- `data: T | undefined` — last successful response (cached). `undefined` until the first fetch resolves.
-- `error: unknown` — last error from the fetcher; cleared on next successful fetch.
-- `isLoading: boolean` — `true` only on the **first** load with no cached data. Use this for spinners. (`!data && !error` in v1; `isLoading` was added in v2 and is what you should use.)
-- `isValidating: boolean` — `true` whenever a request is in flight, including background revalidations on top of cached data. Use for subtle "refreshing..." indicators.
-- `mutate: BoundMutator<T>` — the **bound** mutate; revalidates / overwrites this hook's key only. See [mutate](#mutate).
+- `data: T | undefined` last successful response (cached). `undefined` until the first fetch resolves.
+- `error: unknown` last error from the fetcher; cleared on next successful fetch.
+- `isLoading: boolean` `true` only on the **first** load with no cached data. Use this for spinners. (`!data && !error` in v1; `isLoading` was added in v2 and is what you should use.)
+- `isValidating: boolean` `true` whenever a request is in flight, including background revalidations on top of cached data. Use for subtle "refreshing..." indicators.
+- `mutate: BoundMutator<T>` the **bound** mutate; revalidates / overwrites this hook's key only. See [mutate](#mutate).
 
 **Key shapes**:
-- `string` — `"/api/leaderboard"`. Simplest case.
-- `unknown[]` — `["leaderboard", deviceId]`. The fetcher receives the array spread as args.
-- `null` / `false` / `undefined` — **conditional fetching**: SWR skips the request entirely. The hook returns `{ data: undefined, error: undefined, isLoading: false }`.
-- `() => key` — lazy. Throws inside the function (e.g. `user.id` on an undefined user) are caught and treated as `null`.
+- `string` `"/api/leaderboard"`. Simplest case.
+- `unknown[]` `["leaderboard", deviceId]`. The fetcher receives the array spread as args.
+- `null` / `false` / `undefined` **conditional fetching**: SWR skips the request entirely. The hook returns `{ data: undefined, error: undefined, isLoading: false }`.
+- `() => key` lazy. Throws inside the function (e.g. `user.id` on an undefined user) are caught and treated as `null`.
 
-**Project pattern — auth-token-keyed fetcher** (when we eventually add auth, keep the token in the key, never just close over it):
+**Project pattern auth-token-keyed fetcher** (when we eventually add auth, keep the token in the key, never just close over it):
 
 ```tsx
 const { data } = useSWR(
@@ -63,7 +63,7 @@ This way, rotating the token invalidates the cache automatically (different arra
 
 Two forms:
 
-**Bound** (returned from `useSWR`) — operates on this hook's key:
+**Bound** (returned from `useSWR`) operates on this hook's key:
 
 ```tsx
 const { data, mutate } = useSWR('/api/profile', fetcher);
@@ -74,11 +74,11 @@ await mutate();
 // Optimistic update + refetch:
 await mutate({ ...data, name: 'New' }, { revalidate: true });
 
-// Optimistic-only (no refetch — caller already knows the truth):
+// Optimistic-only (no refetch caller already knows the truth):
 await mutate({ ...data, name: 'New' }, { revalidate: false });
 ```
 
-**Global** (imported from `swr`) — operates on any key, callable from anywhere:
+**Global** (imported from `swr`) operates on any key, callable from anywhere:
 
 ```tsx
 import { mutate } from 'swr';
@@ -86,7 +86,7 @@ import { mutate } from 'swr';
 // Single key:
 await mutate(['leaderboard', deviceId]);
 
-// Filter function — invalidate all matching keys:
+// Filter function invalidate all matching keys:
 await mutate(
   (key) => Array.isArray(key) && key[0] === 'leaderboard',
   undefined,
@@ -135,7 +135,7 @@ const { data, size, setSize, isLoading } = useSWRInfinite<Page>(
   ([url, page]) => fetch(`${url}?page=${page}`).then(r => r.json()),
 );
 
-// data is Page[] — one entry per loaded page. Flatten in the view.
+// data is Page[] one entry per loaded page. Flatten in the view.
 const items = data?.flatMap(p => p.items) ?? [];
 
 // Load next page:
@@ -196,7 +196,7 @@ export function Providers({ children }: { children: ReactNode }) {
 }
 ```
 
-Nested `<SWRConfig>` providers merge — inner values override outer.
+Nested `<SWRConfig>` providers merge inner values override outer.
 
 ## Options reference
 
@@ -208,7 +208,7 @@ All options can be passed per-hook or as `<SWRConfig>` defaults:
 | `revalidateOnReconnect` | `true` | Refetch when `navigator.onLine` flips back to true. Pair with `revalidateOnFocus`. |
 | `revalidateIfStale` | `true` | On mount, if cache exists, fetch in the background anyway. |
 | `dedupingInterval` | `2000` ms | Identical keys requested within this window share a single in-flight request. |
-| `refreshInterval` | `0` (off) | Poll every N ms. **Don't enable globally** — set per-hook on screens that need it. |
+| `refreshInterval` | `0` (off) | Poll every N ms. **Don't enable globally** set per-hook on screens that need it. |
 | `fallback` | `{}` | Map of `{ [serializedKey]: data }` used as initial cache. Useful for SSR hydration. |
 | `fallbackData` | `undefined` | Synchronous initial value for **this** hook only. `data` will be this until the first real fetch resolves; `isLoading` is `false` from the start. |
 | `suspense` | `false` | Throw a promise on first load (React Suspense). Wrap the consumer in `<Suspense>` and an error boundary. |
@@ -216,7 +216,7 @@ All options can be passed per-hook or as `<SWRConfig>` defaults:
 | `errorRetryCount` | `unlimited` | Cap retries on failure. |
 | `errorRetryInterval` | `5000` ms | Base interval between retries (with exponential backoff). |
 | `isPaused` | `() => false` | If the function returns `true`, SWR pauses revalidation entirely (e.g. while a heavy modal is open). |
-| `onSuccess` / `onError` / `onErrorRetry` | — | Lifecycle hooks. `onErrorRetry` lets you customise retry policy (e.g. don't retry 404). |
+| `onSuccess` / `onError` / `onErrorRetry` | | Lifecycle hooks. `onErrorRetry` lets you customise retry policy (e.g. don't retry 404). |
 
 ### Cache provider
 
@@ -228,7 +228,7 @@ All options can be passed per-hook or as `<SWRConfig>` defaults:
 >
 ```
 
-Useful for: per-tab caches, test isolation, persisting cache to localStorage. The provider is created **once** per `<SWRConfig>` instance — don't recreate on every render.
+Useful for: per-tab caches, test isolation, persisting cache to localStorage. The provider is created **once** per `<SWRConfig>` instance don't recreate on every render.
 
 ## Common patterns (project-specific)
 
@@ -252,7 +252,7 @@ const { data, error, isLoading, mutate } = useSWR<LeaderboardSnapshot>(
 );
 ```
 
-Note the `?? getState().ensure()` fallback — first-paint may have `deviceId === null` until hydration; we ensure synchronously rather than skipping the first fetch.
+Note the `?? getState().ensure()` fallback first-paint may have `deviceId === null` until hydration; we ensure synchronously rather than skipping the first fetch.
 
 ### 2. Cross-store invalidation
 
@@ -276,7 +276,7 @@ useEffect(() => {
 }, [localTotalPoints, mutate]);
 ```
 
-**Don't** fold `localTotalPoints` into the SWR key — that throws away the cached snapshot and flashes a loading state.
+**Don't** fold `localTotalPoints` into the SWR key that throws away the cached snapshot and flashes a loading state.
 
 ### 3. Suspense + error boundary
 
@@ -297,7 +297,7 @@ const { data } = useSWR(key, fetcher, { suspense: true });
 // data is T (never undefined) when suspense is on.
 ```
 
-The project doesn't currently use suspense mode for SWR — the leaderboard handles loading/error explicitly. If we adopt it, gate it behind a single screen first; mixing suspense and non-suspense SWR hooks in the same tree gets confusing.
+The project doesn't currently use suspense mode for SWR the leaderboard handles loading/error explicitly. If we adopt it, gate it behind a single screen first; mixing suspense and non-suspense SWR hooks in the same tree gets confusing.
 
 ### 4. Conditional fetching to gate on hydration
 
@@ -310,7 +310,7 @@ Pass `null` until the prerequisite is ready. SWR returns `{ data: undefined, isL
 
 ### 5. TypeScript generics
 
-Always specify the response type — the inferred type from a generic `fetch().then(r => r.json())` is `any`:
+Always specify the response type the inferred type from a generic `fetch().then(r => r.json())` is `any`:
 
 ```tsx
 useSWR<LeaderboardSnapshot>(key, fetcher);
@@ -321,13 +321,13 @@ If your fetcher already returns a typed `Promise<T>` (e.g. our `getLeaderboard`)
 
 ## Gotchas
 
-- **`isLoading` vs `!data`**: Use `isLoading` for the first-fetch spinner. Subsequent background revalidations leave `isLoading` false and only flip `isValidating`. The leaderboard does `isLoading && !data` — both checks are belt-and-braces and harmless.
+- **`isLoading` vs `!data`**: Use `isLoading` for the first-fetch spinner. Subsequent background revalidations leave `isLoading` false and only flip `isValidating`. The leaderboard does `isLoading && !data` both checks are belt-and-braces and harmless.
 - **Key stability**: Inline objects/arrays as keys re-render every time. SWR serialises with `JSON.stringify`, so structurally-equal keys hit the same cache, but you'll still get extra hook invocations. Memoize where it matters.
-- **`null` key vs empty string**: `null`/`undefined`/`false` skip the fetch. Empty string `""` does **not** — it's a valid key.
+- **`null` key vs empty string**: `null`/`undefined`/`false` skip the fetch. Empty string `""` does **not** it's a valid key.
 - **Global mutate from outside React**: `import { mutate } from 'swr'` works in event handlers, store actions, etc., but only after the SWR provider has mounted. Calling it during module init is a no-op.
 - **`revalidateOnFocus` in dev**: React Strict Mode + dev-tools focus events can cause apparent double-fetches. It's not a bug.
-- **Server components**: SWR is client-only. A `useSWR` call in an RSC won't even compile — gate it behind `'use client'` (the leaderboard page is a client component for exactly this reason).
-- **Don't put auth tokens in the fetcher closure**: stale-token bug — the fetcher captures the token at first render and keeps using it. Put the token in the key (see auth pattern above).
+- **Server components**: SWR is client-only. A `useSWR` call in an RSC won't even compile gate it behind `'use client'` (the leaderboard page is a client component for exactly this reason).
+- **Don't put auth tokens in the fetcher closure**: stale-token bug the fetcher captures the token at first render and keeps using it. Put the token in the key (see auth pattern above).
 - **Cache provider lifetime**: `provider: () => new Map()` is called once per `<SWRConfig>` mount. Re-mounting the provider (e.g. by remounting the layout) creates a fresh cache and you lose all in-flight data.
 
 ## References

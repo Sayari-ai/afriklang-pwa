@@ -16,7 +16,7 @@
  *   - bold typography
  *
  * The selected pill is derived from `useAppLocale().override`. A
- * `null` override means "follow system" — that pill highlights when
+ * `null` override means "follow system" that pill highlights when
  * the user hasn't picked a manual override yet.
  */
 

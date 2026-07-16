@@ -7,10 +7,10 @@ description: Next.js 16.2.4 App Router conventions, file-system routing, dynamic
 
 This project pins `next@16.2.4` with `react@19.2.4`. Build/dev runs with the
 classic webpack compiler (`next dev --webpack` / `next build --webpack`),
-**not** Turbopack. App Router only — there is no `pages/` directory.
+**not** Turbopack. App Router only there is no `pages/` directory.
 
 The bundled docs at `node_modules/next/dist/docs/01-app/` are the source of
-truth for this version. When in doubt, read them — Next 16 has breaking
+truth for this version. When in doubt, read them Next 16 has breaking
 changes vs Next 13/14/15 that most LLM training data still reflects.
 
 ## When to use
@@ -35,12 +35,12 @@ LLMs frequently emit pre-Next-15 patterns. **Do not** ship any of these.
 ### 1. `params` and `searchParams` are Promises
 
 ```tsx
-// ❌ Pre-15 (synchronous) — WILL throw at runtime in Next 16
+// ❌ Pre-15 (synchronous) WILL throw at runtime in Next 16
 export default function Page({ params }: { params: { slug: string } }) {
   return <h1>{params.slug}</h1>
 }
 
-// ✅ Next 16 — async server component
+// ✅ Next 16 async server component
 export default async function Page({
   params,
 }: {
@@ -50,7 +50,7 @@ export default async function Page({
   return <h1>{slug}</h1>
 }
 
-// ✅ Next 16 — client component uses React's `use()` hook
+// ✅ Next 16 client component uses React's `use()` hook
 'use client'
 import { use } from 'react'
 export default function Page({
@@ -122,7 +122,7 @@ export default function Error({
 When the (opt-in) Cache Components feature is enabled, `export const dynamic`,
 `dynamicParams`, `revalidate`, and `fetchCache` are no longer accepted.
 This project does not currently enable Cache Components, so the legacy
-`force-dynamic` / `revalidate = 60` style is still valid — see
+`force-dynamic` / `revalidate = 60` style is still valid see
 `src/app/api/audio-upload/route.ts:50` which uses `export const dynamic = "force-dynamic"`.
 
 ### 6. `experimental_ppr` removed
@@ -160,12 +160,12 @@ like `src/app/(app)/` to share layout without affecting URLs.
 
 Folders:
 
-- `[slug]` — dynamic segment.
-- `[...slug]` — catch-all.
-- `[[...slug]]` — optional catch-all.
-- `(group)` — route group, no URL impact (used here for `(app)`).
-- `@slot` — parallel route slot, surfaces as a typed prop on `layout`.
-- `(.)foo` / `(..)foo` / `(...)foo` — intercepting routes.
+- `[slug]` dynamic segment.
+- `[...slug]` catch-all.
+- `[[...slug]]` optional catch-all.
+- `(group)` route group, no URL impact (used here for `(app)`).
+- `@slot` parallel route slot, surfaces as a typed prop on `layout`.
+- `(.)foo` / `(..)foo` / `(...)foo` intercepting routes.
 
 Layout-related gotchas:
 
@@ -190,7 +190,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: `Lesson ${lessonId}` }
 }
 
-// Pre-render at build time — body still must `await params`.
+// Pre-render at build time body still must `await params`.
 export async function generateStaticParams() {
   return [{ lessonId: 'intro' }, { lessonId: 'greetings' }]
 }
@@ -258,7 +258,7 @@ return new NextResponse(upstream.body, {
 ```
 
 Important: do **not** call `request.formData()` if you intend to forward
-`request.body` as a stream — consuming it once locks the stream.
+`request.body` as a stream consuming it once locks the stream.
 
 ### Edge vs Node runtime
 
@@ -278,7 +278,7 @@ import { redirect } from 'next/navigation'
 const store = await cookies()             // async!
 store.set('locale', 'fr', { httpOnly: true, sameSite: 'lax', path: '/' })
 
-redirect('/dashboard') // throws — must be top-level, not inside try/catch
+redirect('/dashboard') // throws must be top-level, not inside try/catch
 ```
 
 ## `next/image`
@@ -302,7 +302,7 @@ Project-specific:
 - For images served from Supabase Storage that you **don't** want Next's
   optimizer to refetch (auth-protected, signed URLs, audio thumbnails),
   pass `unoptimized` so the browser fetches the URL directly.
-- Always set `sizes` when using `fill` — without it the browser downloads
+- Always set `sizes` when using `fill` without it the browser downloads
   the largest variant.
 
 ## `next/link`, `next/navigation`
@@ -325,7 +325,7 @@ import {
 
 const router = useRouter()
 router.push('/x')          // adds history entry
-router.replace('/x')       // no history entry — use for post-submit redirects
+router.replace('/x')       // no history entry use for post-submit redirects
 router.refresh()           // re-fetch current segment's RSC payload
 router.back()
 router.prefetch('/x')
@@ -336,12 +336,12 @@ const tab = sp.get('tab')
 ```
 
 `redirect()` and `notFound()` work in **server** components/handlers and
-throw — never wrap them in `try/catch` (that swallows the redirect).
+throw never wrap them in `try/catch` (that swallows the redirect).
 
 ## Metadata API
 
 ```tsx
-// src/app/layout.tsx — see actual file at src/app/layout.tsx:9
+// src/app/layout.tsx see actual file at src/app/layout.tsx:9
 import type { Metadata, Viewport } from 'next'
 
 export const metadata: Metadata = {
@@ -353,7 +353,7 @@ export const metadata: Metadata = {
   formatDetection: { telephone: false },
 }
 
-// `viewport` MUST be its own export — not a key on `metadata`.
+// `viewport` MUST be its own export not a key on `metadata`.
 export const viewport: Viewport = {
   themeColor: '#00539F',
   width: 'device-width',
@@ -378,7 +378,7 @@ export async function generateMetadata(
 }
 ```
 
-Do **not** put raw `<title>` / `<meta>` tags in the root layout — let the
+Do **not** put raw `<title>` / `<meta>` tags in the root layout let the
 Metadata API render them so streaming and dedup work correctly.
 
 ## `next.config.ts`
@@ -431,7 +431,7 @@ Consequences:
 - **HMR is slower** than Turbopack but works reliably with the
   `next-pwa` and `next-intl` plugins (which is partly why webpack is
   pinned here).
-- **`@ducanh2912/next-pwa` is webpack-only** — switching to Turbopack
+- **`@ducanh2912/next-pwa` is webpack-only** switching to Turbopack
   would require swapping out the PWA plugin entirely.
 - Bundle analyzer / custom webpack tweaks go in `next.config.ts`'s
   `webpack(config) { ... }` hook (not yet used here).
@@ -453,12 +453,12 @@ Consequences:
   server and client (e.g. `Date.now()`, `Math.random()`, locale-formatted
   dates without an explicit locale). For browser-extension noise on
   `<body>` (Grammarly, ColorZilla), use `suppressHydrationWarning` on
-  `<body>` only — see `src/app/layout.tsx:71`.
+  `<body>` only see `src/app/layout.tsx:71`.
 - **`public/` assets** are served at the root: `public/icons/Logo.svg`
   → `/icons/Logo.svg`. Do **not** import them; reference by URL.
 - **Env vars**: `process.env.FOO` is server-only and inlined at build
   time on the server. `process.env.NEXT_PUBLIC_FOO` is inlined into the
-  client bundle and visible in DevTools — never put secrets there.
+  client bundle and visible in DevTools never put secrets there.
 - **`force-dynamic` opts a route into per-request rendering** and
   disables the full-route cache. Use sparingly; prefer `fetch` with
   `cache: 'no-store'` on individual data calls.
@@ -478,7 +478,7 @@ Consequences:
   - Components (Image/Link/Form): `03-api-reference/02-components/`
   - Migration notes: `02-guides/migrating/`
 - Project files worth reading first:
-  - `next.config.ts:1` — plugin chain (next-intl + next-pwa)
-  - `src/app/layout.tsx:1` — root layout, metadata, viewport
-  - `src/app/api/audio-upload/route.ts:1` — streaming proxy with `duplex: 'half'`
+  - `next.config.ts:1` plugin chain (next-intl + next-pwa)
+  - `src/app/layout.tsx:1` root layout, metadata, viewport
+  - `src/app/api/audio-upload/route.ts:1` streaming proxy with `duplex: 'half'`
 - Live docs (may show a newer version): https://nextjs.org/docs/app

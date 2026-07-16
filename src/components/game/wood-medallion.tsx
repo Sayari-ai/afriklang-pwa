@@ -3,14 +3,14 @@ import { useId } from "react";
 import { GameColors } from "@/lib/colors";
 
 /**
- * WoodMedallion — the circular carved-wood disc that underpins the
+ * WoodMedallion the circular carved-wood disc that underpins the
  * kit's round elements (icon buttons, level badges, score badge,
  * resource-counter slots).
  *
  * Pure SVG so the edge can be organically wobbly like the mockup:
  * an irregular "wavy circle" outline (radius modulated by two sine
  * waves), a dark rim, a lit body gradient, a soft top sheen and a
- * couple of grain arcs. Scales losslessly — size it with width/height
+ * couple of grain arcs. Scales losslessly size it with width/height
  * on the wrapping element (the svg fills its box).
  *
  * Colors are hex from `GameColors` because SVG presentation
@@ -20,7 +20,7 @@ import { GameColors } from "@/lib/colors";
  * medallions on one page don't cross-reference each other's defs.
  */
 
-/** Deterministic wobbly-circle path (module-level — computed once). */
+/** Deterministic wobbly-circle path (module-level computed once). */
 function wobblyCircle(
   cx: number,
   cy: number,

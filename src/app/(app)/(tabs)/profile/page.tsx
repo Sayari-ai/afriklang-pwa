@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Profile tab — port of `lib/features/profile/profile_screen.dart`.
+ * Profile tab port of `lib/features/profile/profile_screen.dart`.
  *
  * Three sections, each rendered as a labelled white rounded card:
  *   1. Preferences
@@ -251,7 +251,7 @@ function LearningLanguageRow({ onTap }: { onTap: () => void }) {
 
 function NicknameRow({ onTap }: { onTap: () => void }) {
   const t = useTranslations();
-  // Reactive — flips from "Not set" to the chosen value as soon as
+  // Reactive flips from "Not set" to the chosen value as soon as
   // the user submits the sheet. We don't show the server-assigned
   // fallback here because it's not known on the profile screen
   // (would require a leaderboard fetch); keep this row strictly
@@ -541,7 +541,7 @@ function LearningLanguageSheet({ onClose }: { onClose: () => void }) {
       {SUPPORTED_LEARNING_LANGUAGES.map((lang) => (
         <SheetOption
           key={lang.iso}
-          label={`${lang.flagEmoji}  ${lang.displayName} — ${lang.country}`}
+          label={`${lang.flagEmoji}  ${lang.displayName} ${lang.country}`}
           selected={selected?.iso === lang.iso}
           onTap={() => pick(lang)}
         />

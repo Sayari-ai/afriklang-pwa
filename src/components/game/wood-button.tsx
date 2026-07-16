@@ -5,7 +5,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { GrassEdge } from "./grass";
 
 /**
- * WoodButton — the mockup's PLAY / SHOP / BUY button.
+ * WoodButton the mockup's PLAY / SHOP / BUY button.
  *
  * Anatomy (bottom → top):
  *   - grass clumps poking out around the pill (optional)
@@ -15,9 +15,9 @@ import { GrassEdge } from "./grass";
  *   - chunky Lilita label in cream with a dark outline
  *
  * Pressing squashes the body down onto the base (classic game-button
- * press) via `group-active` transforms — no JS.
+ * press) via `group-active` transforms no JS.
  *
- * Tones: `wood` (default), `green` (grass — confirm/positive),
+ * Tones: `wood` (default), `green` (grass confirm/positive),
  * `red` (destructive). The uneven border radii keep the edge organic.
  */
 
@@ -100,7 +100,7 @@ export function WoodButton({
     >
       {grass && <GrassEdge variant="pill" />}
 
-      {/* Base slab — fixed; the body squashes onto it when pressed. */}
+      {/* Base slab fixed; the body squashes onto it when pressed. */}
       <span
         aria-hidden="true"
         className="absolute inset-0"

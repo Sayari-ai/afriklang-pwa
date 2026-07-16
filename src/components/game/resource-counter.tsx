@@ -6,7 +6,7 @@ import { CoinIcon, EnergyIcon } from "./game-icons";
 import { WoodMedallion } from "./wood-medallion";
 
 /**
- * ResourceCounter — the mockup's coin/energy counter bar: a wooden
+ * ResourceCounter the mockup's coin/energy counter bar: a wooden
  * slat with a round medallion slot at the left holding the resource
  * icon, the amount in chunky game type, and an optional green "+"
  * chip at the right end.
@@ -41,7 +41,7 @@ export function ResourceCounter({
 
   return (
     <div className={`relative flex h-12 items-center ${className ?? ""}`}>
-      {/* Wooden slat — starts under the medallion, rounded ends. */}
+      {/* Wooden slat starts under the medallion, rounded ends. */}
       <div aria-hidden="true" className="absolute inset-y-1 left-6 right-0">
         <span
           className="absolute inset-0"
