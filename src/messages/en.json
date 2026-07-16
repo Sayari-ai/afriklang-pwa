@@ -34,7 +34,7 @@
   "consentBulletRevoke": "You can revoke this consent later from the app settings; future recordings will stop being uploaded.",
   "consentAgeConfirmLabel": "I confirm I'm at least 18 years old, or have a parent or guardian's agreement.",
   "consentWhatIfDeclineAction": "What if I don't agree?",
-  "consentWhatIfDeclineBody": "AfrikLang missions are voice recordings, so the app can't work without your permission. Nothing is recorded or uploaded until you agree. You can leave now and come back anytime your path will be waiting.",
+  "consentWhatIfDeclineBody": "AfrikLang missions are voice recordings, so the app can't work without your permission. Nothing is recorded or uploaded until you agree. You can leave now and come back anytime — your path will be waiting.",
   "consentAgreeButton": "I agree",
   "consentDisclaimer": "By tapping \"{action}\" you confirm you have read the points above.",
 
