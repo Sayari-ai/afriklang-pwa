@@ -3,10 +3,10 @@
 /**
  * Bottom navigation bar for the protected `(app)` route group.
  *
- * Game-kit reskin of the original white Flutter pill: a wooden plank
- * bar (dark carved rim + lit face) floating above the board. The
- * active tab glyph glows grass-green inside a soft green well; idle
- * glyphs are carved cream.
+ * Flat redesign: a white full-width bar with a 2px top border, four
+ * icon-only tabs. Icons are always colored (each tab has its own
+ * brand hue); the active tab sits inside a light-blue rounded tile
+ * with a blue border the signature active treatment.
  *
  * We figure out the active tab from the current pathname so the nav
  * stays in sync with browser back/forward and deep links there's
@@ -24,23 +24,39 @@ interface NavTab {
   label: string;
   /** Match the tab if the pathname starts with this prefix. */
   matchPrefix: string;
+  /** Brand hue for the glyph (hex lucide sets SVG `stroke`). */
+  color: string;
 }
 
 const TABS: NavTab[] = [
-  { href: "/home", icon: Home, label: "Home", matchPrefix: "/home" },
+  {
+    href: "/home",
+    icon: Home,
+    label: "Home",
+    matchPrefix: "/home",
+    color: "#00539F", // brand blue home is the primary surface
+  },
   {
     href: "/leaderboard",
     icon: Trophy,
     label: "Leaderboard",
     matchPrefix: "/leaderboard",
+    color: "#F88D43", // brand orange rewards/competition
   },
   {
     href: "/notifications",
     icon: Bell,
     label: "Notifications",
     matchPrefix: "/notifications",
+    color: "#6D51A6", // mid brand purple
   },
-  { href: "/profile", icon: User, label: "Profile", matchPrefix: "/profile" },
+  {
+    href: "/profile",
+    icon: User,
+    label: "Profile",
+    matchPrefix: "/profile",
+    color: "#321E53", // deep brand purple
+  },
 ];
 
 /**
@@ -64,33 +80,10 @@ export function BottomNav() {
       // `fixed` is positioned relative to the viewport, not the
       // phone-frame wrapper in the root layout, so we manually clamp
       // the nav to the same max-width and center it horizontally.
-      // That keeps the pill anchored to the bottom of the viewport
-      // while still sitting inside the mobile-sized column on desktop.
-      className="pointer-events-none fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 px-4 pb-3 phone-sm:px-2"
+      className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 border-t-2 border-border bg-bg"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="pointer-events-auto relative mx-auto flex h-[72px] max-w-md items-center justify-between px-3 phone-sm:h-[64px] phone-sm:px-2">
-        {/* Wooden plank: carved rim + lit face. */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-0"
-          style={{
-            background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
-            borderRadius: "38px 34px 37px 35px / 34px 38px 33px 37px",
-            boxShadow: "0 8px 16px rgba(0,0,0,0.45)",
-          }}
-        />
-        <span
-          aria-hidden="true"
-          className="absolute"
-          style={{
-            inset: "4px 4px 8px 4px",
-            background:
-              "linear-gradient(180deg, var(--color-wood-light) 0%, var(--color-wood-mid) 55%, var(--color-wood-dark) 100%)",
-            borderRadius: "34px 30px 33px 31px / 30px 34px 29px 33px",
-            boxShadow:
-              "inset 0 3px 0 rgba(255,235,205,0.4), inset 0 -4px 6px rgba(0,0,0,0.18)",
-          }}
-        />
+      <div className="flex h-[64px] items-center justify-around px-2 phone-sm:h-[58px]">
         {TABS.map((tab) => {
           const active = isActive(pathname, tab.matchPrefix);
           const Icon = tab.icon;
@@ -101,28 +94,16 @@ export function BottomNav() {
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
               prefetch
-              className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-all duration-200 ease-out phone-sm:h-12 phone-sm:w-12"
-              style={{
-                background: active
-                  ? "radial-gradient(circle at 50% 35%, rgba(140,198,63,0.35), rgba(76,143,47,0.18) 68%, transparent 75%)"
-                  : "transparent",
-                boxShadow: active
-                  ? "inset 0 2px 4px rgba(62,122,38,0.45)"
-                  : "none",
-                transform: active ? "scale(1.06)" : "scale(1)",
-              }}
+              className={`flex h-12 items-center justify-center rounded-xl px-5 transition-colors duration-150 phone-sm:px-4 ${
+                active ? "border-2 border-blue-border bg-blue-light" : ""
+              }`}
             >
               <Icon
                 size={28}
                 strokeWidth={2.5}
                 // Hex, not var(): lucide's `color` prop becomes the SVG
                 // `stroke` attribute, which doesn't resolve CSS vars.
-                color={active ? "#8CC63F" : "rgba(255,246,224,0.55)"}
-                style={{
-                  filter: active
-                    ? "drop-shadow(0 1.5px 0 var(--color-grass-deep))"
-                    : "drop-shadow(0 1px 0 rgba(92,48,24,0.6))",
-                }}
+                color={active ? tab.color : "#A9A1BC"}
               />
             </Link>
           );
@@ -134,7 +115,7 @@ export function BottomNav() {
 
 /**
  * Bottom padding to reserve room for the fixed nav bar in scrollable
- * screens. Mirrors the SafeArea + 72 + 12 + 12 = 96 pt the Flutter
- * Scaffold inserts for `bottomNavigationBar`.
+ * screens: 64px bar + breathing room (safe-area inset is handled by
+ * the bar itself extending under the home indicator).
  */
-export const BOTTOM_NAV_RESERVED_PX = 96;
+export const BOTTOM_NAV_RESERVED_PX = 88;

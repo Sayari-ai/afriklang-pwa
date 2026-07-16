@@ -23,8 +23,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { WoodButton } from "@/components/game/wood-button";
-import { WoodPanel } from "@/components/game/wood-panel";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { track } from "@/lib/api/events";
 import { useInstallPrompt } from "@/stores/install-prompt";
 
@@ -66,45 +66,43 @@ export function InstallPromptCard() {
   };
 
   return (
-    <WoodPanel grass={false} contentClassName="p-4 text-left">
-      <h2
-        className="font-game text-[17px] tracking-wide text-cream"
-        style={{ textShadow: "0 1.5px 0 rgba(92,48,24,0.7)" }}
-      >
+    <Card className="p-4 text-left">
+      <h2 className="text-[16px] font-extrabold text-text">
         {t("installCardTitle")}
       </h2>
       <div className="h-1" />
-      <p className="text-[13px] font-medium leading-snug text-cream/90">
+      <p className="text-[13px] font-semibold leading-snug text-text-muted">
         {t("installCardBody")}
       </p>
 
       {showIosSteps && (
-        <ol className="mt-3 flex list-decimal flex-col gap-1 pl-5 text-[13px] font-medium leading-snug text-cream">
+        <ol className="mt-3 flex list-decimal flex-col gap-1 pl-5 text-[13px] font-semibold leading-snug text-text">
           <li>{t("installCardIosStep1")}</li>
           <li>{t("installCardIosStep2")}</li>
         </ol>
       )}
 
       <div className="mt-3 flex items-center gap-3">
-        <WoodButton
-          tone="green"
+        <Button
+          // Secondary (white + blue label): this card sits directly
+          // above the screen's primary CTA two stacked filled-blue
+          // buttons would flatten the hierarchy.
+          variant="secondary"
           size="sm"
-          grass={false}
           fullWidth
           className="flex-1"
           onClick={onPrimary}
         >
           {t("installCardCta")}
-        </WoodButton>
+        </Button>
         <button
           type="button"
           onClick={onNotNow}
-          className="h-11 shrink-0 px-3 text-[14px] font-bold text-cream/75"
-          style={{ textShadow: "0 1px 0 rgba(92,48,24,0.6)" }}
+          className="h-10 shrink-0 px-3 text-[13px] font-extrabold uppercase tracking-[0.8px] text-text-faint transition-opacity active:opacity-60"
         >
           {t("installCardNotNow")}
         </button>
       </div>
-    </WoodPanel>
+    </Card>
   );
 }

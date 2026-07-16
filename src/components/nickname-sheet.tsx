@@ -13,12 +13,8 @@
  *     re-prompted on next cold start.
  *   - `"edit"` shows a "Cancel" button that just closes the sheet.
  *
- * Layout matches the existing `SheetShell` pattern in `profile/page.tsx`
- * bottom-anchored card with a translucent scrim, drag-handle, body
- * lock, and Escape-to-close. We don't lift `SheetShell` into a shared
- * component yet because (a) only two callers, (b) profile's variant
- * has subtle styling differences (font weights on options) that would
- * leak into a shared abstraction.
+ * Built on the shared `<Sheet>` shell (white bottom card, scrim,
+ * drag handle, body lock, Escape-to-close).
  *
  * Persistence: the sheet writes the local store synchronously
  * (optimistic), then fires the backend `setNickname()`. On backend
@@ -29,7 +25,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { WoodButton } from "@/components/game/wood-button";
+import { Button } from "@/components/ui/button";
+import { Sheet } from "@/components/ui/sheet";
 import { setNickname } from "@/lib/api/nickname";
 import { EdgeFunctionError } from "@/lib/api/edge";
 import { track } from "@/lib/api/events";
@@ -57,21 +54,6 @@ export function NicknameSheet({
 
   const [draft, setDraft] = useState(initial);
   const [submitting, setSubmitting] = useState(false);
-
-  // Body-lock + Escape, identical to the profile sheets so we feel
-  // native alongside them.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !submitting) onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose, submitting]);
 
   // Auto-focus the input when the sheet opens. We do this once via
   // ref rather than `autoFocus` because Safari iOS tends to ignore
@@ -153,7 +135,7 @@ export function NicknameSheet({
     return t("nicknameErrorEmpty");
   })();
 
-  // Soft cap the textarea via maxLength. This is on top of
+  // Soft cap the input via maxLength. This is on top of
   // `validateNickname` (which is the authoritative gate) without
   // it, mobile keyboards happily let the user paste 5 KB of emoji.
   // Use a slightly larger limit than NICKNAME_MAX_LENGTH because
@@ -166,117 +148,80 @@ export function NicknameSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      {/* Scrim. Tapping it dismisses unless we're mid-submit. */}
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={() => {
-          if (!submitting) onClose();
-        }}
-        className="absolute inset-0 bg-black/50"
-      />
-      <div className="relative mx-auto flex w-full max-w-[480px] flex-col pb-safe">
-        {/* Wooden sheet: carved rim + lit plank face (top corners only). */}
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 -z-10"
-          style={{
-            background: "linear-gradient(180deg, #7d4423 0%, #56301a 100%)",
-            borderRadius: "24px 22px 0 0 / 22px 24px 0 0",
-            boxShadow: "0 -6px 18px rgba(0,0,0,0.4)",
+    <Sheet
+      title={
+        mode === "first-run"
+          ? t("nicknameSheetTitleFirstRun")
+          : t("nicknameSheetTitleEdit")
+      }
+      onClose={onClose}
+      dismissible={!submitting}
+    >
+      <p className="px-5 text-[14px] font-semibold text-text-muted">
+        {t("nicknameSheetSubtitle")}
+      </p>
+      <div className="h-3" />
+
+      <div className="px-5">
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canSubmit) {
+              e.preventDefault();
+              handleSubmit();
+            }
           }}
+          maxLength={maxLengthAttr}
+          placeholder={t("nicknameSheetPlaceholder")}
+          disabled={submitting}
+          className="w-full rounded-2xl border-2 border-border bg-bg-subtle px-4 py-3 text-[16px] font-bold text-text placeholder:text-text-faint outline-none transition-colors focus:border-blue-border focus:bg-blue-light/40"
         />
-        <span
-          aria-hidden="true"
-          className="absolute -z-10"
-          style={{
-            inset: "4px 4px 0 4px",
-            background:
-              "linear-gradient(180deg, var(--color-wood-panel-light) 0%, var(--color-wood-panel-dark) 100%)",
-            borderRadius: "20px 18px 0 0 / 18px 20px 0 0",
-            boxShadow: "inset 0 3px 0 rgba(255,235,200,0.35)",
-          }}
-        />
-        <div className="flex justify-center pt-2.5">
-          <span className="block h-1.5 w-10 rounded-full bg-ink/40" />
-        </div>
-        <div className="h-3" />
-        <h2 className="px-5 font-game text-[19px] tracking-wide text-cream" style={{ textShadow: "0 1.5px 0 rgba(92,48,24,0.7)" }}>
-          {mode === "first-run"
-            ? t("nicknameSheetTitleFirstRun")
-            : t("nicknameSheetTitleEdit")}
-        </h2>
         <div className="h-1.5" />
-        <p className="px-5 text-[13px] font-medium text-cream/85">
-          {t("nicknameSheetSubtitle")}
-        </p>
-        <div className="h-3" />
-
-        <div className="px-5">
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="text"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canSubmit) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            maxLength={maxLengthAttr}
-            placeholder={t("nicknameSheetPlaceholder")}
-            disabled={submitting}
-            className="w-full rounded-xl border-2 border-ink/50 bg-black/20 px-4 py-3 text-[16px] font-semibold text-cream placeholder:text-cream/40 outline-none transition-colors focus:border-grass-light focus:bg-black/25"
-            style={{ boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3)" }}
-          />
-          <div className="h-1.5" />
-          <div className="flex min-h-[16px] items-center justify-between">
-            <span className="text-[12px] font-bold text-[#ffb3a0]">
-              {errorCopy ?? ""}
-            </span>
-            <span className="text-[12px] font-medium text-cream/60">
-              {[...draft.replace(/\s+/g, " ").trim()].length}/
-              {NICKNAME_MAX_LENGTH}
-            </span>
-          </div>
+        <div className="flex min-h-[16px] items-center justify-between">
+          <span className="text-[12px] font-bold text-red">
+            {errorCopy ?? ""}
+          </span>
+          <span className="text-[12px] font-semibold text-text-faint">
+            {[...draft.replace(/\s+/g, " ").trim()].length}/
+            {NICKNAME_MAX_LENGTH}
+          </span>
         </div>
-
-        <div className="h-4" />
-
-        <div className="flex items-center justify-end gap-3 px-5">
-          <button
-            type="button"
-            onClick={() => {
-              if (submitting) return;
-              if (mode === "first-run") markPrompted();
-              onClose();
-            }}
-            disabled={submitting}
-            className="rounded-full px-4 py-2 text-[14px] font-bold text-cream/90 disabled:opacity-50"
-            style={{ textShadow: "0 1px 0 rgba(92,48,24,0.6)" }}
-          >
-            {dismissLabel}
-          </button>
-          <WoodButton
-            tone="green"
-            size="sm"
-            grass={false}
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            loading={submitting}
-          >
-            {submitLabel}
-          </WoodButton>
-        </div>
-        <div className="h-4" />
       </div>
-    </div>
+
+      <div className="h-4" />
+
+      <div className="flex items-center justify-end gap-3 px-5">
+        <button
+          type="button"
+          onClick={() => {
+            if (submitting) return;
+            if (mode === "first-run") markPrompted();
+            onClose();
+          }}
+          disabled={submitting}
+          className="rounded-xl px-4 py-2 text-[14px] font-extrabold uppercase tracking-[0.8px] text-text-faint transition-opacity active:opacity-60 disabled:opacity-50"
+        >
+          {dismissLabel}
+        </button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          loading={submitting}
+        >
+          {submitLabel}
+        </Button>
+      </div>
+      <div className="h-1" />
+    </Sheet>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Login screen mandatory Google sign-in gate.
+ * Login screen mandatory Google sign-in gate (flat redesign).
  *
  * Funnel position (see the decision tree in `src/app/page.tsx`):
  *
@@ -35,9 +35,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Suspense, useEffect, useState } from "react";
 
-import { GameIconHalo, GameKey } from "@/components/game/glossy-icons";
-import { WoodButton } from "@/components/game/wood-button";
-import { ScreenBackground } from "@/components/screen-background";
+import { Button } from "@/components/ui/button";
+import { Mascot } from "@/components/ui/mascot";
 import { track } from "@/lib/api/events";
 import { useAuth } from "@/stores/auth";
 
@@ -109,80 +108,67 @@ function LoginScreen() {
   if (signedIn) return null;
 
   return (
-    <ScreenBackground>
-      <div className="flex min-h-dvh w-full flex-col px-6">
-        <div className="flex-1" />
+    <div className="flex min-h-dvh w-full flex-col px-6 phone-sm:px-4">
+      <div className="flex-1" />
 
-        {/* Glossy key "unlock your adventure" header. */}
-        <div className="flex justify-center">
-          <GameIconHalo size={104}>
-            <GameKey className="h-[68%] w-[68%]" />
-          </GameIconHalo>
-        </div>
-        <div className="h-6" />
-        <h1 className="text-outline whitespace-pre-line text-center font-game text-[36px] leading-tight tracking-wide text-cream phone-sm:text-[28px]">
-          {t("loginTitle")}
-        </h1>
-        <div className="h-3" />
-        <p
-          className="text-center text-[18px] font-medium leading-snug text-cream/95 phone-sm:text-[15px]"
-          style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
-        >
-          {t("loginSubtitle")}
-        </p>
-
-        <div className="flex-1" />
-
-        {failed && (
-          <>
-            <p
-              role="alert"
-              className="text-center text-[15px] font-bold leading-snug text-red-300 phone-sm:text-[13px]"
-              style={{ textShadow: "0 1px 0 rgba(0,0,0,0.5)" }}
-            >
-              {t("loginErrorGeneric")}
-            </p>
-            <div className="h-3" />
-          </>
-        )}
-
-        <WoodButton
-          tone="green"
-          size="lg"
-          fullWidth
-          onClick={signIn}
-          disabled={busy}
-          loading={busy}
-          aria-busy={busy}
-        >
-          <span className="inline-flex items-center justify-center gap-3">
-            <GoogleG />
-            {t("loginGoogleCta")}
-          </span>
-        </WoodButton>
-        <div className="h-3" />
-        <p className="text-center text-[13px] font-normal text-cream/70">
-          {t("loginPrivacyNote")}
-        </p>
-        <div className="h-4" />
+      {/* Mascot "your guide is waiting" hero. */}
+      <div className="flex justify-center">
+        <Mascot size={130} />
       </div>
-    </ScreenBackground>
+      <div className="h-6" />
+      <h1 className="whitespace-pre-line text-center text-[32px] font-extrabold leading-tight text-text phone-sm:text-[26px]">
+        {t("loginTitle")}
+      </h1>
+      <div className="h-3" />
+      <p className="text-center text-[16px] font-semibold leading-snug text-text-muted phone-sm:text-[14px]">
+        {t("loginSubtitle")}
+      </p>
+
+      <div className="flex-1" />
+
+      {failed && (
+        <>
+          <p
+            role="alert"
+            className="text-center text-[14px] font-bold leading-snug text-red phone-sm:text-[13px]"
+          >
+            {t("loginErrorGeneric")}
+          </p>
+          <div className="h-3" />
+        </>
+      )}
+
+      <Button
+        variant="secondary"
+        size="lg"
+        fullWidth
+        onClick={signIn}
+        disabled={busy}
+        loading={busy}
+        aria-busy={busy}
+      >
+        <span className="inline-flex items-center justify-center gap-3">
+          <GoogleG />
+          {t("loginGoogleCta")}
+        </span>
+      </Button>
+      <div className="h-3" />
+      <p className="text-center text-[13px] font-semibold text-text-faint">
+        {t("loginPrivacyNote")}
+      </p>
+      <div className="h-4 pb-[env(safe-area-inset-bottom)]" />
+    </div>
   );
 }
 
 /**
- * Official multi-colour Google "G" on a white tile, so the brand mark
- * stays legible on the wood/grass button body (Google's white-button
- * variant, adapted to the game pill).
+ * Official multi-colour Google "G" (the white-button variant the
+ * secondary button IS white, so the mark sits directly on it).
  */
 function GoogleG() {
   return (
-    <span
-      aria-hidden="true"
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white phone-sm:h-6 phone-sm:w-6"
-      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
-    >
-      <svg viewBox="0 0 48 48" className="h-[18px] w-[18px] phone-sm:h-4 phone-sm:w-4">
+    <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center">
+      <svg viewBox="0 0 48 48" className="h-[20px] w-[20px] phone-sm:h-4 phone-sm:w-4">
         <path
           fill="#EA4335"
           d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"

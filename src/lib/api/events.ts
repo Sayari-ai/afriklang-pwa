@@ -32,6 +32,7 @@ export type AnalyticsEvent =
   | "onboarding_complete"
   | "login_start"
   | "login_success"
+  | "logout"
   | "consent_granted"
   | "level_start"
   | "recording_submitted"
