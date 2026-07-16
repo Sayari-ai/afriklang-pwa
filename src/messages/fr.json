@@ -11,6 +11,12 @@
   "onboardingLanguagePickerTitle": "Quelle langue\napprenez-vous ?",
   "onboardingLanguagePickerSubtitle": "Choisissez-en une. Vous pourrez en changer plus tard.",
 
+  "loginTitle": "Connectez-vous\npour jouer",
+  "loginSubtitle": "Connectez-vous avec Google pour retrouver votre progression, vos points et vos récompenses sur tous vos appareils.",
+  "loginGoogleCta": "Continuer avec Google",
+  "loginErrorGeneric": "La connexion n'a pas abouti. Veuillez réessayer.",
+  "loginPrivacyNote": "Votre compte Google sert uniquement à sauvegarder votre progression.",
+
   "pathSetupBackendNotConfigured": "Le backend n'est pas configuré.\nDéfinissez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY dans .env.local.",
   "pathSetupLoadingTitle": "Préparation de votre\naventure…",
   "pathSetupLoadingSubtitle": "Téléchargement des missions de votre parcours",

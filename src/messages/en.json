@@ -11,6 +11,12 @@
   "onboardingLanguagePickerTitle": "Which language\nare you learning?",
   "onboardingLanguagePickerSubtitle": "Pick one. You can switch later.",
 
+  "loginTitle": "Sign in\nto play",
+  "loginSubtitle": "Sign in with Google so your progress, points and rewards follow you on any device.",
+  "loginGoogleCta": "Continue with Google",
+  "loginErrorGeneric": "Sign-in didn't complete. Please try again.",
+  "loginPrivacyNote": "We only use your Google account to save your progress.",
+
   "pathSetupBackendNotConfigured": "Backend is not configured.\nSet NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.",
   "pathSetupLoadingTitle": "Preparing your\nadventure…",
   "pathSetupLoadingSubtitle": "Downloading missions for your path",

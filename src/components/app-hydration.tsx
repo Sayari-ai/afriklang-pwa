@@ -14,7 +14,7 @@
  *     consent / language / onboarding flags, finally the resolved
  *     system locale.
  *
- * This component renders nothing — it's a side-effect boundary.
+ * This component renders nothing it's a side-effect boundary.
  */
 
 import { useEffect } from "react";
@@ -25,6 +25,7 @@ import { track } from "@/lib/api/events";
 import { runStorageMigrations } from "@/lib/storage/migrations";
 import { startProgressQueueRunner } from "@/lib/storage/progress-queue-runner";
 import { useAppLocale } from "@/stores/app-locale";
+import { useAuth } from "@/stores/auth";
 import { useConsent } from "@/stores/consent";
 import { useDeviceIdentity } from "@/stores/device-identity";
 import {
@@ -42,7 +43,7 @@ let appOpenTracked = false;
 
 export function AppHydration() {
   // `useLocale()` returns the locale that next-intl resolved server-side
-  // — exactly the one our request.ts handed to the provider. We forward
+  // exactly the one our request.ts handed to the provider. We forward
   // it to the locale store so client components have a synchronous
   // source of truth without re-doing the resolution.
   const serverLocale = useLocale();
@@ -57,7 +58,7 @@ export function AppHydration() {
     //    on-disk shape matches what the hydration code expects. The
     //    runner is idempotent (reads a stored version key first), so
     //    on every boot after the first this is a single localStorage
-    //    read and an early return. Fire-and-forget — async cleanup
+    //    read and an early return. Fire-and-forget async cleanup
     //    (e.g. orphan IDB deletes) shouldn't block first paint, and
     //    the synchronous parts (path-cache wipe) complete before
     //    `pathRepo.boot()` reads the cache anyway because that runs
@@ -73,14 +74,21 @@ export function AppHydration() {
     useOnboarding.getState().hydrate();
     useNickname.getState().hydrate();
 
-    // 2b. Install-prompt state: hydrate the dismissal window +
+    // 2b. Auth session (Google sign-in). Async, unlike the localStorage
+    //     stores: `getSession()` awaits the Supabase client's init,
+    //     which is also where an OAuth `?code=` redirect gets
+    //     exchanged for a session. The splash gate and route guard
+    //     wait on `useAuth.hydrated` before routing. Idempotent.
+    void useAuth.getState().hydrate();
+
+    // 2c. Install-prompt state: hydrate the dismissal window +
     //     standalone/iOS detection, and start capturing the Chromium
     //     `beforeinstallprompt` event (it can fire before any screen
     //     that wants to offer installation mounts). Both idempotent.
     useInstallPrompt.getState().hydrate();
     initInstallPromptCapture();
 
-    // 3. Locale: server already picked one — record it as the
+    // 3. Locale: server already picked one record it as the
     //    `effective` value. The persisted override (if any) is read
     //    eagerly inside the store's initializer, so no work needed here
     //    beyond announcing the effective value.
@@ -91,7 +99,7 @@ export function AppHydration() {
     // 4. Boot the offline progress-queue drain loop. Idempotent on
     //    repeat mounts; copy refreshes on every effect run so locale
     //    switches don't strand the snackbar text in the old language.
-    //    Audio uploads no longer have a queue — submission is now an
+    //    Audio uploads no longer have a queue submission is now an
     //    online-only operation (see `audio.ts` "at-most-once policy"),
     //    so only progress writes get queued here.
     startProgressQueueRunner({
@@ -101,7 +109,7 @@ export function AppHydration() {
     });
 
     // 5. Analytics: one `app_open` per browser session. `standalone`
-    //    distinguishes installed-PWA launches from plain tab visits —
+    //    distinguishes installed-PWA launches from plain tab visits 
     //    the key metric for the Phase-1 install prompt.
     if (!appOpenTracked) {
       appOpenTracked = true;

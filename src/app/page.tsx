@@ -11,13 +11,18 @@
  *
  *     /              ← this file (splash + decide-where-to-go)
  *     /onboarding
+ *     /login
  *     /path-setup
  *     /consent
  *     /home          ← (app)/home/page.tsx
  *
- * Decision logic mirrors the Flutter handlers exactly:
+ * Decision logic mirrors the Flutter handlers exactly (with the
+ * web-only Google-auth gate inserted after onboarding):
  *
  *     onboarding done? ──no──► /onboarding
+ *                       │yes
+ *                       ▼
+ *                 signed in?    ──no──► /login
  *                       │yes
  *                       ▼
  *                 path booted?  ──no──► /path-setup
@@ -30,14 +35,16 @@
  *
  * The minimum splash time matches Flutter's 2 s `Future.delayed`
  * (`splash_screen.dart:20`). We start the timer the moment the
- * stores have hydrated so a slow IO read doesn't push us over 2 s —
+ * stores have hydrated so a slow IO read doesn't push us over 2 s 
  * same behaviour as the mobile app.
  *
  * "Hydrated" signal: `<AppHydration>` runs every store's `hydrate()`
  * inside a single `useEffect`, so we can key off any one of the
  * post-hydration flags. We use the onboarding flag because it's the
- * last one set in that block — by the time it's true the others are
- * already populated.
+ * last one set in that block by the time it's true the others are
+ * already populated. The auth store hydrates *asynchronously*
+ * (session restore / OAuth code exchange), so it carries its own
+ * `hydrated` flag which we additionally wait for before routing.
  */
 
 import Image from "next/image";
@@ -45,6 +52,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { GameBoardBackdrop } from "@/components/screen-background";
+import { useAuth } from "@/stores/auth";
 import { useConsent } from "@/stores/consent";
 import { useOnboarding } from "@/stores/onboarding";
 import { usePathRepo } from "@/stores/path-repo";
@@ -55,7 +63,9 @@ export default function SplashGatePage() {
   const router = useRouter();
 
   const hydrated = useOnboarding((s) => s.hydrated);
+  const authHydrated = useAuth((s) => s.hydrated);
   const onboardingDone = useOnboarding((s) => s.complete);
+  const signedIn = useAuth((s) => s.user !== null);
   const consentGranted = useConsent((s) => s.granted);
   const pathReady = usePathRepo((s) => s.isReady);
 
@@ -71,15 +81,22 @@ export default function SplashGatePage() {
   }, [hydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !authHydrated) return;
     const anchor = hydratedAtRef.current ?? Date.now();
     const elapsed = Date.now() - anchor;
     const wait = Math.max(0, SPLASH_MIN_MS - elapsed);
 
     const id = window.setTimeout(() => {
-      // Decision tree — keep in lockstep with `_AppRoot` handlers.
+      // Decision tree keep in lockstep with `_AppRoot` handlers.
       if (!onboardingDone) {
         router.replace("/onboarding");
+        return;
+      }
+      // Google sign-in is mandatory before any backend-bound step 
+      // no guest mode. The login screen bounces back here once a
+      // session exists.
+      if (!signedIn) {
+        router.replace("/login");
         return;
       }
       // After onboarding the Flutter app *always* runs path-setup,
@@ -99,7 +116,15 @@ export default function SplashGatePage() {
     }, wait);
 
     return () => window.clearTimeout(id);
-  }, [hydrated, onboardingDone, pathReady, consentGranted, router]);
+  }, [
+    hydrated,
+    authHydrated,
+    onboardingDone,
+    signedIn,
+    pathReady,
+    consentGranted,
+    router,
+  ]);
 
   // Splash UI: dark game-board backdrop, centred logo. Same geometry
   // as `splash_screen.dart:27-43` (Align(0, -0.15), 45 % width).

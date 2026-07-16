@@ -1,28 +1,28 @@
 "use client";
 
 /**
- * Onboarding screen — two-page intro/language-picker flow.
+ * Onboarding screen two-page intro/language-picker flow.
  *
  * Direct port of `lib/features/onboarding/onboarding_screen.dart`.
  * The Flutter version uses a PageView with optional swipe; on the web
  * we drive page changes purely from CTAs + the indicator (no swipe
- * gesture handling — feels right for a click-first UX and keeps the
+ * gesture handling feels right for a click-first UX and keeps the
  * implementation small).
  *
  * Pages (matches `_pages` in the Dart file):
- *   1. intro          — illustration + "Get rewarded" hook + filled CTA.
+ *   1. intro          illustration + "Get rewarded" hook + filled CTA.
  *                       (Copy deliberately promises no specific dollar
- *                       amount — there is no payout mechanism yet.)
- *   2. languagePicker — chip grid + outline CTA. CTA is gated on a
+ *                       amount there is no payout mechanism yet.)
+ *   2. languagePicker chip grid + outline CTA. CTA is gated on a
  *                       selection (`onboarding_screen.dart:113-119`).
  *
  * Wallet + passcode pages stay disabled (PoC scope, see Dart comments).
  *
  * On finish:
  *   - Persist onboarding-complete (`useOnboarding.complete()`).
- *   - Punt to `/path-setup`. The path-setup screen will boot the
- *     repository, then the splash gate logic (re-entered from there)
- *     decides where to go next.
+ *   - Punt to `/login`. Google sign-in is mandatory (no guest mode);
+ *     once a session exists the login screen bounces to the splash
+ *     gate, which forwards to path-setup / consent / home.
  */
 
 import { useRouter } from "next/navigation";
@@ -111,10 +111,10 @@ export default function OnboardingPage() {
     track("onboarding_complete", {
       learning_language: useLearningLanguage.getState().iso,
     });
-    router.replace("/path-setup");
+    router.replace("/login");
   };
 
-  // Skip is hidden on the language picker (mandatory choice) — same
+  // Skip is hidden on the language picker (mandatory choice) same
   // logic as `onboarding_screen.dart:160-164`.
   const showSkip = current !== "languagePicker";
   const showBack = index > 0;
@@ -182,7 +182,7 @@ function IntroPage({ onCta }: { onCta: () => void }) {
   const t = useTranslations();
   return (
     <div className="flex w-full flex-col items-center justify-center gap-10 text-center">
-      {/* Glossy treasure-coin hero (SVG — replaces the old flat
+      {/* Glossy treasure-coin hero (SVG replaces the old flat
           Dollar-Coin PNG). Decorative; the headline carries meaning. */}
       <RewardIllustration className="h-[230px] w-auto phone-sm:h-[180px]" />
       <div className="flex flex-col gap-3">

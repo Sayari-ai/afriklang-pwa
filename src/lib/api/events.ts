@@ -1,21 +1,21 @@
 "use client";
 
 /**
- * Product analytics client — fire-and-forget event tracking.
+ * Product analytics client fire-and-forget event tracking.
  *
  * Design contract (Phase 0 of the retention roadmap):
- *   * `track()` NEVER throws and NEVER blocks UX — analytics is a
+ *   * `track()` NEVER throws and NEVER blocks UX analytics is a
  *     side-channel, not a dependency. Any failure (offline, backend
  *     missing, edge function down) silently drops the event.
  *   * Events are buffered for a short window and sent as one batched
  *     `events_log` call, so bursts (app_open + level_start on a deep
  *     link) cost one request instead of N.
  *   * Identity is the same anonymous device UUID every other backend
- *     call uses — no cookies, no fingerprinting, no PII in props.
+ *     call uses no cookies, no fingerprinting, no PII in props.
  *     `user_id` attribution arrives with the auth project, server-side.
  *   * Timestamps are assigned server-side; offline events are dropped
  *     rather than queued (replayed events with wrong clocks would
- *     poison retention metrics — absence is more honest).
+ *     poison retention metrics absence is more honest).
  *
  * Event names are a closed union so call sites can't invent
  * unaggregatable one-offs. Add new names here, deliberately.
@@ -30,6 +30,8 @@ import { invokeEdge } from "./edge";
 export type AnalyticsEvent =
   | "app_open"
   | "onboarding_complete"
+  | "login_start"
+  | "login_success"
   | "consent_granted"
   | "level_start"
   | "recording_submitted"
@@ -43,7 +45,7 @@ export type AnalyticsEvent =
   | "install_prompt_dismissed"
   | "app_installed";
 
-/** JSON-safe primitive props only — keeps the payload flat and queryable. */
+/** JSON-safe primitive props only keeps the payload flat and queryable. */
 export type AnalyticsProps = Record<string, string | number | boolean | null>;
 
 interface BufferedEvent {
