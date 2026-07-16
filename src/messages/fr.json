@@ -143,7 +143,7 @@
   "nicknameErrorEmpty": "Veuillez saisir un pseudo.",
   "nicknameErrorTooShort": "Le pseudo doit contenir au moins 2 caractères.",
   "nicknameErrorTooLong": "Le pseudo ne doit pas dépasser 20 caractères.",
-  "nicknameSaveOfflineSnack": "Vous êtes hors ligne votre pseudo sera visible localement jusqu'à la reconnexion.",
+  "nicknameSaveOfflineSnack": "Vous êtes hors ligne — votre pseudo sera visible localement jusqu'à la reconnexion.",
   "nicknameSaveFailedSnack": "Impossible d'enregistrer votre pseudo sur le serveur. Il est conservé localement.",
 
   "notificationsTitle": "Notifications",
