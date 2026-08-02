@@ -1,21 +1,32 @@
 "use client";
 
 /**
- * Profile tab settings (flat redesign).
+ * Profile tab the user's identity + settings (flat redesign).
  *
- * Three sections, each a labelled white bordered card:
- *   1. Preferences
- *      - App language: System / English / Français → bottom-sheet picker
- *        wired to `useSetAppLocale()` (writes cookie + localStorage,
- *        then `router.refresh()` so next-intl swaps message bundles).
- *      - Learning language: Twi / Fon / Wolof → bottom-sheet picker.
- *      - Nickname → shared NicknameSheet (edit mode).
+ * Layout (top to bottom, ordered by the thumb zone static content
+ * high in the hard-reach band, frequent interactions low near the
+ * thumb):
+ *   0. Identity header: large Google avatar (monogram fallback),
+ *      display name, email. The app has exactly one identity per
+ *      user, so the person IS the page header not an "Account"
+ *      row buried in a settings list (that grammar implies
+ *      switchable/multiple accounts, which we don't have).
+ *   1. About
+ *      - Version row (non-interactive). Web has no `buildNumber`;
+ *        we render `version (web)`.
  *   2. Privacy
  *      - Recording consent toggle. Re-grant is one-tap (the user has
  *        already seen the disclosure during onboarding). Revoking
  *        opens a confirm dialog with a red "Revoke" CTA.
- *   3. About
- *      - Version row. Web has no `buildNumber`; we render `version (web)`.
+ *   3. Preferences (the repeat-visit rows, lowest = easiest reach)
+ *      - App language: System / English / Français → bottom-sheet picker
+ *        wired to `useSetAppLocale()` (writes cookie + localStorage,
+ *        then `router.refresh()` so next-intl swaps message bundles).
+ *      - Recording language: Twi / Fon / Wolof → bottom-sheet picker.
+ *   4. Log out: standalone action card at the very bottom (with
+ *      confirm dialog) an action you take, deliberately separated
+ *      from the identity header so it doesn't read as account
+ *      management.
  *
  * Sheets are built on the shared `<Sheet>` shell; the confirm dialog
  * is a centered white card over a scrim.
@@ -26,7 +37,6 @@ import { LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
-import { NicknameSheet } from "@/components/nickname-sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CountryFlag } from "@/components/ui/country-flag";
@@ -42,7 +52,6 @@ import {
   type LearningLanguage,
   useLearningLanguage,
 } from "@/stores/learning-language";
-import { useNickname } from "@/stores/nickname";
 
 // Baked at build time. The PWA has no native package metadata, so
 // we expose the package.json version directly. (Next inlines
@@ -55,7 +64,6 @@ const APP_BUILD = "web";
 type SheetSpec =
   | { kind: "app-language" }
   | { kind: "learning-language" }
-  | { kind: "nickname" }
   | { kind: "revoke-confirm" }
   | { kind: "logout-confirm" }
   | null;
@@ -81,14 +89,18 @@ export default function ProfilePage() {
         </h1>
         <div className="h-4" />
 
-        <SectionCard title={t("profileSectionPreferences")}>
-          <AppLanguageRow onTap={() => setSheet({ kind: "app-language" })} />
-          <Divider />
-          <LearningLanguageRow
-            onTap={() => setSheet({ kind: "learning-language" })}
-          />
-          <Divider />
-          <NicknameRow onTap={() => setSheet({ kind: "nickname" })} />
+        <IdentityHeader />
+
+        <div className="h-5" />
+
+        {/* Section order follows the thumb zone: dead info (About)
+            sits high in the hard-to-reach band, the deliberate
+            privacy toggle mid, and the repeat-visit Preferences
+            pickers lowest closest to a one-handed thumb. Log out
+            stays last by convention (confirm-guarded, and scrolling
+            out of casual reach suits a destructive action). */}
+        <SectionCard title={t("profileSectionAbout")}>
+          <VersionRow />
         </SectionCard>
 
         <div className="h-4" />
@@ -101,17 +113,22 @@ export default function ProfilePage() {
 
         <div className="h-4" />
 
-        <SectionCard title={t("profileSectionAccount")}>
-          <AccountRow />
+        <SectionCard title={t("profileSectionPreferences")}>
+          <AppLanguageRow onTap={() => setSheet({ kind: "app-language" })} />
           <Divider />
-          <LogoutRow onTap={() => setSheet({ kind: "logout-confirm" })} />
+          <LearningLanguageRow
+            onTap={() => setSheet({ kind: "learning-language" })}
+          />
         </SectionCard>
 
         <div className="h-4" />
 
-        <SectionCard title={t("profileSectionAbout")}>
-          <VersionRow />
-        </SectionCard>
+        {/* Standalone action card no section label. Grouping it
+            under the identity header (old "Account" section) made
+            the screen read like a manage-accounts settings page. */}
+        <Card className="overflow-hidden py-1">
+          <LogoutRow onTap={() => setSheet({ kind: "logout-confirm" })} />
+        </Card>
       </div>
 
       {sheet?.kind === "app-language" && (
@@ -119,9 +136,6 @@ export default function ProfilePage() {
       )}
       {sheet?.kind === "learning-language" && (
         <LearningLanguageSheet onClose={() => setSheet(null)} />
-      )}
-      {sheet?.kind === "nickname" && (
-        <NicknameSheet mode="edit" onClose={() => setSheet(null)} />
       )}
       {sheet?.kind === "revoke-confirm" && (
         <RevokeConfirmDialog onClose={() => setSheet(null)} />
@@ -253,31 +267,6 @@ function LearningLanguageRow({ onTap }: { onTap: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// Nickname row
-// ---------------------------------------------------------------------------
-
-function NicknameRow({ onTap }: { onTap: () => void }) {
-  const t = useTranslations();
-  // Reactive flips from "Not set" to the chosen value as soon as
-  // the user submits the sheet. We don't show the server-assigned
-  // fallback here because it's not known on the profile screen
-  // (would require a leaderboard fetch); keep this row strictly
-  // about the *user-chosen* override.
-  const value = useNickname((s) => s.value);
-  const trailing = value && value.length > 0
-    ? value
-    : t("profileNicknameNotSet");
-  return (
-    <Tile
-      leading={<PersonIcon />}
-      label={t("profileNicknameLabel")}
-      trailing={trailing}
-      onTap={onTap}
-    />
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Consent row
 // ---------------------------------------------------------------------------
 
@@ -350,41 +339,63 @@ function ToggleSwitch({
 }
 
 // ---------------------------------------------------------------------------
-// Account rows
+// Identity header + log out
 // ---------------------------------------------------------------------------
 
 /**
- * Signed-in identity row (non-interactive): purple monogram disc +
- * Google display name with the email as a sublabel. Falls back to
- * the email as the headline (then to a generic label) Google
- * accounts don't always expose a name.
+ * The signed-in person, as the page's hero: large Google avatar
+ * (purple monogram disc when the account exposes no photo, or the
+ * photo fails to load e.g. offline), display name, email sublabel.
+ * Falls back to the email as the headline (then to a generic label)
+ * Google accounts don't always expose a name.
+ *
+ * Non-interactive by design: one user = one identity. There is
+ * nothing to switch, add, or manage here.
  */
-function AccountRow() {
+function IdentityHeader() {
   const t = useTranslations();
   const user = useAuth((s) => s.user);
+  const [photoFailed, setPhotoFailed] = useState(false);
 
   const headline = user?.name ?? user?.email ?? t("profileAccountGoogleFallback");
   const sublabel = user?.name ? user.email : null;
   const monogram = (headline[0] ?? "?").toUpperCase();
+  const showPhoto = !!user?.avatarUrl && !photoFailed;
 
   return (
-    <div className="flex items-center px-4 py-3">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple">
-        <span className="text-[17px] font-extrabold text-white">
-          {monogram}
-        </span>
-      </span>
-      <div className="w-3" />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="line-clamp-1 text-[16px] font-bold text-text">
-          {headline}
-        </span>
-        {sublabel && (
-          <span className="line-clamp-1 text-[12px] font-semibold text-text-muted">
-            {sublabel}
+    <div className="flex flex-col items-center text-center">
+      {showPhoto ? (
+        // Plain <img>, not next/image: Google serves avatars already
+        // sized (=s96-c) so the optimizer adds nothing, and next/image
+        // would require whitelisting *.googleusercontent.com in
+        // next.config.ts. `no-referrer` avoids Google's occasional
+        // 403-with-referrer; onError drops to the monogram (offline,
+        // stale URL).
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={user!.avatarUrl!}
+          alt=""
+          aria-hidden
+          referrerPolicy="no-referrer"
+          onError={() => setPhotoFailed(true)}
+          className="h-[88px] w-[88px] rounded-full border-4 border-blue-light object-cover"
+        />
+      ) : (
+        <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full border-4 border-blue-light bg-purple">
+          <span className="text-[34px] font-extrabold text-white">
+            {monogram}
           </span>
-        )}
-      </div>
+        </span>
+      )}
+      <div className="h-3" />
+      <span className="line-clamp-1 max-w-full px-4 text-[20px] font-extrabold text-text">
+        {headline}
+      </span>
+      {sublabel && (
+        <span className="line-clamp-1 max-w-full px-4 text-[13px] font-semibold text-text-muted">
+          {sublabel}
+        </span>
+      )}
     </div>
   );
 }
@@ -739,14 +750,6 @@ function CheckIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-    </svg>
-  );
-}
-
-function PersonIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-3.34 0-10 1.67-10 5v3h20v-3c0-3.33-6.66-5-10-5z" />
     </svg>
   );
 }

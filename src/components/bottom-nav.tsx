@@ -4,9 +4,9 @@
  * Bottom navigation bar for the protected `(app)` route group.
  *
  * Flat redesign: a white full-width bar with a 2px top border, four
- * icon-only tabs. Icons are always colored (each tab has its own
- * brand hue); the active tab sits inside a light-blue rounded tile
- * with a blue border the signature active treatment.
+ * tabs (icon + label). The active tab sits inside a light-blue
+ * rounded tile with a blue border, brand-blue glyph and label the
+ * signature active treatment. Inactive tabs are muted gray.
  *
  * We figure out the active tab from the current pathname so the nav
  * stays in sync with browser back/forward and deep links there's
@@ -16,46 +16,55 @@
 import { Home, Trophy, Bell, User, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+
+import { Palette } from "@/lib/colors";
 
 interface NavTab {
   href: string;
   icon: LucideIcon;
-  /** Used as the accessible label and for `aria-current`. */
-  label: string;
+  /**
+   * Message key for the visible label (also the link's accessible
+   * name, since the text lives inside the anchor).
+   */
+  labelKey: string;
   /** Match the tab if the pathname starts with this prefix. */
   matchPrefix: string;
-  /** Brand hue for the glyph (hex lucide sets SVG `stroke`). */
-  color: string;
 }
+
+/**
+ * Glyph colors (JS values, not var(): lucide's `color` prop becomes
+ * the SVG `stroke` attribute, which doesn't resolve CSS vars).
+ * Active matches the blue active tile (brand blue = `--color-blue`);
+ * inactive is the faint purple-tinted neutral (`--color-text-faint`).
+ */
+const ACTIVE_ICON_COLOR = Palette.blue;
+const INACTIVE_ICON_COLOR = Palette.textFaint;
 
 const TABS: NavTab[] = [
   {
     href: "/home",
     icon: Home,
-    label: "Home",
+    labelKey: "navHome",
     matchPrefix: "/home",
-    color: "#00539F", // brand blue home is the primary surface
   },
   {
     href: "/leaderboard",
     icon: Trophy,
-    label: "Leaderboard",
+    labelKey: "navLeaderboard",
     matchPrefix: "/leaderboard",
-    color: "#F88D43", // brand orange rewards/competition
   },
   {
     href: "/notifications",
     icon: Bell,
-    label: "Notifications",
+    labelKey: "navNotifications",
     matchPrefix: "/notifications",
-    color: "#6D51A6", // mid brand purple
   },
   {
     href: "/profile",
     icon: User,
-    label: "Profile",
+    labelKey: "navProfile",
     matchPrefix: "/profile",
-    color: "#321E53", // deep brand purple
   },
 ];
 
@@ -73,6 +82,7 @@ function isActive(pathname: string, prefix: string): boolean {
 
 export function BottomNav() {
   const pathname = usePathname() ?? "";
+  const t = useTranslations();
 
   return (
     <nav
@@ -91,20 +101,30 @@ export function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
-              aria-label={tab.label}
               aria-current={active ? "page" : undefined}
               prefetch
-              className={`flex h-12 items-center justify-center rounded-xl border-2 px-5 transition-colors duration-150 phone-sm:px-4 ${
+              // Column tile: icon over label. Horizontal padding is
+              // deliberately slim ("Notifications" is the sizing
+              // worst case; four tabs must fit a 320px frame), with
+              // a 44px width floor so short labels ("Home", fr
+              // "Profil") can't shrink the hit area below the iOS
+              // touch-target minimum.
+              className={`flex h-12 flex-col items-center justify-center gap-[3px] rounded-xl border-2 px-3 transition-colors duration-150 phone-sm:min-w-11 phone-sm:px-1.5 ${
                 active ? "border-blue-border bg-blue-light" : "border-transparent"
               }`}
             >
               <Icon
-                size={28}
+                size={22}
                 strokeWidth={2.5}
-                // Hex, not var(): lucide's `color` prop becomes the SVG
-                // `stroke` attribute, which doesn't resolve CSS vars.
-                color={active ? tab.color : "#A9A1BC"}
+                color={active ? ACTIVE_ICON_COLOR : INACTIVE_ICON_COLOR}
               />
+              <span
+                className={`whitespace-nowrap text-[10px] font-extrabold leading-none phone-sm:text-[9px] ${
+                  active ? "text-blue" : "text-text-faint"
+                }`}
+              >
+                {t(tab.labelKey)}
+              </span>
             </Link>
           );
         })}

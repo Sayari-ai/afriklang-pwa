@@ -846,13 +846,7 @@ export default function LevelPage({
         // and means a fresh level honestly starts at 0.
         progressValue={isFeedback ? step : step - 1}
         onBack={onBack}
-        onSkip={onSkip}
         quitLabel={t("levelQuitLabel")}
-        skipLabel={t("commonSkip")}
-        // Hide Skip while the feedback sheet owns the flow and while
-        // an upload is in flight (skipping mid-upload would fork the
-        // flow and corrupt the submitted-count accounting).
-        skipHidden={isFeedback || uploading}
       />
 
       <div className="h-4" />
@@ -900,9 +894,30 @@ export default function LevelPage({
               onClick={toggleRecord}
             />
             <div className="h-3" />
-            <p className="text-[16px] font-bold text-text-muted">
+            <p className="text-[16px] font-bold text-text-muted phone-sm:text-[14px]">
               {isRecording ? t("levelTapToStop") : t("levelTapToRecord")}
             </p>
+          </>
+        )}
+
+        {/* Skip lives down here in the thumb zone (it used to sit
+            top-right in the header): it's a per-question, repeat
+            action, and our users hold the phone one-handed. Same
+            visibility contract as before: available while idle,
+            recording and reviewing; hidden while the feedback sheet
+            owns the flow and while an upload is in flight (skipping
+            mid-upload would fork the flow and corrupt the
+            submitted-count accounting). */}
+        {!isFeedback && !uploading && (
+          <>
+            <div className="h-1" />
+            <button
+              type="button"
+              onClick={onSkip}
+              className="min-h-11 px-6 py-2 text-[14px] font-extrabold uppercase tracking-[0.8px] text-text-faint transition-opacity active:opacity-60 phone-sm:text-[13px]"
+            >
+              {t("commonSkip")}
+            </button>
           </>
         )}
       </div>
@@ -923,45 +938,30 @@ export default function LevelPage({
 }
 
 // ---------------------------------------------------------------------------
-// Top bar: quit, progress, skip
+// Top bar: quit, progress
 // ---------------------------------------------------------------------------
 
 function TopBar({
   totalSteps,
   progressValue,
   onBack,
-  onSkip,
   quitLabel,
-  skipLabel,
-  skipHidden,
 }: {
   totalSteps: number;
   /** Completed-question count (fills on success, not on arrival). */
   progressValue: number;
   onBack: () => void;
-  onSkip: () => void;
   quitLabel: string;
-  skipLabel: string;
-  skipHidden: boolean;
 }) {
   return (
     <div className="flex items-center gap-2 px-3 pt-3">
       <IconButton icon={X} label={quitLabel} size={44} onClick={onBack} />
-      <div className="min-w-0 flex-1 px-1">
+      {/* Right inset mirrors the quit button's visual weight so the
+          bar reads centered. (Skip used to live here it moved to
+          the bottom footer, into the one-handed thumb zone.) */}
+      <div className="min-w-0 flex-1 px-1 pr-3">
         <ProgressBar value={progressValue} max={totalSteps} />
       </div>
-      {skipHidden ? (
-        // Keep the bar geometry stable while Skip is hidden.
-        <span aria-hidden className="w-[52px] phone-sm:w-[40px]" />
-      ) : (
-        <button
-          type="button"
-          onClick={onSkip}
-          className="px-2 py-2 text-[14px] font-extrabold uppercase tracking-[0.8px] text-text-faint transition-opacity active:opacity-60 phone-sm:text-[13px]"
-        >
-          {skipLabel}
-        </button>
-      )}
     </div>
   );
 }
@@ -1001,8 +1001,12 @@ function QuestionContent({
       </p>
       <div className="h-4" />
       {/* Flat white picture card. `aspect-square` keeps it 1:1
-          regardless of the underlying image; `object-cover` clips. */}
-      <div className="relative aspect-square w-full max-w-md rounded-2xl border-2 border-border bg-bg p-2">
+          regardless of the underlying image; `object-cover` clips.
+          Width-capped on narrow phones: the footer grew by ~48px
+          when Skip moved into the thumb zone, so the square card
+          gives some height back to keep more of the image above
+          the fold at 320px. */}
+      <div className="relative aspect-square w-full max-w-md rounded-2xl border-2 border-border bg-bg p-2 phone-sm:max-w-[260px]">
         <div className="relative h-full w-full overflow-hidden rounded-xl bg-bg-subtle">
           {/* Skeleton shimmer until the network image lands. */}
           {!imageLoaded && (

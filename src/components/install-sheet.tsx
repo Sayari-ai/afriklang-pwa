@@ -12,8 +12,7 @@
  *
  * Anti-nagging contract (shared with the card via the store):
  *   - At most once per session (module latch), after a short delay so
- *     the map paints first, and never over the first-run nickname
- *     sheet (`suppressed`).
+ *     the map paints first.
  *   - ANY exit scrim tap, Escape, "Not now" persists the 14-day
  *     cool-off (`dismiss()`), which also hides the celebration card.
  *     Declining the native OS sheet does the same (store-side).
@@ -40,7 +39,7 @@ let offeredThisSession = false;
 /** Delay before the ask let the path render and settle first. */
 const OPEN_DELAY_MS = 1200;
 
-export function HomeInstallSheet({ suppressed }: { suppressed: boolean }) {
+export function HomeInstallSheet() {
   const t = useTranslations();
 
   const canOffer = useInstallPrompt((s) => s.canOffer());
@@ -51,7 +50,7 @@ export function HomeInstallSheet({ suppressed }: { suppressed: boolean }) {
   const [showIosSteps, setShowIosSteps] = useState(false);
 
   useEffect(() => {
-    if (offeredThisSession || suppressed || !canOffer || open) return;
+    if (offeredThisSession || !canOffer || open) return;
     const id = window.setTimeout(() => {
       offeredThisSession = true;
       setOpen(true);
@@ -61,7 +60,7 @@ export function HomeInstallSheet({ suppressed }: { suppressed: boolean }) {
       });
     }, OPEN_DELAY_MS);
     return () => window.clearTimeout(id);
-  }, [suppressed, canOffer, open, isIos]);
+  }, [canOffer, open, isIos]);
 
   if (!open) return null;
 

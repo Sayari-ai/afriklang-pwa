@@ -50,7 +50,7 @@ import { safeStorage } from "@/lib/safe-storage";
  * new migration, append it to `MIGRATIONS` *and* bump this constant
  * to match its `to`. Mismatches are caught by an assertion below.
  */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 interface Migration {
   /** Version produced by running this migration (= prior version + 1). */
@@ -119,6 +119,23 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
           // Per-DB failures are non-fatal see runner-level catch.
         }
       }
+    },
+  },
+  {
+    to: 2,
+    reason: "remove-nickname-feature",
+    run: () => {
+      // The user-chosen nickname flow was retired: Google sign-in is
+      // mandatory, so the leaderboard name now comes from the Google
+      // account (`<DisplayNameSync>` pushes it via `nickname_set`).
+      // Clear the two keys the retired `useNickname` store persisted.
+      //
+      // Key names are inlined (not `StorageKeys.*`): the registry no
+      // longer declares them, and a frozen migration must keep
+      // deleting exactly these historical strings even if the
+      // registry evolves further.
+      safeStorage.removeItem("afriklang.nickname.v1");
+      safeStorage.removeItem("afriklang.nickname.v1.prompted");
     },
   },
 ];

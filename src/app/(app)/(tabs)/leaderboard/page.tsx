@@ -1,16 +1,21 @@
 "use client";
 
 /**
- * Leaderboard tab league-style ranking list (flat redesign).
+ * Leaderboard tab podium view (flat redesign).
  *
  * Layout (from the top):
- *   1. Header: bold title + outline refresh button.
- *   2. Ranked rows for every entry (Duolingo league style): medal
- *      discs for ranks 1-3, plain rank numbers below, colored
+ *   1. Header: bold title.
+ *   2. The top-3 podium: medal discs (gold/silver/bronze), colored
  *      monogram avatars, points right-aligned. The caller's row gets
  *      the light-blue highlight treatment.
- *   3. Sticky "You" footer card when the caller is *not* in the top
- *      list (i.e. `me != null && !meInTop(snapshot)`).
+ *   3. If the caller is not on the podium, their own row renders
+ *      directly below it with their real rank as a plain number
+ *      (never a medal), separated by a "•••" gap marker when their
+ *      rank isn't literally 4. Nobody else is shown ranks beyond
+ *      the podium are noise, the user only cares about the podium
+ *      and their own position.
+ *   4. Refresh: full-width labeled button in a footer pinned above
+ *      the bottom tab bar the one-handed thumb zone.
  *
  * Loading / error / empty:
  *   - Loading: green spinner centered.
@@ -20,6 +25,8 @@
  * Data:
  *   - SWR keyed on `["leaderboard", deviceId]`. The fetcher calls
  *     `getLeaderboard(deviceId)` (Edge Function `leaderboard_get`).
+ *     The endpoint still returns the top 50; we slice client-side so
+ *     the wire contract stays untouched.
  *   - Pull-to-refresh isn't a thing on web, so we replace it with a
  *     small "refresh" button in the header.
  *   - `revalidateOnFocus: true` keeps the list fresh when the tab
@@ -33,18 +40,18 @@ import useSWR from "swr";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
 import { Spinner } from "@/components/ui/icons";
 import { Mascot } from "@/components/ui/mascot";
 import { Palette } from "@/lib/colors";
 import { getLeaderboard } from "@/lib/api/leaderboard";
+import { toLeaderboardName } from "@/lib/api/nickname";
 import {
   type LeaderboardEntry,
   type LeaderboardMe,
   type LeaderboardSnapshot,
 } from "@/lib/content/leaderboard-models";
+import { useAuth } from "@/stores/auth";
 import { useDeviceIdentity } from "@/stores/device-identity";
-import { useNickname } from "@/stores/nickname";
 import { usePathRepo } from "@/stores/path-repo";
 
 const MEDALS = [Palette.medalGold, Palette.medalSilver, Palette.medalBronze];
@@ -214,15 +221,16 @@ function LoadedView({
   onRefresh: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
-  // Local nickname override. The user can choose a display name on
-  // first run (`/home` modal) or from `/profile`. Until the backend
-  // `nickname_set` Edge Function is deployed, the `nickname_get` /
-  // `leaderboard_get` server response still echoes the auto-assigned
-  // name we substitute the local value on the caller's row(s) and
-  // sticky-me so the user sees their chosen name regardless. Other
-  // devices keep showing the server value (cross-device propagation
-  // is the backend's job once the function ships).
-  const localNickname = useNickname((s) => s.value);
+  // Local display-name override. The caller's leaderboard name is
+  // their Google account name, pushed to the backend by
+  // `<DisplayNameSync>` (Edge Function `nickname_set`). The server
+  // snapshot can lag that push first boot after sign-in, offline
+  // session, or a failed sync awaiting its next-boot retry so we
+  // substitute the (identically normalised) Google name on the
+  // caller's row(s) and sticky-me. Other devices keep showing the
+  // server value; accounts without a usable Google name keep the
+  // server-assigned fallback ("Brave Lion 9F3A").
+  const localNickname = toLeaderboardName(useAuth((s) => s.user?.name ?? null));
 
   // Local-points override. The home tab's points counter reads from
   // `progress.totalPoints` (sum over `progress.entries[i].points`,
@@ -260,80 +268,106 @@ function LoadedView({
       }
     : null;
 
-  // Hide zero-point entries from the top list. A freshly-claimed
-  // device row (or a user who hasn't completed a level yet) lands on
-  // the leaderboard at 0 pts, which clutters the list with empty
-  // monograms and pushes real climbers down the page. We keep the
-  // sticky "You" card untouched: it still surfaces the caller's real
-  // rank/points (even when 0) so a brand-new user gets feedback that
-  // they're on the board they just don't appear *in* the visible
-  // top list until they've scored.
+  // Hide zero-point entries. A freshly-claimed device row (or a user
+  // who hasn't completed a level yet) lands on the leaderboard at
+  // 0 pts; a zero-point "podium" would contradict the empty-state
+  // copy ("claim the first spot"). The caller's own row below is
+  // exempt: their real rank/points (even 0) is honest feedback that
+  // they're on the board.
   //
   // Why filter client-side rather than in `parseLeaderboardSnapshot`?
   // The parser stays a transparent mirror of `leaderboard_get`'s
   // wire shape; if the backend later starts filtering server-side
   // this becomes a no-op rather than a contradicting double-filter.
-  const top = overriddenTop.filter((e) => e.points > 0);
-  if (top.length === 0) {
-    // Snapshot might still include the caller via `snapshot.me` 
-    // render the sticky-me card over the empty state so a new user
-    // sees their own zero-row even when no one else qualifies.
-    const me = overriddenMe;
+  const scored = overriddenTop.filter((e) => e.points > 0);
+
+  // The podium: top 3 scored rows (server orders by rank).
+  const podium = scored.slice(0, 3);
+  const meOnPodium = podium.some((e) => e.isMe);
+
+  // The caller's own row, rendered directly under the podium when
+  // they didn't make it. Built from the `me` payload (which the
+  // override pass above already patched), NOT from the top list 
+  // `me` is present even when the caller is far below the top 50.
+  const me = overriddenMe;
+  const meRow: LeaderboardEntry | null =
+    me !== null && !meOnPodium
+      ? { rank: me.rank, nickname: me.nickname, points: me.points, isMe: true }
+      : null;
+
+  if (podium.length === 0) {
     return (
       <>
-        <Header t={t} onRefresh={onRefresh} />
+        <Header t={t} />
         <div className="flex-1 overflow-y-auto">
           <EmptyState t={t} />
         </div>
-        {me && <StickyMe me={me} t={t} />}
+        <RefreshFooter t={t} onRefresh={onRefresh} />
       </>
     );
   }
 
-  const me = overriddenMe;
-  // `meInTop` checks `snapshot.top` (the *unfiltered* list). After
-  // hiding zeros, a caller with 0 pts who was technically present in
-  // the API response now disappears from the rendered list so we
-  // re-derive against the filtered array.
-  const meInRenderedTop =
-    me !== null && top.some((e) => e.rank === me.rank && e.isMe === true);
-  const showStickyMe = me !== null && !meInRenderedTop;
+  // "•••" gap marker: only when there's an actual gap between the
+  // last podium rank and the caller's rank (skip for a literal #4,
+  // and for dense_rank tie compressions that land the caller at a
+  // rank the podium already covers).
+  const lastPodiumRank = podium[podium.length - 1]!.rank;
+  const showGap = meRow !== null && meRow.rank > lastPodiumRank + 1;
 
   return (
     <>
-      <Header t={t} onRefresh={onRefresh} />
-      {/* Scrollable body. The bottom-spacer trick: putting
-          `padding-bottom` directly on a `overflow:auto` element is
-          unreliable Safari and Firefox don't include it in the
-          scroll extent, so the last row stops flush with the
-          container's bottom edge and gets hidden behind the fixed
-          bottom-nav (and the sticky "You" card when present). Pushing
-          the reserved space onto the inner content wrapper makes it
-          part of the scrollable extent everywhere. */}
+      <Header t={t} />
+      {/* Scrollable body. The nav clearance now lives on the
+          non-scrolling refresh footer below, so the scroller only
+          needs a token bottom inset. */}
       <div className="flex-1 overflow-y-auto">
-        <div
-          className="flex flex-col gap-1.5 px-4 pt-2"
-          style={{
-            paddingBottom: showStickyMe
-              ? BOTTOM_NAV_RESERVED_PX + 96
-              : BOTTOM_NAV_RESERVED_PX + 16,
-          }}
-        >
-          {top.map((e) => (
-            <RankRow key={e.rank} entry={e} t={t} />
+        <div className="flex flex-col gap-1.5 px-4 pb-4 pt-2">
+          {podium.map((e) => (
+            <RankRow key={e.rank} entry={e} medal t={t} />
           ))}
+          {showGap && (
+            <div aria-hidden className="flex justify-center py-0.5">
+              <span className="text-[16px] font-extrabold tracking-[0.3em] text-text-faint">
+                •••
+              </span>
+            </div>
+          )}
+          {meRow && (
+            // Plain rank number, never a medal: with dense_rank a
+            // 0-pt caller can share e.g. rank 2 on a near-empty
+            // board a silver disc here would be a lie.
+            <RankRow entry={meRow} medal={false} t={t} />
+          )}
         </div>
       </div>
-      {showStickyMe && me && <StickyMe me={me} t={t} />}
+      <RefreshFooter t={t} onRefresh={onRefresh} />
     </>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Header
+// Header + refresh footer
 // ---------------------------------------------------------------------------
 
-function Header({
+function Header({ t }: { t: ReturnType<typeof useTranslations> }) {
+  return (
+    <div className="flex items-center px-5 pb-3 pt-4 phone-sm:px-4">
+      <h1 className="min-w-0 flex-1 truncate text-[26px] font-extrabold text-text phone-sm:text-[22px]">
+        {t("leaderboardTitle")}
+      </h1>
+    </div>
+  );
+}
+
+/**
+ * Non-scrolling footer pinned directly above the bottom tab bar 
+ * the easiest one-handed reach zone on the screen. Refresh lives
+ * here (it used to be a top-right header button: the hardest corner
+ * to reach, and our ~35yo core audience holds the phone one-handed).
+ * Icon + visible text: an icon-only refresh glyph reads as
+ * decoration to non-technical users; the label carries the meaning.
+ */
+function RefreshFooter({
   t,
   onRefresh,
 }: {
@@ -341,18 +375,20 @@ function Header({
   onRefresh: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 px-5 pb-3 pt-4 phone-sm:px-4">
-      <h1 className="min-w-0 flex-1 truncate text-[26px] font-extrabold text-text phone-sm:text-[22px]">
-        {t("leaderboardTitle")}
-      </h1>
-      <IconButton
-        icon={RefreshCw}
-        label={t("leaderboardRefreshLabel")}
-        size={40}
-        variant="outline"
-        iconColor="#00539F"
+    <div
+      className="px-4 pt-2"
+      style={{ paddingBottom: BOTTOM_NAV_RESERVED_PX + 8 }}
+    >
+      <Button
+        variant="secondary"
+        size="md"
+        fullWidth
+        className="gap-1.5"
         onClick={onRefresh}
-      />
+      >
+        <RefreshCw size={15} strokeWidth={2.75} aria-hidden />
+        {t("leaderboardRefreshButton")}
+      </Button>
     </div>
   );
 }
@@ -363,9 +399,17 @@ function Header({
 
 function RankRow({
   entry,
+  medal,
   t,
 }: {
   entry: LeaderboardEntry;
+  /**
+   * Whether this row may wear a medal disc. Podium rows pass `true`;
+   * the appended "you" row passes `false` so a dense_rank tie (e.g.
+   * a 0-pt caller sharing rank 2 on a near-empty board) can't fake
+   * a podium finish.
+   */
+  medal: boolean;
   t: ReturnType<typeof useTranslations>;
 }) {
   const me = entry.isMe;
@@ -377,9 +421,9 @@ function RankRow({
         me ? "border-2 border-blue-border bg-blue-light" : ""
       }`}
     >
-      {/* Rank: medal disc for the top 3, plain number below. */}
+      {/* Rank: medal disc on the podium, plain number otherwise. */}
       <span className="flex w-9 shrink-0 items-center justify-center">
-        {entry.rank <= 3 ? (
+        {medal && entry.rank <= 3 ? (
           <MedalDisc rank={entry.rank} />
         ) : (
           <span className="text-[16px] font-extrabold text-blue">
@@ -428,51 +472,6 @@ function MedalDisc({ rank }: { rank: number }) {
     >
       <span className="text-[14px] font-extrabold text-white">{rank}</span>
     </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Sticky "You"
-// ---------------------------------------------------------------------------
-
-function StickyMe({
-  me,
-  t,
-}: {
-  me: LeaderboardMe;
-  t: ReturnType<typeof useTranslations>;
-}) {
-  const monogram = me.nickname ? me.nickname[0]!.toUpperCase() : "?";
-  return (
-    <div
-      className="absolute inset-x-0 border-t-2 border-border bg-bg px-5 py-3.5"
-      style={{ bottom: BOTTOM_NAV_RESERVED_PX }}
-    >
-      <div className="flex items-center">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary">
-          <span className="text-[19px] font-extrabold text-white">
-            {monogram}
-          </span>
-        </div>
-        <div className="w-3" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="line-clamp-1 text-[15px] font-extrabold text-text">
-            {t("leaderboardYouLine", { nickname: me.nickname })}
-          </span>
-          <span className="text-[13px] font-semibold text-text-muted">
-            {t("leaderboardYouRankOf", {
-              rank: me.rank,
-              totalDevices: me.totalDevices,
-            })}
-          </span>
-        </div>
-        <div className="rounded-full bg-yellow-light px-3 py-1.5">
-          <span className="text-[14px] font-extrabold text-orange-deep">
-            {t("leaderboardYouPointsPill", { points: me.points })}
-          </span>
-        </div>
-      </div>
-    </div>
   );
 }
 

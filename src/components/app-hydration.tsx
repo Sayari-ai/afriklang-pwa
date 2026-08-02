@@ -33,7 +33,6 @@ import {
   useInstallPrompt,
 } from "@/stores/install-prompt";
 import { useLearningLanguage } from "@/stores/learning-language";
-import { useNickname } from "@/stores/nickname";
 import { useOnboarding } from "@/stores/onboarding";
 
 // Session-once guard for the `app_open` event. The hydration effect
@@ -72,7 +71,6 @@ export function AppHydration() {
     useConsent.getState().hydrate();
     useLearningLanguage.getState().hydrate();
     useOnboarding.getState().hydrate();
-    useNickname.getState().hydrate();
 
     // 2b. Auth session (Google sign-in). Async, unlike the localStorage
     //     stores: `getSession()` awaits the Supabase client's init,

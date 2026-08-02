@@ -174,17 +174,22 @@ export default function OnboardingPage() {
 function IntroPage({ onCta }: { onCta: () => void }) {
   const t = useTranslations();
   return (
-    <div className="flex w-full flex-col items-center justify-center gap-10 text-center phone-sm:gap-7">
-      {/* Mascot hero. Decorative; the headline carries meaning. */}
-      <Mascot size={170} className="phone-sm:hidden" />
-      <Mascot size={130} className="hidden phone-sm:block" />
-      <div className="flex flex-col gap-3">
-        <h1 className="text-[34px] font-extrabold leading-tight text-text phone-sm:text-[27px]">
-          {t("onboardingIntroTitle")}
-        </h1>
-        <p className="text-[19px] font-semibold leading-snug text-text-muted phone-sm:text-[16px]">
-          {t("onboardingIntroSubtitle")}
-        </p>
+    // Column with the hero centered in the leftover space and the
+    // CTA pinned to the slide's bottom edge the primary action
+    // belongs in the one-handed thumb zone, not mid-viewport.
+    <div className="flex w-full flex-col pb-2">
+      <div className="flex flex-1 flex-col items-center justify-center gap-10 text-center phone-sm:gap-7">
+        {/* Mascot hero. Decorative; the headline carries meaning. */}
+        <Mascot size={170} className="phone-sm:hidden" />
+        <Mascot size={130} className="hidden phone-sm:block" />
+        <div className="flex flex-col gap-3">
+          <h1 className="text-[34px] font-extrabold leading-tight text-text phone-sm:text-[27px]">
+            {t("onboardingIntroTitle")}
+          </h1>
+          <p className="text-[19px] font-semibold leading-snug text-text-muted phone-sm:text-[16px]">
+            {t("onboardingIntroSubtitle")}
+          </p>
+        </div>
       </div>
       <Button variant="primary" size="lg" fullWidth onClick={onCta}>
         {t("onboardingIntroCta")}
@@ -206,25 +211,29 @@ function LanguagePickerPage({
 }) {
   const t = useTranslations();
   return (
-    <div className="flex w-full flex-col justify-center gap-8 phone-sm:gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="whitespace-pre-line text-[32px] font-extrabold leading-tight text-text phone-sm:text-[26px]">
-          {t("onboardingLanguagePickerTitle")}
-        </h1>
-        <p className="text-[16px] font-semibold text-text-muted phone-sm:text-[14px]">
-          {t("onboardingLanguagePickerSubtitle")}
-        </p>
-      </div>
+    // Same bottom-pinned CTA structure as the intro slide: the
+    // title + choices float centered, "Next" sits in the thumb zone.
+    <div className="flex w-full flex-col pb-2">
+      <div className="flex flex-1 flex-col justify-center gap-8 phone-sm:gap-6">
+        <div className="flex flex-col gap-2">
+          <h1 className="whitespace-pre-line text-[32px] font-extrabold leading-tight text-text phone-sm:text-[26px]">
+            {t("onboardingLanguagePickerTitle")}
+          </h1>
+          <p className="text-[16px] font-semibold text-text-muted phone-sm:text-[14px]">
+            {t("onboardingLanguagePickerSubtitle")}
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-3">
-        {SUPPORTED_LEARNING_LANGUAGES.map((language) => (
-          <LanguageRow
-            key={language.iso}
-            language={language}
-            selected={selectedIso === language.iso}
-            onClick={() => onSelect(language)}
-          />
-        ))}
+        <div className="flex flex-col gap-3">
+          {SUPPORTED_LEARNING_LANGUAGES.map((language) => (
+            <LanguageRow
+              key={language.iso}
+              language={language}
+              selected={selectedIso === language.iso}
+              onClick={() => onSelect(language)}
+            />
+          ))}
+        </div>
       </div>
 
       <Button

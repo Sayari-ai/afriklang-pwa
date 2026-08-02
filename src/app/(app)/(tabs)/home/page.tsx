@@ -35,7 +35,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
 import { HomeInstallSheet } from "@/components/install-sheet";
-import { NicknameSheet } from "@/components/nickname-sheet";
 import { CountryFlag } from "@/components/ui/country-flag";
 import {
   CycleDecor,
@@ -51,7 +50,6 @@ import {
   findLanguageByIso,
   useLearningLanguage,
 } from "@/stores/learning-language";
-import { useNickname } from "@/stores/nickname";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
 
@@ -241,23 +239,6 @@ export default function HomePage() {
     router.push(`/level/${seg}`);
   };
 
-  // First-visit nickname prompt. Derived directly from the store
-  // rather than a local `useState`: opening means "no nickname set
-  // *and* prompt has not been shown", and the sheet's own dismiss /
-  // submit paths flip `prompted` (or both flags) which collapses
-  // the predicate to `false` and closes the sheet.
-  //
-  // We gate on `hydrated` to avoid a flash where `prompted` defaults
-  // to `false` pre-hydrate and we'd open the sheet for a user who
-  // already dismissed it. `<AppRouteGuard>` blocks render until the
-  // *onboarding* store is hydrated, but the nickname store hydrates
-  // independently in `<AppHydration>` wait for it explicitly.
-  const nicknameHydrated = useNickname((s) => s.hydrated);
-  const nicknameValue = useNickname((s) => s.value);
-  const nicknamePrompted = useNickname((s) => s.prompted);
-  const showNicknameSheet =
-    nicknameHydrated && nicknameValue === null && !nicknamePrompted;
-
   return (
     <div className="relative isolate flex h-dvh w-full flex-col">
       {/* Joyful game-map scene (sky, sun, hills, clouds) pinned
@@ -350,29 +331,13 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* First-run nickname prompt. Lives at the page root so its
-          fixed-position scrim covers the whole shell, not just the
-          scroll container. The sheet is visible whenever the store
-          says we haven't shown it yet it dismisses itself by
-          flipping `prompted` (via `markPrompted()`), which makes the
-          predicate above evaluate to `false` and unmounts this. */}
-      {showNicknameSheet && (
-        <NicknameSheet
-          mode="first-run"
-          onClose={() => {
-            // Defensive: ensure `prompted` is set even if the sheet
-            // closed via a path that didn't flip it (e.g. an edge
-            // case where the network call branched early). Calling
-            // `markPrompted()` is idempotent.
-            useNickname.getState().markPrompted();
-          }}
-        />
-      )}
+      {/* First-run nickname prompt used to live here; retired now
+          that the leaderboard name comes from the Google account
+          (see `<DisplayNameSync>` in the `(app)` layout). */}
 
       {/* Proactive install ask (once per session, 14-day cool-off,
-          self-gating). Suppressed while the nickname sheet owns the
-          screen two competing sheets would be hostile. */}
-      <HomeInstallSheet suppressed={showNicknameSheet} />
+          self-gating). */}
+      <HomeInstallSheet />
     </div>
   );
 }

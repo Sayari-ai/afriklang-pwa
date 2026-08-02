@@ -39,7 +39,7 @@ export type AnalyticsEvent =
   | "level_complete"
   | "cycle_advance"
   | "skip_used"
-  | "nickname_saved"
+  | "display_name_synced"
   | "storage_persist_result"
   | "install_prompt_shown"
   | "install_prompt_accepted"
