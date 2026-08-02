@@ -35,7 +35,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { InstallPromptCard } from "@/components/install-prompt-card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { StarRating } from "@/components/ui/star-rating";
 import { Palette } from "@/lib/colors";
 import { track } from "@/lib/api/events";
+import { playSfx } from "@/lib/audio/sfx";
 import { requestPersistentStorage } from "@/lib/storage/persistence";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
@@ -127,6 +128,17 @@ export default function LevelCompletePage({
   useEffect(() => {
     void requestPersistentStorage();
   }, []);
+
+  // Celebration fanfare, once per mount. The CONTINUE tap that
+  // navigated here already unlocked the sfx AudioContext, so playing
+  // outside a gesture works. Ref-guarded against React strict-mode's
+  // double effect invocation (a doubled fanfare is very audible).
+  const fanfarePlayedRef = useRef(false);
+  useEffect(() => {
+    if (fanfarePlayedRef.current) return;
+    fanfarePlayedRef.current = true;
+    playSfx(isCycleComplete ? "cycleComplete" : "levelComplete");
+  }, [isCycleComplete]);
 
   // Headline variants. For cycle-complete we want a punchier, more
   // celebratory string ("Path complete!") so the user understands the

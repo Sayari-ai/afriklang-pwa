@@ -119,6 +119,7 @@
   "profileLearningLanguageLabel": "Recording language",
   "profileLearningLanguageNotSet": "Not set",
   "profileLearningLanguageSheetTitle": "Choose a language",
+  "profileSoundEffectsLabel": "Sound effects",
   "profileConsentLabel": "Recording consent",
   "profileConsentSublabelGranted": "Granted recordings are uploaded.",
   "profileConsentSublabelRevoked": "Revoked recordings will not be uploaded.",

@@ -51,6 +51,7 @@ import { track } from "@/lib/api/events";
 import { swapQuestion } from "@/lib/api/questions";
 import { buildRecordingFilename } from "@/lib/audio/filename";
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
+import { playSfx } from "@/lib/audio/sfx";
 import { type LevelDefinition } from "@/lib/content/models";
 import {
   formatCycleLevelParam,
@@ -483,6 +484,7 @@ export default function LevelPage({
           : e instanceof Error
             ? e.message
             : String(e);
+      playSfx("error");
       useSnackbar
         .getState()
         .show(
@@ -524,6 +526,7 @@ export default function LevelPage({
     // consciously CONTINUE (instead of silently jumping to the next
     // image). The continue handler advances or finalises.
     setUploading(false);
+    playSfx("success");
     setPhase("feedback");
     stopTimer();
   };

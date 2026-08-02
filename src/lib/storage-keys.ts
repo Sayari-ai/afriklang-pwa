@@ -64,6 +64,13 @@ export const StorageKeys = {
   installPromptDismissedAt: "afriklang.install_prompt.v1.dismissed_at",
 
   /**
+   * UI sound-effects preference (`"true" | "false"`). Absent == enabled:
+   * chimes are on by default, so only a deliberate opt-out is stored.
+   * See `src/stores/sound-settings.ts` / `src/lib/audio/sfx.ts`.
+   */
+  soundEnabled: "afriklang.sound.v1.enabled",
+
+  /**
    * Integer schema version for client-side persisted state. Bumped
    * whenever a non-additive change to localStorage / IndexedDB layout
    * ships, and read on every boot by `runStorageMigrations()` to

@@ -23,6 +23,8 @@
  *        wired to `useSetAppLocale()` (writes cookie + localStorage,
  *        then `router.refresh()` so next-intl swaps message bundles).
  *      - Recording language: Twi / Fon / Wolof → bottom-sheet picker.
+ *      - Sound effects: toggle for the UI feedback chimes; switching
+ *        it on plays the success chime as an instant preview.
  *   4. Log out: standalone action card at the very bottom (with
  *      confirm dialog) an action you take, deliberately separated
  *      from the identity header so it doesn't read as account
@@ -44,6 +46,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { useSetAppLocale } from "@/hooks/use-set-app-locale";
 import type { Locale } from "@/i18n/locales";
 import { track } from "@/lib/api/events";
+import { playSfx } from "@/lib/audio/sfx";
 import { useAppLocale, type LocaleOverride } from "@/stores/app-locale";
 import { useAuth } from "@/stores/auth";
 import { useConsent } from "@/stores/consent";
@@ -52,6 +55,7 @@ import {
   type LearningLanguage,
   useLearningLanguage,
 } from "@/stores/learning-language";
+import { useSoundSettings } from "@/stores/sound-settings";
 
 // Baked at build time. The PWA has no native package metadata, so
 // we expose the package.json version directly. (Next inlines
@@ -119,6 +123,8 @@ export default function ProfilePage() {
           <LearningLanguageRow
             onTap={() => setSheet({ kind: "learning-language" })}
           />
+          <Divider />
+          <SoundEffectsRow />
         </SectionCard>
 
         <div className="h-4" />
@@ -263,6 +269,39 @@ function LearningLanguageRow({ onTap }: { onTap: () => void }) {
       trailing={trailing}
       onTap={onTap}
     />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sound-effects row
+// ---------------------------------------------------------------------------
+
+function SoundEffectsRow() {
+  const t = useTranslations();
+  const enabled = useSoundSettings((s) => s.enabled);
+  const setEnabled = useSoundSettings((s) => s.setEnabled);
+
+  const onToggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    // Instant preview: hearing the chime confirms the switch better
+    // than any sublabel could. `setEnabled` has already flipped the
+    // store (playSfx's enabled-check reads it imperatively), and the
+    // tap gesture guarantees the AudioContext is unlocked.
+    if (next) playSfx("success");
+  };
+
+  return (
+    <div className="flex items-center px-4 py-3">
+      <span className="flex h-6 w-6 items-center justify-center text-purple">
+        <SpeakerIcon />
+      </span>
+      <div className="w-3" />
+      <span className="flex-1 text-[16px] font-bold text-text">
+        {t("profileSoundEffectsLabel")}
+      </span>
+      <ToggleSwitch checked={enabled} onChange={onToggle} />
+    </div>
   );
 }
 
@@ -726,6 +765,14 @@ function MicGlyph() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M12 14c1.66 0 3-1.34 3-3V5a3 3 0 00-6 0v6c0 1.66 1.34 3 3 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V21h2v-3.08A7 7 0 0019 11h-2z" />
+    </svg>
+  );
+}
+
+function SpeakerIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 00-2.5-4.03v8.05a4.5 4.5 0 002.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
     </svg>
   );
 }

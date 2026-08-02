@@ -44,6 +44,7 @@ import { CoinIcon } from "@/components/ui/icons";
 import { Mascot } from "@/components/ui/mascot";
 import { PathNode } from "@/components/ui/path-node";
 import { UnitBanner } from "@/components/ui/unit-banner";
+import { playSfx } from "@/lib/audio/sfx";
 import { type LevelDefinition } from "@/lib/content/models";
 import { formatCycleLevelParam } from "@/lib/content/cycle-level";
 import {
@@ -213,6 +214,7 @@ export default function HomePage() {
 
   const launchLevel = (node: LevelNode) => {
     if (node.status === "locked") {
+      playSfx("locked");
       useSnackbar
         .getState()
         .show(t("homeLevelLockedSnack", { levelId: node.id }));

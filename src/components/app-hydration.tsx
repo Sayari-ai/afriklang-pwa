@@ -22,6 +22,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { isSupportedLocale, type Locale } from "@/i18n/locales";
 import { track } from "@/lib/api/events";
+import { initSfx } from "@/lib/audio/sfx";
 import { runStorageMigrations } from "@/lib/storage/migrations";
 import { startProgressQueueRunner } from "@/lib/storage/progress-queue-runner";
 import { useAppLocale } from "@/stores/app-locale";
@@ -34,6 +35,7 @@ import {
 } from "@/stores/install-prompt";
 import { useLearningLanguage } from "@/stores/learning-language";
 import { useOnboarding } from "@/stores/onboarding";
+import { useSoundSettings } from "@/stores/sound-settings";
 
 // Session-once guard for the `app_open` event. The hydration effect
 // re-runs on locale switches (deps include `t`); the analytics event
@@ -71,6 +73,7 @@ export function AppHydration() {
     useConsent.getState().hydrate();
     useLearningLanguage.getState().hydrate();
     useOnboarding.getState().hydrate();
+    useSoundSettings.getState().hydrate();
 
     // 2b. Auth session (Google sign-in). Async, unlike the localStorage
     //     stores: `getSession()` awaits the Supabase client's init,
@@ -85,6 +88,12 @@ export function AppHydration() {
     //     that wants to offer installation mounts). Both idempotent.
     useInstallPrompt.getState().hydrate();
     initInstallPromptCapture();
+
+    // 2d. Sound effects: arm the gesture-unlock listener so the Web
+    //     Audio context is running before the first out-of-gesture
+    //     chime (submission success fires after an async upload).
+    //     Idempotent; a no-op while the user has sounds disabled.
+    initSfx();
 
     // 3. Locale: server already picked one record it as the
     //    `effective` value. The persisted override (if any) is read
