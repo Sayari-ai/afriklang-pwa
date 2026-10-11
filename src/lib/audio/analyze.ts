@@ -122,7 +122,7 @@ export async function sha256Hex(blob: Blob): Promise<string> {
 
 // ── Capture checks (the same rules the dashboard applies) ────────────────
 
-export type TakeProblem = "too_short" | "too_long" | "too_quiet" | "clipped" | "silence";
+export type TakeProblem = "silent" | "too_short" | "too_long" | "too_quiet" | "clipped" | "silence";
 
 export type TakeRules = {
   durationMinS: number;
@@ -136,6 +136,8 @@ const SILENCE_SLACK = 0.5;
 
 /** The first thing wrong with a take, or null when it is fine. */
 export function checkTake(a: TakeAnalysis, rules: TakeRules): TakeProblem | null {
+  // Not one frame above the silence threshold: the microphone heard nothing (muted, covered or not working).
+  if (a.level_dbfs <= FLOOR_DB) return "silent";
   if (a.duration_s < rules.durationMinS - DURATION_TOLERANCE_S) return "too_short";
   if (a.duration_s > rules.durationMaxS + DURATION_TOLERANCE_S) return "too_long";
   if (a.level_dbfs < rules.minLevelDbfs) return "too_quiet";

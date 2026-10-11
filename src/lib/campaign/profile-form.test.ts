@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AFRICAN_COUNTRIES, ALL_COUNTRIES, countryOptions, guessDevice, initialValues, validateProfile, type ProfileValues } from "./profile-form";
+import { AFRICAN_COUNTRIES, ALL_COUNTRIES, countryOptions, guessDevice, initialValues, profileErrorsFromServer, validateProfile, type ProfileValues } from "./profile-form";
 
 const ok: ProfileValues = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: " Thiès ", gender: "female", age_band: "30-44", device: "Android" };
 const varieties = ["Baol-Baol", "Saloum-Saloum"];
@@ -18,6 +18,18 @@ describe("validateProfile", () => {
   it("limits free text", () => {
     expect(validateProfile({ ...ok, device: "x".repeat(81) }, varieties).errors.device).toBe("tooLong");
     expect(validateProfile({ ...ok, device: "x".repeat(80) }, varieties).errors.device).toBeUndefined();
+  });
+});
+
+describe("free text and server answers", () => {
+  it("wants letters or digits and no control characters", () => {
+    expect(validateProfile({ ...ok, region: "--- ..." }, varieties).errors.region).toBe("noLetters");
+    expect(validateProfile({ ...ok, device: "Tecno\nSpark" }, varieties).errors.device).toBe("control");
+    expect(validateProfile({ ...ok, region: "Saint-Louis 2" }, varieties).errors).toEqual({});
+  });
+  it("marks the fields a 400 named, in either naming style, and ignores the rest", () => {
+    expect(profileErrorsFromServer({ variety: "unknown", ageBand: "bad", "recording.duration_s": "x", user_id: "x" })).toEqual({ variety: "server", age_band: "server" });
+    expect(profileErrorsFromServer(undefined)).toEqual({});
   });
 });
 

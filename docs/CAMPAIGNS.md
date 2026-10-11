@@ -39,7 +39,10 @@ browser  ──►  /api/audio-upload (existing proxy)  ──►  Sayari      (
   the user id and the verified Google email from the signed-in session
   (`supabase/functions/_shared/campaigns.ts`) and drops any `user_id` / `email` the browser sends.
 - Only the actions and fields listed in `ACTIONS` are forwarded: `claim`, `campaigns`, `profile`,
-  `consent`, `withdraw`, `missions`, `submit`.
+  `consent`, `withdraw`, `missions`, `submit`. Each field is checked first (type, length, allowed
+  values, formats, recording metadata ranges, with the dashboard's limits); a bad request gets a 400
+  `{ error, code: "invalid_input", fieldErrors: { <field>: <problem> } }` naming every bad field,
+  and the profile form marks those fields.
 - Audio goes straight to Sayari through the existing proxy. The dashboard receives only the recording's
   **metadata** (duration, level, peak, silence margins, sample rate, sha-256 of the file, Sayari id when
   Sayari returns one) and checks it again.

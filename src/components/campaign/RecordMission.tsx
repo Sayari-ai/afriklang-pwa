@@ -7,16 +7,33 @@ import { analyzeWav, checkTake, sha256Hex, type TakeAnalysis, type TakeProblem }
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
 import { AudioUploadError, uploadAudio } from "@/lib/api/audio";
 import { submitRecording } from "@/lib/campaign/api";
-import { ERROR_KEY } from "@/lib/campaign/errors";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
-import { autoStopS, buildMetadata, canStop, deviceLabel, formatClock, isTimed, nextTodo, problemMessageKey, submitFailureAction, takeRules, type SubmitAction } from "@/lib/campaign/record-flow";
-import type { CampaignCard, CampaignErrorCode, Mission, RecordingMetadata } from "@/lib/campaign/types";
+import {
+  autoStopS,
+  buildMetadata,
+  canStop,
+  deviceLabel,
+  formatClock,
+  isTimed,
+  nextTodo,
+  problemMessageKey,
+  submitFailureAction,
+  takeRules,
+  uploadFailureKey,
+  type SubmitAction,
+  type UploadFailureKey,
+} from "@/lib/campaign/record-flow";
+import type { CampaignCard, CampaignFailure, Mission, RecordingMetadata } from "@/lib/campaign/types";
+import { useFailureText } from "./CampaignHubParts";
 import { RecordPrompt } from "./RecordPrompt";
 import { TakeReview } from "./TakeReview";
 
 type Phase = "idle" | "countdown" | "recording" | "analyzing" | "review" | "problem" | "submitting" | "failed" | "saved";
 type Take = { blob: Blob; analysis: TakeAnalysis & { sample_rate: number; channels: number } };
-type Failure = { action: SubmitAction; code: CampaignErrorCode | "upload"; offline?: boolean };
+/** Why a take was not sent: the audio upload (with what went wrong), or the save of its metadata. */
+type Failure =
+  | { action: SubmitAction; stage: "upload"; key: UploadFailureKey | "prepare" }
+  | { action: SubmitAction; stage: "submit"; result: CampaignFailure };
 
 const COUNTDOWN_S = 3;
 
@@ -34,6 +51,7 @@ type Props = {
 export function RecordMission({ campaignId, card, mission, missions, speakerId, dialect, onSaved, reload }: Props) {
   const t = useTranslations("campaign.record");
   const tc = useTranslations("campaign.common");
+  const failureText = useFailureText();
   const hubHref = `/campaign/${campaignId}`;
   const rules = takeRules(card, mission);
   const maxS = autoStopS(mission, rules);
@@ -195,10 +213,11 @@ export function RecordMission({ campaignId, card, mission, missions, speakerId, 
       sentRef.current = null;
       setProblem(p);
       setPhase(p ? "problem" : "review");
-    } catch (e) {
+    } catch {
       recorderRef.current = null;
       if (attempt !== attemptRef.current) return;
-      setMicError(e instanceof RecorderError ? micMessage(e) : t("mic.internal"));
+      // Stopping failed (nothing captured, or the file could not be read back): not a start problem.
+      setMicError(t("mic.stopFailed"));
       setPhase("idle");
     } finally {
       busyRef.current = false;
@@ -227,7 +246,15 @@ export function RecordMission({ campaignId, card, mission, missions, speakerId, 
     setFailure(null);
     try {
       if (!sentRef.current) {
-        const sha = await sha256Hex(take.blob);
+        let sha: string;
+        try {
+          sha = await sha256Hex(take.blob);
+        } catch {
+          // crypto.subtle is missing on old engines and on non-https pages
+          setFailure({ action: { kind: "retry", reupload: true }, stage: "upload", key: "prepare" });
+          setPhase("failed");
+          return;
+        }
         const filename = buildCampaignFilename({ languageCode: card.language.code, speakerId, missionCode: mission.code });
         sentRef.current = { sha, filename, sayariId: null, uploaded: false, metadata: null };
       }
@@ -246,7 +273,9 @@ export function RecordMission({ campaignId, card, mission, missions, speakerId, 
           sent.uploaded = true;
           sent.sayariId = res.recordingId;
         } catch (e) {
-          setFailure({ action: { kind: "retry", reupload: true }, code: "upload", offline: e instanceof AudioUploadError && e.isNetwork });
+          const online = typeof navigator === "undefined" || navigator.onLine !== false;
+          const key = e instanceof AudioUploadError ? uploadFailureKey(e, online) : "other";
+          setFailure({ action: { kind: "retry", reupload: true }, stage: "upload", key });
           setPhase("failed");
           return;
         }
@@ -265,7 +294,7 @@ export function RecordMission({ campaignId, card, mission, missions, speakerId, 
         setRejectReason(action.reason);
         return;
       }
-      setFailure({ action, code: result.code });
+      setFailure({ action, stage: "submit", result });
       setPhase("failed");
     } finally {
       busyRef.current = false;
@@ -283,7 +312,10 @@ export function RecordMission({ campaignId, card, mission, missions, speakerId, 
     </h2>
   );
   const linkClass = "inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 px-5 text-base font-semibold text-slate-800";
-  const errorText = (code: CampaignErrorCode) => tc(`errors.${ERROR_KEY[code]}`);
+  const uploadText = (key: UploadFailureKey | "prepare") =>
+    key === "offline" ? tc("errors.offline") : key === "rateLimited" ? tc("errors.rateLimited") : t(`failed.uploadKeys.${key}`);
+  const failureMessage = (f: Failure) =>
+    f.stage === "upload" ? uploadText(f.key) : f.action.kind === "already" ? tc("errors.alreadySubmitted") : failureText(f.result);
 
   return (
     <div className="flex flex-col gap-4">
@@ -386,7 +418,7 @@ export function RecordMission({ campaignId, card, mission, missions, speakerId, 
         <div className="flex flex-col gap-3">
           {heading("failed.title")}
           <p role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-base text-red-900">
-            {failure.code === "upload" ? (failure.offline ? tc("errors.network") : t("failed.upload")) : failure.action.kind === "already" ? tc("errors.alreadySubmitted") : errorText(failure.code)}
+            {failureMessage(failure)}
           </p>
           {failure.action.kind === "retry" ? (
             <>

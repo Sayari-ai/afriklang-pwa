@@ -3,8 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useCampaignList, type Loaded } from "@/lib/campaign/hooks";
 import type { CampaignList } from "@/lib/campaign/api";
-import { ERROR_KEY } from "@/lib/campaign/errors";
 import { CampaignCardView } from "./CampaignCardView";
+import { useFailureText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 
 /** The list of campaigns. `data` is passed when a claim just returned it; otherwise it is fetched. */
@@ -14,7 +14,7 @@ export function ClaimCampaignList({ data }: { data?: CampaignList }) {
 
 function FetchedList() {
   const t = useTranslations("campaign.claim.home");
-  const errors = useTranslations("campaign.common.errors");
+  const failureText = useFailureText();
   const common = useTranslations("campaign.common");
   const list: Loaded<CampaignList> = useCampaignList();
   const { state } = list;
@@ -26,7 +26,7 @@ function FetchedList() {
       <section className="flex flex-col gap-4">
         <h1 className="text-2xl font-bold text-slate-900">{t("errorTitle")}</h1>
         <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900">
-          {errors(ERROR_KEY[list.error.code])}
+          {failureText(list.error)}
         </p>
         <button type="button" onClick={list.reload} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-5 text-base font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60">
           {common("retry")}

@@ -6,7 +6,7 @@ import type { CampaignErrorCode } from "./types";
  * message carries a masked hint of the invited address).
  */
 export const ERROR_KEY: Record<CampaignErrorCode, string> = {
-  invalid_input: "generic",
+  invalid_input: "invalidInput",
   not_linked: "notLinked",
   not_assigned: "notAssigned",
   invalid_link: "invalidLink",
@@ -30,6 +30,10 @@ export const ERROR_KEY: Record<CampaignErrorCode, string> = {
   bridge_unreachable: "unreachable",
   bridge_error: "unreachable",
   network: "network",
+  offline: "offline",
+  timeout: "timeout",
+  misconfigured: "misconfigured",
+  conflict: "conflict",
   rate_limited: "rateLimited",
   unknown: "generic",
 };
@@ -38,4 +42,4 @@ export const ERROR_KEY: Record<CampaignErrorCode, string> = {
 export const needsSignIn = (code: CampaignErrorCode) => code === "unauthorized";
 
 /** Failures worth a "try again" button (the call itself may succeed later). */
-export const isRetryable = (code: CampaignErrorCode) => ["network", "bridge_unreachable", "bridge_error", "server_error", "rate_limited", "unknown"].includes(code);
+export const isRetryable = (code: CampaignErrorCode) => ["network", "offline", "timeout", "bridge_unreachable", "bridge_error", "server_error", "rate_limited", "unknown"].includes(code);

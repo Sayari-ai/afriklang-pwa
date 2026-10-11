@@ -4,12 +4,12 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClaimCampaignList } from "@/components/campaign/ClaimCampaignList";
 import { ClaimFailureCard } from "@/components/campaign/ClaimFailureCard";
-import { ClaimSpinner } from "@/components/campaign/ClaimNotice";
+import { ClaimBrokenLink, ClaimSpinner } from "@/components/campaign/ClaimNotice";
 import { SignInCard } from "@/components/campaign/SignInCard";
 import { claimLink, type CampaignList } from "@/lib/campaign/api";
 import { claimOutcome, nextView, type ClaimState } from "@/lib/campaign/claim-flow";
 import { useCampaignSession } from "@/lib/campaign/hooks";
-import { clearToken, takeTokenFromLocation } from "@/lib/campaign/link-token";
+import { clearToken, takeLinkFromLocation } from "@/lib/campaign/link-token";
 
 export default function CampaignLandingPage() {
   const t = useTranslations("campaign.claim");
@@ -21,17 +21,25 @@ export default function CampaignLandingPage() {
   const [claim, setClaim] = useState<ClaimState>({ status: "idle" });
   const [claimed, setClaimed] = useState<CampaignList | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // The URL carried a broken invitation (cut when copied): say so rather than ignore it.
+  const [brokenLink, setBrokenLink] = useState(false);
   // The token+attempt already sent: StrictMode runs effects twice, a token must be claimed once.
   const started = useRef<string | null>(null);
 
   useEffect(() => {
     // Read in the effect (the URL is not known on the server); the strip of the fragment is a side effect too.
-    const found = takeTokenFromLocation();
-    void Promise.resolve().then(() => setToken(found));
+    const found = takeLinkFromLocation();
+    void Promise.resolve().then(() => {
+      setToken(found.token);
+      setBrokenLink(found.malformed);
+    });
     // An installed app that is already open can receive a new invitation link as a hash-only change.
     const onHash = () => {
-      const fresh = takeTokenFromLocation();
-      if (fresh) setToken(fresh);
+      const fresh = takeLinkFromLocation();
+      if (fresh.token) {
+        setBrokenLink(false);
+        setToken(fresh.token);
+      } else if (fresh.malformed) setBrokenLink(true);
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -62,8 +70,12 @@ export default function CampaignLandingPage() {
     setClaim({ status: "idle" });
   }, []);
 
+  const dismissBrokenLink = useCallback(() => setBrokenLink(false), []);
+
   const view = nextView({ session: session.status, hasToken: token === undefined ? null : Boolean(token), claim });
   const email = session.status === "signedIn" ? session.email : null;
+
+  if (brokenLink && view !== "waiting" && view !== "claiming") return <ClaimBrokenLink onContinue={dismissBrokenLink} />;
 
   switch (view) {
     case "waiting":

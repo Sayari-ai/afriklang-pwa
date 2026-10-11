@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clearToken, savedToken, saveToken, tokenFromHash } from "./link-token";
+import { clearToken, malformedTokenInHash, savedToken, saveToken, tokenFromHash } from "./link-token";
 
 const TOKEN = "AbCdEf0123456789AbCdEf0123456789AbCdEf01234";
 const memory = () => {
@@ -38,5 +38,15 @@ describe("saved token", () => {
     expect(() => saveToken(TOKEN, broken)).not.toThrow();
     expect(savedToken(broken)).toBeNull();
     expect(() => clearToken(broken)).not.toThrow();
+  });
+});
+
+describe("malformedTokenInHash", () => {
+  it("spots a token cut or altered when copied, and nothing else", () => {
+    expect(malformedTokenInHash(`#t=${TOKEN.slice(0, 30)}`)).toBe(true);
+    expect(malformedTokenInHash("#t=")).toBe(true);
+    expect(malformedTokenInHash(`#t=${TOKEN}`)).toBe(false);
+    expect(malformedTokenInHash("")).toBe(false);
+    expect(malformedTokenInHash("#section-2")).toBe(false);
   });
 });

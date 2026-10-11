@@ -34,7 +34,8 @@
     "permission-denied": "The microphone is blocked. Allow microphone access for this site in your browser settings, then try again.",
     "no-mic": "No microphone was found. Plug one in or check your device, then try again.",
     "unsupported": "This browser cannot record audio. Open this page in a recent version of Chrome or Safari.",
-    "internal": "The recording could not start. Close other apps that use the microphone, then try again."
+    "internal": "The recording could not start. Close other apps that use the microphone, then try again.",
+    "stopFailed": "The recording could not be completed: no sound reached the app. Check that the microphone works and is not muted, then record again."
   },
   "status": {
     "idle": "Ready to record",
@@ -52,6 +53,7 @@
   "analyzing": "Checking your recording…",
   "problem": {
     "title": "Let's record it again",
+    "silent": "No sound was picked up. Check that the microphone is not covered or muted, then record again and speak clearly.",
     "too_short": "The recording is too short. Please speak for at least {min} seconds.",
     "too_long": "The recording is too long. Please keep it under {max} seconds.",
     "too_quiet": "The recording is too quiet. Move the phone a little closer to your mouth and speak up.",
@@ -73,7 +75,14 @@
   },
   "failed": {
     "title": "Not sent yet",
-    "upload": "The audio could not be sent. Your recording is still here.",
+    "uploadKeys": {
+      "network": "The audio could not be sent: the connection failed or was too slow. Your recording is still here. Check your connection and try again.",
+      "tooLarge": "The audio file is too large to send. Please record a shorter take.",
+      "refused": "The audio service did not accept this file. Please record it again. If it keeps happening, contact the Afriklang team.",
+      "server": "The audio service had a problem on its side. Your recording is still here. Try again in a moment.",
+      "other": "The audio could not be sent. Your recording is still here. Try again.",
+      "prepare": "Your recording could not be prepared for sending on this device. Try again. If it keeps happening, open the app in an up-to-date Chrome or Safari."
+    },
     "willUpload": "Trying again will send the audio and then save the mission.",
     "alreadyUploaded": "Your audio was already sent. Trying again only saves the mission."
   },

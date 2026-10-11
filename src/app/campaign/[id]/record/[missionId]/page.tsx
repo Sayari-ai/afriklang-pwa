@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useFailureText } from "@/components/campaign/CampaignHubParts";
 import { RecordMission } from "@/components/campaign/RecordMission";
 import { useCampaignList, useCampaignMissions } from "@/lib/campaign/hooks";
-import { ERROR_KEY } from "@/lib/campaign/errors";
+import { isRetryable } from "@/lib/campaign/errors";
 import { guardMission } from "@/lib/campaign/record-flow";
 
 const linkClass = "inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-5 text-base font-semibold text-white";
@@ -15,6 +16,7 @@ export default function RecordMissionPage() {
   const { id, missionId } = useParams<{ id: string; missionId: string }>();
   const t = useTranslations("campaign.record");
   const tc = useTranslations("campaign.common");
+  const failureText = useFailureText();
   const missions = useCampaignMissions(id);
   const list = useCampaignList();
   // After a save the list reloads and the mission turns "submitted"; the success screen must stay.
@@ -40,10 +42,12 @@ export default function RecordMissionPage() {
   if (failed) {
     return (
       <div className="flex flex-col gap-3" role="alert">
-        <p>{tc(`errors.${ERROR_KEY[failed.error.code]}`)}</p>
-        <button type="button" onClick={failed.reload} className="min-h-12 rounded-full border border-slate-300 px-5 text-base font-semibold">
-          {tc("retry")}
-        </button>
+        <p>{failureText(failed.error)}</p>
+        {isRetryable(failed.error.code) ? (
+          <button type="button" onClick={failed.reload} className="min-h-12 rounded-full border border-slate-300 px-5 text-base font-semibold">
+            {tc("retry")}
+          </button>
+        ) : null}
         {hub}
       </div>
     );

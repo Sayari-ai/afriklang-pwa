@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { useCampaignMissions } from "@/lib/campaign/hooks";
+import { isRetryable } from "@/lib/campaign/errors";
 import { groupMissions, percentDone } from "@/lib/campaign/mission-list";
 import type { Mission } from "@/lib/campaign/types";
+import { useFailureText } from "./CampaignHubParts";
 import { MissionRow } from "./MissionRow";
 
 type Props = { campaignId: string; readOnly: boolean };
@@ -12,12 +14,14 @@ export function MissionList({ campaignId, readOnly }: Props) {
   const t = useTranslations("campaign.flow.missions");
   const tc = useTranslations("campaign.common");
   const res = useCampaignMissions(campaignId);
+  const failureText = useFailureText();
 
   if (res.state === "error") {
     return (
       <div role="alert" className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        <p>{t("loadError")}</p>
-        <button type="button" onClick={res.reload} className="min-h-11 rounded-lg border border-red-300 px-3 font-semibold">{tc("retry")}</button>
+        <p className="font-semibold">{t("loadError")}</p>
+        <p>{failureText(res.error)}</p>
+        {isRetryable(res.error.code) ? <button type="button" onClick={res.reload} className="min-h-11 rounded-lg border border-red-300 px-3 font-semibold">{tc("retry")}</button> : null}
       </div>
     );
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { withdrawConsent } from "@/lib/campaign/api";
 import type { CampaignCard, CampaignFailure } from "@/lib/campaign/types";
 import { FailureMessage, buttonSecondary } from "./CampaignHubParts";
@@ -21,6 +21,7 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
   });
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false); // a second tap before the re-render must not send twice
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
 
   const rec = card.instructions.recording;
@@ -37,12 +38,18 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
   }, [storeKey]);
 
   async function withdraw() {
+    if (sending.current) return;
+    sending.current = true;
     setBusy(true);
     setFailure(null);
-    const res = await withdrawConsent(card.campaign_id);
-    setBusy(false);
-    if (res.ok) onWithdrawn();
-    else setFailure(res);
+    try {
+      const res = await withdrawConsent(card.campaign_id);
+      if (res.ok) onWithdrawn();
+      else setFailure(res);
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
   }
 
   const types = SPEECH_ORDER.flatMap((type) => card.instructions.speech_types.filter((s) => s.type === type));

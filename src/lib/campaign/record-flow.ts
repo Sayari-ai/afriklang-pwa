@@ -60,7 +60,7 @@ export type SubmitAction =
   | { kind: "signin" }
   | { kind: "retry"; reupload: boolean };
 
-const HUB_CODES = ["partner_consent", "campaign_paused", "campaign_not_open", "account_consent", "campaign_consent", "blocked", "not_assigned", "campaign_closed", "profile_incomplete"];
+const HUB_CODES = ["conflict", "partner_consent", "campaign_paused", "campaign_not_open", "account_consent", "campaign_consent", "blocked", "not_assigned", "campaign_closed", "profile_incomplete"];
 
 /** What to do after a failed upload/submit. `uploaded`: the audio already reached Sayari, so a retry must not upload it again. */
 export function submitFailureAction(failure: Pick<CampaignFailure, "code" | "reason">, ctx: { uploaded: boolean }): SubmitAction {
@@ -68,9 +68,27 @@ export function submitFailureAction(failure: Pick<CampaignFailure, "code" | "rea
   if (failure.code === "already_submitted") return { kind: "already" };
   if (failure.code === "unauthorized") return { kind: "signin" };
   if (HUB_CODES.includes(failure.code)) return { kind: "hub" };
+  // Not the take's fault: keep it so it can be sent once the service is fixed.
+  if (failure.code === "misconfigured") return { kind: "retry", reupload: !ctx.uploaded };
   if (isRetryable(failure.code)) return { kind: "retry", reupload: !ctx.uploaded };
   // invalid_input and the like: the take cannot be saved as is
   return { kind: "rerecord", reason: "other" };
+}
+
+export type UploadFailureKey = "offline" | "network" | "tooLarge" | "refused" | "rateLimited" | "server" | "other";
+
+/**
+ * Which message to show when the audio upload failed, from the error's HTTP status (0 when no
+ * answer came back) and whether the device reports a network. Each one says what to do next.
+ */
+export function uploadFailureKey(e: { status: number; isNetwork: boolean }, online: boolean): UploadFailureKey {
+  if (!online) return "offline";
+  if (e.isNetwork || e.status === 0) return "network";
+  if (e.status === 413) return "tooLarge";
+  if (e.status === 429) return "rateLimited";
+  if (e.status >= 500) return "server";
+  if (e.status >= 400) return "refused";
+  return "other";
 }
 
 /** Next mission to record after `currentId` (todo or rejected), in position order. Null when none. */
