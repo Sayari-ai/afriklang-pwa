@@ -26,8 +26,11 @@ recording's metadata goes to the dashboard.
    - `BRIDGE_SECRET`: a long random value (`openssl rand -hex 32`). The same value goes into the
      dashboard as `PWA_BRIDGE_SECRET`. Never paste it in chat, tickets or commits.
    - `DASHBOARD_URL`: the dashboard's https origin, no path (for example `https://afriklang.com`).
-3. **Deploy the function** (JWT verification must stay ON, the default):
-   `supabase functions deploy campaigns --project-ref <ref>`
+3. **Deploy the function** (JWT verification must stay ON, the default). Either:
+   - CLI: `supabase functions deploy campaigns --project-ref <ref>`; or
+   - Dashboard: Edge Functions -> Deploy a new function -> Via Editor, name it `campaigns`, paste the whole of
+     `deploy/campaigns-single-file.ts` (generated: `node scripts/build-campaigns-single-file.mjs`; a test fails
+     when it is stale), deploy, then check the function's **Verify JWT** setting is ON.
 4. **Dashboard side**: `PWA_BRIDGE_SECRET` (same value), `PWA_APP_URL` (this app's https origin),
    `CAMPAIGN_REPLY_TO`, SES, `CRON_SECRET`; migrations 0044-0053 applied. See the dashboard's
    `docs/CAMPAIGNS_DEPLOYMENT_CHECKLIST.md`.
