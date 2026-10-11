@@ -46,7 +46,7 @@ browser  ──►  /api/audio-upload (existing proxy)  ──►  Sayari      (
 - Audio goes straight to Sayari through the existing proxy, with the campaign context as extra multipart
   fields (campaign, mission, prompt, speaker IDs and the take's measurements). The full list is
   `docs/SAYARI_UPLOAD_PAYLOAD.json`.
-- Audio goes to Sayari through the existing proxy. The dashboard receives only the recording's
+- The dashboard receives only the recording's
   **metadata** (duration, level, peak, silence margins, sample rate, sha-256 of the file, Sayari id when
   Sayari returns one) and checks it again.
 - The campaign area has its **own persistent Google session** (`src/lib/campaign/auth-client.ts`). The
