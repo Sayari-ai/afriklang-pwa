@@ -1,0 +1,126 @@
+{
+  "hub": {
+    "notFoundTitle": "Campagne introuvable",
+    "notFoundBody": "Nous n'avons pas trouvé cette campagne dans votre liste.",
+    "backToList": "Retour à mes campagnes",
+    "signedOut": "Connectez-vous pour continuer.",
+    "topic": "Thème : {topic}",
+    "deadline": "Jusqu'au {date}",
+    "paused": "L'enregistrement est en pause pour le moment. Vous pouvez voir vos missions ci-dessous ; il reprendra quand la campagne reprendra.",
+    "closed": "Cette campagne est terminée. Vous pouvez encore voir vos missions ci-dessous, mais vous ne pouvez plus enregistrer.",
+    "pausedTitle": "Enregistrement en pause",
+    "closedTitle": "Campagne terminée"
+  },
+  "profile": {
+    "title": "À propos de vous",
+    "intro": "Quelques informations nous aident à associer votre voix au bon projet. Tous les champs sont obligatoires.",
+    "privacy": "Votre nom ne voyage jamais avec votre audio : seul un identifiant de locuteur pseudonyme l'accompagne.",
+    "correctTitle": "Corriger mon profil",
+    "nativeLanguage": "Langue maternelle",
+    "variety": "Variété de votre langue",
+    "varietyPlaceholder": "Choisissez votre variété",
+    "varietyOther": "Aucune de celles-ci / une autre variété",
+    "varietyOtherTitle": "Cette campagne concerne une autre variété",
+    "varietyOtherBody": "Cette campagne s'adresse aux locuteurs des variétés listées. Si vous parlez une autre variété, contactez l'équipe Afriklang : elle pourra vous parler d'autres campagnes qui vous conviennent peut-être.",
+    "country": "Pays où vous vivez",
+    "countryPlaceholder": "Choisissez votre pays",
+    "region": "Région ou ville",
+    "regionHint": "Par exemple : Thiès",
+    "gender": "Genre",
+    "genderPlaceholder": "Choisissez",
+    "age": "Tranche d'âge",
+    "agePlaceholder": "Choisissez",
+    "device": "Téléphone ou appareil",
+    "deviceHint": "Vous pouvez le modifier, par exemple Samsung A14.",
+    "choose": "Choisir…",
+    "genders": {
+      "female": "Femme",
+      "male": "Homme",
+      "other": "Autre",
+      "undisclosed": "Je préfère ne pas le dire"
+    },
+    "errors": {
+      "required": "Veuillez remplir ce champ.",
+      "tooLong": "C'est trop long (80 caractères au maximum).",
+      "invalid": "Veuillez choisir l'une des options."
+    },
+    "save": "Enregistrer et continuer",
+    "saving": "Enregistrement…",
+    "formError": "Vérifiez les champs signalés."
+  },
+  "blocked": {
+    "title": "Cette campagne n'est pas disponible pour votre profil",
+    "body": "La variété que vous avez indiquée ne correspond pas à celle que cherche cette campagne. L'équipe Afriklang a été prévenue et vous contactera si une autre campagne vous convient.",
+    "fix": "Si vous vous êtes trompé, vous pouvez corriger votre profil et la campagne s'ouvrira de nouveau."
+  },
+  "consent": {
+    "accountTitle": "Votre consentement à l'enregistrement",
+    "campaignTitle": "Consentement pour cette campagne",
+    "accountSummary": "En acceptant, vous autorisez Afriklang à enregistrer votre voix et à la traiter pour constituer des jeux de données vocales. Vous pouvez vous retirer de n'importe quelle campagne à tout moment.",
+    "campaignSummary": "En acceptant, vous participez à la campagne {code} (thème : {topic}). Vos enregistrements seront utilisés comme décrit dans le texte. Vous pouvez vous retirer de cette campagne à tout moment.",
+    "readText": "Lire le texte complet du consentement",
+    "opensNewTab": "(s'ouvre dans un nouvel onglet)",
+    "agree": "J'ai lu et j'accepte",
+    "sign": "J'accepte",
+    "signing": "Enregistrement…",
+    "changed": "Le texte du consentement a changé : relisez-le avant d'accepter.",
+    "notConfigured": "Le texte du consentement n'est pas encore prêt pour cette campagne. Contactez l'équipe Afriklang.",
+    "noLink": "Le lien vers le texte du consentement est manquant. Contactez l'équipe Afriklang."
+  },
+  "instructions": {
+    "title": "Comment enregistrer",
+    "toggle": "Consignes d'enregistrement",
+    "rules": "Les règles d'or",
+    "quiet": "Choisissez une pièce calme. Éteignez la télévision, la radio et les ventilateurs.",
+    "background": "Arrière-plan : {text}",
+    "mic": "Tenez le téléphone à {min} à {max} cm de votre bouche.",
+    "micMin": "Tenez le téléphone à au moins {min} cm de votre bouche.",
+    "micMax": "Tenez le téléphone à {max} cm au plus de votre bouche.",
+    "level": "Parlez clairement et assez fort : l'enregistrement doit atteindre au moins {level} dBFS en moyenne. L'application le vérifie pour vous.",
+    "silence": "Restez silencieux environ {s} seconde avant de commencer et après avoir fini.",
+    "byType": "Quoi faire, selon le type",
+    "duration": "{min} à {max} secondes",
+    "perSession": "Environ {min} à {max} missions par séance.",
+    "types": {
+      "read": { "name": "Lecture à voix haute", "help": "Lisez la phrase affichée à voix haute, naturellement, comme vous la diriez à quelqu'un." },
+      "spontaneous": { "name": "Parole libre", "help": "Parlez du thème ou de la question affichés, avec vos propres mots, tant que le minuteur le permet." },
+      "conversational": { "name": "Conversation", "help": "Parlez avec votre partenaire du scénario affiché. L'un de vous lance l'enregistrement sur un seul téléphone, et vous êtes tous deux crédités." }
+    },
+    "withdraw": "Me retirer de cette campagne",
+    "withdrawTitle": "Vous retirer de cette campagne ?",
+    "withdrawBody": "Vous ne pourrez plus enregistrer pour cette campagne et l'équipe sera prévenue. Votre consentement général à l'enregistrement est conservé.",
+    "withdrawConfirm": "Oui, me retirer",
+    "withdrawing": "Retrait en cours…",
+    "cancel": "Annuler"
+  },
+  "missions": {
+    "title": "Vos missions",
+    "progress": "{done} sur {total} terminées",
+    "accepted": "{n, plural, one {# enregistrement accepté} other {# enregistrements acceptés}}",
+    "toRecord": "À enregistrer",
+    "toRedo": "À refaire",
+    "done": "Envoyées et acceptées",
+    "emptyTitle": "Pas encore de missions",
+    "emptyBody": "Les missions apparaîtront ici dès que l'équipe les aura préparées.",
+    "allDone": "Rien à enregistrer pour le moment. Merci !",
+    "record": "Enregistrer",
+    "redo": "Enregistrer de nouveau",
+    "reason": "Pourquoi il est revenu : {reason}",
+    "noReason": "L'équipe a demandé une nouvelle prise.",
+    "partner": "Partenaire : {id}",
+    "partnerWait": "Votre partenaire n'a pas encore terminé son consentement. Vous pourrez enregistrer dès que ce sera fait.",
+    "duration": "{min} à {max} s",
+    "durationMax": "jusqu'à {max} s",
+    "status": {
+      "submitted": "Envoyée",
+      "accepted": "Acceptée"
+    },
+    "types": {
+      "read": "Lecture",
+      "spontaneous": "Parole libre",
+      "conversational": "Conversation"
+    },
+    "loadError": "Impossible de charger vos missions.",
+    "readOnly": "Lecture seule"
+  }
+}

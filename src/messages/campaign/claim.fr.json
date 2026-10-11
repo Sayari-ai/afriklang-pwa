@@ -1,0 +1,59 @@
+{
+  "signIn": {
+    "title": "Bienvenue sur Afriklang enregistrement",
+    "intro": "Connectez-vous avec le compte Google qui utilise l'adresse e-mail à laquelle votre invitation a été envoyée.",
+    "why": "C'est ainsi que nous nous assurons que l'invitation parvient à la bonne personne. L'e-mail de votre compte Google doit être vérifié et identique à celui de l'invitation.",
+    "invitationDetected": "Votre invitation a été détectée. Connectez-vous pour l'utiliser.",
+    "button": "Continuer avec Google",
+    "starting": "Ouverture de Google…",
+    "error": "Impossible d'ouvrir la connexion Google. Veuillez réessayer.",
+    "notConfigured": "Note développeur : la connexion n'est pas configurée. Renseignez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY."
+  },
+  "claiming": {
+    "title": "Vérification de votre invitation…",
+    "body": "Cela ne prend qu'un instant."
+  },
+  "failure": {
+    "titleAccount": "Ce compte Google ne correspond pas",
+    "titleLink": "Impossible d'utiliser cette invitation",
+    "titleRetry": "Impossible de vérifier votre invitation",
+    "signedInAs": "Connecté en tant que {email}.",
+    "useAnother": "Utiliser un autre compte Google",
+    "otherAccountHint": "Votre invitation est toujours enregistrée. Connectez-vous avec le bon compte pour continuer.",
+    "continue": "Aller à mes campagnes",
+    "contact": "Besoin d'aide ? Contactez l'équipe Afriklang."
+  },
+  "notLinked": {
+    "title": "Ouvrez votre lien d'invitation",
+    "body": "Ouvrez le lien de votre e-mail d'invitation pour commencer.",
+    "lost": "Vous ne retrouvez pas l'e-mail ? Contactez l'équipe Afriklang et nous vous enverrons une nouvelle invitation."
+  },
+  "home": {
+    "greeting": "Bon retour",
+    "intro": "Voici les campagnes auxquelles vous êtes invité(e).",
+    "loadingList": "Chargement de vos campagnes…",
+    "errorTitle": "Impossible de charger vos campagnes",
+    "emptyTitle": "Aucune campagne pour le moment",
+    "emptyBody": "Quand l'équipe Afriklang vous ajoutera à une campagne, elle apparaîtra ici."
+  },
+  "card": {
+    "code": "Code {code}",
+    "language": "Langue",
+    "topic": "Thème",
+    "deadline": "Échéance : {date}",
+    "progress": "{accepted} sur {total} acceptés",
+    "todo": "À faire",
+    "submitted": "Envoyés",
+    "accepted": "Acceptés",
+    "rejected": "À refaire",
+    "open": "Ouvrir la campagne",
+    "chip": {
+      "profile": "Terminez votre profil",
+      "blocked": "Indisponible",
+      "consent": "Consentement requis",
+      "paused": "En pause",
+      "closed": "Terminée",
+      "ready": "Prêt à enregistrer"
+    }
+  }
+}

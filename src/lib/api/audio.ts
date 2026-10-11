@@ -101,7 +101,36 @@ export interface UploadAudioArgs {
   signal?: AbortSignal;
 }
 
-export async function uploadAudio(args: UploadAudioArgs): Promise<void> {
+/** What Sayari answered, best effort: the recording's id when the response carries one. */
+export interface UploadAudioResult {
+  recordingId: string | null;
+}
+
+/** Find a recording id in Sayari's upload response (shape is not documented: tolerate a few). */
+export function recordingIdFromResponse(body: unknown): string | null {
+  const pick = (o: unknown): string | null => {
+    if (!o || typeof o !== "object") return null;
+    const r = o as Record<string, unknown>;
+    for (const k of ["audio_id", "id", "recording_id"]) {
+      const v = r[k];
+      if (typeof v === "string" && v.trim()) return v.trim().slice(0, 200);
+      if (typeof v === "number" && Number.isFinite(v)) return String(v);
+    }
+    return null;
+  };
+  if (Array.isArray(body)) return pick(body[0]);
+  const direct = pick(body);
+  if (direct) return direct;
+  const inner = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  for (const k of ["files", "results", "items", "data", "uploaded"]) {
+    const v = inner[k];
+    const found = Array.isArray(v) ? pick(v[0]) : pick(v);
+    if (found) return found;
+  }
+  return null;
+}
+
+export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioResult> {
   // Fail fast when the device reports offline. `navigator.onLine` is
   // not 100% reliable (it only catches "no interface"), but when it
   // *is* false we know the fetch will fail in 45 s with the same
@@ -194,9 +223,16 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<void> {
   args.signal?.removeEventListener("abort", onCallerAbort);
 
   if (response.ok) {
-    // Drain to allow connection reuse (keepalive).
-    await response.arrayBuffer().catch(() => undefined);
-    return;
+    // Read the body (this also lets the connection be reused). The id is optional: the
+    // dashboard identifies a recording by the file's sha-256, so a missing id is fine.
+    const text = await response.text().catch(() => "");
+    let parsed: unknown = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // not JSON
+    }
+    return { recordingId: recordingIdFromResponse(parsed) };
   }
 
   // HTTP-level error. Read body once for diagnostics.
