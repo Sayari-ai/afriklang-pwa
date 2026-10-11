@@ -28,7 +28,7 @@ export type CampaignCard = {
   code: string;
   title: string;
   status: string;
-  language: { code: string; name: string };
+  language: { code: string; name: string; varieties: string[] };
   topic: { domain: string; sub_domain: string | null };
   deadline: string | null;
   progress: { total: number; todo: number; submitted: number; accepted: number; rejected: number };

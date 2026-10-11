@@ -8,6 +8,9 @@ import {
   type Locale,
 } from "./locales";
 
+/** One message file per screen group (see src/messages/campaign). */
+const CAMPAIGN_AREAS = ["common", "claim", "flow", "record"] as const;
+
 /**
  * Per-request locale resolver for next-intl.
  *
@@ -37,5 +40,13 @@ export default getRequestConfig(async () => {
   // Lazy-load the message bundle to keep cold-start small.
   const messages = (await import(`../messages/${locale}.json`)).default;
 
-  return { locale, messages };
+  // Campaign screens keep their strings in src/messages/campaign/<area>.<locale>.json,
+  // all under one "campaign" namespace: useTranslations("campaign.<area>").
+  const campaign = Object.fromEntries(
+    await Promise.all(
+      CAMPAIGN_AREAS.map(async (area) => [area, (await import(`../messages/campaign/${area}.${locale}.json`)).default] as const),
+    ),
+  );
+
+  return { locale, messages: { ...messages, campaign } };
 });
