@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMetadata, canStop, deviceLabel, formatClock, guardMission, nextTodo, problemMessageKey, submitFailureAction, takeRules, uploadFailureKey } from "./record-flow";
+import { buildMetadata, buildSayariCampaignFields, canStop, deviceLabel, formatClock, guardMission, nextTodo, problemMessageKey, submitFailureAction, takeRules, uploadFailureKey } from "./record-flow";
 import type { CampaignCard, Mission } from "./types";
 
 const card = (over: Partial<CampaignCard> = {}): CampaignCard =>
@@ -114,5 +114,21 @@ describe("uploadFailureKey", () => {
     expect(uploadFailureKey({ status: 502, isNetwork: false }, true)).toBe("server");
     expect(uploadFailureKey({ status: 400, isNetwork: false }, true)).toBe("refused");
     expect(uploadFailureKey({ status: 302, isNetwork: false }, true)).toBe("other");
+  });
+});
+
+describe("buildSayariCampaignFields", () => {
+  const c = card({ campaign_id: "c1", code: "WOL_FIN_PILOT_01", topic: { domain: "Banking", sub_domain: null } });
+  const m = mission({ prompt: { id: "P7", text_or_topic: "x", category: null }, partner_speaker_id: null });
+  const meta = buildMetadata({ duration_s: 8.2, level_dbfs: -22, peak_dbfs: -1.5, silence_before_s: 1.1, silence_after_s: 1, sample_rate: 16000, channels: 1 }, "a".repeat(64), "Android Chrome", null);
+  it("sends identifiers and measurements as strings, leaving absent values out", () => {
+    const f = buildSayariCampaignFields(c, m, meta);
+    expect(f).toMatchObject({ campaign_code: "WOL_FIN_PILOT_01", mission_code: "S-1", mission_type: "spontaneous", prompt_id: "P7", duration_s: "8.2", channels: "1", domain: "Banking" });
+    expect(f).not.toHaveProperty("sub_domain");
+    expect(f).not.toHaveProperty("partner_speaker_id");
+    expect(f).not.toHaveProperty("prompt_category");
+  });
+  it("never carries a name, email or user id", () => {
+    expect(Object.keys(buildSayariCampaignFields(c, m, meta)).join(" ")).not.toMatch(/name|email|user_id/);
   });
 });

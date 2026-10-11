@@ -123,4 +123,37 @@ export function buildMetadata(a: TakeAnalysis & { sample_rate: number; channels:
   };
 }
 
+/**
+ * The campaign fields sent to Sayari with the audio, as multipart text fields (all values are strings,
+ * absent values are left out). The same list is documented in docs/SAYARI_UPLOAD_PAYLOAD.json.
+ * Never a name, email or user id: the speaker ID is the only identity.
+ */
+export function buildSayariCampaignFields(card: CampaignCard, mission: Mission, metadata: RecordingMetadata): Record<string, string> {
+  const fields: Record<string, string | number | null | undefined> = {
+    campaign_id: card.campaign_id,
+    campaign_code: card.code,
+    domain: card.topic.domain,
+    sub_domain: card.topic.sub_domain,
+    mission_id: mission.mission_id,
+    mission_code: mission.code,
+    mission_type: mission.type,
+    prompt_id: mission.prompt.id,
+    prompt_category: mission.prompt.category,
+    partner_speaker_id: mission.partner_speaker_id,
+    source_sha256: metadata.source_sha256,
+    format: metadata.format,
+    sample_rate: metadata.sample_rate,
+    channels: metadata.channels,
+    duration_s: metadata.duration_s,
+    level_dbfs: metadata.level_dbfs,
+    peak_dbfs: metadata.peak_dbfs,
+    silence_before_s: metadata.silence_before_s,
+    silence_after_s: metadata.silence_after_s,
+    device: metadata.device,
+  };
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(fields)) if (v !== null && v !== undefined && v !== "") out[k] = String(v);
+  return out;
+}
+
 export const formatClock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;

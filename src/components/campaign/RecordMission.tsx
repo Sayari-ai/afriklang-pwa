@@ -11,6 +11,7 @@ import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import {
   autoStopS,
   buildMetadata,
+  buildSayariCampaignFields,
   canStop,
   deviceLabel,
   formatClock,
@@ -269,6 +270,7 @@ export function RecordMission({ campaignId, card, mission, missions, speakerId, 
             ...(dialect ? { dialect } : {}),
             englishDescription: mission.prompt.text_or_topic,
             speakerId,
+            extraFields: buildSayariCampaignFields(card, mission, buildMetadata(take.analysis, sent.sha, deviceLabel(navigator.userAgent), null)),
           });
           sent.uploaded = true;
           sent.sayariId = res.recordingId;
