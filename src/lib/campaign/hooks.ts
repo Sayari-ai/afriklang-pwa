@@ -21,12 +21,9 @@ import type { CampaignFailure } from "./types";
 export type SessionState = { status: "waiting" } | { status: "signedOut" } | { status: "signedIn"; email: string | null; userId: string };
 
 export function useCampaignSession(): SessionState {
-  const [state, setState] = useState<SessionState>({ status: "waiting" });
+  const [state, setState] = useState<SessionState>(isCampaignAuthConfigured ? { status: "waiting" } : { status: "signedOut" });
   useEffect(() => {
-    if (!isCampaignAuthConfigured) {
-      setState({ status: "signedOut" });
-      return;
-    }
+    if (!isCampaignAuthConfigured) return;
     const auth = getCampaignAuth().auth;
     const apply = (s: { user: { id: string; email?: string | null } } | null) =>
       setState(s ? { status: "signedIn", email: s.user.email ?? null, userId: s.user.id } : { status: "signedOut" });

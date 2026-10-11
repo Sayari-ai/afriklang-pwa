@@ -1,1 +1,59 @@
-{}
+{
+  "signIn": {
+    "title": "Welcome to Afriklang recording",
+    "intro": "Sign in with the Google account that uses the email address your invitation was sent to.",
+    "why": "This is how we make sure the invitation reaches the right person. Your Google email must be verified and match the invitation.",
+    "invitationDetected": "Your invitation was detected. Sign in to use it.",
+    "button": "Continue with Google",
+    "starting": "Opening Google…",
+    "error": "We could not open Google sign-in. Please try again.",
+    "notConfigured": "Developer note: sign-in is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+  },
+  "claiming": {
+    "title": "Checking your invitation…",
+    "body": "This only takes a moment."
+  },
+  "failure": {
+    "titleAccount": "This Google account does not match",
+    "titleLink": "We could not use this invitation",
+    "titleRetry": "We could not check your invitation",
+    "signedInAs": "Signed in as {email}.",
+    "useAnother": "Use another Google account",
+    "otherAccountHint": "Your invitation is still saved. Sign in with the right account to continue.",
+    "continue": "Go to my campaigns",
+    "contact": "Need help? Contact the Afriklang team."
+  },
+  "notLinked": {
+    "title": "Open your invitation link",
+    "body": "Open the link from your invitation email to get started.",
+    "lost": "Cannot find the email? Contact the Afriklang team and we will send you a new invitation."
+  },
+  "home": {
+    "greeting": "Welcome back",
+    "intro": "Here are the campaigns you are invited to.",
+    "loadingList": "Loading your campaigns…",
+    "errorTitle": "We could not load your campaigns",
+    "emptyTitle": "No campaigns yet",
+    "emptyBody": "When the Afriklang team adds you to a campaign, it will appear here."
+  },
+  "card": {
+    "code": "Code {code}",
+    "language": "Language",
+    "topic": "Topic",
+    "deadline": "Deadline {date}",
+    "progress": "{accepted} of {total} accepted",
+    "todo": "To do",
+    "submitted": "Submitted",
+    "accepted": "Accepted",
+    "rejected": "To redo",
+    "open": "Open campaign",
+    "chip": {
+      "profile": "Finish your profile",
+      "blocked": "Not available",
+      "consent": "Consent needed",
+      "paused": "Paused",
+      "closed": "Closed",
+      "ready": "Ready to record"
+    }
+  }
+}

@@ -1,1 +1,126 @@
-{}
+{
+  "hub": {
+    "notFoundTitle": "Campaign not found",
+    "notFoundBody": "We could not find this campaign in your list.",
+    "backToList": "Back to my campaigns",
+    "signedOut": "Please sign in to continue.",
+    "topic": "Topic: {topic}",
+    "deadline": "Until {date}",
+    "paused": "Recording is paused for now. You can see your missions below, and recording reopens when the campaign resumes.",
+    "closed": "This campaign has ended. You can still see your missions below, but you can no longer record.",
+    "pausedTitle": "Recording is paused",
+    "closedTitle": "Campaign ended"
+  },
+  "profile": {
+    "title": "About you",
+    "intro": "A few details help us match your voice to the right project. Everything is required.",
+    "privacy": "Your name never travels with your audio: only a pseudonymous speaker ID does.",
+    "correctTitle": "Correct my profile",
+    "nativeLanguage": "Native language",
+    "variety": "Variety of your language",
+    "varietyPlaceholder": "Choose your variety",
+    "varietyOther": "None of these / another variety",
+    "varietyOtherTitle": "This campaign is for a different variety",
+    "varietyOtherBody": "This campaign is for speakers of the varieties listed. If you speak another variety, please contact the Afriklang team. They can tell you about other campaigns that may suit you.",
+    "country": "Country you live in",
+    "countryPlaceholder": "Choose your country",
+    "region": "Region or city",
+    "regionHint": "For example: Thiès",
+    "gender": "Gender",
+    "genderPlaceholder": "Choose",
+    "age": "Age group",
+    "agePlaceholder": "Choose",
+    "device": "Phone or device",
+    "deviceHint": "You can change this, for example Samsung A14.",
+    "choose": "Choose…",
+    "genders": {
+      "female": "Female",
+      "male": "Male",
+      "other": "Other",
+      "undisclosed": "Prefer not to say"
+    },
+    "errors": {
+      "required": "Please fill in this field.",
+      "tooLong": "This is too long (80 characters at most).",
+      "invalid": "Please choose one of the options."
+    },
+    "save": "Save and continue",
+    "saving": "Saving…",
+    "formError": "Please check the highlighted fields."
+  },
+  "blocked": {
+    "title": "This campaign is not available for your profile",
+    "body": "The variety you gave does not match the one this campaign is looking for. The Afriklang team has been told and will get in touch if another campaign suits you.",
+    "fix": "If you made a mistake, you can correct your profile and the campaign will open again."
+  },
+  "consent": {
+    "accountTitle": "Your consent to record",
+    "campaignTitle": "Consent for this campaign",
+    "accountSummary": "By agreeing, you allow Afriklang to record your voice and to process it to build speech datasets. You can withdraw from any campaign at any time.",
+    "campaignSummary": "By agreeing, you take part in the campaign {code} (topic: {topic}). Your recordings will be used as described in the text. You can withdraw from this campaign at any time.",
+    "readText": "Read the full consent text",
+    "opensNewTab": "(opens in a new tab)",
+    "agree": "I have read and agree",
+    "sign": "I agree",
+    "signing": "Saving…",
+    "changed": "The consent text has changed, so please read it again before you agree.",
+    "notConfigured": "The consent text is not ready yet for this campaign. Please contact the Afriklang team.",
+    "noLink": "The consent text link is missing. Please contact the Afriklang team."
+  },
+  "instructions": {
+    "title": "How to record",
+    "toggle": "Recording instructions",
+    "rules": "The golden rules",
+    "quiet": "Find a quiet room. Switch off TV, radio and fans.",
+    "background": "Background: {text}",
+    "mic": "Hold the phone {min} to {max} cm from your mouth.",
+    "micMin": "Hold the phone at least {min} cm from your mouth.",
+    "micMax": "Hold the phone at most {max} cm from your mouth.",
+    "level": "Speak clearly and loud enough: the recording must reach at least {level} dBFS on average. The app checks this for you.",
+    "silence": "Stay silent for about {s} second before you start and after you finish.",
+    "byType": "What to do, by type",
+    "duration": "{min} to {max} seconds",
+    "perSession": "About {min} to {max} missions per sitting.",
+    "types": {
+      "read": { "name": "Read aloud", "help": "Read the sentence on screen out loud, naturally, as you would say it to someone." },
+      "spontaneous": { "name": "Speak freely", "help": "Talk about the topic or question shown, in your own words, until the timer allows." },
+      "conversational": { "name": "Conversation", "help": "Talk with your partner about the scenario shown. One of you presses record on one phone, and both of you are credited." }
+    },
+    "withdraw": "Withdraw from this campaign",
+    "withdrawTitle": "Withdraw from this campaign?",
+    "withdrawBody": "You will not be able to record for this campaign any more, and the team will be told. Your consent to record in general stays.",
+    "withdrawConfirm": "Yes, withdraw",
+    "withdrawing": "Withdrawing…",
+    "cancel": "Cancel"
+  },
+  "missions": {
+    "title": "Your missions",
+    "progress": "{done} of {total} done",
+    "accepted": "{n, plural, one {# accepted recording} other {# accepted recordings}}",
+    "toRecord": "To record",
+    "toRedo": "To redo",
+    "done": "Submitted and accepted",
+    "emptyTitle": "No missions yet",
+    "emptyBody": "Missions will appear here as soon as the team has prepared them.",
+    "allDone": "Nothing left to record right now. Thank you!",
+    "record": "Record",
+    "redo": "Record again",
+    "reason": "Why it came back: {reason}",
+    "noReason": "The team asked for a new take.",
+    "partner": "Partner: {id}",
+    "partnerWait": "Your partner has not finished their consent yet. You can record once they have.",
+    "duration": "{min} to {max} s",
+    "durationMax": "up to {max} s",
+    "status": {
+      "submitted": "Submitted",
+      "accepted": "Accepted"
+    },
+    "types": {
+      "read": "Read",
+      "spontaneous": "Speak",
+      "conversational": "Conversation"
+    },
+    "loadError": "We could not load your missions.",
+    "readOnly": "Read only"
+  }
+}

@@ -1,1 +1,120 @@
-{}
+{
+  "appTitle": "Enregistrer",
+  "backToMissions": "Retour aux missions",
+  "signInAgain": "Se reconnecter",
+  "recordAgain": "Réenregistrer",
+  "ready": "Prêt quand vous l'êtes",
+  "start": "Enregistrer",
+  "stop": "Arrêter",
+  "cancel": "Annuler",
+  "progress": "Temps écoulé",
+  "leaveConfirm": "Quitter cette page ? Votre enregistrement n'a pas été sauvegardé et sera perdu.",
+  "type": {
+    "read": "Lecture à voix haute",
+    "spontaneous": "Parole libre",
+    "conversational": "Conversation"
+  },
+  "prompt": {
+    "label": "À enregistrer",
+    "spontaneous": "Parlez de ce sujet, avec vos propres mots :",
+    "conversationalScenario": "Discutez ensemble de ce scénario :",
+    "partner": "Identifiant de votre partenaire : {id}",
+    "onePhone": "Un seul téléphone enregistre, et les deux locuteurs sont crédités pour l'enregistrement. Placez le téléphone là où vous serez tous les deux bien entendus.",
+    "duration": "Durée : de {min} à {max} secondes",
+    "rejected": "Cet enregistrement n'a pas été accepté précédemment. Merci de le refaire.",
+    "rejectedWithReason": "Cet enregistrement n'a pas été accepté précédemment : {reason}"
+  },
+  "hint": {
+    "read": "Lisez la phrase à voix haute, clairement et à votre rythme normal. Touchez Arrêter quand vous avez fini.",
+    "timed": "Parlez au moins {min} secondes. Installez-vous dans un endroit calme et tenez le téléphone à une distance confortable.",
+    "canStop": "Vous pouvez arrêter quand vous avez terminé.",
+    "tooEarly": "Continuez : un enregistrement doit durer au moins {min} secondes."
+  },
+  "mic": {
+    "permission-denied": "Le microphone est bloqué. Autorisez l'accès au microphone pour ce site dans les réglages de votre navigateur, puis réessayez.",
+    "no-mic": "Aucun microphone n'a été trouvé. Branchez-en un ou vérifiez votre appareil, puis réessayez.",
+    "unsupported": "Ce navigateur ne peut pas enregistrer le son. Ouvrez cette page dans une version récente de Chrome ou de Safari.",
+    "internal": "L'enregistrement n'a pas pu démarrer. Fermez les autres applications qui utilisent le microphone, puis réessayez."
+  },
+  "status": {
+    "idle": "Prêt à enregistrer",
+    "countdown": "L'enregistrement démarre dans un instant",
+    "recording": "Enregistrement en cours",
+    "analyzing": "Vérification de votre enregistrement",
+    "review": "Enregistrement terminé. Écoutez puis envoyez",
+    "problem": "L'enregistrement présente un problème",
+    "submitting": "Envoi de votre enregistrement",
+    "failed": "L'enregistrement n'a pas pu être envoyé",
+    "saved": "Enregistrement sauvegardé"
+  },
+  "countdown": "Préparez-vous",
+  "recording": "Enregistrement…",
+  "analyzing": "Vérification de votre enregistrement…",
+  "problem": {
+    "title": "Refaisons l'enregistrement",
+    "too_short": "L'enregistrement est trop court. Parlez au moins {min} secondes.",
+    "too_long": "L'enregistrement est trop long. Gardez-le sous {max} secondes.",
+    "too_quiet": "L'enregistrement est trop faible. Rapprochez un peu le téléphone de votre bouche et parlez plus fort.",
+    "clipped": "L'enregistrement est déformé car le son est trop fort. Éloignez le téléphone et recommencez.",
+    "silence": "Laissez environ une seconde de silence avant de commencer et après avoir fini. Attendez un instant avant de parler et avant de toucher Arrêter."
+  },
+  "rejected": {
+    "duration": "L'équipe n'a pas pu accepter la durée de cet enregistrement. Merci de le refaire.",
+    "level": "L'équipe n'a pas pu accepter le volume de cet enregistrement. Merci de le refaire, un peu plus près du microphone.",
+    "silence": "L'équipe n'a pas pu accepter le silence au début ou à la fin. Merci de le refaire avec une courte pause avant et après.",
+    "other": "L'équipe n'a pas pu accepter cet enregistrement. Merci de le refaire."
+  },
+  "review": {
+    "title": "Écoutez votre enregistrement",
+    "player": "Votre enregistrement",
+    "duration": "Durée : {time}",
+    "submit": "Envoyer",
+    "submitting": "Envoi…"
+  },
+  "failed": {
+    "title": "Pas encore envoyé",
+    "upload": "Le son n'a pas pu être envoyé. Votre enregistrement est toujours là.",
+    "willUpload": "En réessayant, le son sera envoyé puis la mission sera enregistrée.",
+    "alreadyUploaded": "Votre son a déjà été envoyé. En réessayant, seule la mission sera enregistrée."
+  },
+  "saved": {
+    "title": "Enregistré",
+    "body": "La mission {code} est enregistrée et attend maintenant sa vérification.",
+    "next": "Mission suivante",
+    "allDone": "Tout est fait pour l'instant. Merci !"
+  },
+  "guard": {
+    "missing": {
+      "title": "Mission introuvable",
+      "body": "Cette mission ne fait pas partie de votre campagne. Retournez à la liste et choisissez-en une."
+    },
+    "profile": {
+      "title": "Terminez d'abord votre profil",
+      "body": "Complétez votre profil avant d'enregistrer."
+    },
+    "blocked": {
+      "title": "Enregistrement indisponible",
+      "body": "Cette campagne n'est pas disponible pour votre profil. L'équipe a été prévenue."
+    },
+    "consent": {
+      "title": "Consentement requis",
+      "body": "Acceptez les textes de consentement avant d'enregistrer."
+    },
+    "paused": {
+      "title": "Enregistrement en pause",
+      "body": "La campagne est en pause. L'enregistrement rouvrira à sa reprise."
+    },
+    "closed": {
+      "title": "Campagne terminée",
+      "body": "Cette campagne est terminée et n'accepte plus d'enregistrements."
+    },
+    "done": {
+      "title": "Déjà enregistrée",
+      "body": "Cette mission a déjà été enregistrée. Il n'y a rien d'autre à faire ici."
+    },
+    "partner": {
+      "title": "En attente de votre partenaire",
+      "body": "Votre partenaire de conversation n'a pas encore terminé son consentement. Vous pourrez enregistrer cette mission dès que ce sera fait."
+    }
+  }
+}
