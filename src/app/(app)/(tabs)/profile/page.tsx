@@ -1,53 +1,61 @@
 "use client";
 
 /**
- * Profile tab — port of `lib/features/profile/profile_screen.dart`.
+ * Profile tab the user's identity + settings (flat redesign).
  *
- * Three sections, each rendered as a labelled white rounded card:
- *   1. Preferences
- *      - App language: System / English / Français → bottom-sheet picker
- *        wired to `useSetAppLocale()` (writes cookie + localStorage,
- *        then `router.refresh()` so next-intl swaps message bundles).
- *      - Learning language: Twi / Fon / Wolof → bottom-sheet picker.
+ * Layout (top to bottom, ordered by the thumb zone static content
+ * high in the hard-reach band, frequent interactions low near the
+ * thumb):
+ *   0. Identity header: large Google avatar (monogram fallback),
+ *      display name, email. The app has exactly one identity per
+ *      user, so the person IS the page header not an "Account"
+ *      row buried in a settings list (that grammar implies
+ *      switchable/multiple accounts, which we don't have).
+ *   1. About
+ *      - Version row (non-interactive). Web has no `buildNumber`;
+ *        we render `version (web)`.
  *   2. Privacy
  *      - Recording consent toggle. Re-grant is one-tap (the user has
  *        already seen the disclosure during onboarding). Revoking
  *        opens a confirm dialog with a red "Revoke" CTA.
- *   3. About
- *      - Version row. Pulled from `package.json` via a build-time
- *        constant (`process.env.NEXT_PUBLIC_APP_VERSION`) with a
- *        fallback to the `package.json` `version` baked at compile
- *        time. Web has no `buildNumber`; we render `version (web)`.
+ *   3. Preferences (the repeat-visit rows, lowest = easiest reach)
+ *      - App language: System / English / Français → bottom-sheet picker
+ *        wired to `useSetAppLocale()` (writes cookie + localStorage,
+ *        then `router.refresh()` so next-intl swaps message bundles).
+ *      - Recording language: Twi / Fon / Wolof → bottom-sheet picker.
+ *      - Sound effects: toggle for the UI feedback chimes; switching
+ *        it on plays the success chime as an instant preview.
+ *   4. Log out: standalone action card at the very bottom (with
+ *      confirm dialog) an action you take, deliberately separated
+ *      from the identity header so it doesn't read as account
+ *      management.
  *
- * Differences from Flutter:
- *   - `showModalBottomSheet` → fixed-position overlay with a
- *     translucent scrim. Tapping the scrim cancels (same UX).
- *   - `Switch.adaptive` → custom CSS toggle in brand primary.
- *   - `package_info_plus` → static `APP_VERSION` (Next 16 doesn't
- *     bundle native package metadata; this is honest about the runtime).
- *   - `_LocaleOverride` is `Locale | null`; the sheet returns
- *     `LocaleOverride | undefined` (undefined = dismissed).
+ * Sheets are built on the shared `<Sheet>` shell; the confirm dialog
+ * is a centered white card over a scrim.
  */
 
 import { useTranslations } from "next-intl";
+import { LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { ScreenBackground } from "@/components/screen-background";
 import { BOTTOM_NAV_RESERVED_PX } from "@/components/bottom-nav";
-import { NicknameSheet } from "@/components/nickname-sheet";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { CountryFlag } from "@/components/ui/country-flag";
+import { Sheet } from "@/components/ui/sheet";
 import { useSetAppLocale } from "@/hooks/use-set-app-locale";
 import type { Locale } from "@/i18n/locales";
+import { track } from "@/lib/api/events";
+import { playSfx } from "@/lib/audio/sfx";
 import { useAppLocale, type LocaleOverride } from "@/stores/app-locale";
+import { useAuth } from "@/stores/auth";
 import { useConsent } from "@/stores/consent";
 import {
   SUPPORTED_LEARNING_LANGUAGES,
   type LearningLanguage,
   useLearningLanguage,
 } from "@/stores/learning-language";
-import { useNickname } from "@/stores/nickname";
-
-const PRIMARY = "#00539F";
-const RED = "#E53935";
+import { useSoundSettings } from "@/stores/sound-settings";
 
 // Baked at build time. The PWA has no native package metadata, so
 // we expose the package.json version directly. (Next inlines
@@ -60,8 +68,8 @@ const APP_BUILD = "web";
 type SheetSpec =
   | { kind: "app-language" }
   | { kind: "learning-language" }
-  | { kind: "nickname" }
   | { kind: "revoke-confirm" }
+  | { kind: "logout-confirm" }
   | null;
 
 export default function ProfilePage() {
@@ -72,27 +80,31 @@ export default function ProfilePage() {
   const [sheet, setSheet] = useState<SheetSpec>(null);
 
   return (
-    <ScreenBackground overlay="strong">
+    <div
+      className="flex h-dvh w-full flex-col"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div
         className="flex-1 overflow-y-auto px-4 pt-4"
         style={{ paddingBottom: BOTTOM_NAV_RESERVED_PX + 16 }}
       >
-        <h1
-          className="px-1 text-[32px] font-black text-white"
-          style={{ letterSpacing: "-0.5px" }}
-        >
+        <h1 className="px-1 text-[26px] font-extrabold text-text">
           {t("profileTitle")}
         </h1>
         <div className="h-4" />
 
-        <SectionCard title={t("profileSectionPreferences")}>
-          <AppLanguageRow onTap={() => setSheet({ kind: "app-language" })} />
-          <Divider />
-          <LearningLanguageRow
-            onTap={() => setSheet({ kind: "learning-language" })}
-          />
-          <Divider />
-          <NicknameRow onTap={() => setSheet({ kind: "nickname" })} />
+        <IdentityHeader />
+
+        <div className="h-5" />
+
+        {/* Section order follows the thumb zone: dead info (About)
+            sits high in the hard-to-reach band, the deliberate
+            privacy toggle mid, and the repeat-visit Preferences
+            pickers lowest closest to a one-handed thumb. Log out
+            stays last by convention (confirm-guarded, and scrolling
+            out of casual reach suits a destructive action). */}
+        <SectionCard title={t("profileSectionAbout")}>
+          <VersionRow />
         </SectionCard>
 
         <div className="h-4" />
@@ -105,9 +117,24 @@ export default function ProfilePage() {
 
         <div className="h-4" />
 
-        <SectionCard title={t("profileSectionAbout")}>
-          <VersionRow />
+        <SectionCard title={t("profileSectionPreferences")}>
+          <AppLanguageRow onTap={() => setSheet({ kind: "app-language" })} />
+          <Divider />
+          <LearningLanguageRow
+            onTap={() => setSheet({ kind: "learning-language" })}
+          />
+          <Divider />
+          <SoundEffectsRow />
         </SectionCard>
+
+        <div className="h-4" />
+
+        {/* Standalone action card no section label. Grouping it
+            under the identity header (old "Account" section) made
+            the screen read like a manage-accounts settings page. */}
+        <Card className="overflow-hidden py-1">
+          <LogoutRow onTap={() => setSheet({ kind: "logout-confirm" })} />
+        </Card>
       </div>
 
       {sheet?.kind === "app-language" && (
@@ -116,13 +143,13 @@ export default function ProfilePage() {
       {sheet?.kind === "learning-language" && (
         <LearningLanguageSheet onClose={() => setSheet(null)} />
       )}
-      {sheet?.kind === "nickname" && (
-        <NicknameSheet mode="edit" onClose={() => setSheet(null)} />
-      )}
       {sheet?.kind === "revoke-confirm" && (
         <RevokeConfirmDialog onClose={() => setSheet(null)} />
       )}
-    </ScreenBackground>
+      {sheet?.kind === "logout-confirm" && (
+        <LogoutConfirmDialog onClose={() => setSheet(null)} />
+      )}
+    </div>
   );
 }
 
@@ -139,19 +166,16 @@ function SectionCard({
 }) {
   return (
     <div className="flex flex-col">
-      <span
-        className="px-2 pb-1.5 text-[12px] font-extrabold text-white/70"
-        style={{ letterSpacing: "1.2px" }}
-      >
-        {title.toUpperCase()}
+      <span className="px-2 pb-1.5 text-[12px] font-extrabold uppercase tracking-[1.2px] text-text-faint">
+        {title}
       </span>
-      <div className="overflow-hidden rounded-2xl bg-white">{children}</div>
+      <Card className="overflow-hidden py-1">{children}</Card>
     </div>
   );
 }
 
 function Divider() {
-  return <div className="h-px w-full bg-black/[0.06]" />;
+  return <div className="mx-4 h-0.5 bg-border/70" />;
 }
 
 function Tile({
@@ -171,13 +195,15 @@ function Tile({
       type="button"
       onClick={onTap ?? undefined}
       disabled={!tappable}
-      className="flex w-full items-center px-4 py-3.5 text-left transition-colors active:bg-black/[0.04] disabled:cursor-default"
+      className="flex w-full items-center px-4 py-3.5 text-left transition-colors active:bg-bg-subtle disabled:cursor-default"
     >
-      <span className="flex h-6 w-6 items-center justify-center" style={{ color: PRIMARY }}>
+      {/* Leading glyphs wear the mid brand purple decorative accent;
+          blue stays reserved for interactive/selected states. */}
+      <span className="flex h-6 w-6 items-center justify-center text-purple">
         {leading}
       </span>
       <div className="w-3" />
-      <span className="flex-1 text-[16px] font-bold text-black/85">{label}</span>
+      <span className="flex-1 text-[16px] font-bold text-text">{label}</span>
       <TrailingValue>{trailing}</TrailingValue>
       {tappable && (
         <>
@@ -191,9 +217,7 @@ function Tile({
 
 function TrailingValue({ children }: { children: React.ReactNode }) {
   return (
-    <span
-      className="line-clamp-1 max-w-[55%] text-right text-[14px] font-semibold text-black/60"
-    >
+    <span className="line-clamp-1 max-w-[55%] text-right text-[14px] font-semibold text-text-muted">
       {children}
     </span>
   );
@@ -230,9 +254,14 @@ function AppLanguageRow({ onTap }: { onTap: () => void }) {
 function LearningLanguageRow({ onTap }: { onTap: () => void }) {
   const t = useTranslations();
   const selected = useLearningLanguage((s) => s.selected);
-  const trailing = selected
-    ? `${selected.flagEmoji} ${selected.displayName}`
-    : t("profileLearningLanguageNotSet");
+  const trailing = selected ? (
+    <span className="inline-flex items-center gap-1.5 align-middle">
+      <CountryFlag iso={selected.iso} size={24} className="shrink-0" />
+      <span>{selected.displayName}</span>
+    </span>
+  ) : (
+    t("profileLearningLanguageNotSet")
+  );
   return (
     <Tile
       leading={<SchoolIcon />}
@@ -244,27 +273,35 @@ function LearningLanguageRow({ onTap }: { onTap: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// Nickname row
+// Sound-effects row
 // ---------------------------------------------------------------------------
 
-function NicknameRow({ onTap }: { onTap: () => void }) {
+function SoundEffectsRow() {
   const t = useTranslations();
-  // Reactive — flips from "Not set" to the chosen value as soon as
-  // the user submits the sheet. We don't show the server-assigned
-  // fallback here because it's not known on the profile screen
-  // (would require a leaderboard fetch); keep this row strictly
-  // about the *user-chosen* override.
-  const value = useNickname((s) => s.value);
-  const trailing = value && value.length > 0
-    ? value
-    : t("profileNicknameNotSet");
+  const enabled = useSoundSettings((s) => s.enabled);
+  const setEnabled = useSoundSettings((s) => s.setEnabled);
+
+  const onToggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    // Instant preview: hearing the chime confirms the switch better
+    // than any sublabel could. `setEnabled` has already flipped the
+    // store (playSfx's enabled-check reads it imperatively), and the
+    // tap gesture guarantees the AudioContext is unlocked.
+    if (next) playSfx("success");
+  };
+
   return (
-    <Tile
-      leading={<PersonIcon />}
-      label={t("profileNicknameLabel")}
-      trailing={trailing}
-      onTap={onTap}
-    />
+    <div className="flex items-center px-4 py-3">
+      <span className="flex h-6 w-6 items-center justify-center text-purple">
+        <SpeakerIcon />
+      </span>
+      <div className="w-3" />
+      <span className="flex-1 text-[16px] font-bold text-text">
+        {t("profileSoundEffectsLabel")}
+      </span>
+      <ToggleSwitch checked={enabled} onChange={onToggle} />
+    </div>
   );
 }
 
@@ -292,16 +329,16 @@ function ConsentRow({
 
   return (
     <div className="flex items-center px-4 py-3">
-      <span style={{ color: PRIMARY }}>
-        <MicIcon />
+      <span className="flex h-6 w-6 items-center justify-center text-purple">
+        <MicGlyph />
       </span>
       <div className="w-3" />
       <div className="flex flex-1 flex-col">
-        <span className="text-[16px] font-bold text-black/85">
+        <span className="text-[16px] font-bold text-text">
           {t("profileConsentLabel")}
         </span>
         <div className="h-0.5" />
-        <span className="text-[12px] text-black/60">
+        <span className="text-[12px] font-semibold text-text-muted">
           {granted
             ? t("profileConsentSublabelGranted")
             : t("profileConsentSublabelRevoked")}
@@ -325,17 +362,105 @@ function ToggleSwitch({
       role="switch"
       aria-checked={checked}
       onClick={onChange}
-      className="relative inline-flex h-7 w-12 items-center rounded-full transition-colors"
-      style={{
-        backgroundColor: checked ? PRIMARY : "#CCCCCC",
-      }}
+      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+        checked ? "bg-primary" : "bg-border"
+      }`}
     >
       <span
-        className="inline-block h-6 w-6 rounded-full bg-white shadow transition-transform"
+        className="inline-block h-6 w-6 rounded-full bg-white transition-transform"
         style={{
           transform: checked ? "translateX(22px)" : "translateX(2px)",
+          boxShadow: "0 1.5px 2px rgba(0,0,0,0.25)",
         }}
       />
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Identity header + log out
+// ---------------------------------------------------------------------------
+
+/**
+ * The signed-in person, as the page's hero: large Google avatar
+ * (purple monogram disc when the account exposes no photo, or the
+ * photo fails to load e.g. offline), display name, email sublabel.
+ * Falls back to the email as the headline (then to a generic label)
+ * Google accounts don't always expose a name.
+ *
+ * Non-interactive by design: one user = one identity. There is
+ * nothing to switch, add, or manage here.
+ */
+function IdentityHeader() {
+  const t = useTranslations();
+  const user = useAuth((s) => s.user);
+  const [photoFailed, setPhotoFailed] = useState(false);
+
+  const headline = user?.name ?? user?.email ?? t("profileAccountGoogleFallback");
+  const sublabel = user?.name ? user.email : null;
+  const monogram = (headline[0] ?? "?").toUpperCase();
+  const showPhoto = !!user?.avatarUrl && !photoFailed;
+
+  return (
+    <div className="flex flex-col items-center text-center">
+      {showPhoto ? (
+        // Plain <img>, not next/image: Google serves avatars already
+        // sized (=s96-c) so the optimizer adds nothing, and next/image
+        // would require whitelisting *.googleusercontent.com in
+        // next.config.ts. `no-referrer` avoids Google's occasional
+        // 403-with-referrer; onError drops to the monogram (offline,
+        // stale URL).
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={user!.avatarUrl!}
+          alt=""
+          aria-hidden
+          referrerPolicy="no-referrer"
+          onError={() => setPhotoFailed(true)}
+          className="h-[88px] w-[88px] rounded-full border-4 border-blue-light object-cover"
+        />
+      ) : (
+        <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full border-4 border-blue-light bg-purple">
+          <span className="text-[34px] font-extrabold text-white">
+            {monogram}
+          </span>
+        </span>
+      )}
+      <div className="h-3" />
+      <span className="line-clamp-1 max-w-full px-4 text-[20px] font-extrabold text-text">
+        {headline}
+      </span>
+      {sublabel && (
+        <span className="line-clamp-1 max-w-full px-4 text-[13px] font-semibold text-text-muted">
+          {sublabel}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Log-out trigger row. Red the one leave-the-app action on the
+ * screen so it must not read like just another preference. Opens
+ * the confirm dialog (an accidental tap costs a full OAuth
+ * round-trip to undo).
+ */
+function LogoutRow({ onTap }: { onTap: () => void }) {
+  const t = useTranslations();
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      className="flex w-full items-center px-4 py-3.5 text-left transition-colors active:bg-bg-subtle"
+    >
+      <span className="flex h-6 w-6 items-center justify-center">
+        {/* lucide defaults stroke to currentColor hex not needed here. */}
+        <LogOut size={22} strokeWidth={2.5} className="text-red" aria-hidden />
+      </span>
+      <div className="w-3" />
+      <span className="flex-1 text-[16px] font-bold text-red">
+        {t("profileLogoutLabel")}
+      </span>
     </button>
   );
 }
@@ -363,78 +488,34 @@ function VersionRow() {
 // Bottom sheets
 // ---------------------------------------------------------------------------
 
-function SheetShell({
-  title,
-  children,
-  onClose,
-}: {
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  // Lock body scroll while open + close on Escape.
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
-      {/* Scrim. Tapping it dismisses. */}
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/50"
-      />
-      <div className="relative mx-auto flex w-full max-w-[480px] flex-col rounded-t-[20px] bg-white pb-safe">
-        <div className="flex justify-center pt-2">
-          <span className="block h-1 w-10 rounded bg-black/25" />
-        </div>
-        <div className="h-3" />
-        <h2 className="px-4 text-[18px] font-extrabold text-black/85">{title}</h2>
-        <div className="h-2" />
-        <div className="flex flex-col">{children}</div>
-        <div className="h-3" />
-      </div>
-    </div>
-  );
-}
-
 function SheetOption({
   label,
   selected,
   onTap,
+  leading,
 }: {
   label: string;
   selected: boolean;
   onTap: () => void;
+  /** Optional glyph before the label (e.g. a country flag). */
+  leading?: React.ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onTap}
-      className="flex w-full items-center px-5 py-3.5 text-left transition-colors active:bg-black/[0.04]"
+      className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors active:bg-bg-subtle"
     >
+      {leading}
       <span
-        className="flex-1 text-[16px]"
-        style={{
-          color: selected ? PRIMARY : "rgba(0,0,0,0.85)",
-          fontWeight: selected ? 800 : 500,
-        }}
+        className={`flex-1 text-[16px] ${
+          selected ? "font-extrabold text-blue" : "font-semibold text-text"
+        }`}
       >
         {label}
       </span>
       {selected && (
-        <span style={{ color: PRIMARY }}>
+        <span className="text-blue">
           <CheckIcon />
         </span>
       )}
@@ -455,7 +536,7 @@ function AppLanguageSheet({ onClose }: { onClose: () => void }) {
   const isOverride = (v: Locale): boolean => override === v;
 
   return (
-    <SheetShell title={t("profileAppLanguageLabel")} onClose={onClose}>
+    <Sheet title={t("profileAppLanguageLabel")} onClose={onClose}>
       <SheetOption
         label={t("profileAppLanguageSystem")}
         selected={override === null}
@@ -471,7 +552,7 @@ function AppLanguageSheet({ onClose }: { onClose: () => void }) {
         selected={isOverride("fr")}
         onTap={() => pick("fr")}
       />
-    </SheetShell>
+    </Sheet>
   );
 }
 
@@ -486,19 +567,22 @@ function LearningLanguageSheet({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <SheetShell
+    <Sheet
       title={t("profileLearningLanguageSheetTitle")}
       onClose={onClose}
     >
       {SUPPORTED_LEARNING_LANGUAGES.map((lang) => (
         <SheetOption
           key={lang.iso}
-          label={`${lang.flagEmoji}  ${lang.displayName} — ${lang.country}`}
+          leading={
+            <CountryFlag iso={lang.iso} size={30} className="shrink-0" />
+          }
+          label={`${lang.displayName} ${lang.country}`}
           selected={selected?.iso === lang.iso}
           onTap={() => pick(lang)}
         />
       ))}
-    </SheetShell>
+    </Sheet>
   );
 }
 
@@ -528,41 +612,131 @@ function RevokeConfirmDialog({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
       <button
         type="button"
-        aria-label="Cancel"
+        aria-label={t("commonCancel")}
         onClick={onClose}
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/40"
       />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white p-5">
-        <h2 className="text-[20px] font-extrabold text-black/85">
+      <Card className="relative w-full max-w-sm p-5">
+        <h2 className="text-[19px] font-extrabold text-text">
           {t("profileConsentRevokeTitle")}
         </h2>
         <div className="h-2" />
-        <p className="text-[14px] text-black/70">
+        <p className="text-[14px] font-semibold leading-snug text-text-muted">
           {t("profileConsentRevokeBody")}
         </p>
         <div className="h-4" />
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-2 text-[14px] font-bold"
-            style={{ color: PRIMARY }}
+            className="rounded-xl px-4 py-2 text-[14px] font-extrabold uppercase tracking-[0.8px] text-text-faint transition-opacity active:opacity-60"
           >
             {t("commonCancel")}
           </button>
-          <button
-            type="button"
+          <Button
+            variant="danger"
+            size="sm"
             onClick={() => {
               revoke();
               onClose();
             }}
-            className="rounded-full px-4 py-2 text-[14px] font-bold text-white"
-            style={{ backgroundColor: RED }}
           >
             {t("profileConsentRevokeConfirm")}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Logout-confirm dialog
+// ---------------------------------------------------------------------------
+
+/**
+ * Confirm dialog for logging out. Reassures that device-local
+ * progress survives (the Google session is only the access key 
+ * `device_id` keys all backend data, so nothing is wiped).
+ *
+ * On confirm: `useAuth.signOut()`. The auth listener flips `user` to
+ * null, `<AppRouteGuard>` bounces to the splash gate, and the gate
+ * forwards to `/login` no manual navigation needed here. Errors
+ * are swallowed: the store clears the local session in its `finally`
+ * even when the server round-trip fails, so the redirect happens
+ * regardless.
+ */
+function LogoutConfirmDialog({ onClose }: { onClose: () => void }) {
+  const t = useTranslations();
+  const [busy, setBusy] = useState(false);
+
+  // Body-lock + Escape, same as the sheet (but not while signing out).
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !busy) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose, busy]);
+
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    track("logout");
+    try {
+      await useAuth.getState().signOut();
+      // No onClose(): the route guard unmounts this screen the
+      // moment `user` goes null closing early would flash the
+      // profile without its dialog for a frame.
+    } catch {
+      // Local session is already cleared by the store's `finally`;
+      // the guard redirect proceeds regardless.
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+      <button
+        type="button"
+        aria-label={t("commonCancel")}
+        onClick={() => {
+          if (!busy) onClose();
+        }}
+        className="absolute inset-0 bg-black/40"
+      />
+      <Card className="relative w-full max-w-sm p-5">
+        <h2 className="text-[19px] font-extrabold text-text">
+          {t("profileLogoutConfirmTitle")}
+        </h2>
+        <div className="h-2" />
+        <p className="text-[14px] font-semibold leading-snug text-text-muted">
+          {t("profileLogoutConfirmBody")}
+        </p>
+        <div className="h-4" />
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="rounded-xl px-4 py-2 text-[14px] font-extrabold uppercase tracking-[0.8px] text-text-faint transition-opacity active:opacity-60 disabled:opacity-50"
+          >
+            {t("commonCancel")}
+          </button>
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => void confirm()}
+            disabled={busy}
+            loading={busy}
+          >
+            {t("profileLogoutConfirmAction")}
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }
@@ -587,10 +761,18 @@ function SchoolIcon() {
   );
 }
 
-function MicIcon() {
+function MicGlyph() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M12 14c1.66 0 3-1.34 3-3V5a3 3 0 00-6 0v6c0 1.66 1.34 3 3 3zm5-3a5 5 0 01-10 0H5a7 7 0 006 6.92V21h2v-3.08A7 7 0 0019 11h-2z" />
+    </svg>
+  );
+}
+
+function SpeakerIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 00-2.5-4.03v8.05a4.5 4.5 0 002.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
     </svg>
   );
 }
@@ -605,7 +787,7 @@ function InfoIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="rgba(0,0,0,0.4)" aria-hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="#A9A1BC" aria-hidden>
       <path d="M9.29 6.71a1 1 0 000 1.41L13.17 12l-3.88 3.88a1 1 0 101.42 1.41l4.59-4.59a1 1 0 000-1.41L10.71 6.71a1 1 0 00-1.42 0z" />
     </svg>
   );
@@ -615,14 +797,6 @@ function CheckIcon() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-    </svg>
-  );
-}
-
-function PersonIcon() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-3.34 0-10 1.67-10 5v3h20v-3c0-3.33-6.66-5-10-5z" />
     </svg>
   );
 }

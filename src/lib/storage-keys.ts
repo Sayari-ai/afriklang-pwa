@@ -42,19 +42,33 @@ export const StorageKeys = {
   progressQueueStore: "afriklang.progress_queue.v1",
 
   /**
-   * User-chosen display name for the leaderboard. Optional override of
-   * the server-assigned nickname returned by `leaderboard_get`. UTF-8
-   * string, trimmed and length-validated client-side before write.
+   * The last leaderboard display name the server confirmed for this
+   * device. `<DisplayNameSync>` compares the signed-in Google
+   * account's (normalised) name against this marker on every boot
+   * and re-pushes via `nickname_set` when they differ. Written only
+   * after a successful server round-trip, so a failed sync retries
+   * on the next boot.
+   *
+   * (Replaces the retired `afriklang.nickname.v1` /
+   * `afriklang.nickname.v1.prompted` pair see storage migration
+   * v2. Never reuse those key names.)
    */
-  nickname: "afriklang.nickname.v1",
+  displayNameSynced: "afriklang.display_name.v1.synced",
 
   /**
-   * Boolean flag: has the first-run nickname prompt been shown on the
-   * map screen? Persisted separately from `nickname` itself so a user
-   * who dismisses the prompt without entering a name doesn't get asked
-   * again on every cold start.
+   * ISO-8601 timestamp of the last time the user dismissed the
+   * add-to-home-screen prompt card. Used to respect the dismissal for
+   * a cool-off window instead of nagging on every celebration screen.
+   * Absent == never dismissed.
    */
-  nicknamePrompted: "afriklang.nickname.v1.prompted",
+  installPromptDismissedAt: "afriklang.install_prompt.v1.dismissed_at",
+
+  /**
+   * UI sound-effects preference (`"true" | "false"`). Absent == enabled:
+   * chimes are on by default, so only a deliberate opt-out is stored.
+   * See `src/stores/sound-settings.ts` / `src/lib/audio/sfx.ts`.
+   */
+  soundEnabled: "afriklang.sound.v1.enabled",
 
   /**
    * Integer schema version for client-side persisted state. Bumped
@@ -64,7 +78,7 @@ export const StorageKeys = {
    * `src/lib/storage/migrations.ts` for the migration list.
    *
    * Stored as a base-10 integer string ("1", "2", ...). Absent on
-   * pre-migration installs — treated as version 0 by the runner so
+   * pre-migration installs treated as version 0 by the runner so
    * the first migration always fires.
    */
   schemaVersion: "afriklang.schema_version",

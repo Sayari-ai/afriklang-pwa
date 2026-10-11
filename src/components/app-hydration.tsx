@@ -14,25 +14,37 @@
  *     consent / language / onboarding flags, finally the resolved
  *     system locale.
  *
- * This component renders nothing — it's a side-effect boundary.
+ * This component renders nothing it's a side-effect boundary.
  */
 
 import { useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { isSupportedLocale, type Locale } from "@/i18n/locales";
+import { track } from "@/lib/api/events";
+import { initSfx } from "@/lib/audio/sfx";
 import { runStorageMigrations } from "@/lib/storage/migrations";
 import { startProgressQueueRunner } from "@/lib/storage/progress-queue-runner";
 import { useAppLocale } from "@/stores/app-locale";
+import { useAuth } from "@/stores/auth";
 import { useConsent } from "@/stores/consent";
 import { useDeviceIdentity } from "@/stores/device-identity";
+import {
+  initInstallPromptCapture,
+  useInstallPrompt,
+} from "@/stores/install-prompt";
 import { useLearningLanguage } from "@/stores/learning-language";
-import { useNickname } from "@/stores/nickname";
 import { useOnboarding } from "@/stores/onboarding";
+import { useSoundSettings } from "@/stores/sound-settings";
+
+// Session-once guard for the `app_open` event. The hydration effect
+// re-runs on locale switches (deps include `t`); the analytics event
+// must not.
+let appOpenTracked = false;
 
 export function AppHydration() {
   // `useLocale()` returns the locale that next-intl resolved server-side
-  // — exactly the one our request.ts handed to the provider. We forward
+  // exactly the one our request.ts handed to the provider. We forward
   // it to the locale store so client components have a synchronous
   // source of truth without re-doing the resolution.
   const serverLocale = useLocale();
@@ -47,7 +59,7 @@ export function AppHydration() {
     //    on-disk shape matches what the hydration code expects. The
     //    runner is idempotent (reads a stored version key first), so
     //    on every boot after the first this is a single localStorage
-    //    read and an early return. Fire-and-forget — async cleanup
+    //    read and an early return. Fire-and-forget async cleanup
     //    (e.g. orphan IDB deletes) shouldn't block first paint, and
     //    the synchronous parts (path-cache wipe) complete before
     //    `pathRepo.boot()` reads the cache anyway because that runs
@@ -61,9 +73,29 @@ export function AppHydration() {
     useConsent.getState().hydrate();
     useLearningLanguage.getState().hydrate();
     useOnboarding.getState().hydrate();
-    useNickname.getState().hydrate();
+    useSoundSettings.getState().hydrate();
 
-    // 3. Locale: server already picked one — record it as the
+    // 2b. Auth session (Google sign-in). Async, unlike the localStorage
+    //     stores: `getSession()` awaits the Supabase client's init,
+    //     which is also where an OAuth `?code=` redirect gets
+    //     exchanged for a session. The splash gate and route guard
+    //     wait on `useAuth.hydrated` before routing. Idempotent.
+    void useAuth.getState().hydrate();
+
+    // 2c. Install-prompt state: hydrate the dismissal window +
+    //     standalone/iOS detection, and start capturing the Chromium
+    //     `beforeinstallprompt` event (it can fire before any screen
+    //     that wants to offer installation mounts). Both idempotent.
+    useInstallPrompt.getState().hydrate();
+    initInstallPromptCapture();
+
+    // 2d. Sound effects: arm the gesture-unlock listener so the Web
+    //     Audio context is running before the first out-of-gesture
+    //     chime (submission success fires after an async upload).
+    //     Idempotent; a no-op while the user has sounds disabled.
+    initSfx();
+
+    // 3. Locale: server already picked one record it as the
     //    `effective` value. The persisted override (if any) is read
     //    eagerly inside the store's initializer, so no work needed here
     //    beyond announcing the effective value.
@@ -74,7 +106,7 @@ export function AppHydration() {
     // 4. Boot the offline progress-queue drain loop. Idempotent on
     //    repeat mounts; copy refreshes on every effect run so locale
     //    switches don't strand the snackbar text in the old language.
-    //    Audio uploads no longer have a queue — submission is now an
+    //    Audio uploads no longer have a queue submission is now an
     //    online-only operation (see `audio.ts` "at-most-once policy"),
     //    so only progress writes get queued here.
     startProgressQueueRunner({
@@ -82,6 +114,16 @@ export function AppHydration() {
         syncFailed: t("progressQueuedSyncFailedSnack"),
       }),
     });
+
+    // 5. Analytics: one `app_open` per browser session. `standalone`
+    //    distinguishes installed-PWA launches from plain tab visits 
+    //    the key metric for the Phase-1 install prompt.
+    if (!appOpenTracked) {
+      appOpenTracked = true;
+      track("app_open", {
+        standalone: window.matchMedia("(display-mode: standalone)").matches,
+      });
+    }
   }, [serverLocale, t]);
 
   return null;

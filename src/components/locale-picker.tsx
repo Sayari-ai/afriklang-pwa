@@ -3,20 +3,12 @@
 /**
  * Three-way locale picker (System / English / Français).
  *
- * This is the same widget used inside the Profile screen's "App
- * language" row in Flutter (`lib/features/profile/profile_screen.dart`).
- * Building it as a standalone component now means Phase 6 can drop it
- * straight in, and we can render it on the placeholder home page for
- * a smoke test before any real screens exist.
- *
- * Visual style is gamified, matching the Flutter chips:
- *   - rounded full pill
- *   - 1px white/30 border for the inactive state
- *   - solid white-on-primary for the active state
- *   - bold typography
+ * Flat redesign: pill radio group. Selected pill gets the light-blue
+ * selection treatment (blue border + tint + blue label); idle pills
+ * are white with the standard gray border.
  *
  * The selected pill is derived from `useAppLocale().override`. A
- * `null` override means "follow system" — that pill highlights when
+ * `null` override means "follow system" that pill highlights when
  * the user hasn't picked a manual override yet.
  */
 
@@ -58,16 +50,11 @@ export function LocalePicker({ className }: { className?: string }) {
             role="radio"
             aria-checked={isActive}
             onClick={() => setLocale(pill.value)}
-            className="rounded-full px-4 py-2 text-sm font-bold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
-            style={{
-              backgroundColor: isActive
-                ? "#ffffff"
-                : "rgba(255,255,255,0.10)",
-              color: isActive ? "var(--color-primary)" : "#ffffff",
-              border: isActive
-                ? "1px solid #ffffff"
-                : "1px solid rgba(255,255,255,0.30)",
-            }}
+            className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition-all duration-150 ${
+              isActive
+                ? "border-blue-border bg-blue-light text-blue"
+                : "border-border bg-bg text-text-muted"
+            }`}
           >
             {pill.label}
           </button>

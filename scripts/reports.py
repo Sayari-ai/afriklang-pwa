@@ -77,8 +77,8 @@ def write_attributions_md(ledger: Ledger, out_path: Path) -> Path:
                 f"[{license_label}]({license_url})" if license_url else license_label
             )
             lines.append(
-                f"- L{lid} q{qi}: {photographer} via {row.get('provider','')} — "
-                f"{license_text} — [source]({page})"
+                f"- L{lid} q{qi}: {photographer} via {row.get('provider','')} "
+                f"{license_text} [source]({page})"
             )
         lines.append("")
     out_path.parent.mkdir(parents=True, exist_ok=True)

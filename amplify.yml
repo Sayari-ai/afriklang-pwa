@@ -1,10 +1,10 @@
-# AWS Amplify Hosting build settings — Afriklang PWA
+# AWS Amplify Hosting build settings Afriklang PWA
 #
 # This is a Next.js 16 (App Router) app with a server-side Route Handler
 # (/api/audio-upload, Node runtime) and dynamic, server-rendered routes.
 # It therefore deploys to Amplify's SSR/compute platform (WEB_COMPUTE),
 # NOT static hosting. Amplify auto-detects this from the `.next` output
-# below — do NOT add `output: "export"` to next.config.ts.
+# below do NOT add `output: "export"` to next.config.ts.
 #
 # Required environment variables are set in the Amplify console
 # (App settings -> Environment variables). See .env.example for the list.

@@ -4,13 +4,15 @@
  * Renders the current snackbar message from `useSnackbar`.
  *
  * Mounted once in `(app)/layout.tsx`. We deliberately render even when
- * `message` is null so the in/out transitions stay smooth — the
+ * `message` is null so the in/out transitions stay smooth the
  * container's `opacity` and `translate-y` reflect presence.
  *
+ * Flat redesign: white toast card with the standard 2px border and a
+ * soft drop shadow, dark text.
+ *
  * Position:
- *   - Bottom-anchored, above the floating bottom-nav (which reserves
- *     `BOTTOM_NAV_RESERVED_PX = 96`). We add a 12 px gap on top of
- *     that.
+ *   - Bottom-anchored, above the fixed bottom-nav (which reserves
+ *     `BOTTOM_NAV_RESERVED_PX`). We add a 12px gap on top of that.
  *   - Centred horizontally with a max-width so very long messages
  *     wrap rather than spill across desktop viewports.
  *
@@ -35,10 +37,10 @@ export function SnackbarHost() {
     >
       <div
         // Re-key on `seq` so React tears down + remounts the inner
-        // pill whenever a fresh message arrives, restarting the entry
+        // card whenever a fresh message arrives, restarting the entry
         // transition from scratch.
         key={seq}
-        className="max-w-md rounded-2xl bg-[#323232] px-4 py-3 text-[15px] font-medium text-white shadow-lg transition-all duration-200"
+        className="max-w-md rounded-2xl border-2 border-border bg-bg px-5 py-3 text-[15px] font-bold text-text shadow-[0_4px_12px_rgba(0,0,0,0.12)] transition-all duration-200"
         style={{
           opacity: visible ? 1 : 0,
           transform: visible ? "translateY(0)" : "translateY(8px)",

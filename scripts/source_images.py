@@ -100,7 +100,7 @@ def process_row(
 
     existing = ledger.get(path_id, level_id, q_index)
     # Only honour the resume short-circuit when the stored URL is a real
-    # public https URL — a `file://` URL means an earlier dry run wrote
+    # public https URL a `file://` URL means an earlier dry run wrote
     # the ledger but never uploaded.
     if (
         resume
@@ -119,7 +119,7 @@ def process_row(
 
     # Fast path: a previous (dry) run already produced the processed JPEG
     # locally and recorded full provenance in the ledger. We just need to
-    # upload that file and rewrite the ledger URL — no provider call,
+    # upload that file and rewrite the ledger URL no provider call,
     # no re-download, no re-dedupe.
     processed_local = PROCESSED_DIR / f"p{path_id:02d}_L{level_id}_q{q_index}.jpg"
     if (
@@ -279,7 +279,7 @@ def _format_attribution(meta: dict) -> str:
     photographer = meta.get("photographer") or "Unknown"
     license_label = meta.get("license") or ""
     page = meta.get("source_page_url") or ""
-    return f"{photographer} — {license_label} — {page}".strip(" —")
+    return f"{photographer} {license_label} {page}".strip(" ")
 
 
 def main(argv: list[str]) -> int:

@@ -1,12 +1,12 @@
 // POST /functions/v1/paths_assign
 // Body: { device_id: uuid, advance?: boolean }
 //
-// `advance: false` (or omitted) — idempotent: returns the device's TOP
+// `advance: false` (or omitted) idempotent: returns the device's TOP
 // per-device cycle assignment. If the device has no assignment yet,
 // issues cycle 1 from the global rotation. This is the legacy contract
 // and is what the deployed Flutter mobile app expects.
 //
-// `advance: true` — re-issue. Asserts the device's current top cycle
+// `advance: true` re-issue. Asserts the device's current top cycle
 // has all 8 levels completed; returns the newly issued cycle's
 // assignment row. Used by the PWA when the user finishes a cycle and
 // taps "Start next path".

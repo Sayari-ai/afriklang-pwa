@@ -5,7 +5,7 @@ description: ESLint v9 with FLAT CONFIG (eslint.config.mjs) wired to eslint-conf
 
 # eslint@^9 (+ eslint-config-next@16.2.4)
 
-> **CRITICAL: ESLint 9 uses FLAT CONFIG.** Almost all training data shows the legacy `.eslintrc.{js,json,yml}` + `extends: ["next/core-web-vitals"]` style — that format is **deprecated** in v9 and **removed** in v10. This project uses `eslint.config.mjs` exclusively. Don't propose `.eslintrc*` edits.
+> **CRITICAL: ESLint 9 uses FLAT CONFIG.** Almost all training data shows the legacy `.eslintrc.{js,json,yml}` + `extends: ["next/core-web-vitals"]` style that format is **deprecated** in v9 and **removed** in v10. This project uses `eslint.config.mjs` exclusively. Don't propose `.eslintrc*` edits.
 
 ## When to use
 - Adding, tightening, or silencing a lint rule.
@@ -71,19 +71,19 @@ A flat config exports an **array of configuration objects**. Each object can hav
 | Key | Purpose |
 |---|---|
 | `name` | Diagnostic label (recommended). |
-| `files` | Glob array — which files this object applies to. Default: `**/*.{js,cjs,mjs}`. |
-| `ignores` | Glob array — files this object skips. With **only** `ignores` (no other keys), it acts as **global ignores**. |
+| `files` | Glob array which files this object applies to. Default: `**/*.{js,cjs,mjs}`. |
+| `ignores` | Glob array files this object skips. With **only** `ignores` (no other keys), it acts as **global ignores**. |
 | `languageOptions` | `ecmaVersion`, `sourceType`, `globals`, `parser`, `parserOptions`. |
 | `linterOptions` | `noInlineConfig`, `reportUnusedDisableDirectives`. |
-| `plugins` | `{ pluginName: pluginObject }` — flat config requires plugin **objects**, not strings. |
+| `plugins` | `{ pluginName: pluginObject }` flat config requires plugin **objects**, not strings. |
 | `rules` | `{ "rule-name": "off" | "warn" | "error" | ["error", options] }`. |
 | `settings` | Free-form metadata accessible to rules (e.g. `react: { version: "detect" }`). |
 | `processor`, `extends` | Less common; `extends` is a flat-config helper provided by `defineConfig`. |
 
 ### `defineConfig` and `globalIgnores`
 Imported from `eslint/config`:
-- `defineConfig(arr)` — type-aware identity helper; flattens nested arrays so you can spread shareable configs.
-- `globalIgnores(globs)` — returns a config object containing only `ignores`, making the global-ignore semantics explicit. Equivalent to `{ ignores: globs }` but self-documenting.
+- `defineConfig(arr)` type-aware identity helper; flattens nested arrays so you can spread shareable configs.
+- `globalIgnores(globs)` returns a config object containing only `ignores`, making the global-ignore semantics explicit. Equivalent to `{ ignores: globs }` but self-documenting.
 
 ### Rule severity
 ```js
@@ -96,7 +96,7 @@ rules: {
 ```
 
 ### Per-glob overrides (cascading)
-Order matters — later objects override earlier ones for matching files.
+Order matters later objects override earlier ones for matching files.
 ```js
 export default defineConfig([
   ...nextVitals,
@@ -159,9 +159,9 @@ globalIgnores([".next/**", "public/sw.js"])
 ### Rules from `eslint-config-next`
 This project pulls in two sub-configs from `eslint-config-next`:
 
-1. **`eslint-config-next/core-web-vitals`** — extends the base Next plugin recommended set with stricter Web Vitals-related rules:
-   - `@next/next/no-img-element` (error) — use `next/image`.
-   - `@next/next/no-html-link-for-pages` (error) — use `next/link` for internal routes.
+1. **`eslint-config-next/core-web-vitals`** extends the base Next plugin recommended set with stricter Web Vitals-related rules:
+   - `@next/next/no-img-element` (error) use `next/image`.
+   - `@next/next/no-html-link-for-pages` (error) use `next/link` for internal routes.
    - `@next/next/no-sync-scripts`, `@next/next/no-script-component-in-head`.
    - `@next/next/no-page-custom-font`, `@next/next/google-font-display`, `@next/next/google-font-preconnect`.
    - `@next/next/inline-script-id`, `@next/next/no-before-interactive-script-outside-document`.
@@ -169,7 +169,7 @@ This project pulls in two sub-configs from `eslint-config-next`:
    - React + React Hooks rules (`react/jsx-key`, `react-hooks/rules-of-hooks`, `react-hooks/exhaustive-deps`).
    - Core JS rules (`no-undef`, `no-unused-vars` adapted for TS).
 
-2. **`eslint-config-next/typescript`** — adds `@typescript-eslint/parser` + a curated subset of `@typescript-eslint` rules suitable for App-Router projects (no type-checked rules by default — those require `parserOptions.project`).
+2. **`eslint-config-next/typescript`** adds `@typescript-eslint/parser` + a curated subset of `@typescript-eslint` rules suitable for App-Router projects (no type-checked rules by default those require `parserOptions.project`).
 
 To inspect which rules are actually active for a given file:
 ```bash
@@ -195,7 +195,7 @@ npx eslint --print-config <file>   # dump effective rules for a file
 const opaque: any = …;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 ```
-`reportUnusedDisableDirectives` defaults to `"warn"` in v9 — stale disable comments now produce a lint warning.
+`reportUnusedDisableDirectives` defaults to `"warn"` in v9 stale disable comments now produce a lint warning.
 
 ## Common patterns
 
@@ -234,7 +234,7 @@ export default defineConfig([
   },
 ]);
 ```
-Type-checked rules are *significantly* slower — apply them narrowly.
+Type-checked rules are *significantly* slower apply them narrowly.
 
 ### Using a legacy shareable config via FlatCompat (only if needed)
 This project doesn't need it because `eslint-config-next` ships flat-native exports. If you ever pull in an old `.eslintrc`-style shareable config:
@@ -259,15 +259,15 @@ export default defineConfig([
 3. **Plugins are objects, not strings.** `plugins: ["import"]` (legacy) → `plugins: { import: importPlugin }` (flat). The string version silently does nothing in flat config.
 4. **Order matters in the array.** Later entries override earlier ones for matched files. Place `eslint-config-next` spreads first, project overrides last.
 5. **`extends` no longer exists at the top level.** In flat config you spread arrays (`...nextVitals`). The `extends` key inside a single config object is a `defineConfig`-only convenience and works differently than legacy `extends`.
-6. **Default file targets are `**/*.{js,cjs,mjs}`.** TypeScript files are linted only because `eslint-config-next/typescript` adds `**/*.{ts,tsx}` patterns. If you write your own object with `rules` only and no `files`, it applies to JS files too — be deliberate.
+6. **Default file targets are `**/*.{js,cjs,mjs}`.** TypeScript files are linted only because `eslint-config-next/typescript` adds `**/*.{ts,tsx}` patterns. If you write your own object with `rules` only and no `files`, it applies to JS files too be deliberate.
 7. **`eslint-config-next` v16 sub-paths require ESM.** Hence `eslint.config.mjs` (or `"type": "module"`).
-8. **`next build` runs ESLint.** Failing rules break the build. To skip during build, set `eslint.ignoreDuringBuilds: true` in `next.config.*` — but prefer fixing.
+8. **`next build` runs ESLint.** Failing rules break the build. To skip during build, set `eslint.ignoreDuringBuilds: true` in `next.config.*` but prefer fixing.
 9. **No more `--ext` flag.** ESLint v9 derives extensions purely from `files` globs. `npx eslint --ext .ts,.tsx .` is gone.
-10. **Cache file path** moved to `.eslintcache` in cwd by default — keep it gitignored.
+10. **Cache file path** moved to `.eslintcache` in cwd by default keep it gitignored.
 11. **`reportUnusedDisableDirectives` defaults to `"warn"`.** Old disable comments will surface as lint output until removed.
 12. **`eslint --init` generates flat config now.** Don't be surprised when it produces `eslint.config.mjs`.
 13. **`globalIgnores` requires the patterns to be globs**, not paths. `dist/` won't match anything; `dist/**` will.
-14. **Workbox / next-pwa output**: this project deliberately ignores `public/sw.js`, `public/workbox-*.js`, etc. — they are minified and would generate hundreds of false positives. Re-add to `globalIgnores` if a new generated file appears.
+14. **Workbox / next-pwa output**: this project deliberately ignores `public/sw.js`, `public/workbox-*.js`, etc. they are minified and would generate hundreds of false positives. Re-add to `globalIgnores` if a new generated file appears.
 15. **TypeScript-aware ESLint can be slow.** The current config does *not* set `parserOptions.project`, so type-aware rules are off. Only enable them in a scoped override for the files that need them.
 
 ## References

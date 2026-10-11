@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * Path-setup screen — port of `lib/features/onboarding/path_setup_screen.dart`.
+ * Path-setup screen boot gate (flat redesign).
  *
  * Drives the path-repository boot (assign + getPath + getProgress with
- * a localStorage cache fast-path) and shows either a loading spinner
- * or a retry-able error state. On success, hands off to the splash
- * gate which forwards to /consent or /home depending on consent
- * state.
+ * a localStorage cache fast-path) and shows either a loading state
+ * (mascot + green spinner) or a retry-able error state. On success,
+ * hands off to the splash gate which forwards to /consent or /home
+ * depending on consent state.
  *
  * Why bounce back to `/` instead of going straight to `/home`?
  *   The splash gate is the single source of truth for the onboarding
@@ -22,9 +22,12 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { CloudOff } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-import { ScreenBackground } from "@/components/screen-background";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { usePathRepo } from "@/stores/path-repo";
 
@@ -40,14 +43,13 @@ export default function PathSetupPage() {
 
   // Boot routine. Pulled out into a stable callback so the retry
   // button can re-invoke it. Note that we intentionally do NOT reset
-  // `stage` to loading at the top — the synchronous setState would
+  // `stage` to loading at the top the synchronous setState would
   // trip `react-hooks/set-state-in-effect` on first mount. Instead
   // each entry point flips to loading itself just before calling
   // `start()`. Initial state is already loading, so the cold-start
   // path is a no-op.
   const start = useCallback(async () => {
-    // Same short-circuit as `path_setup_screen.dart:47-53`. On the
-    // web a missing config is just as fatal — the Supabase client
+    // On the web a missing config is fatal the Supabase client
     // never gets constructed.
     if (!isSupabaseConfigured) {
       setStage({
@@ -71,7 +73,7 @@ export default function PathSetupPage() {
   // Kick off boot once on mount.
   //
   // We wrap in `queueMicrotask` to keep the synchronous setState
-  // inside the config-missing branch out of the effect body proper —
+  // inside the config-missing branch out of the effect body proper 
   // otherwise `react-hooks/set-state-in-effect` flags it. The boot
   // itself is async anyway; deferring by a microtask is invisible.
   useEffect(() => {
@@ -84,15 +86,13 @@ export default function PathSetupPage() {
   };
 
   return (
-    <ScreenBackground overlay="soft">
-      <div className="flex min-h-dvh w-full items-center justify-center px-8">
-        {stage.kind === "loading" ? (
-          <LoadingBody />
-        ) : (
-          <ErrorBody message={stage.message} onRetry={retry} />
-        )}
-      </div>
-    </ScreenBackground>
+    <div className="flex min-h-dvh w-full items-center justify-center px-8">
+      {stage.kind === "loading" ? (
+        <LoadingBody />
+      ) : (
+        <ErrorBody message={stage.message} onRetry={retry} />
+      )}
+    </div>
   );
 }
 
@@ -100,14 +100,14 @@ function LoadingBody() {
   const t = useTranslations();
   return (
     <div className="flex max-w-sm flex-col items-center gap-6 text-center">
-      <Spinner />
-      <h1
-        className="whitespace-pre-line text-[32px] font-black leading-tight text-white"
-        style={{ letterSpacing: "-0.5px" }}
-      >
+      <Mascot size={110} />
+      <span className="text-primary">
+        <Spinner className="h-10 w-10" />
+      </span>
+      <h1 className="whitespace-pre-line text-[26px] font-extrabold leading-tight text-text">
         {t("pathSetupLoadingTitle")}
       </h1>
-      <p className="text-[16px] font-medium text-white">
+      <p className="text-[15px] font-semibold text-text-muted">
         {t("pathSetupLoadingSubtitle")}
       </p>
     </div>
@@ -124,53 +124,28 @@ function ErrorBody({
   const t = useTranslations();
   return (
     <div className="flex w-full max-w-sm flex-col items-stretch gap-4 text-center">
-      {/* Cloud-off icon — inline SVG so we don't pull a per-icon dep
-          for one screen. */}
-      <svg
-        viewBox="0 0 24 24"
-        width="64"
-        height="64"
-        fill="none"
-        className="self-center text-white"
+      <CloudOff
+        size={64}
+        strokeWidth={2}
+        color="#A9A1BC"
+        className="self-center"
         aria-hidden
-      >
-        <path
-          d="M22 16.5a4.5 4.5 0 00-4.5-4.5H17a5.5 5.5 0 00-9.78-2M2 2l20 20M5 8.5A4.5 4.5 0 005 17h11"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <h1
-        className="whitespace-pre-line text-[32px] font-black leading-tight text-white"
-        style={{ letterSpacing: "-0.5px" }}
-      >
+      />
+      <h1 className="whitespace-pre-line text-[26px] font-extrabold leading-tight text-text">
         {t("pathSetupErrorTitle")}
       </h1>
-      <p className="whitespace-pre-line text-[14px] font-medium leading-snug text-white">
+      <p className="whitespace-pre-line text-[14px] font-semibold leading-snug text-text-muted">
         {message}
       </p>
-      <button
-        type="button"
+      <Button
+        variant="primary"
+        size="md"
+        fullWidth
+        className="mt-4"
         onClick={onRetry}
-        className="mt-4 h-14 rounded-[28px] bg-white text-[20px] font-bold"
-        style={{ color: "var(--color-brand-primary)" }}
       >
         {t("pathSetupRetryButton")}
-      </button>
+      </Button>
     </div>
-  );
-}
-
-function Spinner() {
-  // 48 px white ring with a transparent quadrant — pure CSS so we
-  // don't drag in another dependency.
-  return (
-    <span
-      role="progressbar"
-      aria-label="Loading"
-      className="block h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white"
-    />
   );
 }

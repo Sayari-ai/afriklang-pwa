@@ -5,7 +5,7 @@
  *
  * Mirrors `lib/core/api/audio_api.dart`. Single endpoint:
  *   POST /api/audio-upload   (same-origin Next.js Route Handler that
- *   proxies to Sayari server-side — see
+ *   proxies to Sayari server-side see
  *   `src/app/api/audio-upload/route.ts` for why)
  *   multipart/form-data
  *     fields:
@@ -17,7 +17,7 @@
  *     files:
  *       files               (required)  binary, content-type audio/wav
  *
- * The schema field name is `files` (plural array) — the backend
+ * The schema field name is `files` (plural array) the backend
  * accepts an array of binaries even when we only ever send one. Don't
  * rename it without coordinating with the Sayari team.
  *
@@ -33,7 +33,7 @@
  * but had its response truncated (timeout at the LB after S3 wrote,
  * connection killed before headers, etc.) would be replayed and
  * persist the same WAV to storage twice. Even though our filenames
- * embed a UUID + timestamp, dedupe is the backend's choice — the
+ * embed a UUID + timestamp, dedupe is the backend's choice the
  * client must not assume it. The user-visible retry path is now: the
  * level screen surfaces the failure via snackbar, the user taps
  * Submit again. That keeps the duplicate-write risk strictly bounded
@@ -47,7 +47,7 @@
  *     itself has no built-in timeout and a hung TCP socket would
  *     otherwise spin forever on flaky networks. A timeout *is* one of
  *     the request states that could leave a half-written file on the
- *     server, but the alternative — letting the upload hang — is
+ *     server, but the alternative letting the upload hang is
  *     worse UX. The user manually decides whether to retry.
  *   - Map low-level `TypeError: Failed to fetch` (the browser's catch-
  *     all for offline / DNS / CORS / mixed-content) to a friendlier
@@ -72,7 +72,7 @@ export class AudioUploadError extends Error {
   constructor(
     message: string,
     public readonly status: number = 0,
-    /** True if the failure happened before any HTTP response — i.e. the
+    /** True if the failure happened before any HTTP response i.e. the
      *  user is offline, DNS failed, CORS blocked the preflight, or the
      *  socket timed out. Useful for callers that want to show a
      *  reconnect prompt rather than a generic upload error. */
@@ -88,14 +88,14 @@ export interface UploadAudioArgs {
   file: Blob;
   /** Filename written to disk by the backend (`Lang_Speaker_Date_Topic.wav`). */
   filename: string;
-  /** ISO 639-1 / 639-3 — the user's chosen learning language. */
+  /** ISO 639-1 / 639-3 the user's chosen learning language. */
   languageIso: string;
   /** Whether consent has been granted and recorded for this clip. */
   consentRecorded: boolean;
   dialect?: string;
   /** English prompt shown to the speaker; useful as ground truth. */
   englishDescription?: string;
-  /** Stable speaker UUID — same as our `device_id`. */
+  /** Stable speaker UUID same as our `device_id`. */
   speakerId?: string;
   /** Optional `AbortSignal` for cancel-on-unmount. */
   signal?: AbortSignal;
@@ -134,7 +134,7 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioRes
   // Fail fast when the device reports offline. `navigator.onLine` is
   // not 100% reliable (it only catches "no interface"), but when it
   // *is* false we know the fetch will fail in 45 s with the same
-  // outcome — better to surface the offline state immediately. The
+  // outcome better to surface the offline state immediately. The
   // level screen uses `isNetwork` to render an offline-specific
   // snackbar.
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
@@ -147,7 +147,7 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioRes
 
   const url = `${BASE_URL}/api/audio-upload`;
 
-  // Build the multipart body. We don't reuse this across calls — the
+  // Build the multipart body. We don't reuse this across calls the
   // function is single-shot now, but `FormData` is also single-shot
   // in some engines (Safari < 16) so building locally keeps the
   // contract obvious.
@@ -187,14 +187,14 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioRes
       method: "POST",
       body: form,
       signal: ctrl.signal,
-      // Do NOT set `Content-Type` manually — fetch needs to add the
+      // Do NOT set `Content-Type` manually fetch needs to add the
       // multipart boundary itself.
     });
   } catch (e) {
     clearTimeout(timeoutId);
     args.signal?.removeEventListener("abort", onCallerAbort);
 
-    // Caller cancelled — propagate as cancellation.
+    // Caller cancelled propagate as cancellation.
     if (args.signal?.aborted) {
       throw new AudioUploadError("Upload cancelled.", 0, false);
     }
@@ -206,7 +206,7 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioRes
 
     // Browsers throw `TypeError: Failed to fetch` for: offline, DNS
     // miss, CORS block, mixed content, refused TCP, killed by
-    // extension. We can't tell them apart from the JS side — give one
+    // extension. We can't tell them apart from the JS side give one
     // friendly message. With at-most-once semantics, a transient
     // hiccup now requires a manual retry tap from the user; that's
     // intentional.

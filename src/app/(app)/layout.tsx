@@ -1,5 +1,5 @@
 /**
- * Layout for the protected app shell — `/home`, `/leaderboard`,
+ * Layout for the protected app shell `/home`, `/leaderboard`,
  * `/notifications`, `/profile`, and the level/celebration routes.
  *
  * Mirrors `lib/features/home/home_screen.dart:131-134` (Scaffold +
@@ -23,14 +23,19 @@
 import type { ReactNode } from "react";
 
 import { AppRouteGuard } from "@/components/app-route-guard";
+import { DisplayNameSync } from "@/components/display-name-sync";
 import { SnackbarHost } from "@/components/snackbar-host";
 
 export default function AppGroupLayout({ children }: { children: ReactNode }) {
   return (
     <AppRouteGuard>
       {children}
+      {/* Push the Google account's display name to the backend as
+          this device's leaderboard name (silent, once per change).
+          Inside the guard so session + device id are guaranteed. */}
+      <DisplayNameSync />
       {/* Single host for ephemeral notices ("Level locked", upload
-          errors, etc.) — replaces Flutter's `ScaffoldMessenger`. */}
+          errors, etc.) replaces Flutter's `ScaffoldMessenger`. */}
       <SnackbarHost />
     </AppRouteGuard>
   );

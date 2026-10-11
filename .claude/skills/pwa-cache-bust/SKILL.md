@@ -1,11 +1,11 @@
 ---
 name: pwa-cache-bust
-description: Recovery playbook for stale @ducanh2912/next-pwa service worker caches that serve outdated chunks during dev or after deploy. USE FOR: phantom React errors referencing files that don't exist (e.g. "App.tsx"), missing _next/static chunk 404s, "Cannot read properties of undefined" with stack traces pointing at deleted code, service worker not picking up next.config.ts/manifest/public/ changes, "why is my change not showing up", verifying SW activation after deploy, unregistering SW in Chrome/Safari/Firefox. Trigger phrases: "stale cache", "service worker", "sw.js", "phantom error", "chunk 404", "PWA not updating", "next-pwa", "skipWaiting", "clear cache", "unregister service worker". DO NOT USE FOR: actual code bugs that reproduce in incognito with cache disabled (those are real bugs — debug normally), Workbox precache config changes (edit next.config.ts directly), or first-time PWA setup.
+description: Recovery playbook for stale @ducanh2912/next-pwa service worker caches that serve outdated chunks during dev or after deploy. USE FOR: phantom React errors referencing files that don't exist (e.g. "App.tsx"), missing _next/static chunk 404s, "Cannot read properties of undefined" with stack traces pointing at deleted code, service worker not picking up next.config.ts/manifest/public/ changes, "why is my change not showing up", verifying SW activation after deploy, unregistering SW in Chrome/Safari/Firefox. Trigger phrases: "stale cache", "service worker", "sw.js", "phantom error", "chunk 404", "PWA not updating", "next-pwa", "skipWaiting", "clear cache", "unregister service worker". DO NOT USE FOR: actual code bugs that reproduce in incognito with cache disabled (those are real bugs debug normally), Workbox precache config changes (edit next.config.ts directly), or first-time PWA setup.
 ---
 
 # PWA cache recovery playbook
 
-This project uses `@ducanh2912/next-pwa` (Workbox under the hood). The service worker is generated at build time into `public/sw.js` and registered automatically by `next-pwa`'s injection. When PWA-relevant files change — `next.config.ts`, `public/`, `manifest.ts`, anything that affects the precache manifest — the running tab can keep serving old chunks until the SW updates AND clients reload.
+This project uses `@ducanh2912/next-pwa` (Workbox under the hood). The service worker is generated at build time into `public/sw.js` and registered automatically by `next-pwa`'s injection. When PWA-relevant files change `next.config.ts`, `public/`, `manifest.ts`, anything that affects the precache manifest the running tab can keep serving old chunks until the SW updates AND clients reload.
 
 ## Symptoms that point HERE (not at a real bug)
 
@@ -18,7 +18,7 @@ Telltale signs:
 - `TypeError: Cannot read properties of undefined (reading 'X')` with a stack trace that includes line numbers from code you deleted.
 - Changes to `next.config.ts` (e.g. `images.remotePatterns`, the `withPWA` wrapping) appear to have no effect.
 - Manifest icon updates don't show on the home-screen tile after rebuild.
-- "I changed `globals.css` but the page looks identical" — and a hard reload doesn't fix it.
+- "I changed `globals.css` but the page looks identical" and a hard reload doesn't fix it.
 
 ## Quick diagnostic (60 seconds)
 
@@ -43,7 +43,7 @@ const withPWA = withPWAInit({
 `disable: process.env.NODE_ENV === "development"` means **the SW is NOT generated and NOT registered when running `npm run dev`**. If you see a service worker active on `localhost:3000` while `next dev` is running, one of:
 
 1. You ran `npm run build && npm run start` earlier in this browser profile and the SW from that build is still installed.
-2. `process.env.NODE_ENV` isn't being detected as `development` (check your shell — some setups set `NODE_ENV=production` accidentally).
+2. `process.env.NODE_ENV` isn't being detected as `development` (check your shell some setups set `NODE_ENV=production` accidentally).
 3. The config was changed and the dev server wasn't restarted.
 
 Fix path: unregister the SW (steps below) and restart `next dev`.
@@ -52,13 +52,13 @@ Fix path: unregister the SW (steps below) and restart `next dev`.
 
 This project sets **`skipWaiting: false`** intentionally. Open tabs keep the previous SW active until the user reloads, so a deploy doesn't break a mid-session level. Trade-off: after a deploy, users will see the old build until they reload at least once. If you change this to `true`, document why in the PR.
 
-## Recovery steps — try in this order
+## Recovery steps try in this order
 
 ### Step 1: Unregister the SW (Chrome/Edge)
 
 1. DevTools → **Application** → **Service Workers**
 2. Find the entry for your origin → click **Unregister**
-3. Close the tab (yes, close it — don't just reload)
+3. Close the tab (yes, close it don't just reload)
 4. Reopen the URL
 
 That's enough ~70% of the time. The next page load will have **no SW**, will fetch fresh assets, and (in production) will register the new SW from `/sw.js`.
@@ -68,7 +68,7 @@ That's enough ~70% of the time. The next page load will have **no SW**, will fet
 If unregister wasn't enough, the cache entries can be served by another route (e.g. a stale precached `/_next/.../chunk.js`):
 
 1. DevTools → **Application** → **Storage** (top of the left sidebar) → **Clear site data**
-2. Check at minimum: ☑ Cache storage, ☑ Service workers. Leave Local/Session storage UNCHECKED unless you also want to wipe device id / consent / learning language (you usually don't — that forces re-onboarding).
+2. Check at minimum: ☑ Cache storage, ☑ Service workers. Leave Local/Session storage UNCHECKED unless you also want to wipe device id / consent / learning language (you usually don't that forces re-onboarding).
 3. Click **Clear site data**
 4. Hard reload: `Ctrl+Shift+R` (Linux/Win) / `Cmd+Shift+R` (Mac)
 
@@ -84,7 +84,7 @@ npm run dev
 
 This forces a clean rebuild. Combine with steps 1–2 in the browser.
 
-### Step 4: Worst case — bump a version constant
+### Step 4: Worst case bump a version constant
 
 If a deployed SW is genuinely stuck on production users, bump a version sentinel in `next.config.ts`. The `@ducanh2912/next-pwa` plugin hashes the precache manifest, so any meaningful config change (e.g. adding a comment with a date suffix to the workboxOptions, or any code change in `public/`) re-hashes `sw.js` and forces SW activation. Smallest viable change:
 
@@ -108,7 +108,7 @@ Then create `public/version.txt` with that string and ship. Document in the comm
 
 ### Chrome / Edge / Brave (Chromium)
 
-DevTools steps above. **Bypass for network** checkbox in the SW panel is useful while debugging — it forwards every request to network without consulting the SW, but only while DevTools is open.
+DevTools steps above. **Bypass for network** checkbox in the SW panel is useful while debugging it forwards every request to network without consulting the SW, but only while DevTools is open.
 
 ### Safari (macOS)
 
@@ -130,10 +130,10 @@ iOS Safari has no DevTools. Recovery on iPhone:
 
 ## Verifying after a production deploy
 
-1. Visit `/sw.js` directly in the browser. Find the `precacheAndRoute([...])` call (usually near the bottom). The hash strings (`"revision":"abc123..."`) should differ from the previous deploy. If they don't, the build didn't change anything Workbox cares about — that's fine, but it also means existing clients won't see an update prompt for this deploy.
+1. Visit `/sw.js` directly in the browser. Find the `precacheAndRoute([...])` call (usually near the bottom). The hash strings (`"revision":"abc123..."`) should differ from the previous deploy. If they don't, the build didn't change anything Workbox cares about that's fine, but it also means existing clients won't see an update prompt for this deploy.
 2. In DevTools → Application → Service Workers, you should see a new entry in **"waiting"** state (because `skipWaiting: false`). The active SW is still the old one.
 3. Reload once. The waiting SW activates and becomes the running one.
-4. Reload again — assets are now served from the new SW's caches.
+4. Reload again assets are now served from the new SW's caches.
 
 If users report stale content post-deploy and `/sw.js` *did* update, they likely never reloaded the tab. With `skipWaiting: false` that's expected; consider adding an in-app "new version available" toast that listens for `navigator.serviceWorker.controller` changing.
 
@@ -153,7 +153,7 @@ A user pings: "the app is broken, I see a weird red error". Walk them through th
    - A screenshot of the error
    - Whether reload fixes it
 2. **If you reproduce**:
-   - DevTools → Application → Service Workers — note "Last updated"
+   - DevTools → Application → Service Workers note "Last updated"
    - Compare to your last deploy timestamp in Vercel/host dashboard
    - If SW is older than the deploy, this is a stale-SW case
 3. **If you don't reproduce**: ask the user to open in Incognito. If incognito works, it's their cached SW. Send them this script:
@@ -166,7 +166,7 @@ A user pings: "the app is broken, I see a weird red error". Walk them through th
 With `skipWaiting: false`, users on a long-lived tab won't see a new SW until they reload. A common UX pattern is to show an in-app toast when a new SW is waiting:
 
 ```ts
-// Conceptual sketch — not currently in this codebase
+// Conceptual sketch not currently in this codebase
 useEffect(() => {
   if (!("serviceWorker" in navigator)) return;
   navigator.serviceWorker.getRegistration().then((reg) => {
@@ -177,7 +177,7 @@ useEffect(() => {
       next.addEventListener("statechange", () => {
         if (next.state === "installed" && navigator.serviceWorker.controller) {
           // A new SW is waiting; old one still controlling.
-          showToast("A new version is available — reload?");
+          showToast("A new version is available reload?");
         }
       });
     });
@@ -185,7 +185,7 @@ useEffect(() => {
 }, []);
 ```
 
-If you implement this, do NOT auto-call `reg.waiting?.postMessage({type:"SKIP_WAITING"})` without user consent — that's the same problem as `skipWaiting: true`. Let the user tap "Reload".
+If you implement this, do NOT auto-call `reg.waiting?.postMessage({type:"SKIP_WAITING"})` without user consent that's the same problem as `skipWaiting: true`. Let the user tap "Reload".
 
 ## Inspecting `sw.js` directly
 
@@ -202,7 +202,7 @@ In the browser, navigate to `/sw.js` and search the file (Ctrl+F) for `precacheA
 ## Quick reference: file locations
 
 - SW config: `next.config.ts` (`withPWAInit` block)
-- Generated SW: `public/sw.js` (build output, gitignored or committed depending on policy — check `.gitignore`)
+- Generated SW: `public/sw.js` (build output, gitignored or committed depending on policy check `.gitignore`)
 - Web manifest: `src/app/manifest.ts` → served at `/manifest.webmanifest`
 - Manifest icons: `public/icons/...` (hashed paths defined in `manifest.ts`)
 - PWA registration injection: handled by `@ducanh2912/next-pwa` when `register: true`

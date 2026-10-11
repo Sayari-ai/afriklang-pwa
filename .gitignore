@@ -49,3 +49,5 @@ next-env.d.ts
 /public/workbox-*.js.map
 /public/fallback-*.js
 .env*.local
+
+certificates

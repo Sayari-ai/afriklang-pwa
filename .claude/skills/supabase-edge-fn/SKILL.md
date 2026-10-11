@@ -34,7 +34,7 @@ After migration `00003_multicycle.sql`:
 - `cycle` is **1-based PER DEVICE** (NOT the global rotation counter). The global rotation counter still exists as `paths_rotation.cycle` but never leaks into per-device rows.
 - Every WHERE / UPDATE / INSERT on these tables MUST include `cycle` or you'll touch the wrong row once a device has advanced.
 
-If you see code keyed on `(device_id, level_id)` only, it is from before 00003 and is broken — fix it.
+If you see code keyed on `(device_id, level_id)` only, it is from before 00003 and is broken fix it.
 
 ## Naming gotcha: never name a SQL local var `cycle`
 
@@ -45,13 +45,13 @@ update public.paths_rotation
    set cycle = case when ... then v_rotation.cycle + 1 else v_rotation.cycle end
 ```
 
-raises `ERROR: column reference "cycle" is ambiguous` — Postgres can't decide between (a) the OUT param, (b) `paths_rotation.cycle` (the SET target), (c) `v_rotation.cycle`. This is exactly what `00004_fix_cycle_ambiguity.sql` fixed.
+raises `ERROR: column reference "cycle" is ambiguous` Postgres can't decide between (a) the OUT param, (b) `paths_rotation.cycle` (the SET target), (c) `v_rotation.cycle`. This is exactly what `00004_fix_cycle_ambiguity.sql` fixed.
 
 **Rules:**
 
 1. Always prefix locals with `v_` (e.g. `v_cycle`, `v_top_cycle`, `v_new_cycle`, `v_rotation_cycle`).
 2. In SELECT/UPDATE bodies, qualify columns with table aliases: `select max(dp.cycle) from public.device_paths dp`.
-3. If you must reference an OUT param column name in an UPDATE's RHS, **pre-compute into a `v_*` local** and reference the local in the SET — exactly like 00004 does:
+3. If you must reference an OUT param column name in an UPDATE's RHS, **pre-compute into a `v_*` local** and reference the local in the SET exactly like 00004 does:
 
 ```sql
 if v_rotation.next_index = 20 then
@@ -99,7 +99,7 @@ Don't change the sentinel string without changing both ends in the same PR.
 
 ## Legacy-by-default contract (Flutter compat)
 
-`paths_assign` accepts `{ device_id, advance? }` where `advance` defaults to `false`. The deployed Flutter app calls without `advance` and expects a single-path response — that's the legacy contract. The PWA opts into multi-cycle behaviour via the `?multicycle=1` query param on read endpoints. **Never flip the default.** When in doubt, default to legacy and let the PWA opt in.
+`paths_assign` accepts `{ device_id, advance? }` where `advance` defaults to `false`. The deployed Flutter app calls without `advance` and expects a single-path response that's the legacy contract. The PWA opts into multi-cycle behaviour via the `?multicycle=1` query param on read endpoints. **Never flip the default.** When in doubt, default to legacy and let the PWA opt in.
 
 ## Edge Function template
 
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
 });
 ```
 
-Imports: `_shared/util.ts` already pins `deno.land/std` and `@supabase/supabase-js` versions. Don't add new dependencies casually — every new import is a cold-start cost on Deno Deploy.
+Imports: `_shared/util.ts` already pins `deno.land/std` and `@supabase/supabase-js` versions. Don't add new dependencies casually every new import is a cold-start cost on Deno Deploy.
 
 ## Playbook: ADD a new edge function
 
@@ -167,13 +167,13 @@ This is the dangerous one. The Flutter app is in production and cannot be force-
 1. Decide: is this **additive** (safe) or **breaking** (requires a new function name)?
    - Additive: new optional request field, new response field appended at the end.
    - Breaking: renamed field, removed field, type change, semantic change.
-2. For breaking changes, **don't modify the existing function** — create `paths_assign_v2` and let the PWA migrate first. Retire the v1 only after Flutter has shipped a build that uses v2.
+2. For breaking changes, **don't modify the existing function** create `paths_assign_v2` and let the PWA migrate first. Retire the v1 only after Flutter has shipped a build that uses v2.
 3. For additive changes:
    - Edit the SQL function. **Preserve OUT param names and order.** Add new columns at the end.
    - Edit the Edge Function to surface the new field.
    - Edit `src/lib/api/edge.ts` callers in the PWA.
-   - Confirm the Flutter app's parser is permissive (most are — they ignore unknown JSON keys).
-4. Migration: `supabase/migrations/NNNNN_description.sql`. Use `create or replace function` — never `drop function` unless you're also dropping every signature variant (see 00003 dropping the 2-arg `award_points` after creating the 3-arg version with a default).
+   - Confirm the Flutter app's parser is permissive (most are they ignore unknown JSON keys).
+4. Migration: `supabase/migrations/NNNNN_description.sql`. Use `create or replace function` never `drop function` unless you're also dropping every signature variant (see 00003 dropping the 2-arg `award_points` after creating the 3-arg version with a default).
 5. `supabase db push` then `supabase functions deploy <name> --project-ref elosonbrvmsfgrxemtso`.
 6. Smoke-test with curl AND with both clients pointed at the deployed function.
 
@@ -183,7 +183,7 @@ This is the dangerous one. The Flutter app is in production and cannot be force-
 # Migrations: applies any new files in supabase/migrations/ to the linked project.
 supabase db push
 
-# Single function deploy (preferred — faster, smaller blast radius).
+# Single function deploy (preferred faster, smaller blast radius).
 supabase functions deploy paths_assign --project-ref elosonbrvmsfgrxemtso
 
 # Deploy all functions (use sparingly; cold-starts every function).
@@ -216,13 +216,13 @@ curl -X POST "$SB_URL/functions/v1/paths_assign" \
   -d '{"device_id":"00000000-0000-0000-0000-000000000001","advance":true}'
 # Expect 409 with {"error":"cycle_incomplete",...} if the top cycle isn't all 8 done.
 
-# Progress set (legacy — no cycle, server resolves to top cycle):
+# Progress set (legacy no cycle, server resolves to top cycle):
 curl -X POST "$SB_URL/functions/v1/progress_set" \
   -H "Authorization: Bearer $ANON" \
   -H "Content-Type: application/json" \
   -d '{"device_id":"00000000-0000-0000-0000-000000000001","level_id":1,"status":"completed"}'
 
-# Progress set (PWA — explicit cycle):
+# Progress set (PWA explicit cycle):
 curl -X POST "$SB_URL/functions/v1/progress_set" \
   -H "Authorization: Bearer $ANON" \
   -H "Content-Type: application/json" \
@@ -237,6 +237,6 @@ The PWA wraps everything in `src/lib/api/edge.ts`'s `invokeEdge<T>(fn, opts)` he
 
 - POSTs JSON body or builds a query string for GET.
 - Unwraps `FunctionsHttpError` and tries to parse `{message, error}` from the body.
-- Throws `EdgeFunctionError(fn, status, message)` — callers `catch` and `instanceof`-check this to map status codes (404 → "no assignment", 409 → "cycle incomplete", etc.).
+- Throws `EdgeFunctionError(fn, status, message)` callers `catch` and `instanceof`-check this to map status codes (404 → "no assignment", 409 → "cycle incomplete", etc.).
 
 When you change a contract, search for the function name in `src/lib/api/` and update both the request shape AND the typed response.

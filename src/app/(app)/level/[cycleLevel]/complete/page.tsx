@@ -1,24 +1,20 @@
 "use client";
 
 /**
- * Level complete screen — port of `lib/features/level/level_complete_screen.dart`.
+ * Level complete screen the celebration (flat redesign).
  *
  * Shown after the last question of a level uploads successfully. The
  * actual `usePathRepo.completeLevel(...)` call happens in the level
- * screen *before* navigating here, which differs from Flutter (where
- * the home owns it via callback) but is closer to a web "the URL is
- * the truth" model: by the time you land on `/level/:id/complete`,
- * the level is already marked done.
+ * screen *before* navigating here by the time you land on
+ * `/level/:id/complete`, the level is already marked done.
  *
  * Inputs (query string):
  *   - `points`         → integer points reward to display (defaults to 0).
- *   - `total`          → number of segments in the all-green step bar
- *                         (the question count for this level). Defaults to 4.
- *   - `submitted`      → number of questions actually recorded; the
- *                         step bar fills only that many segments.
+ *   - `total`          → question count for this level (progress bar
+ *                         denominator + recordings stat). Defaults to 4.
+ *   - `submitted`      → number of questions actually recorded.
  *   - `partial`        → "1" when the level was completed partially
  *                         (skip/back with at least one submission).
- *                         Halves the bar fill behaviour.
  *   - `cycleComplete`  → "1" when this completion was the *last* level
  *                         of the user's current cycle. Switches the
  *                         page to the "cycle complete" variant: a
@@ -26,48 +22,36 @@
  *                         that calls `usePathRepo.advanceCycle()`, and
  *                         offline-aware enable state for the CTA.
  *
- * Hardware back / browser back: indistinguishable from the "Next
- * mission" CTA in our case — both routes back to `/home`. The Flutter
- * version uses `PopScope` to force a `pop(true)` so the home callback
- * runs; we don't need that ceremony because completion is already
- * persisted before we arrive.
- *
- * Visuals:
- *   - Same dark scrim background (`overlay="strong"` → 0xCC overlay).
- *   - Massive amber `+N` numeral, white headline, bilingual encouragement
- *     with a bold `$20` span (rendered via a sentinel split, mirroring
- *     Flutter's `\u0000AMOUNT\u0000`).
- *   - All-green step bar pinned to the top.
- *   - White pill CTA at the bottom. Label depends on the variant:
- *     "Next mission" for the per-level variant, "Start next cycle"
- *     for the cycle-complete variant.
- *   - CSS-only confetti burst near the top — 24 particles, 6 brand
- *     colors, 3-second one-shot animation. No npm dep.
+ * Visuals (Duolingo end-of-lesson style):
+ *   - White surface, confetti burst in brand colors.
+ *   - Celebrating mascot over the earned 1-3 star arc.
+ *   - Big yellow headline.
+ *   - Two stat cards: POINTS (yellow, coin) and RECORDINGS (green,
+ *     mic, `submitted/total`).
+ *   - Full-width primary CONTINUE pinned at the bottom (label varies
+ *     by variant), with the add-to-home-screen card above it.
  */
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { use, useCallback, useEffect, useMemo, useState } from "react";
+import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ScreenBackground } from "@/components/screen-background";
+import { InstallPromptCard } from "@/components/install-prompt-card";
+import { Button } from "@/components/ui/button";
+import { CoinIcon, MicIcon } from "@/components/ui/icons";
+import { Mascot } from "@/components/ui/mascot";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { StarRating } from "@/components/ui/star-rating";
+import { Palette } from "@/lib/colors";
+import { track } from "@/lib/api/events";
+import { playSfx } from "@/lib/audio/sfx";
+import { requestPersistentStorage } from "@/lib/storage/persistence";
 import { usePathRepo } from "@/stores/path-repo";
 import { useSnackbar } from "@/stores/snackbar";
 
-// Encouragement is a templated ICU string with a `{amount}` slot. We
-// render it with a control-char sentinel, then split around the
-// sentinel so the amount can become a bold <strong>$20</strong> span.
-const AMOUNT_SENTINEL = "\u0000AMOUNT\u0000";
-
-// Confetti palette — same six tokens as the Flutter version.
-const CONFETTI_COLORS = [
-  "#E53935", // red
-  "#FFC02E", // amber
-  "#66BB6A", // green
-  "#2196F3", // blue
-  "#E91E63", // pink
-  "#9C27B0", // purple
-] as const;
+// Confetti palette brand green, blue, red, yellow, orange, purple.
+const CONFETTI_COLORS = Palette.confetti;
 
 export default function LevelCompletePage({
   params,
@@ -87,25 +71,33 @@ export default function LevelCompletePage({
 
   const points = parseIntSafe(search.get("points"), 0);
   const total = parseIntSafe(search.get("total"), 4);
-  // Partial-completion query params. When `partial=1`, the step bar
-  // renders the first `submitted` segments green and the rest grey, so
-  // the user can see at a glance that they skipped some images. Falls
-  // back to a full bar (the legacy behaviour) when the params are
-  // missing — e.g. older URLs from before partial credit existed.
+  // Partial-completion query params. When `partial=1`, the progress
+  // bar fills only `submitted/total`, so the user can see at a glance
+  // that they skipped some images. Falls back to a full bar (the
+  // legacy behaviour) when the params are missing e.g. older URLs
+  // from before partial credit existed.
   const isPartial = search.get("partial") === "1";
   const submitted = parseIntSafe(search.get("submitted"), total);
+
+  // Star rating for the hero same 3-slot mapping the map badges use:
+  // clean sweep → 3 stars, partial → ceil(ratio × 3), min 1.
+  const earnedStars = isPartial
+    ? Math.max(
+        1,
+        Math.min(3, Math.ceil((submitted / Math.max(1, total)) * 3)),
+      )
+    : 3;
 
   // Cycle-complete variant. When the level page detected (via the
   // repo's `completeLevel` return) that this was the final level of
   // the active cycle, it appends `&cycleComplete=1` to the URL. We
   // branch the headline + CTA on this rather than rendering a
-  // separate page, because the layout (step bar, hero, points,
-  // confetti, pill button) is otherwise identical and we'd just be
-  // duplicating the chrome.
+  // separate page, because the layout is otherwise identical and
+  // we'd just be duplicating the chrome.
   const isCycleComplete = search.get("cycleComplete") === "1";
 
   // Track online/offline so the cycle-complete CTA can disable when
-  // the device is offline — `advanceCycle` POSTs to the backend and
+  // the device is offline `advanceCycle` POSTs to the backend and
   // we don't queue path-assignment writes (the backend issues a new
   // cycle synchronously, so there's nothing meaningful to defer).
   // `navigator.onLine` is unreliable on its own (some browsers stay
@@ -130,22 +122,27 @@ export default function LevelCompletePage({
   // round-trip can't be re-triggered by an impatient double-tap.
   const [advancing, setAdvancing] = useState(false);
 
-  // Render the encouragement once with the sentinel, then split into
-  // [before, after] around it. This avoids rebuilding the string on
-  // every render and keeps the bold span structure stable.
-  const [encouragementBefore, encouragementAfter] = useMemo(() => {
-    const rendered = t("levelCompleteEncouragement", { amount: AMOUNT_SENTINEL });
-    const idx = rendered.indexOf(AMOUNT_SENTINEL);
-    if (idx < 0) return [rendered, ""];
-    return [
-      rendered.slice(0, idx),
-      rendered.slice(idx + AMOUNT_SENTINEL.length),
-    ];
-  }, [t]);
+  // Phase-1 durability: the user just invested real effort ask the
+  // browser to protect our storage bucket from best-effort eviction.
+  // One-shot per session, silently no-ops where unsupported.
+  useEffect(() => {
+    void requestPersistentStorage();
+  }, []);
+
+  // Celebration fanfare, once per mount. The CONTINUE tap that
+  // navigated here already unlocked the sfx AudioContext, so playing
+  // outside a gesture works. Ref-guarded against React strict-mode's
+  // double effect invocation (a doubled fanfare is very audible).
+  const fanfarePlayedRef = useRef(false);
+  useEffect(() => {
+    if (fanfarePlayedRef.current) return;
+    fanfarePlayedRef.current = true;
+    playSfx(isCycleComplete ? "cycleComplete" : "levelComplete");
+  }, [isCycleComplete]);
 
   // Headline variants. For cycle-complete we want a punchier, more
   // celebratory string ("Path complete!") so the user understands the
-  // scope of what they just achieved — not just "another level done".
+  // scope of what they just achieved not just "another level done".
   const headline = isCycleComplete
     ? t("levelCompleteCycleTitle")
     : t("levelCompleteCongrats");
@@ -176,6 +173,7 @@ export default function LevelCompletePage({
     setAdvancing(true);
     try {
       await usePathRepo.getState().advanceCycle();
+      track("cycle_advance");
       router.replace("/home");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -187,103 +185,133 @@ export default function LevelCompletePage({
   }, [advancing, online, router, t]);
 
   return (
-    <ScreenBackground overlay="strong">
-      <div className="flex min-h-dvh flex-1 flex-col">
-        {/* All-green step bar pinned near the top, 60% width to match
-            the in-level top bar. */}
-        <div className="px-6 pt-3">
-          <div className="mx-auto w-3/5">
-            <AllGreenStepBar total={total} submitted={isPartial ? submitted : total} />
-          </div>
-        </div>
+    <div className="flex min-h-dvh w-full flex-col pb-safe pt-[env(safe-area-inset-top)]">
+      {/* Progress bar pinned near the top full for clean sweeps,
+          partial fills show the skipped tail. */}
+      <div className="px-6 pt-4">
+        <ProgressBar value={isPartial ? submitted : total} max={total} />
+      </div>
 
-        {/* Confetti — absolutely positioned over the top of the
-            content so it can rain down behind the points numeral. */}
-        <ConfettiBurst />
+      {/* Confetti absolutely positioned over the top of the
+          content so it can rain down behind the hero. */}
+      <ConfettiBurst />
 
-        {/* Centered hero block (points + headline + encouragement). */}
-        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-          <span
-            className="block max-w-full break-words font-black leading-none"
-            style={{
-              color: "#FFC02E",
-              // Fluid: 64px on tiny phones, scales up to 96px around 480px.
-              fontSize: "clamp(64px, 22vw, 96px)",
-              fontWeight: 900,
-              letterSpacing: "-2px",
-            }}
-          >
-            +{points}
-          </span>
-          <div className="h-8" />
-          <h1 className="text-[28px] font-bold text-white phone-sm:text-[22px]">
-            {headline}
-          </h1>
-          <div className="h-4" />
-          <p
-            className="text-[16px] font-normal leading-snug text-white phone-sm:text-[14px]"
-            style={{ lineHeight: 1.4 }}
-          >
-            {/*
-              Cycle-complete variant gets its own subtitle (no $20
-              sentinel split) — the per-level encouragement copy
-              doesn't fit the "you finished the whole path" beat.
-            */}
-            {isCycleComplete ? (
-              t("levelCompleteCycleSubtitle")
-            ) : (
+      {/* Centered hero block (mascot + stars + headline + stats). */}
+      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center phone-sm:px-4">
+        <Mascot size={120} />
+        <div className="h-4" />
+        <StarRating filled={earnedStars} size={40} />
+        <div className="h-5" />
+        <h1 className="text-[32px] font-extrabold leading-tight text-orange-deep phone-sm:text-[26px]">
+          {headline}
+        </h1>
+        <div className="h-2" />
+        <p className="max-w-[340px] text-[15px] font-semibold leading-snug text-text-muted phone-sm:text-[13px]">
+          {/*
+            Cycle-complete variant gets its own subtitle the
+            per-level encouragement copy doesn't fit the "you
+            finished the whole path" beat.
+          */}
+          {isCycleComplete
+            ? t("levelCompleteCycleSubtitle")
+            : t("levelCompleteEncouragement")}
+        </p>
+        <div className="h-7" />
+
+        {/* Stat cards colored frame, white well, matching value. */}
+        <div className="flex w-full max-w-[360px] items-stretch gap-3">
+          <StatCard
+            frame={Palette.yellow}
+            label={t("levelCompleteStatPoints")}
+            value={
               <>
-                {encouragementBefore}
-                <strong className="font-bold">$20</strong>
-                {encouragementAfter}
+                <CoinIcon className="h-6 w-6 shrink-0" />
+                <span
+                  className="text-[20px] font-extrabold"
+                  style={{ color: Palette.yellowDeep }}
+                >
+                  +{points}
+                </span>
               </>
-            )}
-          </p>
-        </div>
-
-        {/* CTA. Variant-dependent label + handler. White pill with
-            green text — matches the Flutter style. Disabled while
-            `advancing` (cycle-complete only) so the user can't double
-            -submit a `paths_assign`. */}
-        <div className="px-6 pb-6">
-          <button
-            type="button"
-            onClick={isCycleComplete ? onAdvanceCycle : onNext}
-            disabled={isCycleComplete && (advancing || !online)}
-            className="flex h-[60px] w-full items-center justify-center rounded-full bg-white text-[20px] font-bold transition-opacity active:opacity-80 disabled:opacity-60"
-            style={{ color: "#66BB6A" }}
-          >
-            {isCycleComplete
-              ? advancing
-                ? t("cycleAdvancePending")
-                : t("levelCompleteCycleStartNext")
-              : t("levelCompleteNextMission")}
-          </button>
+            }
+          />
+          <StatCard
+            frame={Palette.primary}
+            label={t("levelCompleteStatRecordings")}
+            value={
+              <>
+                <MicIcon
+                  className="h-6 w-6 shrink-0"
+                  color={Palette.primary}
+                />
+                <span
+                  className="text-[20px] font-extrabold"
+                  style={{ color: Palette.primaryText }}
+                >
+                  {submitted}/{total}
+                </span>
+              </>
+            }
+          />
         </div>
       </div>
-    </ScreenBackground>
+
+      {/* CTA. Variant-dependent label + handler disabled while
+          `advancing` (cycle-complete only) so the user can't
+          double-submit a `paths_assign`. */}
+      <div className="flex flex-col gap-5 px-6 pb-4">
+        {/* Add-to-home-screen offer at the peak-motivation moment.
+            Self-gating: renders nothing when installed, dismissed
+            recently, or no install path exists on this browser. */}
+        <InstallPromptCard />
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          onClick={isCycleComplete ? onAdvanceCycle : onNext}
+          disabled={isCycleComplete && (advancing || !online)}
+          loading={isCycleComplete && advancing}
+        >
+          {isCycleComplete
+            ? advancing
+              ? t("cycleAdvancePending")
+              : t("levelCompleteCycleStartNext")
+            : t("levelCompleteNextMission")}
+        </Button>
+      </div>
+    </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// All-green step bar
+// Stat card
 // ---------------------------------------------------------------------------
 
-function AllGreenStepBar({ total, submitted }: { total: number; submitted: number }) {
-  // Defensive: at least 1 segment so we don't render an empty row.
-  const n = Math.max(1, total);
-  const filled = Math.max(0, Math.min(n, submitted));
+/**
+ * Colored stat tile: saturated frame with a tiny uppercase label on
+ * the frame itself, and a white inner well carrying the value.
+ */
+function StatCard({
+  frame,
+  label,
+  value,
+}: {
+  /** Frame hex color. */
+  frame: string;
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
-    <div className="flex h-1.5 items-center gap-1.5">
-      {Array.from({ length: n }).map((_, i) => (
-        <div
-          key={i}
-          className="h-1.5 flex-1 rounded-[3px]"
-          style={{
-            backgroundColor: i < filled ? "#66BB6A" : "rgba(255,255,255,0.25)",
-          }}
-        />
-      ))}
+    <div
+      className="flex flex-1 flex-col overflow-hidden rounded-2xl p-[3px]"
+      style={{ backgroundColor: frame }}
+    >
+      <p className="px-2 py-1 text-center text-[11px] font-extrabold uppercase tracking-[1px] text-white phone-sm:px-1 phone-sm:text-[10px] phone-sm:tracking-normal">
+        {label}
+      </p>
+      <div className="flex h-[52px] items-center justify-center gap-1.5 rounded-[13px] bg-bg">
+        {value}
+      </div>
     </div>
   );
 }
@@ -296,11 +324,11 @@ function AllGreenStepBar({ total, submitted }: { total: number; submitted: numbe
  * 24 small confetti rectangles fall from the top center, each with a
  * pre-randomised horizontal drift, rotation, color, and delay. The
  * animation runs once (no `infinite`) so the burst settles after ~3 s
- * and stays static — no JS rAF loop and no `confetti` dep.
+ * and stays static no JS rAF loop and no `confetti` dep.
  *
  * We cannot use `Math.random()` during render under React 19's
  * `react-hooks/purity` rule, so the random pattern is computed via a
- * tiny seedable LCG keyed on the particle index — deterministic, no
+ * tiny seedable LCG keyed on the particle index deterministic, no
  * lint complaints, and visually identical to a fresh random per mount.
  */
 function ConfettiBurst() {
@@ -370,7 +398,7 @@ interface ConfettiParticle {
 function buildParticles(count: number): ConfettiParticle[] {
   const out: ConfettiParticle[] = [];
   // Seedable LCG (numerical recipes constants). Deterministic across
-  // mounts so the visual is identical every time — fine for a
+  // mounts so the visual is identical every time fine for a
   // celebration burst.
   let seed = 0x12345678;
   const next = () => {

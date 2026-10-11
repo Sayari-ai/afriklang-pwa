@@ -1,6 +1,6 @@
 ---
 name: typescript
-description: TypeScript 5.x configured for Next.js 16 App Router — strict mode, bundler module resolution, react-jsx, path alias `@/*` → `./src/*`. USE FOR: tsconfig edits, type errors, picking the right utility type, generic / conditional / mapped types, type guards, discriminated unions, ambient declarations, satisfies operator, Next.js-specific typing (PageProps, server-action types). DO NOT USE FOR: runtime schema validation (zod is NOT installed — use manual type guards), JS-only refactors, ESLint rule tweaks (see `eslint` skill), build-time Next config (see Next.js docs).
+description: TypeScript 5.x configured for Next.js 16 App Router strict mode, bundler module resolution, react-jsx, path alias `@/*` → `./src/*`. USE FOR: tsconfig edits, type errors, picking the right utility type, generic / conditional / mapped types, type guards, discriminated unions, ambient declarations, satisfies operator, Next.js-specific typing (PageProps, server-action types). DO NOT USE FOR: runtime schema validation (zod is NOT installed use manual type guards), JS-only refactors, ESLint rule tweaks (see `eslint` skill), build-time Next config (see Next.js docs).
 ---
 
 # typescript@^5 (Next.js 16 App Router)
@@ -46,7 +46,7 @@ description: TypeScript 5.x configured for Next.js 16 App Router — strict mode
 }
 ```
 
-(Project file uses `"jsx": "react-jsx"` — Next 16 also accepts `"preserve"`. Keep whichever ships in the repo. Both compile correctly under SWC/Webpack; `react-jsx` matches what `create-next-app` emits today.)
+(Project file uses `"jsx": "react-jsx"` Next 16 also accepts `"preserve"`. Keep whichever ships in the repo. Both compile correctly under SWC/Webpack; `react-jsx` matches what `create-next-app` emits today.)
 
 ### Why each option
 | Option | Reason |
@@ -54,18 +54,18 @@ description: TypeScript 5.x configured for Next.js 16 App Router — strict mode
 | `target: "ES2017"` | Wide browser support after Next/SWC down-levels. |
 | `lib: ["dom", "dom.iterable", "esnext"]` | DOM types + the latest ECMAScript built-ins. |
 | `allowJs: true` | Permits importing legacy `.js` (e.g. occasional config files). |
-| `skipLibCheck: true` | Skips type-checking `node_modules/**/*.d.ts` — speeds builds, avoids 3P breakage. |
+| `skipLibCheck: true` | Skips type-checking `node_modules/**/*.d.ts` speeds builds, avoids 3P breakage. |
 | `strict: true` | Enables `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitThis`, `useUnknownInCatchVariables`, `alwaysStrict`. |
 | `noEmit: true` | TS only type-checks; SWC/webpack does the actual transpile. |
 | `esModuleInterop: true` | Lets `import x from "cjs-module"` work. |
 | `module: "esnext"` | Emit pure ESM `import`/`export`. |
-| `moduleResolution: "bundler"` | TS 5 mode that mirrors how bundlers resolve — supports `package.json` `exports`, no extension required, no `.js` rewrite. **Required by Next 16.** |
+| `moduleResolution: "bundler"` | TS 5 mode that mirrors how bundlers resolve supports `package.json` `exports`, no extension required, no `.js` rewrite. **Required by Next 16.** |
 | `resolveJsonModule: true` | `import data from "./data.json"`. |
 | `isolatedModules: true` | Each file must be transpilable in isolation (required by SWC). Forbids `const enum`, certain re-exports without `export type`. |
 | `jsx: "preserve"` / `"react-jsx"` | Next/SWC handles JSX transformation. `"preserve"` keeps `<Foo/>` for Next; `"react-jsx"` emits `_jsx()` calls. Both work in Next 16. |
 | `incremental: true` | Caches type-check info in `.tsbuildinfo` for faster subsequent runs. |
 | `plugins: [{ name: "next" }]` | Enables the Next.js TS server plugin: typed routes, server-component diagnostics, async `params` handling. |
-| `paths: { "@/*": ["./src/*"] }` | Project-wide alias — `import x from "@/lib/foo"`. |
+| `paths: { "@/*": ["./src/*"] }` | Project-wide alias `import x from "@/lib/foo"`. |
 | `include: ".next/types/**"` | Picks up Next-generated types (typed routes, route segment configs). |
 
 ### Package versions
@@ -116,7 +116,7 @@ Stricter than `isolatedModules` + `importsNotUsedAsValues`. Forces `import type`
 TS 5.5+. When enabled, every exported declaration must be explicitly typed so a tool can emit `.d.ts` without invoking the TS checker. Useful for libraries; off here.
 
 ### `noUncheckedIndexedAccess` (recommended toggle, currently off)
-Adds `| undefined` to every indexed access (`arr[0]: T | undefined`). Catches a major class of bugs but requires extensive optional-chaining adjustments — flip on with care.
+Adds `| undefined` to every indexed access (`arr[0]: T | undefined`). Catches a major class of bugs but requires extensive optional-chaining adjustments flip on with care.
 
 ## Utility types cheat sheet
 
@@ -180,7 +180,7 @@ type Route = `/${"home" | "lessons" | "profile"}`;     // "/home" | "/lessons" |
 type EventName<E extends string> = `on${Capitalize<E>}`;
 ```
 
-## Generics — practical patterns
+## Generics practical patterns
 ```ts
 function once<Args extends unknown[], R>(fn: (...args: Args) => R): (...args: Args) => R {
   let called = false; let value: R;
@@ -201,7 +201,7 @@ declare global {
 }
 export {}; // make this file a module
 
-// src/types/png.d.ts — ambient for non-TS imports
+// src/types/png.d.ts ambient for non-TS imports
 declare module "*.png" {
   const src: string;
   export default src;
@@ -267,7 +267,7 @@ export const useSession = create<SessionState>()((set) => ({
 
 ### Next.js App Router typing
 ```tsx
-// src/app/lessons/[id]/page.tsx — Next 16: params is async
+// src/app/lessons/[id]/page.tsx Next 16: params is async
 type PageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -313,13 +313,13 @@ const lesson = raw;   // narrowed to LessonSummary
 6. **`skipLibCheck: true`** hides errors in `node_modules`. If a 3rd-party type is wrong, you may need a local override file (`src/types/foo.d.ts`).
 7. **`noEmit: true`**: do not run `tsc` expecting JS output. Use `tsc --noEmit` for type-checking; let SWC compile.
 8. **Path aliases at runtime**: `tsconfig.json#paths` only affects type-checking + Next/SWC. Don't expect Node-without-bundler scripts to resolve `@/…` (use `tsx`/`ts-node` with a paths plugin if needed).
-9. **JSX flag**: with `"jsx": "preserve"` you cannot run files through `tsc` to JS — Next/SWC must do the JSX transform. With `"react-jsx"`, you import nothing — no `import React from "react"` needed.
-10. **`incremental: true` produces `.tsbuildinfo`** — keep it gitignored (Next handles this).
+9. **JSX flag**: with `"jsx": "preserve"` you cannot run files through `tsc` to JS Next/SWC must do the JSX transform. With `"react-jsx"`, you import nothing no `import React from "react"` needed.
+10. **`incremental: true` produces `.tsbuildinfo`** keep it gitignored (Next handles this).
 11. **Next 16 `params` is `Promise<…>`.** Forgetting to `await` is a runtime bug the type system catches only if you type the prop as `Promise<…>`. Always do.
 12. **`@types/react` 19 changed defaults**: `ReactNode` no longer includes `bigint`, `useRef<T>(initial)` requires the initial value or yields `RefObject<T | null>`. If you upgraded from 18, expect minor type shifts.
 13. **TS doesn't validate runtime data.** Interfaces are erased. Always guard at the network boundary; this project does so manually (see "Manual interfaces" above).
 14. **Cyclic `import type` is fine**, cyclic value imports may not be. Prefer splitting types into a leaf `types.ts` per module.
-15. **`tsc --watch` vs `next dev`**: don't run both; `next dev` already type-checks (well, lints — full TS check happens on `next build`). For continuous checks, run `tsc --noEmit --watch` in a side terminal.
+15. **`tsc --watch` vs `next dev`**: don't run both; `next dev` already type-checks (well, lints full TS check happens on `next build`). For continuous checks, run `tsc --noEmit --watch` in a side terminal.
 
 ## References
 - Project: `tsconfig.json`, `package.json`, `src/types/**`.

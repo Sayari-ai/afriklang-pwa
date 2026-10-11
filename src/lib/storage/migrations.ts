@@ -21,7 +21,7 @@
  *     orchestrate both classes uniformly.
  *
  * Migration policy:
- *   - Migrations are append-only. Never edit a shipped migration —
+ *   - Migrations are append-only. Never edit a shipped migration 
  *     once a user has run it, that step is recorded as "applied" and
  *     the runner won't re-execute it. Add a new entry instead.
  *   - Migrations should be tolerant of partial state (e.g. a key may
@@ -50,7 +50,7 @@ import { safeStorage } from "@/lib/safe-storage";
  * new migration, append it to `MIGRATIONS` *and* bump this constant
  * to match its `to`. Mismatches are caught by an assertion below.
  */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 interface Migration {
   /** Version produced by running this migration (= prior version + 1). */
@@ -58,7 +58,7 @@ interface Migration {
   /** Short reason string used in console logs for diagnostics. */
   reason: string;
   /**
-   * Mutates persisted state. Sync prep + async cleanup is fine —
+   * Mutates persisted state. Sync prep + async cleanup is fine 
    * the runner awaits the returned promise but does not block the
    * version bump on it.
    */
@@ -81,7 +81,7 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
       //     readCachedBundle()`), which is strictly before this
       //     migration runs (the runner is invoked from
       //     `<AppHydration>`'s `useEffect`, which fires after first
-      //     render — and by then every module imported by the React
+      //     render and by then every module imported by the React
       //     tree has already evaluated). So this wipe does NOT affect
       //     the in-memory state of the *current* session; it only
       //     guarantees the *next* session starts from a clean slate.
@@ -90,7 +90,7 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
       //     deliberately tolerant of the legacy single-cycle shape
       //     (`parsePathBundle` wraps it in a one-element array), so
       //     this session's read is correct regardless. The wipe here
-      //     is belt-and-braces — it forces a fresh `paths_get` round
+      //     is belt-and-braces it forces a fresh `paths_get` round
       //     trip on the next cold boot so any user who already had a
       //     cached payload picks up a server-stamped `cycle: 1` on
       //     every level entry, which the home map's stacking layout
@@ -101,7 +101,7 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
       //
       //     Progress cache is left alone: the parser injects
       //     `cycle: 1` for legacy entries and the offline queue may
-      //     still hold pending writes that reference it — wiping
+      //     still hold pending writes that reference it wiping
       //     would lose those.
       safeStorage.removeItem(StorageKeys.pathCache);
 
@@ -109,16 +109,33 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
       //     pre-`afriklang.progress` prototypes. We only ever shipped
       //     `afriklang.progress` (see `progress-queue.ts`), but a
       //     defensive sweep here keeps users who upgraded from a
-      //     dev preview clean. Names guessed conservatively — only
+      //     dev preview clean. Names guessed conservatively only
       //     ones we know belonged to this app.
       const orphanDbs = ["afriklang"];
       for (const name of orphanDbs) {
         try {
           await deleteDatabaseSafe(name);
         } catch {
-          // Per-DB failures are non-fatal — see runner-level catch.
+          // Per-DB failures are non-fatal see runner-level catch.
         }
       }
+    },
+  },
+  {
+    to: 2,
+    reason: "remove-nickname-feature",
+    run: () => {
+      // The user-chosen nickname flow was retired: Google sign-in is
+      // mandatory, so the leaderboard name now comes from the Google
+      // account (`<DisplayNameSync>` pushes it via `nickname_set`).
+      // Clear the two keys the retired `useNickname` store persisted.
+      //
+      // Key names are inlined (not `StorageKeys.*`): the registry no
+      // longer declares them, and a frozen migration must keep
+      // deleting exactly these historical strings even if the
+      // registry evolves further.
+      safeStorage.removeItem("afriklang.nickname.v1");
+      safeStorage.removeItem("afriklang.nickname.v1.prompted");
     },
   },
 ];
@@ -156,7 +173,7 @@ function writeVersion(v: number): void {
  * `indexedDB.deleteDatabase()` wrapped in a promise with a timeout.
  *
  * `versionchange` deadlocks happen when another tab/worker holds an
- * open connection to the database — `deleteDatabase` then fires a
+ * open connection to the database `deleteDatabase` then fires a
  * `blocked` event and never resolves. We don't want that to hang the
  * boot indefinitely, so we race against a 5-second timer. The
  * orphan DB will get cleaned up on the next session anyway because

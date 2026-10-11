@@ -4,7 +4,7 @@
 /* Custom variants & utilities                                        */
 /* ------------------------------------------------------------------ */
 
-/* Narrow-phone variant — applies on viewports up to 379px wide
+/* Narrow-phone variant applies on viewports up to 379px wide
    (iPhone SE 1st gen 320px, Galaxy Fold cover 280px, smaller Androids).
    Use as `phone-sm:text-2xl` to override base styles on tiny screens. */
 @custom-variant phone-sm (@media (max-width: 379px));
@@ -17,72 +17,244 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Afriklang design tokens                                            */
+/* Afriklang design tokens brand palette                             */
 /*                                                                    */
-/* Mirrors src/lib/colors.ts (and lib/core/theme/app_colors.dart in   */
-/* the Flutter app). Exposed both as raw CSS variables (for inline    */
-/* style usage and gradients) and as Tailwind v4 @theme tokens so     */
-/* utilities like `bg-primary`, `text-record-active`, etc. work.      */
+/* Brand colors: #00539F (blue), #F88D43 (orange), #321E53 (deep      */
+/* purple), #FFFFFF (white). The system derives a full ramp from      */
+/* them:                                                              */
+/*   - BLUE is the primary: CTAs, active path node, progress,         */
+/*     selection states, toggles, focus.                              */
+/*   - ORANGE is the reward accent: points, coins, stars, completed   */
+/*     nodes, celebration, the Listen action.                         */
+/*   - DEEP PURPLE is the brand ink: headings/body text, unit         */
+/*     banners, mascot, and it tints every neutral (borders, muted    */
+/*     text, subtle wells) so even the grays feel branded.            */
+/*   - WHITE is the surface.                                          */
+/*   - RED stays reserved for record/stop + destructive color-as-    */
+/*     affordance conventions beat brand purity there.                */
+/* Every family ships a `-deep` shade (the hard bottom edge of 3D-    */
+/* pressed buttons and path nodes) and, where selection/feedback      */
+/* surfaces need it, a `-light` tint + `-border` pair.                */
+/*                                                                    */
+/* Exposed both as raw CSS variables (for inline gradients/shadows)   */
+/* and as Tailwind v4 @theme tokens so utilities like `bg-primary`,   */
+/* `text-text-muted`, `border-border` work.                           */
+/*                                                                    */
+/* JS mirror: `src/lib/colors.ts` (SVG attributes can't resolve       */
+/* var()). Keep the two in lockstep.                                  */
 /* ------------------------------------------------------------------ */
 
 :root {
-  /* Brand */
+  /* --- Brand blue (primary actions, active path node) -------------- */
   --color-primary: #00539f;
-  /* Alias used throughout the components — kept in sync with
-     --color-primary so existing inline `var(--color-brand-primary)`
-     references resolve. The shorter `--color-primary` is the
-     canonical Tailwind v4 token (see @theme inline below). */
-  --color-brand-primary: var(--color-primary);
+  --color-primary-deep: #003c74;
+  --color-primary-light: #dcebf9;
+  /* Praise/emphasis text sitting on the light-blue tint. */
+  --color-primary-text: #00539f;
 
-  /* Map */
-  --color-map-bg: #7bc96f;
-  --color-mascot-body: #e53935;
-  --color-step-bar: #66bb6a;
-  --color-step-bar-track: #cfcfcf;
-  --color-locked-node: #6b6b6b;
-  --color-locked-icon: #b5b5b5;
+  /* --- Blue aliases (info, listen→moved to orange, selection) ------ */
+  /* The selection system (rows, pickers, nav tile) was built on the  */
+  /* `blue-*` names; they now resolve to the same brand-blue ramp as  */
+  /* `primary` a deliberate monochrome-primary system. Accents come */
+  /* from orange and purple instead.                                  */
+  --color-blue: #00539f;
+  --color-blue-deep: #003c74;
+  --color-blue-light: #dcebf9;
+  --color-blue-border: #93bfe6;
 
-  /* Level review */
-  --color-retake: #e53935;
-  --color-listen: #2196f3;
-  --color-submit: #66bb6a;
+  /* --- Red (record/stop, destructive semantic, off-brand) --------- */
+  --color-red: #ff4b4b;
+  --color-red-deep: #ea2b2b;
+  --color-red-light: #ffdfe0;
 
-  /* Recording states */
-  --color-record-idle: #66bb6a;
-  --color-record-active: #e53935;
+  /* --- Brand orange (rewards: stars, points, completed nodes) ------ */
+  /* The `yellow-*` names are kept for compatibility; they resolve to */
+  /* the brand-orange ramp (there is no yellow in the brand kit).     */
+  --color-yellow: #f88d43;
+  --color-yellow-deep: #db6f26;
+  --color-yellow-light: #feeddd;
+  --color-orange: #f88d43;
+  --color-orange-deep: #db6f26;
 
-  /* Rewards / podium */
-  --color-points-reward: #ffc02e;
-  --color-podium-gold: #ffd700;
-  --color-podium-silver: #c0c0c0;
-  --color-podium-bronze: #cd7f32;
+  /* --- Brand purple (mascot, unit banners, decorative accents) ----- */
+  --color-purple: #6d51a6; /* mid tone derived from #321E53 */
+  --color-purple-deep: #321e53; /* the brand dark itself */
 
-  /* Overlays (matching Flutter's 0x99 / 0xCC ARGB literals). */
-  --color-bg-overlay-60: rgba(0, 0, 0, 0.6);
-  --color-bg-overlay-80: rgba(0, 0, 0, 0.8);
+  /* --- Neutrals purple-tinted so even grays feel branded --------- */
+  --color-text: #321e53; /* primary copy = brand ink */
+  --color-text-muted: #6e6285; /* secondary copy */
+  --color-text-faint: #a9a1bc; /* tertiary / disabled */
+  --color-border: #e8e4f0; /* card borders, dividers */
+  --color-bg-subtle: #f7f5fb; /* subtle wells */
+  --color-bg: #ffffff; /* page background */
+
+  /* --- Legacy affordance aliases ----------------------------------- */
+  /* Gameplay logic where color IS the affordance. Kept as named      */
+  /* tokens so intent stays readable at the call site.                */
+  --color-retake: var(--color-red);
+  --color-listen: var(--color-orange);
+  --color-submit: var(--color-primary);
+  --color-record-idle: var(--color-primary);
+  --color-record-active: var(--color-red);
 }
 
 @theme inline {
-  /* Make Satoshi the default sans-serif. The CSS variable is set by
-     `next/font/local` in src/lib/fonts.ts and applied to <html>. */
-  --font-sans: var(--font-satoshi);
+  /* Nunito everywhere. The CSS variable is set by `next/font/google`
+     in src/lib/fonts.ts and applied to <html>. Weight is applied
+     per-usage via `font-bold`/`font-extrabold`/`font-black`. */
+  --font-sans: var(--font-nunito);
 
   --color-primary: var(--color-primary);
-  --color-map-bg: var(--color-map-bg);
-  --color-mascot-body: var(--color-mascot-body);
-  --color-step-bar: var(--color-step-bar);
-  --color-step-bar-track: var(--color-step-bar-track);
-  --color-locked-node: var(--color-locked-node);
-  --color-locked-icon: var(--color-locked-icon);
+  --color-primary-deep: var(--color-primary-deep);
+  --color-primary-light: var(--color-primary-light);
+  --color-primary-text: var(--color-primary-text);
+  --color-blue: var(--color-blue);
+  --color-blue-deep: var(--color-blue-deep);
+  --color-blue-light: var(--color-blue-light);
+  --color-blue-border: var(--color-blue-border);
+  --color-red: var(--color-red);
+  --color-red-deep: var(--color-red-deep);
+  --color-red-light: var(--color-red-light);
+  --color-yellow: var(--color-yellow);
+  --color-yellow-deep: var(--color-yellow-deep);
+  --color-yellow-light: var(--color-yellow-light);
+  --color-orange: var(--color-orange);
+  --color-orange-deep: var(--color-orange-deep);
+  --color-purple: var(--color-purple);
+  --color-purple-deep: var(--color-purple-deep);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-faint: var(--color-text-faint);
+  --color-border: var(--color-border);
+  --color-bg-subtle: var(--color-bg-subtle);
+  --color-bg: var(--color-bg);
   --color-retake: var(--color-retake);
   --color-listen: var(--color-listen);
   --color-submit: var(--color-submit);
   --color-record-idle: var(--color-record-idle);
   --color-record-active: var(--color-record-active);
-  --color-points-reward: var(--color-points-reward);
-  --color-podium-gold: var(--color-podium-gold);
-  --color-podium-silver: var(--color-podium-silver);
-  --color-podium-bronze: var(--color-podium-bronze);
+}
+
+/* ------------------------------------------------------------------ */
+/* Shared keyframes                                                   */
+/*                                                                    */
+/* Centralized here (previously duplicated in per-page <style> tags). */
+/* All prefixed `afk-`. Respect prefers-reduced-motion at the call    */
+/* site via the `motion-safe:` variant or an explicit media query.    */
+/* ------------------------------------------------------------------ */
+
+@keyframes afk-bob {
+  from {
+    transform: translateY(-3px);
+  }
+  to {
+    transform: translateY(3px);
+  }
+}
+
+/* START speech-bubble float (larger amplitude than afk-bob, single
+   axis, ease-in-out both ways). */
+@keyframes afk-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes afk-pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes afk-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.75);
+    opacity: 0;
+  }
+}
+
+@keyframes afk-twinkle {
+  0%,
+  100% {
+    transform: scale(0.65);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* Bottom feedback sheet entry (post-submit "Nice job!"). */
+@keyframes afk-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Slow horizontal cloud drift (game-map backdrop). */
+@keyframes afk-drift {
+  from {
+    transform: translateX(-14px);
+  }
+  to {
+    transform: translateX(14px);
+  }
+}
+
+@keyframes afk-shake-0 {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(7px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes afk-shake-1 {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(8px);
+  }
+  40% {
+    transform: translateX(-7px);
+  }
+  60% {
+    transform: translateX(5px);
+  }
+  80% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -91,10 +263,10 @@
 
 html,
 body {
-  /* Anchor at black so that screens with a translucent scrim over
-     `bg.png` never expose a flash of system white between transitions. */
-  background: #000000;
-  color: #ffffff;
+  /* A step deeper than the app canvas (--color-bg-subtle) so desktop
+     letterbox gutters read as chrome and the phone column pops. */
+  background: #edeaf4;
+  color: var(--color-text);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
   /* Better text rendering on macOS / iOS Safari for the heavy weights. */
   -webkit-font-smoothing: antialiased;
@@ -117,8 +289,9 @@ body {
 }
 
 /* Re-enable focus rings (Tailwind v4 doesn't strip them by default but
-   we explicitly want them visible-on-keyboard for a11y). */
+   we explicitly want them visible-on-keyboard for a11y). Brand blue
+   reads clearly on the white surfaces. */
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-blue);
   outline-offset: 2px;
 }

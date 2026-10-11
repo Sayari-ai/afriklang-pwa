@@ -2,7 +2,7 @@
 
 Whitelists the four provider licenses we use. For Wikimedia (which varies
 per file), we accept anything that looks like CC0/CC BY/CC BY-SA/Public
-domain — and reject NoDerivs / NonCommercial.
+domain and reject NoDerivs / NonCommercial.
 """
 from __future__ import annotations
 

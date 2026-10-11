@@ -4,14 +4,14 @@
  * The PWA route `/level/[cycleLevel]` encodes BOTH the cycle and the
  * level id in a single URL segment, formatted as `${cycle}-${levelId}`.
  * Examples:
- *   - `/level/1-1` — cycle 1, level 1
- *   - `/level/2-3` — cycle 2, level 3
+ *   - `/level/1-1` cycle 1, level 1
+ *   - `/level/2-3` cycle 2, level 3
  *
  * Why a single segment instead of two?
  *   - Keeps the route directory shape unchanged (just a rename of `[id]`
  *     to `[cycleLevel]`); no new dynamic-route nesting to think about.
  *   - Old bookmarks of the form `/level/3` can still be detected and
- *     redirected by `parseCycleLevelParam` — which gracefully falls back
+ *     redirected by `parseCycleLevelParam` which gracefully falls back
  *     to `cycle = 1` so single-cycle users don't get a 404.
  *
  * NEVER hand-build the URL by string concatenation; always go through
@@ -28,7 +28,7 @@ export interface CycleLevelKey {
  * Build the URL path segment for a (cycle, levelId) pair. Always emits
  * the canonical `${cycle}-${levelId}` form regardless of cycle value.
  *
- * Throws on non-positive integers — those are not legal anywhere in the
+ * Throws on non-positive integers those are not legal anywhere in the
  * domain and emitting `0-3` or `-1-2` would only push the failure
  * downstream into a confusing "level not found" state.
  */
@@ -50,8 +50,8 @@ export function formatCycleLevelParam(key: CycleLevelKey): string {
 /**
  * Parse a `[cycleLevel]` route param. Tolerates two shapes:
  *
- *   - `${cycle}-${levelId}` — canonical, e.g. "2-3" → { cycle: 2, levelId: 3 }
- *   - `${levelId}`           — bare integer, e.g. "3" → { cycle: 1, levelId: 3 }
+ *   - `${cycle}-${levelId}` canonical, e.g. "2-3" → { cycle: 2, levelId: 3 }
+ *   - `${levelId}`           bare integer, e.g. "3" → { cycle: 1, levelId: 3 }
  *
  * Bare-integer parsing keeps any pre-multi-cycle deep-links and bookmarks
  * working: a single-cycle device's home map still produces the canonical

@@ -51,19 +51,19 @@ from providers.wikimedia import WikimediaProvider  # noqa: E402
 # (path_id, level_id, q_index) to a Wikimedia-friendly query. We
 # probed each of these manually before encoding them here.
 QUERY_OVERRIDES: dict[tuple[int, int, int], str] = {
-    # p14/L3/q1 — A grandmother passing a tray of food
+    # p14/L3/q1 A grandmother passing a tray of food
     (14, 3, 1): "grandmother food tray",
-    # p14/L5/q7 — A woman shaking out a rug from a balcony
+    # p14/L5/q7 A woman shaking out a rug from a balcony
     (14, 5, 7): "woman cleaning rug",
-    # p15/L3/q1 — A grandfather pointing at a photo album
+    # p15/L3/q1 A grandfather pointing at a photo album
     (15, 3, 1): "grandfather memories photographs",
-    # p15/L7/q3 — Children riding decorated bicycles in a parade
+    # p15/L7/q3 Children riding decorated bicycles in a parade
     (15, 7, 3): "children bicycle parade",
-    # p17/L3/q4 — A father teaching his son to drive
+    # p17/L3/q4 A father teaching his son to drive
     (17, 3, 4): "driving lesson",
-    # p19/L6/q3 — A storm rolling over a coastal city
+    # p19/L6/q3 A storm rolling over a coastal city
     (19, 6, 3): "storm coastal city",
-    # p20/L2/q2 — A tongue tasting a spoon
+    # p20/L2/q2 A tongue tasting a spoon
     (20, 2, 2): "tongue tasting",
 }
 
@@ -91,7 +91,7 @@ def _format_attribution(meta: dict) -> str:
     photographer = meta.get("photographer") or "Unknown"
     license_label = meta.get("license") or ""
     page = meta.get("source_page_url") or ""
-    return f"{photographer} — {license_label} — {page}".strip(" —")
+    return f"{photographer} {license_label} {page}".strip(" ")
 
 
 def backfill_row(

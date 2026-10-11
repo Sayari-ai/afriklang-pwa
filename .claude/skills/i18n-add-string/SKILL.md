@@ -7,8 +7,8 @@ description: Add, rename, or remove a translated string in this next-intl PWA. C
 
 This project uses [`next-intl`](https://next-intl.dev). Messages live in two flat JSON files:
 
-- `src/messages/en.json` — source of truth for English copy
-- `src/messages/fr.json` — French translations, **must contain every key in en.json**
+- `src/messages/en.json` source of truth for English copy
+- `src/messages/fr.json` French translations, **must contain every key in en.json**
 
 A missing key at lookup time logs `IntlError: MISSING_MESSAGE` and renders the raw key string as fallback. In dev that's loud; in production it ships broken UI. **Never edit one file without the other.**
 
@@ -33,12 +33,12 @@ Keys are flat (no nesting), camelCase, prefixed by feature/screen:
 
 Suffix conventions:
 
-- `*Title` / `*Subtitle` — heading copy
-- `*Snack` — snackbar messages (transient toast)
-- `*Button` / `*Action` / `*Cta` — button labels
-- `*Label` / `*Sublabel` — settings rows
-- `*Hint` / `*Placeholder` — input affordances
-- `*Error*` — validation messages
+- `*Title` / `*Subtitle` heading copy
+- `*Snack` snackbar messages (transient toast)
+- `*Button` / `*Action` / `*Cta` button labels
+- `*Label` / `*Sublabel` settings rows
+- `*Hint` / `*Placeholder` input affordances
+- `*Error*` validation messages
 
 When in doubt, read `src/messages/en.json` and match the closest existing key's shape.
 
@@ -73,16 +73,16 @@ t("streakDays", { count: 3 }) // "3 days"
 ### Select (gendered/categorical)
 
 ```json
-"profileConsentSublabel": "{state, select, granted {Granted — recordings are uploaded.} other {Revoked — recordings will not be uploaded.}}"
+"profileConsentSublabel": "{state, select, granted {Granted recordings are uploaded.} other {Revoked recordings will not be uploaded.}}"
 ```
 
 In this project we currently use **two separate keys** (`profileConsentSublabelGranted`, `profileConsentSublabelRevoked`) instead of `select`, because translators handle separate keys more reliably. Prefer that pattern unless you genuinely have N>2 cases.
 
 ### Newlines
 
-Use literal `\n` in the JSON string. The UI renders them via `whitespace-pre-line` Tailwind class — see `levelQuestionTitle` and the `<h1>` in `src/app/(app)/level/[cycleLevel]/page.tsx:832-837`.
+Use literal `\n` in the JSON string. The UI renders them via `whitespace-pre-line` Tailwind class see `levelQuestionTitle` and the `<h1>` in `src/app/(app)/level/[cycleLevel]/page.tsx:832-837`.
 
-## 3. Calling `t()` — three sites
+## 3. Calling `t()` three sites
 
 ### a. Client components
 
@@ -96,7 +96,7 @@ export default function MyScreen() {
 }
 ```
 
-Namespacing is supported (`useTranslations("home")` then `t("pointsLabel")`) but **this project does not use namespaces** — keys are already feature-prefixed. Don't introduce one without converting all keys.
+Namespacing is supported (`useTranslations("home")` then `t("pointsLabel")`) but **this project does not use namespaces** keys are already feature-prefixed. Don't introduce one without converting all keys.
 
 ### b. Server components / route handlers / `generateMetadata`
 
@@ -113,7 +113,7 @@ export async function generateMetadata() {
 
 ### c. Outside React (stores, API clients, queue runners)
 
-You **cannot** call `t()` directly — there is no React context. Three options:
+You **cannot** call `t()` directly there is no React context. Three options:
 
 1. **Pass the translated string in.** The progress-queue runner does this:
 
@@ -135,7 +135,7 @@ You **cannot** call `t()` directly — there is no React context. Three options:
    }
    ```
 
-3. **Hardcode in English as a last resort** — only acceptable for dev-only / debug strings that never reach production users.
+3. **Hardcode in English as a last resort** only acceptable for dev-only / debug strings that never reach production users.
 
 ## 4. Snackbar pattern
 
@@ -155,7 +155,7 @@ function SubmitButton() {
 }
 ```
 
-`useSnackbar.getState().show(...)` does NOT require a React tree (the store is global) — but `t(...)` does. The snackbar host (`<SnackbarHost>`) is mounted once in `(app)/layout.tsx` so any authenticated screen gets it for free.
+`useSnackbar.getState().show(...)` does NOT require a React tree (the store is global) but `t(...)` does. The snackbar host (`<SnackbarHost>`) is mounted once in `(app)/layout.tsx` so any authenticated screen gets it for free.
 
 ## 5. Step-by-step playbook
 
@@ -181,7 +181,7 @@ function SubmitButton() {
 ## 6. Common mistakes
 
 - **Adding only to `en.json`.** Runtime error in the French build, no compile-time guard. Always edit both.
-- **Reusing a key with a different placeholder set.** `t("foo", { x })` where `foo` was rewritten to use `{y}` — `next-intl` throws `IntlError: MISSING_VAR`. Update every call site when you rename a placeholder.
+- **Reusing a key with a different placeholder set.** `t("foo", { x })` where `foo` was rewritten to use `{y}` `next-intl` throws `IntlError: MISSING_VAR`. Update every call site when you rename a placeholder.
 - **Calling `t()` in a Zustand store body.** No React context → impossible. Pass the string in via an action argument or a `getCopy` callback (see §3c).
 - **Forgetting `\n` for multi-line copy.** The `whitespace-pre-line` class is what renders them; they're invisible in raw JSON.
-- **Hardcoding inside JSX during a refactor.** Every user-visible string passes through `t()`. Search for stray quoted English strings before committing: `npx eslint .` will flag many of them via `react/jsx-no-literals`-adjacent rules but not all — grep manually if you suspect any.
+- **Hardcoding inside JSX during a refactor.** Every user-visible string passes through `t()`. Search for stray quoted English strings before committing: `npx eslint .` will flag many of them via `react/jsx-no-literals`-adjacent rules but not all grep manually if you suspect any.
