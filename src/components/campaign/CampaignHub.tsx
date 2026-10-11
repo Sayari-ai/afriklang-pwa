@@ -74,10 +74,10 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
       );
       break;
     case "account_consent":
-      body = <ConsentStep type="account" card={card} onSigned={reload} />;
+      body = <ConsentStep key="account" type="account" card={card} onSigned={reload} />;
       break;
     case "campaign_consent":
-      body = <ConsentStep type="campaign" card={card} onSigned={reload} />;
+      body = <ConsentStep key="campaign" type="campaign" card={card} onSigned={reload} />;
       break;
     case "paused":
     case "closed":

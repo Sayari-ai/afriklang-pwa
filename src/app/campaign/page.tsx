@@ -28,6 +28,13 @@ export default function CampaignLandingPage() {
     // Read in the effect (the URL is not known on the server); the strip of the fragment is a side effect too.
     const found = takeTokenFromLocation();
     void Promise.resolve().then(() => setToken(found));
+    // An installed app that is already open can receive a new invitation link as a hash-only change.
+    const onHash = () => {
+      const fresh = takeTokenFromLocation();
+      if (fresh) setToken(fresh);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
   useEffect(() => {

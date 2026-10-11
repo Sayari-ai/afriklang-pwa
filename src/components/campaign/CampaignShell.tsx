@@ -14,7 +14,8 @@ export function CampaignShell({ children }: { children: ReactNode }) {
   const session = useCampaignSession();
 
   return (
-    <div className="flex min-h-dvh flex-1 flex-col bg-white text-slate-900">
+    // The app's root frame clips overflow, so this screen scrolls itself (h-dvh + overflow-y-auto).
+    <div className="flex h-dvh flex-col overflow-y-auto bg-white text-slate-900">
       <header className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
         <Link href="/campaign" className="text-base font-bold text-primary">
           {t("appName")}
