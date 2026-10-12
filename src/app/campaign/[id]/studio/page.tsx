@@ -85,7 +85,7 @@ export default function StudioPage() {
       missions={missions.data.missions}
       userId={session.userId}
       speakerId={speakerId!}
-      dialect={list.data.contributor.profile.values?.variety ?? null}
+      contributor={list.data.contributor}
       startId={startId}
     />
   );

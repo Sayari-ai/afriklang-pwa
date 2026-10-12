@@ -84,6 +84,10 @@ export interface RecordingResult {
   blob: Blob;
   /** Total recorded duration in seconds (post-resample). */
   durationSec: number;
+  /** Rate the microphone delivered before the resample to 16 kHz (often 48000 on phones). */
+  inputSampleRate: number;
+  /** What the browser applied to the microphone (from the track's settings), when it says. */
+  processing: { echoCancellation?: boolean; noiseSuppression?: boolean; autoGainControl?: boolean };
 }
 
 /**
@@ -304,6 +308,7 @@ export class WavRecorder {
 
     // Snapshot state, then tear down.
     const ctx = this.ctx;
+    const settings = this.stream?.getAudioTracks()[0]?.getSettings?.() ?? {};
     const node = this.node;
     const source = this.source;
     const stream = this.stream;
@@ -344,7 +349,13 @@ export class WavRecorder {
     const blob = encodeWav(pcm, WAV_TARGET_SAMPLE_RATE);
     const durationSec = downsampled.length / WAV_TARGET_SAMPLE_RATE;
 
-    return { blob, durationSec };
+    const flag = (v: unknown) => (typeof v === "boolean" ? v : undefined);
+    return {
+      blob,
+      durationSec,
+      inputSampleRate: inputRate,
+      processing: { echoCancellation: flag(settings.echoCancellation), noiseSuppression: flag(settings.noiseSuppression), autoGainControl: flag(settings.autoGainControl) },
+    };
   }
 
   /**

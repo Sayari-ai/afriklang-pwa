@@ -16,19 +16,28 @@
 import { Check, ChevronRight, CloudOff, RotateCcw, SkipForward, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { analyzeWav, checkTake, sha256Hex, type TakeAnalysis, type TakeProblem } from "@/lib/audio/analyze";
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
+import { buildAudioMetadata, parseDevice } from "@/lib/campaign/audio-metadata";
 import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import { buildMetadata, buildSayariCampaignFields, deviceLabel, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
 import { QUIET_HINT_AFTER_S, TEXT_SIZES, canRecordNow, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
-import type { CampaignCard, Mission } from "@/lib/campaign/types";
+import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
 import { Confetti, PromptCard, RecordButton, SessionBar, TakePlayer } from "./StudioParts";
 
 type Phase = "idle" | "countdown" | "lead" | "speaking" | "tail" | "analyzing" | "problem" | "review" | "saving" | "goal" | "done";
-type Take = { blob: Blob; analysis: TakeAnalysis & { sample_rate: number; channels: number; peaks: number[] } };
+type Take = {
+  blob: Blob;
+  analysis: TakeAnalysis & { sample_rate: number; channels: number; peaks: number[] };
+  recordedAt: Date;
+  inputSampleRate: number;
+  processing: { echoCancellation?: boolean; noiseSuppression?: boolean; autoGainControl?: boolean };
+  quietHintShown: boolean;
+  takeNumber: number;
+};
 
 const COUNTDOWN_S = 3;
 const SIZE_KEY = "afriklang.studio.textSize";
@@ -39,11 +48,17 @@ type Props = {
   missions: Mission[];
   userId: string;
   speakerId: string;
-  dialect: string | null;
+  contributor: ContributorView;
   startId: string | null;
 };
 
-export function Studio({ campaignId, card, missions, userId, speakerId, dialect, startId }: Props) {
+export function Studio({ campaignId, card, missions, userId, speakerId, contributor, startId }: Props) {
+  const dialect = contributor.profile.values?.variety ?? null;
+  const locale = useLocale();
+  // One id per studio visit: groups the takes of a sitting in the dataset.
+  const [sessionId] = useState(() => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `s-${Date.now().toString(36)}`));
+  const quietShownRef = useRef(false);
+  const takesRef = useRef(new Map<string, number>());
   const t = useTranslations("campaign.studio");
   const hubHref = `/campaign/${campaignId}`;
   const box = useOutbox();
@@ -88,6 +103,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, dialect,
   const maxS = mission && timed ? (mission.duration_s.max ?? rules?.durationMaxS ?? null) : null;
 
   const recorderRef = useRef<WavRecorder | null>(null);
+  const currentIdRef = useRef<string | null>(currentId);
   const streamRef = useRef<Promise<MediaStream> | null>(null);
   const attemptRef = useRef(0);
   const levelRef = useRef(-100);
@@ -179,12 +195,16 @@ export function Studio({ campaignId, card, missions, userId, speakerId, dialect,
     clearTimers();
     setPhase("analyzing");
     try {
-      const { blob } = await rec.stop();
+      const { blob, inputSampleRate, processing } = await rec.stop();
+      const recordedAt = new Date();
       recorderRef.current = null;
       const analysis = await analyzeWav(blob);
       if (attempt !== attemptRef.current) return;
       const p = checkTake(analysis, rules);
-      setTake(p ? null : { blob, analysis });
+      const mid = currentIdRef.current ?? "";
+      const takeNumber = (takesRef.current.get(mid) ?? 0) + 1;
+      takesRef.current.set(mid, takeNumber);
+      setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown: quietShownRef.current, takeNumber });
       setProblem(p);
       setPhase(p ? "problem" : "review");
       vibrate(p ? [40, 60, 40] : 30);
@@ -222,6 +242,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, dialect,
       let last = startedAt;
       setElapsed(0);
       setQuiet(false);
+      quietShownRef.current = false;
       setPhase("lead");
       vibrate(20);
       later(() => {
@@ -239,6 +260,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, dialect,
         if (s > pad + 0.5 && recorderRef.current.levelDbfs < (rules?.minLevelDbfs ?? -35)) quietFor += (now - last) / 1000;
         else quietFor = 0;
         last = now;
+        if (quietFor >= QUIET_HINT_AFTER_S) quietShownRef.current = true;
         setQuiet(quietFor >= QUIET_HINT_AFTER_S);
         if (maxS != null && s >= maxS - pad) return beginTailRef.current();
         timers.current.push(setTimeout(tick, 100));
@@ -329,6 +351,32 @@ export function Studio({ campaignId, card, missions, userId, speakerId, dialect,
         return;
       }
       const metadata = buildMetadata(take.analysis, sha, deviceLabel(navigator.userAgent), null);
+      const filename = buildCampaignFilename({ languageCode: card.language.code, speakerId, missionCode: mission.code });
+      const audioDoc = buildAudioMetadata({
+        card,
+        mission,
+        contributor,
+        analysis: take.analysis,
+        rules: rules!,
+        sha256: sha,
+        filename,
+        capture: {
+          recordedAt: take.recordedAt,
+          submittedAt: new Date(),
+          inputSampleRate: take.inputSampleRate,
+          processing: take.processing,
+          sizeBytes: take.blob.size,
+          paddingS: pad,
+          quietHintShown: take.quietHintShown,
+          takeNumber: take.takeNumber,
+          sessionId,
+          indexInSession: sessionCount + 1,
+          appLocale: locale,
+          utcOffsetMin: -new Date().getTimezoneOffset(),
+          device: { label: deviceLabel(navigator.userAgent), ...parseDevice(navigator.userAgent) },
+          appVersion: process.env.NEXT_PUBLIC_APP_VERSION ?? "0.1.0",
+        },
+      });
       const item: OutboxItem = {
         v: 1,
         id: sha,
@@ -339,13 +387,13 @@ export function Studio({ campaignId, card, missions, userId, speakerId, dialect,
         missionType: mission.type,
         createdAt: Date.now(),
         blob: take.blob,
-        filename: buildCampaignFilename({ languageCode: card.language.code, speakerId, missionCode: mission.code }),
+        filename,
         upload: {
           languageIso: card.language.code,
           ...(dialect ? { dialect } : {}),
           englishDescription: mission.prompt.text_or_topic,
           speakerId,
-          extraFields: buildSayariCampaignFields(card, mission, metadata),
+          extraFields: { ...buildSayariCampaignFields(card, mission, metadata), metadata: JSON.stringify(audioDoc) },
         },
         metadata,
         uploaded: false,
@@ -388,6 +436,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, dialect,
   // Timers and key handlers read the latest values through refs, updated after each render.
   useLayoutEffect(() => {
     onPhoneRef.current = onPhone;
+    currentIdRef.current = currentId;
     byIdRef.current = byId;
     beginTailRef.current = beginTail;
     pressRef.current = press;

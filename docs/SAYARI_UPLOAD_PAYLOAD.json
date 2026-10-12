@@ -1,6 +1,6 @@
 {
   "title": "Audio upload from the Afriklang app to Sayari (campaign recordings)",
-  "version": "2026-10-11",
+  "version": "2026-10-12",
   "request": {
     "method": "POST",
     "path": "/api/audio/upload",
@@ -31,7 +31,10 @@
     "consent_recorded": {
       "required": true,
       "type": "string",
-      "enum": ["true", "false"],
+      "enum": [
+        "true",
+        "false"
+      ],
       "example": "true",
       "description": "Always \"true\" for a campaign: the app does not let anyone record before the account and campaign consents are signed."
     },
@@ -102,7 +105,11 @@
       "campaign_only": true,
       "required": true,
       "type": "string",
-      "enum": ["read", "spontaneous", "conversational"],
+      "enum": [
+        "read",
+        "spontaneous",
+        "conversational"
+      ],
       "example": "read",
       "description": "Speech type. Drives the transcription type and, for conversations, how the channels are read."
     },
@@ -140,7 +147,9 @@
       "campaign_only": true,
       "required": true,
       "type": "string",
-      "enum": ["wav"],
+      "enum": [
+        "wav"
+      ],
       "example": "wav"
     },
     "sample_rate": {
@@ -198,6 +207,13 @@
       "type": "string",
       "example": "Android Chrome",
       "description": "Operating system and browser of the recording phone (coarse, from the user agent)."
+    },
+    "metadata": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string (JSON)",
+      "schema_version": "afriklang.audio/2.0",
+      "description": "One JSON document with everything known about the recording: recording, audio, quality, campaign, mission, prompt, speaker (declared profile, pseudonymous), conversation, consent, device, session, app. Built by src/lib/campaign/audio-metadata.ts. Field reference: the 'Afriklang PWA -> Sayari' spec document. The flat fields above are kept for compatibility and always agree with it."
     }
   },
   "example_request_fields": {
@@ -229,7 +245,9 @@
   },
   "response_expected": {
     "status": 200,
-    "body": { "audio_id": "string, Sayari's id for the recording" },
+    "body": {
+      "audio_id": "string, Sayari's id for the recording"
+    },
     "notes": [
       "The app accepts audio_id, id or recording_id (also inside files/results/items/data/uploaded) and forwards it to the dashboard as sayari_recording_id. A missing id is tolerated.",
       "The app never retries an upload by itself; an error shows a message and the contributor taps again. The dashboard answers a repeated source_sha256 with duplicate: true, so Sayari should accept or refuse a repeated source_sha256 consistently.",

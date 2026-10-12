@@ -169,6 +169,12 @@ export function installCampaignMock() {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (url.includes("/functions/v1/campaigns")) return bridge(JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>);
     if (url.endsWith("/api/audio-upload")) {
+      // Keep the last upload's text fields so they can be inspected (window.__afkLastUpload).
+      if (init?.body instanceof FormData) {
+        const fields: Record<string, string> = {};
+        init.body.forEach((v, k) => (fields[k] = typeof v === "string" ? v : `<file ${(v as File).name}, ${(v as File).size} bytes>`));
+        (window as unknown as { __afkLastUpload?: unknown }).__afkLastUpload = fields;
+      }
       await delay(900);
       if (navigator.onLine === false) throw new TypeError("Failed to fetch");
       return json({ audio_id: "say-" + Math.random().toString(36).slice(2, 10) });
