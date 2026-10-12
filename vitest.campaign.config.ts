@@ -6,7 +6,7 @@ import path from "node:path";
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["src/lib/campaign/**/*.test.ts", "src/lib/audio/analyze.test.ts", "src/lib/api/audio-result.test.ts", "supabase/functions/_shared/campaigns.test.ts", "supabase/functions/campaigns/index.test.ts", "supabase/functions/campaigns/single-file.test.ts"],
+    include: ["src/lib/campaign/**/*.test.ts", "src/lib/security/**/*.test.ts", "src/lib/audio/analyze.test.ts", "src/lib/api/audio-result.test.ts", "supabase/functions/_shared/campaigns.test.ts", "supabase/functions/campaigns/index.test.ts", "supabase/functions/campaigns/single-file.test.ts"],
   },
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
 });

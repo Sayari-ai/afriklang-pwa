@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useId, useRef, useState } from "react";
 import { signConsent } from "@/lib/campaign/api";
 import type { CampaignCard, CampaignFailure } from "@/lib/campaign/types";
+import { safeExternalUrl } from "@/lib/security/safe-url";
 import { FailureMessage, Notice, buttonPrimary } from "./CampaignHubParts";
 
 type Props = { type: "account" | "campaign"; card: CampaignCard; onSigned: () => void };
@@ -13,6 +14,8 @@ export function ConsentStep({ type, card, onSigned }: Props) {
   const locale = useLocale() === "fr" ? "fr" : "en";
   const id = useId();
   const consent = card.consents[type];
+  // The address is typed by an admin on the dashboard: only http(s) may become a link.
+  const textUrl = safeExternalUrl(consent.text_url);
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const sending = useRef(false); // a second tap before the re-render must not sign twice
@@ -50,9 +53,9 @@ export function ConsentStep({ type, card, onSigned }: Props) {
       ) : (
         <>
           <p className="text-base text-slate-700">{type === "account" ? t("accountSummary") : t("campaignSummary", { code: card.code, topic })}</p>
-          {consent.text_url ? (
+          {textUrl ? (
             <a
-              href={consent.text_url}
+              href={textUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex min-h-12 w-full items-center justify-center rounded-xl border-2 border-primary px-4 py-3 text-center text-base font-bold text-primary"
@@ -67,10 +70,10 @@ export function ConsentStep({ type, card, onSigned }: Props) {
             <span className="text-base font-semibold text-slate-900">{t("agree")}</span>
           </label>
           {failure ? <FailureMessage failure={failure} /> : null}
-          <button type="button" onClick={sign} disabled={!agreed || busy || !consent.text_url} aria-describedby={!agreed && consent.text_url ? `${id}-hint` : undefined} className={buttonPrimary}>
+          <button type="button" onClick={sign} disabled={!agreed || busy || !textUrl} aria-describedby={!agreed && textUrl ? `${id}-hint` : undefined} className={buttonPrimary}>
             {busy ? t("signing") : t("sign")}
           </button>
-          {!agreed && consent.text_url ? <p id={`${id}-hint`} className="text-sm text-slate-600">{t("agreeFirst")}</p> : null}
+          {!agreed && textUrl ? <p id={`${id}-hint`} className="text-sm text-slate-600">{t("agreeFirst")}</p> : null}
         </>
       )}
     </section>

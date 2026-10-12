@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 
 import { AppHydration } from "@/components/app-hydration";
+import { SelfXssWarning } from "@/components/self-xss-warning";
 import { AppBackdrop } from "@/components/ui/app-backdrop";
 import { nunito } from "@/lib/fonts";
 import "./globals.css";
@@ -80,6 +81,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AppHydration />
+          <SelfXssWarning />
           {/*
             Phone-frame: the app is designed as a mobile experience and
             ports a Flutter mobile UI. On wide viewports we letterbox

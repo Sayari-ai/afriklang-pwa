@@ -17,12 +17,8 @@
  *     localStorage key (managed by the SDK, not `StorageKeys`).
  *   - `autoRefreshToken: true` keep the session alive in the
  *     background while the PWA is open.
- *   - `detectSessionInUrl: true` + `flowType: "pkce"` the Google
- *     OAuth redirect lands back on `/login?code=...`; the client
- *     exchanges the code for a session on initialization. PKCE is
- *     safe here because `signInWithOAuth` navigates the *same*
- *     browsing context, so the code verifier persisted in
- *     localStorage is available when the redirect returns.
+ *   - `detectSessionInUrl: false` Google sign-in is finished by the
+ *     campaign client (lib/campaign/auth-client.ts), see below.
  *
  * Edge Functions keep authenticating with the anon key plus our own
  * `device_id` payload field `user_id` attribution is a server-side

@@ -24,8 +24,25 @@ const withPWA = withPWAInit({
   },
 });
 
+// Security headers on every response. The CSP only sets directives that cannot break the app
+// (no script-src: Next's inline bootstrap scripts would need nonces first).
+//   - frame-ancestors / X-Frame-Options: no framing, so no clickjacking of the record/consent
+//     buttons and no "paste this into the page" tricks inside a look-alike frame.
+//   - base-uri / object-src / form-action: close the classic injection footholds.
+//   - Permissions-Policy: the microphone for this origin only; camera and location off.
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "microphone=(self), camera=(), geolocation=()" },
+];
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
   // LAN dev access: when running `next dev` and hitting the dev
   // server from another device on the local network (phone, tablet)
   // Next 15+ rejects the request unless the origin is allow-listed.
