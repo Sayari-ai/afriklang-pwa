@@ -84,7 +84,8 @@ function listenOnce() {
   });
 }
 
-function useCached<T>(key: string | null, load: ((userId: string, force: boolean) => Promise<void>) | null): Loaded<T> {
+/** `valid` rejects a saved copy of the wrong shape (an older app version wrote it): it is then refetched, never painted. */
+function useCached<T>(key: string | null, load: ((userId: string, force: boolean) => Promise<void>) | null, valid: (data: T) => boolean = () => true): Loaded<T> {
   const session = useCampaignSession();
   const userId = session.status === "signedIn" ? session.userId : null;
   const id = userId && key ? cacheId(userId, key) : null;
@@ -118,14 +119,16 @@ function useCached<T>(key: string | null, load: ((userId: string, force: boolean
   if (!entry) return { state: "loading", error: null, data: null, reload };
   // A rejected session is "signed out" as far as the screens are concerned.
   if (entry.failure && needsSignIn(entry.failure.code)) return { state: "signedOut", error: null, data: null, reload };
-  if (entry.data != null) return { state: "ready", error: null, data: entry.data, reload, refreshing: entry.refreshing, failure: entry.failure, saved: entry.at === 0 };
+  if (entry.data != null && valid(entry.data)) return { state: "ready", error: null, data: entry.data, reload, refreshing: entry.refreshing, failure: entry.failure, saved: entry.at === 0 };
   if (entry.failure && !entry.refreshing) return { state: "error", error: entry.failure, data: null, reload };
   return { state: "loading", error: null, data: null, reload };
 }
 
 const listLoader = (userId: string, force: boolean) => loadCampaigns(userId, force);
 
-export const useCampaignList = (): Loaded<CampaignList> => useCached<CampaignList>(CAMPAIGNS, listLoader);
+const isCampaignList = (d: CampaignList) => Array.isArray(d?.campaigns);
+
+export const useCampaignList = (): Loaded<CampaignList> => useCached<CampaignList>(CAMPAIGNS, listLoader, isCampaignList);
 
 /** `enabled: false` reads the saved copy only (the bridge refuses missions before the consents). */
 export function useCampaignMissions(campaignId: string, enabled = true): Loaded<MissionList> {
