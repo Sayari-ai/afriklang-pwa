@@ -34,7 +34,8 @@
     "permission-denied": "Le microphone est bloqué. Autorisez l'accès au microphone pour ce site dans les réglages de votre navigateur, puis réessayez.",
     "no-mic": "Aucun microphone n'a été trouvé. Branchez-en un ou vérifiez votre appareil, puis réessayez.",
     "unsupported": "Ce navigateur ne peut pas enregistrer le son. Ouvrez cette page dans une version récente de Chrome ou de Safari.",
-    "internal": "L'enregistrement n'a pas pu démarrer. Fermez les autres applications qui utilisent le microphone, puis réessayez."
+    "internal": "L'enregistrement n'a pas pu démarrer. Fermez les autres applications qui utilisent le microphone, puis réessayez.",
+    "stopFailed": "L'enregistrement n'a pas pu être finalisé : aucun son n'est parvenu à l'application. Vérifiez que le microphone fonctionne et n'est pas coupé, puis recommencez."
   },
   "status": {
     "idle": "Prêt à enregistrer",
@@ -52,6 +53,7 @@
   "analyzing": "Vérification de votre enregistrement…",
   "problem": {
     "title": "Refaisons l'enregistrement",
+    "silent": "Aucun son n'a été capté. Vérifiez que le microphone n'est ni couvert ni coupé, puis recommencez en parlant distinctement.",
     "too_short": "L'enregistrement est trop court. Parlez au moins {min} secondes.",
     "too_long": "L'enregistrement est trop long. Gardez-le sous {max} secondes.",
     "too_quiet": "L'enregistrement est trop faible. Rapprochez un peu le téléphone de votre bouche et parlez plus fort.",
@@ -73,7 +75,14 @@
   },
   "failed": {
     "title": "Pas encore envoyé",
-    "upload": "Le son n'a pas pu être envoyé. Votre enregistrement est toujours là.",
+    "uploadKeys": {
+      "network": "Le son n'a pas pu être envoyé : la connexion a échoué ou était trop lente. Votre enregistrement est toujours là. Vérifiez votre connexion et réessayez.",
+      "tooLarge": "Le fichier audio est trop volumineux pour être envoyé. Faites un enregistrement plus court.",
+      "refused": "Le service audio n'a pas accepté ce fichier. Refaites l'enregistrement. Si le problème persiste, contactez l'équipe Afriklang.",
+      "server": "Le service audio a rencontré un problème de son côté. Votre enregistrement est toujours là. Réessayez dans un instant.",
+      "other": "Le son n'a pas pu être envoyé. Votre enregistrement est toujours là. Réessayez.",
+      "prepare": "Votre enregistrement n'a pas pu être préparé pour l'envoi sur cet appareil. Réessayez. Si le problème persiste, ouvrez l'application dans une version récente de Chrome ou de Safari."
+    },
     "willUpload": "En réessayant, le son sera envoyé puis la mission sera enregistrée.",
     "alreadyUploaded": "Votre son a déjà été envoyé. En réessayant, seule la mission sera enregistrée."
   },

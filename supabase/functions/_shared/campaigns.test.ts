@@ -3,6 +3,10 @@ import { ACTIONS, bearerToken, buildForward, dashboardBase, identityFrom, type I
 
 const WHO: Identity = { userId: "11111111-1111-4111-8111-111111111111", email: "awa@gmail.com", emailVerified: true };
 const CID = "22222222-2222-4222-8222-222222222222";
+const DEVICE = "33333333-3333-4333-8333-333333333333";
+const TOKEN = "T".repeat(43);
+const PROFILE = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: "Thiès", gender: "female", age_band: "30-44", device: "Android" };
+const RECORDING = { format: "wav", sample_rate: 16000, channels: 1, duration_s: 8.2, level_dbfs: -22, source_sha256: "a".repeat(64), peak_dbfs: -1.5, silence_before_s: 1.1, silence_after_s: 1, device: "Android Chrome" };
 
 describe("buildForward", () => {
   it("takes the user from the verified identity and drops anything the browser claims", () => {
@@ -11,27 +15,65 @@ describe("buildForward", () => {
   });
 
   it("sends the verified email only for claim, from the identity not the body", () => {
-    const r = buildForward("claim", { token: "  tok  ", device_id: "d", email: "evil@x.org", email_verified: true }, WHO);
-    expect(r).toEqual({ ok: true, path: "claim", body: { user_id: WHO.userId, email: "awa@gmail.com", email_verified: true, token: "tok", device_id: "d" } });
-    const unverified = buildForward("claim", { token: "t" }, { ...WHO, emailVerified: false });
+    const r = buildForward("claim", { token: `  ${TOKEN}  `, device_id: DEVICE.toUpperCase(), email: "evil@x.org", email_verified: true }, WHO);
+    expect(r).toEqual({ ok: true, path: "claim", body: { user_id: WHO.userId, email: "awa@gmail.com", email_verified: true, token: TOKEN, device_id: DEVICE } });
+    const unverified = buildForward("claim", { token: TOKEN }, { ...WHO, emailVerified: false });
     expect(unverified).toMatchObject({ ok: true, body: { email_verified: false } });
-    for (const a of ["campaigns", "profile", "consent", "withdraw", "missions", "submit"]) {
-      const f = buildForward(a, { campaign_id: CID, mission_id: CID, type: "account", version: "v1", recording: {} }, WHO);
+    const valid: Record<string, Record<string, unknown>> = {
+      campaigns: {},
+      profile: PROFILE,
+      consent: { type: "account", version: "v1", locale: "en" },
+      withdraw: { campaign_id: CID },
+      missions: { campaign_id: CID },
+      submit: { mission_id: CID, recording: RECORDING },
+    };
+    for (const [a, fields] of Object.entries(valid)) {
+      const f = buildForward(a, fields, WHO);
+      expect(f.ok, a).toBe(true);
       expect(f.ok && "email" in f.body).toBe(false);
     }
   });
 
   it("refuses unknown actions, including inherited object keys", () => {
-    for (const a of ["", "nope", "__proto__", "constructor", "toString", undefined, 5]) expect(buildForward(a, {}, WHO)).toEqual({ ok: false, error: "unknown_action" });
+    for (const a of ["", "nope", "__proto__", "constructor", "toString", undefined, 5]) expect(buildForward(a, {}, WHO)).toMatchObject({ ok: false, code: "unknown_action" });
   });
 
-  it("requires and validates fields", () => {
-    expect(buildForward("claim", {}, WHO)).toEqual({ ok: false, error: "token_required" });
-    expect(buildForward("claim", { token: 5 }, WHO)).toEqual({ ok: false, error: "token_invalid" });
-    expect(buildForward("missions", { campaign_id: "nope" }, WHO)).toEqual({ ok: false, error: "campaign_id_invalid" });
-    expect(buildForward("submit", { mission_id: CID, recording: [] }, WHO)).toEqual({ ok: false, error: "recording_invalid" });
-    expect(buildForward("submit", { mission_id: CID }, WHO)).toEqual({ ok: false, error: "recording_required" });
-    expect(buildForward("claim", { token: "x".repeat(500) }, WHO)).toMatchObject({ ok: true, body: { token: "x".repeat(128) } });
+  it("names every missing or malformed field at once", () => {
+    expect(buildForward("claim", {}, WHO)).toMatchObject({ ok: false, code: "invalid_input", fieldErrors: { token: "token is required" } });
+    expect(buildForward("claim", { token: 5 }, WHO)).toMatchObject({ fieldErrors: { token: "token must be text" } });
+    expect(buildForward("claim", { token: "x".repeat(500) }, WHO)).toMatchObject({ fieldErrors: { token: expect.stringContaining("too long") } });
+    expect(buildForward("claim", { token: "short" }, WHO)).toMatchObject({ fieldErrors: { token: expect.stringContaining("43-character") } });
+    expect(buildForward("claim", { token: TOKEN, device_id: "phone" }, WHO)).toMatchObject({ fieldErrors: { device_id: "device_id must be a uuid" } });
+    expect(buildForward("missions", { campaign_id: "nope" }, WHO)).toMatchObject({ fieldErrors: { campaign_id: "campaign_id must be a uuid" } });
+    expect(buildForward("submit", { mission_id: CID, recording: [] }, WHO)).toMatchObject({ fieldErrors: { recording: expect.stringContaining("object") } });
+    expect(buildForward("submit", { mission_id: CID }, WHO)).toMatchObject({ fieldErrors: { recording: "recording is required" } });
+    const r = buildForward("profile", { native_language: "Wolof", variety: " ", country: "Senegal", region: "x".repeat(81), gender: "f", age_band: "17", device: "!!!" }, WHO);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && Object.keys(r.fieldErrors ?? {}).sort()).toEqual(["age_band", "country", "device", "gender", "native_language", "region", "variety"]);
+    expect(!r.ok && r.error).toContain("variety is required");
+  });
+
+  it("normalises what it forwards and drops unknown fields", () => {
+    const r = buildForward("profile", { ...PROFILE, country: " sn ", region: "  Thiès ", nickname: "x" }, WHO);
+    expect(r).toEqual({ ok: true, path: "profile", body: { user_id: WHO.userId, ...PROFILE, country: "SN", region: "Thiès" } });
+  });
+
+  it("checks consent type, locale and the campaign id a campaign consent needs", () => {
+    expect(buildForward("consent", { type: "partner", version: "v1", locale: "de" }, WHO)).toMatchObject({ fieldErrors: { type: expect.any(String), locale: expect.any(String) } });
+    expect(buildForward("consent", { type: "campaign", version: "v1", locale: "fr" }, WHO)).toMatchObject({ fieldErrors: { campaign_id: expect.stringContaining("required") } });
+    expect(buildForward("consent", { type: "account", campaign_id: CID, version: "v1", locale: "fr" }, WHO)).toEqual({ ok: true, path: "consent", body: { user_id: WHO.userId, type: "account", version: "v1", locale: "fr" } });
+    expect(buildForward("consent", { type: "account", version: "v".repeat(21), locale: "fr" }, WHO)).toMatchObject({ fieldErrors: { version: expect.stringContaining("too long") } });
+  });
+
+  it("checks each recording field and strips the rest", () => {
+    const ok = buildForward("submit", { mission_id: CID, recording: { ...RECORDING, source_sha256: RECORDING.source_sha256.toUpperCase(), extra: "x" } }, WHO);
+    expect(ok).toEqual({ ok: true, path: "missions/submit", body: { user_id: WHO.userId, mission_id: CID, recording: RECORDING } });
+    const bad = buildForward("submit", { mission_id: CID, recording: { format: "mp3", sample_rate: 44_100.5, channels: 3, duration_s: 0, level_dbfs: 3, source_sha256: "abc", peak_dbfs: "loud" } }, WHO);
+    expect(!bad.ok && Object.keys(bad.fieldErrors ?? {}).sort()).toEqual([
+      "recording.channels", "recording.duration_s", "recording.format", "recording.level_dbfs", "recording.peak_dbfs", "recording.sample_rate", "recording.source_sha256",
+    ]);
+    // a clipped take is well formed: the dashboard refuses it as recording_rejected (422)
+    expect(buildForward("submit", { mission_id: CID, recording: { ...RECORDING, peak_dbfs: 0.4 } }, WHO).ok).toBe(true);
   });
 
   it("the campaigns list needs no fields and tolerates a junk body", () => {

@@ -84,6 +84,10 @@ export interface RecordingResult {
   blob: Blob;
   /** Total recorded duration in seconds (post-resample). */
   durationSec: number;
+  /** Rate the microphone delivered before the resample to 16 kHz (often 48000 on phones). */
+  inputSampleRate: number;
+  /** What the browser applied to the microphone (from the track's settings), when it says. */
+  processing: { echoCancellation?: boolean; noiseSuppression?: boolean; autoGainControl?: boolean };
 }
 
 /**
@@ -179,6 +183,9 @@ export class WavRecorder {
   private chunks: Float32Array[] = [];
   private starting: Promise<void> | null = null;
   private isRecording = false;
+  /** Smoothed RMS of the latest audio (0..1), for a live level meter. */
+  private rms = 0;
+  private frames = 0;
 
   /**
    * Acquires the mic, sets up the pipeline, and starts buffering. On
@@ -249,9 +256,18 @@ export class WavRecorder {
     });
 
     this.chunks = [];
+    this.rms = 0;
+    this.frames = 0;
     node.port.onmessage = (e: MessageEvent<Float32Array>) => {
       // Worklet posts a fresh Float32Array each quantum; just keep them.
-      if (e.data instanceof Float32Array) this.chunks.push(e.data);
+      if (!(e.data instanceof Float32Array)) return;
+      this.chunks.push(e.data);
+      this.frames += e.data.length;
+      let sum = 0;
+      for (let i = 0; i < e.data.length; i++) sum += e.data[i] * e.data[i];
+      const now = Math.sqrt(sum / Math.max(1, e.data.length));
+      // Fast attack, slow release: the meter jumps with the voice and falls back gently.
+      this.rms = now > this.rms ? now : this.rms * 0.92 + now * 0.08;
     };
 
     source.connect(node);
@@ -292,6 +308,7 @@ export class WavRecorder {
 
     // Snapshot state, then tear down.
     const ctx = this.ctx;
+    const settings = this.stream?.getAudioTracks()[0]?.getSettings?.() ?? {};
     const node = this.node;
     const source = this.source;
     const stream = this.stream;
@@ -332,7 +349,13 @@ export class WavRecorder {
     const blob = encodeWav(pcm, WAV_TARGET_SAMPLE_RATE);
     const durationSec = downsampled.length / WAV_TARGET_SAMPLE_RATE;
 
-    return { blob, durationSec };
+    const flag = (v: unknown) => (typeof v === "boolean" ? v : undefined);
+    return {
+      blob,
+      durationSec,
+      inputSampleRate: inputRate,
+      processing: { echoCancellation: flag(settings.echoCancellation), noiseSuppression: flag(settings.noiseSuppression), autoGainControl: flag(settings.autoGainControl) },
+    };
   }
 
   /**
@@ -361,5 +384,15 @@ export class WavRecorder {
 
   get recording(): boolean {
     return this.isRecording;
+  }
+
+  /** Live input level in dBFS (about -100 when silent). Read it on an animation frame. */
+  get levelDbfs(): number {
+    return this.rms > 0 ? Math.max(-100, 20 * Math.log10(this.rms)) : -100;
+  }
+
+  /** Seconds of audio captured so far (at the context's rate, before resampling). */
+  get capturedSeconds(): number {
+    return this.ctx ? this.frames / this.ctx.sampleRate : 0;
   }
 }

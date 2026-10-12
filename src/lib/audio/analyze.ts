@@ -109,9 +109,26 @@ export function analyzeSamples(samples: Float32Array, sampleRate: number): TakeA
   };
 }
 
-export async function analyzeWav(blob: Blob): Promise<TakeAnalysis & { sample_rate: number; channels: number }> {
+/** `n` bars for a waveform picture: the loudest sample of each slice, 0..1. */
+export function waveformPeaks(samples: Float32Array, n: number): number[] {
+  const out = new Array<number>(n).fill(0);
+  if (!samples.length || n <= 0) return out;
+  const size = samples.length / n;
+  for (let b = 0; b < n; b++) {
+    let max = 0;
+    const end = Math.min(samples.length, Math.floor((b + 1) * size));
+    for (let i = Math.floor(b * size); i < end; i++) {
+      const a = Math.abs(samples[i]);
+      if (a > max) max = a;
+    }
+    out[b] = Math.min(1, max);
+  }
+  return out;
+}
+
+export async function analyzeWav(blob: Blob): Promise<TakeAnalysis & { sample_rate: number; channels: number; peaks: number[] }> {
   const wav = parseWav(await blob.arrayBuffer());
-  return { ...analyzeSamples(wav.samples, wav.sampleRate), sample_rate: wav.sampleRate, channels: 1 };
+  return { ...analyzeSamples(wav.samples, wav.sampleRate), sample_rate: wav.sampleRate, channels: 1, peaks: waveformPeaks(wav.samples, 64) };
 }
 
 /** sha-256 (64 hex characters) of the file exactly as it will be uploaded. */
@@ -122,7 +139,7 @@ export async function sha256Hex(blob: Blob): Promise<string> {
 
 // ── Capture checks (the same rules the dashboard applies) ────────────────
 
-export type TakeProblem = "too_short" | "too_long" | "too_quiet" | "clipped" | "silence";
+export type TakeProblem = "silent" | "too_short" | "too_long" | "too_quiet" | "clipped" | "silence";
 
 export type TakeRules = {
   durationMinS: number;
@@ -136,6 +153,8 @@ const SILENCE_SLACK = 0.5;
 
 /** The first thing wrong with a take, or null when it is fine. */
 export function checkTake(a: TakeAnalysis, rules: TakeRules): TakeProblem | null {
+  // Not one frame above the silence threshold: the microphone heard nothing (muted, covered or not working).
+  if (a.level_dbfs <= FLOOR_DB) return "silent";
   if (a.duration_s < rules.durationMinS - DURATION_TOLERANCE_S) return "too_short";
   if (a.duration_s > rules.durationMaxS + DURATION_TOLERANCE_S) return "too_long";
   if (a.level_dbfs < rules.minLevelDbfs) return "too_quiet";

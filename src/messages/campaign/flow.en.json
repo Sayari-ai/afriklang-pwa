@@ -40,10 +40,31 @@
       "undisclosed": "Prefer not to say"
     },
     "errors": {
-      "required": "Please fill in this field.",
-      "tooLong": "This is too long (80 characters at most).",
-      "invalid": "Please choose one of the options."
+      "required": {
+        "native_language": "Choose your native language.",
+        "variety": "Choose the variety of the language you speak.",
+        "country": "Choose the country you live in.",
+        "region": "Enter your region or city.",
+        "gender": "Choose your gender, or \"Prefer not to say\".",
+        "age_band": "Choose your age group.",
+        "device": "Enter the phone or device you record with."
+      },
+      "tooLong": "This is too long: {max} characters at most (you typed {count}).",
+      "invalid": "Choose one of the options in the list.",
+      "noLetters": "Use letters or numbers, not only symbols or spaces.",
+      "control": "Remove the line breaks or special characters.",
+      "server": {
+        "native_language": "This language was not accepted. Choose one from the list.",
+        "variety": "This variety was not accepted for this language. Choose one from the list.",
+        "country": "This country was not accepted. Choose one from the list.",
+        "region": "This region was not accepted. Enter a region or city name, 80 characters at most.",
+        "gender": "This answer was not accepted. Choose one of the options.",
+        "age_band": "This age group was not accepted. Choose one of the options.",
+        "device": "This device name was not accepted. Enter a short name, 80 characters at most."
+      }
     },
+    "noVarietiesTitle": "No variety to choose from yet",
+    "noVarietiesBody": "This campaign does not list its language varieties yet, so the profile cannot be completed. Please contact the Afriklang team.",
     "save": "Save and continue",
     "saving": "Saving…",
     "formError": "Please check the highlighted fields."
@@ -61,6 +82,7 @@
     "readText": "Read the full consent text",
     "opensNewTab": "(opens in a new tab)",
     "agree": "I have read and agree",
+    "agreeFirst": "Tick the box above once you have read the text to continue.",
     "sign": "I agree",
     "signing": "Saving…",
     "changed": "The consent text has changed, so please read it again before you agree.",

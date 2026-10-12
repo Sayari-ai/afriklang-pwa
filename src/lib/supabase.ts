@@ -59,7 +59,9 @@ export function getSupabase(): SupabaseClient {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true,
+      // The campaign area has its own client (lib/campaign/auth-client.ts) that finishes its own
+      // Google sign-in on /campaign; this one must not try to exchange that code.
+      detectSessionInUrl: (url) => !url.pathname.startsWith("/campaign"),
       flowType: "pkce",
     },
   });

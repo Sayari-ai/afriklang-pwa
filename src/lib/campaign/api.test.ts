@@ -22,9 +22,39 @@ describe("toResult", () => {
 
   it("rate limits and unknown answers are named, with Retry-After", () => {
     expect(toResult(429, { error: "slow down" }, "12")).toMatchObject({ code: "rate_limited", retryAfterS: 12 });
-    expect(toResult(500, null)).toMatchObject({ code: "unknown", message: "" });
+    expect(toResult(500, null)).toMatchObject({ code: "server_error", message: "" });
     expect(toResult(418, { code: "made_up", error: "teapot" })).toMatchObject({ code: "unknown" });
     expect(toResult(429, {}, "soon")).not.toHaveProperty("retryAfterS");
+  });
+});
+
+describe("toResult: precise failures", () => {
+  it("keeps the per-field problems of a 400, ignoring junk entries", () => {
+    const r = toResult(400, { error: "Invalid request: variety is required.", code: "invalid_input", fieldErrors: { variety: "variety is required", region: 5, "": " " } });
+    expect(r).toMatchObject({ ok: false, code: "invalid_input", message: "Invalid request: variety is required.", fieldErrors: { variety: "variety is required" } });
+    expect(toResult(400, { code: "invalid_input", error: "x", fieldErrors: [1] })).not.toHaveProperty("fieldErrors");
+  });
+
+  it("maps the Edge Function's own codes", () => {
+    expect(toResult(500, { error: "server_misconfigured", message: "x" })).toMatchObject({ code: "misconfigured", message: "x" });
+    expect(toResult(502, { error: "auth_unavailable", message: "x" })).toMatchObject({ code: "bridge_unreachable" });
+    expect(toResult(504, { error: "late", code: "bridge_timeout" })).toMatchObject({ code: "timeout" });
+    expect(toResult(400, { error: "invalid_json", message: "x" })).toMatchObject({ code: "invalid_input" });
+    expect(toResult(413, { error: "too_large", message: "x" })).toMatchObject({ code: "invalid_input" });
+    expect(toResult(400, { error: "toString" })).toMatchObject({ code: "invalid_input", message: "toString" });
+  });
+
+  it("guesses the kind of failure from the status when no code is known", () => {
+    expect(toResult(401, null)).toMatchObject({ code: "unauthorized" });
+    expect(toResult(409, { error: "Conflict" })).toMatchObject({ code: "conflict", message: "Conflict" });
+    expect(toResult(503, "<html>")).toMatchObject({ code: "bridge_unreachable" });
+    expect(toResult(504, null)).toMatchObject({ code: "timeout" });
+    expect(toResult(422, {})).toMatchObject({ code: "invalid_input" });
+  });
+
+  it("a success that is not a JSON object is a bad answer, not data", () => {
+    expect(toResult(200, null)).toMatchObject({ ok: false, code: "bridge_error" });
+    expect(toResult(200, [1])).toMatchObject({ ok: false, code: "bridge_error" });
   });
 });
 
@@ -39,6 +69,9 @@ describe("error table", () => {
     expect(needsSignIn("unauthorized")).toBe(true);
     expect(needsSignIn("not_linked")).toBe(false);
     expect(isRetryable("network")).toBe(true);
+    expect(isRetryable("offline")).toBe(true);
+    expect(isRetryable("timeout")).toBe(true);
+    expect(isRetryable("invalid_input")).toBe(false);
     expect(isRetryable("email_mismatch")).toBe(false);
     expect(isRetryable("blocked")).toBe(false);
   });

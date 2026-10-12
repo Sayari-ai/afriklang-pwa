@@ -107,8 +107,22 @@ export type CampaignErrorCode =
   | "bridge_unreachable"
   | "bridge_error"
   | "network"
+  | "offline"
+  | "timeout"
+  | "misconfigured"
+  | "conflict"
   | "rate_limited"
   | "unknown";
 
-export type CampaignFailure = { ok: false; status: number; code: CampaignErrorCode; message: string; nextStep?: NextStep; reason?: "duration" | "level" | "silence" | "other"; retryAfterS?: number };
+export type CampaignFailure = {
+  ok: false;
+  status: number;
+  code: CampaignErrorCode;
+  message: string;
+  nextStep?: NextStep;
+  reason?: "duration" | "level" | "silence" | "other";
+  retryAfterS?: number;
+  /** Per-field problems of a 400 (Edge Function or dashboard), keyed by the body field name, e.g. "variety" or "recording.duration_s". */
+  fieldErrors?: Record<string, string>;
+};
 export type CampaignResult<T> = { ok: true; data: T } | CampaignFailure;

@@ -44,8 +44,17 @@ export const languageOptions = (): Option[] =>
   Object.entries(LANGUAGES).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, "en"));
 
 export type ProfileValues = { [K in keyof ProfileInput]: string };
-export type FieldError = "required" | "tooLong" | "invalid";
+/**
+ * What is wrong with one field. "server": the field was refused by the server (a 400 with
+ * `fieldErrors`) although it passed the checks here; the screen shows that field's own hint.
+ */
+export type FieldError = "required" | "tooLong" | "invalid" | "noLetters" | "control" | "server";
 export type ProfileErrors = Partial<Record<keyof ProfileInput, FieldError>>;
+
+export const PROFILE_FIELDS: readonly (keyof ProfileInput)[] = ["native_language", "variety", "country", "region", "gender", "age_band", "device"];
+/** Letters or digits somewhere in a free-text answer (the Edge Function applies the same rule). */
+const HAS_WORD = /[\p{L}\p{N}]/u;
+const CONTROL = /[\u0000-\u001f\u007f]/;
 
 export function validateProfile(v: ProfileValues, varieties: readonly string[]): { input: ProfileInput | null; errors: ProfileErrors } {
   const t = (s: string) => s.trim();
@@ -59,6 +68,8 @@ export function validateProfile(v: ProfileValues, varieties: readonly string[]):
     const s = t(v[k]);
     if (!s) errors[k] = "required";
     else if (s.length > MAX_TEXT) errors[k] = "tooLong";
+    else if (CONTROL.test(s)) errors[k] = "control";
+    else if (!HAS_WORD.test(s)) errors[k] = "noLetters";
   };
   need("native_language", (s) => s in LANGUAGES);
   need("variety", (s) => varieties.includes(s));
@@ -75,6 +86,19 @@ export function validateProfile(v: ProfileValues, varieties: readonly string[]):
       gender: t(v.gender), age_band: t(v.age_band), device: t(v.device),
     },
   };
+}
+
+/**
+ * The profile fields a server 400 named in `fieldErrors`. Keys may be the body names
+ * ("age_band") or the dashboard's camelCase ("ageBand"); others are ignored.
+ */
+export function profileErrorsFromServer(fieldErrors: Record<string, string> | undefined): ProfileErrors {
+  const out: ProfileErrors = {};
+  for (const key of Object.keys(fieldErrors ?? {})) {
+    const snake = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) as keyof ProfileInput;
+    if (PROFILE_FIELDS.includes(snake)) out[snake] = "server";
+  }
+  return out;
 }
 
 /** A short device name from the user agent, e.g. "Android". Editable by the person. */

@@ -51,18 +51,32 @@ export function clearToken(s: Store | null = store()): void {
   }
 }
 
+/** True when the fragment carries a `t` that is not a well-formed token (cut or altered when copied). */
+export function malformedTokenInHash(hash: string): boolean {
+  const t = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash).get("t");
+  return t !== null && !TOKEN_RE.test(t);
+}
+
 /**
- * Pick up the token from the current URL: remember it and strip the fragment. Returns the
- * token to use now (from the URL, else from storage), or null.
+ * Pick up the invitation from the current URL: remember a good token and strip the fragment
+ * either way. `token` is the one to use now (from the URL, else from storage); `malformed`
+ * says the URL carried a broken one, which the screen explains instead of silently ignoring.
  */
-export function takeTokenFromLocation(): string | null {
-  if (typeof window === "undefined") return null;
-  const fromUrl = tokenFromHash(window.location.hash);
+export function takeLinkFromLocation(): { token: string | null; malformed: boolean } {
+  if (typeof window === "undefined") return { token: null, malformed: false };
+  const hash = window.location.hash;
+  const fromUrl = tokenFromHash(hash);
+  const malformed = !fromUrl && malformedTokenInHash(hash);
+  // Replace the entry so Back does not bring the token (or its broken copy) back.
+  if (fromUrl || malformed) window.history.replaceState(null, "", window.location.pathname + window.location.search);
   if (fromUrl) {
     saveToken(fromUrl);
-    // Replace the entry so Back does not bring the token back.
-    window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    return fromUrl;
+    return { token: fromUrl, malformed: false };
   }
-  return savedToken();
+  return { token: malformed ? null : savedToken(), malformed };
+}
+
+/** The token to use now (from the URL, else from storage), or null. */
+export function takeTokenFromLocation(): string | null {
+  return takeLinkFromLocation().token;
 }

@@ -23,6 +23,12 @@
     "continue": "Go to my campaigns",
     "contact": "Need help? Contact the Afriklang team."
   },
+  "brokenLink": {
+    "title": "This invitation link is incomplete",
+    "body": "Part of the link seems to be missing, often because it was cut when copied. Open the link directly from your invitation email by tapping it.",
+    "help": "If it still does not work, ask the Afriklang team to send you a new invitation.",
+    "continue": "Continue without the link"
+  },
   "notLinked": {
     "title": "Open your invitation link",
     "body": "Open the link from your invitation email to get started.",

@@ -16,12 +16,21 @@ contributors, tracking) lives in `afriklang-landing-page`; the contract between 
 4. The app sends the token to the dashboard. The dashboard binds the account to the contributor **only
    if the Google email is verified and equals the email the invitation was sent to**. Otherwise the
    contributor is told which address (masked, for example `a***@gmail.com`) to use.
-5. Home: one card per campaign, each with a status (finish profile, consent needed, ready, paused, closed).
-6. In a campaign: **profile** (language, variety, country, region, gender, age group, phone) →
-   **account consent** (once) → **campaign consent** → **instructions** → **missions**.
-7. **Recording**: read a sentence, answer a topic, or hold a conversation (one phone records, both
-   speakers are credited). The app checks duration, level, clipping and silence before upload.
-8. Each mission shows its state: to record, submitted, accepted, or **to redo** with the reason.
+5. Home (`/campaign`, also what `/` and the installed app open): totals, takes waiting on the phone,
+   and one card per campaign **that has missions assigned to the speaker**, with a direct
+   "Start recording" button. With no missions assigned, the speaker sees their recent activity and a
+   link to their history instead.
+6. In a campaign: a three-step setup, **profile** (language, variety, country, region, gender, age
+   group, phone) → **account consent** (once) → **campaign consent**; then the start button, recording
+   tips, and the missions in tabs (to record, to redo, in review, accepted).
+7. **Studio** (`/campaign/<id>/studio`): missions back to back, the ones to redo first. The studio
+   records a short silence before showing "Speak now" and keeps recording a moment after Stop, so the
+   silence margins pass; a ring around the button follows the voice (green loud enough, amber too
+   quiet). Duration, level, clipping and silence are checked before the take can be submitted.
+   "Submit & next" saves the take on the phone and goes straight on; a session goal (the campaign's
+   smallest "missions per session") ends in a small celebration.
+8. **History** (`/campaign/history`): totals, takes still on the phone (send now, record again,
+   delete), every recording with its review result, and the activity on this phone by day.
 
 Only a pseudonymous **speaker ID** (for example `SPK-7Q2M9X4D`) travels with the audio, never a name.
 
@@ -39,13 +48,32 @@ browser  ──►  /api/audio-upload (existing proxy)  ──►  Sayari      (
   the user id and the verified Google email from the signed-in session
   (`supabase/functions/_shared/campaigns.ts`) and drops any `user_id` / `email` the browser sends.
 - Only the actions and fields listed in `ACTIONS` are forwarded: `claim`, `campaigns`, `profile`,
-  `consent`, `withdraw`, `missions`, `submit`.
-- Audio goes straight to Sayari through the existing proxy. The dashboard receives only the recording's
+  `consent`, `withdraw`, `missions`, `submit`. Each field is checked first (type, length, allowed
+  values, formats, recording metadata ranges, with the dashboard's limits); a bad request gets a 400
+  `{ error, code: "invalid_input", fieldErrors: { <field>: <problem> } }` naming every bad field,
+  and the profile form marks those fields.
+- Audio goes straight to Sayari through the existing proxy, with the campaign context as extra multipart
+  fields (campaign, mission, prompt, speaker IDs and the take's measurements). The full list is
+  `docs/SAYARI_UPLOAD_PAYLOAD.json`.
+- The dashboard receives only the recording's
   **metadata** (duration, level, peak, silence margins, sample rate, sha-256 of the file, Sayari id when
   Sayari returns one) and checks it again.
 - The campaign area has its **own persistent Google session** (`src/lib/campaign/auth-client.ts`). The
   app's other Supabase client keeps no session on purpose (it identifies a device, not a person).
-- The campaign area is outside the learning app's onboarding/consent gates.
+- The app is the speaker app: `/` redirects to `/campaign`; the manifest starts there and has shortcuts
+  to Missions and History. (The learning-app screens are still in the code but no longer reachable
+  from the entry point.)
+- **Reads are cached** (`src/lib/campaign/cache.ts`): one request per key however many screens ask,
+  the last answer saved on the device per user and painted at once (also offline), refreshed in the
+  background on app start, when the app returns to the foreground and when the network comes back.
+  A `missions` answer also refreshes that campaign's card on the home screen. Sign-out clears it.
+- **Takes go through an outbox** (`src/lib/campaign/outbox*.ts`, IndexedDB `afriklang.campaign.outbox`):
+  saved the moment the speaker submits, then sent in the background, audio first, metadata second,
+  each step remembered so neither is repeated without need. Retries back off (5 s to 5 min);
+  "campaign paused" and similar hold the take for later; a take the dashboard refuses is removed and
+  the mission comes back to redo. A cross-tab lock keeps two tabs from sending the same take. An
+  upload whose answer was lost is sent again, so Sayari may hold two copies with the same
+  `source_sha256`; the dashboard stores the recording once.
 
 ## 3. Setup, in order
 
@@ -117,11 +145,26 @@ Do this with staff accounts before inviting anyone:
 | `deploy/campaigns-single-file.ts` | Generated one-file build for the dashboard editor |
 | `src/lib/campaign/` | Auth client, bridge API client, link-token handling, hooks, flow logic |
 | `src/lib/audio/analyze.ts` | Level, peak, silence, sha-256 of a take; the same rules the dashboard applies |
-| `src/app/campaign/**` | The screens: home/claim, campaign hub, recording |
+| `src/app/campaign/**` | The screens: home/claim, campaign page, studio, history |
+| `src/lib/campaign/cache.ts`, `queries.ts` | Read cache and the local edits after a write |
+| `src/lib/campaign/outbox*.ts` | Takes waiting on the phone and the background sender |
+| `src/lib/campaign/studio-flow.ts`, `view.ts`, `activity.ts` | Studio order and timing, screen facts, local activity log |
+| `src/lib/campaign/dev-mock.ts` | Pretend backend for trying the app (development only) |
 | `src/components/campaign/**` | Screen components |
 | `src/messages/campaign/*.{en,fr}.json` | Strings, one file per area, English and French |
 
-## 7. Tests
+## 7. Try it without a backend
+
+```bash
+NEXT_PUBLIC_CAMPAIGN_MOCK=1 NEXT_PUBLIC_SUPABASE_URL=https://mock.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=mock npx next dev --webpack
+```
+
+Opens signed in as a fake speaker with one Wolof campaign of 12 missions (setup not done yet). Audio
+uploads are accepted locally. In the browser console: `__afkMock.review()` plays the reviewer (first
+submitted take sent back, the others accepted), `__afkMock.reset()` starts over. Never active in a
+production build.
+
+## 8. Tests
 
 ```bash
 npx vitest run --config vitest.campaign.config.ts
@@ -133,12 +176,14 @@ audio measurements, error mapping, the screens' decision logic, and English/Fren
 **Not covered by automated tests:** a real microphone, real Google sign-in, and the live Edge Function
 runtime. Check those by hand (section 4).
 
-## 8. Known limits
+## 9. Known limits
 
 - Google is the only sign-in; the functional spec also asks for phone or email with a code. The bridge
   keys on the user id, so changing the sign-in method changes nothing on the dashboard side.
 - Two-device capture (one channel per speaker) is not supported; conversations are one phone, mono.
 - Recording status after upload (pre-annotated, accepted, rejected) is set by the dashboard; the app
   only shows it.
-- A take that was recorded but not yet submitted is lost if the contributor leaves the screen.
+- A take recorded but not yet submitted (still on the review screen) is lost if the speaker leaves;
+  the app asks first. Once submitted it is safe on the phone.
+- Takes waiting on the phone are sent while the app is open (no background sync when it is closed).
 - The french copy of the invitation and reminder emails (dashboard side) is not reviewed by a native speaker.

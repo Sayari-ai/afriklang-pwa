@@ -1,0 +1,154 @@
+{
+  "shell": {
+    "missions": "Missions",
+    "history": "Historique",
+    "account": "Mon compte",
+    "speakerId": "Votre identifiant de locuteur",
+    "speakerIdHelp": "Seul cet identifiant accompagne vos enregistrements, jamais votre nom.",
+    "signedInAs": "Connecté avec {email}",
+    "language": "Langue de l'application",
+    "signOut": "Se déconnecter",
+    "signOutPending": "{n, plural, one {# enregistrement attend} other {# enregistrements attendent}} encore sur ce téléphone. Ils restent ici et seront envoyés à votre prochaine connexion avec ce compte. Se déconnecter quand même ?",
+    "offline": "Hors ligne : vos données enregistrées s'affichent",
+    "close": "Fermer"
+  },
+  "home": {
+    "hello": "Bonjour !",
+    "intro": "Merci de prêter votre voix à votre langue.",
+    "stats": {
+      "accepted": "Acceptés",
+      "inReview": "En vérification",
+      "streak": "{n, plural, =0 {Pas encore de série} one {# jour d'affilée} other {# jours d'affilée}}"
+    },
+    "yourMissions": "Vos missions",
+    "noMissionsTitle": "Aucune mission pour vous pour l'instant",
+    "noMissionsBody": "Quand l'équipe vous attribuera des enregistrements, ils apparaîtront ici. En attendant, voici ce que vous avez déjà fait.",
+    "seeHistory": "Voir tout mon historique",
+    "recent": "Activité récente"
+  },
+  "card": {
+    "daysLeft": "{n, plural, =0 {Se termine aujourd'hui} one {# jour restant} other {# jours restants}}",
+    "ended": "Terminée",
+    "recorded": "{done} sur {total} enregistrées",
+    "start": "Commencer à enregistrer",
+    "continue": "Continuer · {n} restantes",
+    "setup": "Terminez la préparation pour commencer",
+    "setupStep": "Étape {n} sur 3",
+    "blocked": "Vérifiez votre profil",
+    "allSent": "Tout est enregistré. En cours de vérification.",
+    "view": "Voir mes enregistrements",
+    "details": "Détails",
+    "waiting": "{n, plural, one {# prise en attente d'envoi} other {# prises en attente d'envoi}}",
+    "paused": "En pause",
+    "closed": "Terminée",
+    "redo": "{n, plural, one {# à refaire} other {# à refaire}}"
+  },
+  "outbox": {
+    "sending": "Envoi de vos enregistrements…",
+    "waiting": "{n, plural, one {# enregistrement en attente d'envoi} other {# enregistrements en attente d'envoi}}",
+    "offline": "Vous êtes hors ligne. Ils seront envoyés dès votre reconnexion.",
+    "retrying": "Nous réessaierons automatiquement.",
+    "held": "{n, plural, one {# enregistrement en attente} other {# enregistrements en attente}}",
+    "failed": "{n, plural, one {# enregistrement n'a pas pu être envoyé} other {# enregistrements n'ont pas pu être envoyés}}",
+    "sendNow": "Envoyer maintenant",
+    "discard": "Supprimer",
+    "discardConfirm": "Supprimer cet enregistrement de votre téléphone ? Vous pourrez refaire la mission.",
+    "recordAgain": "Recommencer",
+    "state": {
+      "pending": "En attente d'envoi",
+      "sending": "Envoi…",
+      "held": "En attente",
+      "failed": "Non envoyé"
+    },
+    "reason": {
+      "paused": "la campagne est en pause",
+      "consent": "un consentement est nécessaire",
+      "signin": "reconnectez-vous pour l'envoyer",
+      "partner": "le consentement de votre partenaire manque",
+      "closed": "la campagne est terminée",
+      "file": "le fichier a été refusé ; enregistrez-le à nouveau",
+      "server": "le service rencontre un problème",
+      "network": "la connexion a échoué",
+      "generic": "il n'a pas pu être enregistré"
+    }
+  },
+  "hub": {
+    "before": "Avant de commencer",
+    "steps": {
+      "profile": "À propos de vous",
+      "account": "Votre consentement",
+      "campaign": "Consentement de la campagne"
+    },
+    "done": "Fait",
+    "current": "Maintenant",
+    "start": "Commencer à enregistrer",
+    "toRecord": "{n, plural, one {# mission à enregistrer} other {# missions à enregistrer}}",
+    "allRecorded": "Tout est enregistré. L'équipe vérifie vos prises.",
+    "tips": {
+      "title": "Bien enregistrer",
+      "quiet": "Une pièce calme, sans télé ni ventilateur",
+      "distance": "Téléphone à {min}–{max} cm de la bouche",
+      "distanceDefault": "Téléphone à une main de la bouche",
+      "wait": "Attendez « Parlez »",
+      "listen": "Réécoutez avant d'envoyer"
+    },
+    "tabs": {
+      "todo": "À enregistrer",
+      "redo": "À refaire",
+      "sent": "En vérification",
+      "accepted": "Acceptées"
+    },
+    "empty": {
+      "todo": "Plus rien à enregistrer ici.",
+      "redo": "Rien à refaire. Bravo !",
+      "sent": "Aucun enregistrement en attente de vérification.",
+      "accepted": "Aucun enregistrement accepté pour l'instant."
+    },
+    "partnerWait": "En attente du consentement de votre partenaire",
+    "more": "Plus d'options"
+  },
+  "history": {
+    "title": "Mon historique",
+    "intro": "Tout ce que vous avez enregistré, et ce qu'il en est advenu.",
+    "stats": {
+      "recorded": "Enregistrés",
+      "accepted": "Acceptés",
+      "inReview": "En vérification",
+      "toRedo": "À refaire"
+    },
+    "onPhone": "Sur ce téléphone",
+    "recordings": "Mes enregistrements",
+    "filters": {
+      "all": "Tous",
+      "accepted": "Acceptés",
+      "review": "En vérification",
+      "redo": "À refaire"
+    },
+    "empty": "Aucun enregistrement ici pour l'instant.",
+    "nothingYet": "Vous n'avez encore rien enregistré. Vos enregistrements et leurs résultats apparaîtront ici.",
+    "timeline": "Activité récente",
+    "noActivity": "Aucune activité sur ce téléphone pour l'instant.",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "activity": {
+      "sent": "{code} envoyée",
+      "rejected": "{code} refusée par la vérification automatique ({reason})",
+      "failed": "{code} n'a pas pu être envoyée",
+      "profile": "Profil enregistré",
+      "consent": "Consentement signé",
+      "withdrawn": "Retrait d'une campagne"
+    },
+    "reasons": {
+      "duration": "durée",
+      "level": "volume",
+      "silence": "silence",
+      "other": "autre"
+    },
+    "status": {
+      "submitted": "En vérification",
+      "accepted": "Accepté",
+      "rejected": "À refaire"
+    },
+    "loadError": "Impossible de charger les enregistrements de cette campagne."
+  }
+}
