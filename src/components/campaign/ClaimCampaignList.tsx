@@ -9,12 +9,9 @@
 import { CheckCircle2, Flame, Hourglass } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useEffect } from "react";
-import { cacheId, campaignCache } from "@/lib/campaign/cache";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
 import type { CampaignList } from "@/lib/campaign/api";
 import { useOutbox } from "@/lib/campaign/outbox-client";
-import { CAMPAIGNS } from "@/lib/campaign/queries";
 import { streakDays } from "@/lib/campaign/activity";
 import { hasMissions, totals } from "@/lib/campaign/view";
 import { ActivityTimeline, useActivity } from "./ActivityTimeline";
@@ -23,17 +20,7 @@ import { useFailureText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { OutboxPanel } from "./OutboxPanel";
 
-/** `data` is passed when a claim just returned it: it seeds the cache, so nothing is fetched twice. */
-export function ClaimCampaignList({ data }: { data?: CampaignList }) {
-  const session = useCampaignSession();
-  const userId = session.status === "signedIn" ? session.userId : null;
-  useEffect(() => {
-    if (data && userId) campaignCache.put(cacheId(userId, CAMPAIGNS), data);
-  }, [data, userId]);
-  return <SpeakerHome />;
-}
-
-function SpeakerHome() {
+export function ClaimCampaignList() {
   const t = useTranslations("campaign.claim.home");
   const failureText = useFailureText();
   const common = useTranslations("campaign.common");

@@ -6,10 +6,11 @@ import { ClaimCampaignList } from "@/components/campaign/ClaimCampaignList";
 import { ClaimFailureCard } from "@/components/campaign/ClaimFailureCard";
 import { ClaimBrokenLink, ClaimSpinner } from "@/components/campaign/ClaimNotice";
 import { SignInCard } from "@/components/campaign/SignInCard";
-import { claimLink, type CampaignList } from "@/lib/campaign/api";
+import { claimLink } from "@/lib/campaign/api";
 import { claimOutcome, nextView, type ClaimState } from "@/lib/campaign/claim-flow";
 import { useCampaignSession } from "@/lib/campaign/hooks";
 import { clearToken, takeLinkFromLocation } from "@/lib/campaign/link-token";
+import { loadCampaigns } from "@/lib/campaign/queries";
 
 export default function CampaignLandingPage() {
   const t = useTranslations("campaign.claim");
@@ -19,7 +20,6 @@ export default function CampaignLandingPage() {
   // null until the URL / storage has been read (never during server render).
   const [token, setToken] = useState<string | null | undefined>(undefined);
   const [claim, setClaim] = useState<ClaimState>({ status: "idle" });
-  const [claimed, setClaimed] = useState<CampaignList | null>(null);
   const [attempt, setAttempt] = useState(0);
   // The URL carried a broken invitation (cut when copied): say so rather than ignore it.
   const [brokenLink, setBrokenLink] = useState(false);
@@ -47,6 +47,7 @@ export default function CampaignLandingPage() {
 
   useEffect(() => {
     if (session.status !== "signedIn" || !token) return;
+    const userId = session.userId;
     const id = `${token}:${attempt}`;
     if (started.current === id) return;
     started.current = id;
@@ -55,14 +56,15 @@ export default function CampaignLandingPage() {
     void claimLink(token).then((res) => {
       if (res.ok) {
         clearToken();
-        setClaimed(res.data);
-        setClaim({ status: "done" });
+        // The claim answers with one campaign; the home needs the whole list, which the claim
+        // may just have changed: refetch it before showing the home.
+        void loadCampaigns(userId, true).finally(() => setClaim({ status: "done" }));
         return;
       }
       if (claimOutcome(res).clearToken) clearToken();
       setClaim({ status: "failed", failure: res });
     });
-  }, [session.status, token, attempt]);
+  }, [session, token, attempt]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
   const continueWithoutToken = useCallback(() => {
@@ -87,7 +89,7 @@ export default function CampaignLandingPage() {
     case "claimFailed":
       return claim.status === "failed" ? <ClaimFailureCard failure={claim.failure} email={email} onRetry={retry} onContinue={continueWithoutToken} /> : null;
     case "claimed":
-      return claimed ? <ClaimCampaignList data={claimed} /> : null;
+      return <ClaimCampaignList />;
     case "home":
       return <ClaimCampaignList />;
   }
