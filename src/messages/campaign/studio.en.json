@@ -1,0 +1,122 @@
+{
+  "title": "Recording studio",
+  "close": "Close the studio",
+  "closeConfirm": "Leave the studio? The take you just recorded has not been submitted and will be lost.",
+  "missionOf": "Mission {n} of {total}",
+  "textSize": "Text size",
+  "textSmaller": "Smaller text",
+  "textBigger": "Bigger text",
+  "session": "{n, plural, =0 {No take yet this session} one {# take this session} other {# takes this session}}",
+  "sessionGoal": "{n} of {goal} this session",
+  "type": {
+    "read": "Read aloud",
+    "spontaneous": "Speak freely",
+    "conversational": "Conversation"
+  },
+  "prompt": {
+    "read": "Read this sentence aloud",
+    "spontaneous": "Talk about this, in your own words",
+    "conversational": "Have this conversation with your partner",
+    "partner": "Partner: {id}",
+    "onePhone": "One phone records, both of you are credited. Put it where both voices are heard.",
+    "length": "{min} to {max} seconds",
+    "redo": "Asked again",
+    "redoReason": "Why it came back: {reason}"
+  },
+  "phase": {
+    "idle": "Tap the button and wait for “Speak now”",
+    "countdown": "Get ready…",
+    "lead": "Stay silent…",
+    "speaking": "Speak now",
+    "tail": "Stay silent a moment…",
+    "analyzing": "Checking your take…"
+  },
+  "button": {
+    "record": "Record",
+    "stop": "Stop",
+    "cancel": "Cancel"
+  },
+  "hint": {
+    "tooEarly": "Keep going: at least {min} seconds.",
+    "quiet": "We can barely hear you. Come a little closer or speak up.",
+    "good": "Sounds good",
+    "space": "Tip: press Space to record and stop, Enter to submit."
+  },
+  "review": {
+    "title": "Listen back",
+    "play": "Play",
+    "pause": "Pause",
+    "length": "{time} recorded",
+    "again": "Record again",
+    "submit": "Submit & next",
+    "submitLast": "Submit",
+    "preparing": "Saving…"
+  },
+  "problem": {
+    "title": "Let's try that again",
+    "silent": "No sound reached the app. Check the microphone is not covered or muted, then speak clearly.",
+    "too_short": "Too short: please speak for at least {min} seconds.",
+    "too_long": "Too long: please keep it under {max} seconds.",
+    "too_quiet": "A bit too quiet. Hold the phone closer to your mouth and speak up.",
+    "clipped": "Too loud, the sound is distorted. Hold the phone a little further away.",
+    "silence": "Leave a short silence before and after you speak: wait for “Speak now”, and stay silent a moment after you finish.",
+    "again": "Record again"
+  },
+  "saved": {
+    "flash": "Saved! It will be sent automatically.",
+    "flashOffline": "Saved on your phone. It will be sent when you are back online."
+  },
+  "skip": "Skip for now",
+  "mic": {
+    "permission-denied": "The microphone is blocked. Allow microphone access for this app in your browser settings, then try again.",
+    "no-mic": "No microphone was found. Check your device, then try again.",
+    "unsupported": "This browser cannot record audio. Open the app in a recent Chrome or Safari.",
+    "internal": "Recording could not start. Close other apps that use the microphone, then try again.",
+    "stopFailed": "The take could not be finished: no sound reached the app. Check the microphone, then record again.",
+    "prepare": "Your take could not be prepared on this device. Try again, or update your browser."
+  },
+  "goal": {
+    "title": "Session goal reached!",
+    "body": "{n} takes recorded. Take a short break, drink some water, then carry on if you like.",
+    "keepGoing": "Keep going",
+    "finish": "Finish for now"
+  },
+  "done": {
+    "title": "All recorded!",
+    "body": "You have recorded every mission available right now. Thank you! Your takes are checked by the team; you will see the results in your history.",
+    "sessionCount": "{n, plural, one {# take} other {# takes}} this session",
+    "back": "Back to my campaign"
+  },
+  "guard": {
+    "notReady": {
+      "title": "Not ready to record yet",
+      "body": "Finish the steps on the campaign page first."
+    },
+    "paused": {
+      "title": "Recording is paused",
+      "body": "The campaign is paused. Recording reopens when it resumes."
+    },
+    "closed": {
+      "title": "Campaign ended",
+      "body": "This campaign no longer accepts recordings."
+    },
+    "partner": {
+      "title": "Waiting for your partner",
+      "body": "Your conversation partner has not finished their consent yet."
+    },
+    "back": "Back to my campaign"
+  },
+  "status": {
+    "idle": "Ready to record",
+    "countdown": "Recording starts in a moment",
+    "lead": "Recording. Stay silent.",
+    "speaking": "Recording. Speak now.",
+    "tail": "Recording. Stay silent.",
+    "analyzing": "Checking your take",
+    "review": "Take finished. Listen and submit.",
+    "problem": "The take has a problem",
+    "saving": "Saving your take",
+    "goal": "Session goal reached",
+    "done": "Everything is recorded"
+  }
+}

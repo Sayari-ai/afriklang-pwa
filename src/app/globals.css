@@ -122,3 +122,25 @@ body {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+/* Campaign studio celebrations */
+@keyframes afk-confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(540deg); opacity: 0.2; }
+}
+.afk-confetti { animation-name: afk-confetti-fall; animation-timing-function: cubic-bezier(.3,.6,.5,1); animation-fill-mode: forwards; }
+
+@keyframes afk-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.afk-pop { animation: afk-pop 380ms ease-out both; }
+@keyframes afk-slide-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.afk-slide-in { animation: afk-slide-in 260ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .afk-pop, .afk-slide-in { animation: none; }
+}

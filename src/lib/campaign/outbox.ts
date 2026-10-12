@@ -45,7 +45,11 @@ export type OutboxDeps = {
 /** An error from `upload` that carries an HTTP status (AudioUploadError has this shape). */
 type UploadErrorLike = { status?: number; isNetwork?: boolean };
 
-const summary = ({ blob: _blob, ...rest }: OutboxItem): OutboxSummary => rest;
+const summary = (item: OutboxItem): OutboxSummary => {
+  const { blob, ...rest } = item;
+  void blob;
+  return rest;
+};
 
 export function createOutbox(deps: OutboxDeps) {
   const now = deps.now ?? Date.now;

@@ -9,7 +9,7 @@ import {
 } from "./locales";
 
 /** One message file per screen group (see src/messages/campaign). */
-const CAMPAIGN_AREAS = ["common", "claim", "flow", "record"] as const;
+const CAMPAIGN_AREAS = ["common", "claim", "flow", "record", "studio", "home"] as const;
 
 /**
  * Per-request locale resolver for next-intl.

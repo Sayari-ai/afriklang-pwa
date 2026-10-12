@@ -12,8 +12,7 @@ export const metadata: Metadata = {
     default: "Afriklang",
     template: "%s · Afriklang",
   },
-  description:
-    "Learn African languages through bite-sized, gamified speaking lessons.",
+  description: "Record your language for Afriklang: missions, recording studio and history.",
   // Browser tab favicon. Points at the same SVG used by the PWA
   // manifest so the brand mark is consistent across install surfaces.
   icons: {

@@ -11,14 +11,17 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Afriklang",
     short_name: "Afriklang",
-    description:
-      "Learn African languages through bite-sized, gamified speaking lessons.",
-    start_url: "/",
+    description: "Record your language for Afriklang: missions, recording studio and history.",
+    start_url: "/campaign",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
     background_color: "#00539F",
     theme_color: "#00539F",
+    shortcuts: [
+      { name: "My missions", short_name: "Missions", url: "/campaign" },
+      { name: "My history", short_name: "History", url: "/campaign/history" },
+    ],
     icons: [
       // Afriklang brand logo. SVG is fully scalable so a single asset
       // covers every install surface (home screen, app switcher, etc.).
