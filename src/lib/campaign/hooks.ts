@@ -7,26 +7,38 @@
  *   useCampaignList()         the contributor + one card per campaign
  *   useCampaignMissions(id)   one campaign's card + its missions
  *
- * Each data hook returns { state, ..., error, reload }. `state` is "waiting" until the
- * session is known, "signedOut" without a session, then "loading" -> "ready" | "error".
- * A failure is a CampaignFailure (with the dashboard's code), never a thrown error.
+ * Reads go through the shared cache (cache.ts): one call per key however many screens ask, the
+ * last answer painted at once (also offline), refreshed in the background when the app comes back
+ * to the foreground or the network returns.
+ *
+ * Each data hook returns { state, data, error, reload }. `state` is "waiting" until the session is
+ * known, "signedOut" without a session, "loading" until the first answer, then "ready" | "error".
+ * "ready" also says whether a refresh is running and whether the last one failed (the data shown
+ * is then the saved copy).
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import type { CampaignList, MissionList } from "./api";
 import { getCampaignAuth, isCampaignAuthConfigured } from "./auth-client";
-import { getMissions, listCampaigns, type CampaignList, type MissionList } from "./api";
+import { cacheId, campaignCache, type Entry } from "./cache";
 import { needsSignIn } from "./errors";
+import { CAMPAIGNS, loadCampaigns, loadMissions, missionsKey } from "./queries";
 import type { CampaignFailure } from "./types";
 
 export type SessionState = { status: "waiting" } | { status: "signedOut" } | { status: "signedIn"; email: string | null; userId: string };
 
+let lastSession: SessionState | null = null;
+
 export function useCampaignSession(): SessionState {
-  const [state, setState] = useState<SessionState>(isCampaignAuthConfigured ? { status: "waiting" } : { status: "signedOut" });
+  const [state, setState] = useState<SessionState>(() => lastSession ?? (isCampaignAuthConfigured ? { status: "waiting" } : { status: "signedOut" }));
   useEffect(() => {
     if (!isCampaignAuthConfigured) return;
     const auth = getCampaignAuth().auth;
-    const apply = (s: { user: { id: string; email?: string | null } } | null) =>
-      setState(s ? { status: "signedIn", email: s.user.email ?? null, userId: s.user.id } : { status: "signedOut" });
+    const apply = (s: { user: { id: string; email?: string | null } } | null) => {
+      const next: SessionState = s ? { status: "signedIn", email: s.user.email ?? null, userId: s.user.id } : { status: "signedOut" };
+      lastSession = next;
+      setState((prev) => (sameSession(prev, next) ? prev : next));
+    };
     void auth.getSession().then(({ data }) => apply(data.session));
     const { data } = auth.onAuthStateChange((_event, session) => apply(session));
     return () => data.subscription.unsubscribe();
@@ -34,44 +46,80 @@ export function useCampaignSession(): SessionState {
   return state;
 }
 
+const sameSession = (a: SessionState, b: SessionState) =>
+  a.status === b.status && (a.status !== "signedIn" || (b.status === "signedIn" && a.userId === b.userId && a.email === b.email));
+
 export type Loaded<T> =
   | { state: "waiting" | "signedOut" | "loading"; error: null; data: null; reload: () => void }
-  | { state: "ready"; error: null; data: T; reload: () => void }
+  | { state: "ready"; error: null; data: T; reload: () => void; refreshing: boolean; failure: CampaignFailure | null }
   | { state: "error"; error: CampaignFailure; data: null; reload: () => void };
 
-function useRemote<T>(load: (() => Promise<{ ok: true; data: T } | CampaignFailure>) | null, key: string): Loaded<T> {
+// ── Revalidation of what is on screen ────────────────────────────────────
+
+const active = new Map<string, { count: number; load: (force: boolean) => Promise<void> }>();
+let listening = false;
+
+function revalidateActive() {
+  for (const { load } of active.values()) void load(false);
+}
+
+function listenOnce() {
+  if (listening || typeof window === "undefined") return;
+  listening = true;
+  window.addEventListener("online", () => {
+    // Back online: what is shown may be old, fetch it whatever its age.
+    for (const { load } of active.values()) void load(true);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") revalidateActive();
+  });
+}
+
+function useCached<T>(key: string | null, load: ((userId: string, force: boolean) => Promise<void>) | null): Loaded<T> {
   const session = useCampaignSession();
-  const [version, setVersion] = useState(0);
-  const [result, setResult] = useState<{ key: string; value: { ok: true; data: T } | CampaignFailure } | null>(null);
-  const reload = useCallback(() => setVersion((v) => v + 1), []);
-  const signedIn = session.status === "signedIn";
+  const userId = session.status === "signedIn" ? session.userId : null;
+  const id = userId && key ? cacheId(userId, key) : null;
+
+  const entry = useSyncExternalStore(
+    campaignCache.subscribe,
+    () => (id ? campaignCache.read<T>(id) : null),
+    () => null,
+  ) as Entry<T> | null;
 
   useEffect(() => {
-    if (!signedIn || !load) return;
-    let cancelled = false;
-    void load().then((value) => {
-      if (!cancelled) setResult({ key: `${key}:${version}`, value });
-    });
+    if (!id || !userId || !load) return;
+    listenOnce();
+    const run = (force: boolean) => load(userId, force);
+    const slot = active.get(id) ?? { count: 0, load: run };
+    slot.count++;
+    active.set(id, slot);
+    void run(false);
     return () => {
-      cancelled = true;
+      slot.count--;
+      if (slot.count <= 0) active.delete(id);
     };
-    // `load` is rebuilt every render; `key` + `version` say when to fetch again.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signedIn, key, version]);
+  }, [id, userId, load]);
+
+  const reload = useCallback(() => {
+    if (userId && load) void load(userId, true);
+  }, [userId, load]);
 
   if (session.status === "waiting") return { state: "waiting", error: null, data: null, reload };
   if (session.status === "signedOut") return { state: "signedOut", error: null, data: null, reload };
-  // Keep showing the previous data while a reload is in flight; only a different key resets to loading.
-  if (!result || !result.key.startsWith(`${key}:`)) return { state: "loading", error: null, data: null, reload };
-  const value = result.value;
-  if (!value.ok) {
-    // A rejected session is "signed out" as far as the screens are concerned.
-    if (needsSignIn(value.code)) return { state: "signedOut", error: null, data: null, reload };
-    return { state: "error", error: value, data: null, reload };
-  }
-  return { state: "ready", error: null, data: value.data, reload };
+  if (!entry) return { state: "loading", error: null, data: null, reload };
+  // A rejected session is "signed out" as far as the screens are concerned.
+  if (entry.failure && needsSignIn(entry.failure.code)) return { state: "signedOut", error: null, data: null, reload };
+  if (entry.data != null) return { state: "ready", error: null, data: entry.data, reload, refreshing: entry.refreshing, failure: entry.failure };
+  if (entry.failure && !entry.refreshing) return { state: "error", error: entry.failure, data: null, reload };
+  return { state: "loading", error: null, data: null, reload };
 }
 
-export const useCampaignList = (): Loaded<CampaignList> => useRemote(listCampaigns, "list");
+const listLoader = (userId: string, force: boolean) => loadCampaigns(userId, force);
 
-export const useCampaignMissions = (campaignId: string): Loaded<MissionList> => useRemote(() => getMissions(campaignId), `missions:${campaignId}`);
+export const useCampaignList = (): Loaded<CampaignList> => useCached<CampaignList>(CAMPAIGNS, listLoader);
+
+/** `enabled: false` reads the saved copy only (the bridge refuses missions before the consents). */
+export function useCampaignMissions(campaignId: string, enabled = true): Loaded<MissionList> {
+  const loader = useCallback((userId: string, force: boolean) => loadMissions(userId, campaignId, force), [campaignId]);
+  return useCached<MissionList>(missionsKey(campaignId), enabled ? loader : null);
+}
