@@ -17,8 +17,10 @@ import type {
   ContributorView,
   Mission,
   NextStep,
+  PoolView,
   ProfileInput,
   RecordingMetadata,
+  Rewards,
 } from "./types";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -158,7 +160,10 @@ async function send<T>(token: string, action: string, fields: Record<string, unk
 export type CampaignList = { contributor: ContributorView; campaigns: CampaignCard[] };
 /** A claim answers with the ONE campaign the invitation was for, not the whole list. */
 export type ClaimResult = { contributor: ContributorView; campaign: CampaignCard };
-export type MissionList = { campaign: CampaignCard; missions: Mission[]; rewards: { accepted: number } };
+export type MissionList = { campaign: CampaignCard; missions: Mission[]; rewards: Rewards };
+/** A draw answers with the NEW missions only, and the speaker's pool state. */
+export type DrawResult = { missions: Mission[]; pool: PoolView };
+export type ReturnResult = { returned: number; pool: Pick<PoolView, "open" | "refill_below"> };
 
 /** The invitation link: bind this account to the contributor it was sent to. */
 export const claimLink = (token: string, deviceId?: string) => call<ClaimResult>("claim", { token, ...(deviceId ? { device_id: deviceId } : {}) });
@@ -170,3 +175,7 @@ export const withdrawConsent = (campaignId: string) => call<{ withdrawn: true }>
 export const getMissions = (campaignId: string) => call<MissionList>("missions", { campaign_id: campaignId });
 export const submitRecording = (missionId: string, recording: RecordingMetadata) =>
   call<{ recording_id: string; mission_status: string; duplicate: boolean }>("submit", { mission_id: missionId, recording });
+/** Pool campaigns: draw a leased batch. Safe to repeat: the dashboard never draws beyond the batch size. */
+export const drawMissions = (campaignId: string) => call<DrawResult>("draw", { campaign_id: campaignId });
+/** Pool campaigns: give back open missions the speaker will not record (at most 200 per call). */
+export const returnMissions = (campaignId: string, missionIds: string[]) => call<ReturnResult>("return", { campaign_id: campaignId, mission_ids: missionIds });
