@@ -27,8 +27,10 @@ export function getCampaignAuth(): SupabaseClient {
       flowType: "pkce",
       persistSession: true,
       autoRefreshToken: true,
-      // Only the campaign area's own sign-in returns here; the app's other client handles the rest.
-      detectSessionInUrl: (url) => url.pathname.startsWith("/campaign"),
+      // Must stay `true`, not a function: supabase-js treats a function as the *implicit*-grant
+      // test, so a PKCE "?code=" would be rejected and never exchanged (endless sign-in screen).
+      // Only codes whose verifier this client stored (under its own storageKey) are exchanged.
+      detectSessionInUrl: true,
       storageKey: "afriklang.campaign.auth.v1",
     },
   });
