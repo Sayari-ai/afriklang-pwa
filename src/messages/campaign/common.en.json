@@ -46,7 +46,7 @@
   "pool": {
     "drawing": "Getting missions for you…",
     "getMore": "Get more missions",
-    "batchDone": "You have recorded your whole batch. Get more missions to keep going.",
+    "batchDone": "Nothing left to record in your batch. Get more missions to keep going.",
     "drawFailed": "We could not get new missions. Check your connection and try again.",
     "leaseUntil": "Record these by {date}. Missions not sent by then go to other speakers.",
     "leaseSoon": "{n, plural, one {# hour} other {# hours}} left to record these. Missions not sent in time go to other speakers.",
