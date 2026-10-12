@@ -2,8 +2,14 @@
 
 import type { CampaignCard, NextStep } from "./types";
 
-/** A campaign has something for the speaker only once missions were assigned to them. */
-export const hasMissions = (c: Pick<CampaignCard, "progress">) => c.progress.total > 0;
+/**
+ * A campaign has something for the speaker once missions were assigned to them (planned), or,
+ * for a pool campaign, as long as it is not over: its missions are drawn only once the speaker is
+ * set up, so its card must show from the first setup step on. A paused or ended pool campaign
+ * from which nothing was drawn has nothing to show.
+ */
+export const hasMissions = (c: Pick<CampaignCard, "progress" | "dispatch" | "next_step">) =>
+  c.progress.total > 0 || (c.dispatch === "pool" && c.next_step !== "paused" && c.next_step !== "closed");
 
 /** Left to record (to do + to redo). */
 export const openCount = (c: Pick<CampaignCard, "progress">) => c.progress.todo + c.progress.rejected;

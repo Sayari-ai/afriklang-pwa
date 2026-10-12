@@ -18,7 +18,9 @@
     "stats": {
       "accepted": "Accepted",
       "inReview": "In review",
-      "streak": "{n, plural, =0 {No streak yet} one {# day in a row} other {# days in a row}}"
+      "streak": "{n, plural, =0 {No streak yet} one {# day in a row} other {# days in a row}}",
+      "acceptedTime": "Accepted audio",
+      "inReviewTime": "In review"
     },
     "yourMissions": "Your missions",
     "noMissionsTitle": "No missions for you right now",
@@ -41,7 +43,11 @@
     "waiting": "{n, plural, one {# take waiting to send} other {# takes waiting to send}}",
     "paused": "Paused",
     "closed": "Ended",
-    "redo": "{n, plural, one {# to redo} other {# to redo}}"
+    "redo": "{n, plural, one {# to redo} other {# to redo}}",
+    "sent": "{n, plural, one {# recording sent} other {# recordings sent}}",
+    "getMissions": "Get missions to record",
+    "paid": "{time} accepted",
+    "noNewMissions": "No new missions for you"
   },
   "outbox": {
     "sending": "Sending your recordings…",
@@ -149,6 +155,7 @@
       "accepted": "Accepted",
       "rejected": "To redo"
     },
-    "loadError": "We could not load the recordings of this campaign."
+    "loadError": "We could not load the recordings of this campaign.",
+    "paid": "Accepted audio: {accepted} · In review: {pending}"
   }
 }

@@ -37,5 +37,48 @@
     "misconfigured": "The campaign service is not set up correctly. Please tell the Afriklang team.",
     "conflict": "This was changed in the meantime. Reload the page, then try again.",
     "rateLimitedWait": "Too many requests. Wait {s, plural, one {# second} other {# seconds}}, then try again."
+  },
+  "time": {
+    "hm": "{h} h {m} min",
+    "m": "{m} min",
+    "underMinute": "under 1 min"
+  },
+  "pool": {
+    "drawing": "Getting missions for you…",
+    "getMore": "Get more missions",
+    "batchDone": "Nothing left to record in your batch. Get more missions to keep going.",
+    "drawFailed": "We could not get new missions. Check your connection and try again.",
+    "leaseUntil": "Record these by {date}. Missions not sent by then go to other speakers.",
+    "leaseSoon": "{n, plural, one {# hour} other {# hours}} left to record these. Missions not sent in time go to other speakers.",
+    "leaseRow": "{n, plural, one {# hour left} other {# hours left}}",
+    "elsewhere": "You can keep recording in:",
+    "status": {
+      "cell_full": {
+        "title": "Enough recordings from your profile",
+        "body": "This campaign has enough recordings from speakers with your profile. Thank you! Finish the ones you have."
+      },
+      "campaign_full": {
+        "title": "This campaign is complete",
+        "body": "This campaign has all the recordings it needs. Thank you! Finish the ones you have."
+      },
+      "speaker_cap": {
+        "title": "You have reached the limit",
+        "body": "You have reached the most one speaker may record in this campaign. Thank you!"
+      },
+      "quality_hold": {
+        "title": "New missions are on hold",
+        "body": "Too many of your recent recordings were rejected. The team has been told and will be in touch."
+      }
+    },
+    "giveBack": "Give back the missions I will not record",
+    "giveBackHelp": "They go to other speakers at once. You can get new ones later.",
+    "giveBackConfirm": "Give back {n, plural, one {# mission} other {# missions}}? They go to other speakers.",
+    "givenBack": "{n, plural, =0 {Nothing was given back.} one {# mission given back.} other {# missions given back.}}",
+    "giveBackFailed": "We could not give the missions back. Try again."
+  },
+  "paid": {
+    "accepted": "Accepted audio",
+    "pending": "In review",
+    "help": "You are paid for each hour of accepted audio."
   }
 }

@@ -20,6 +20,19 @@ export type ContributorView = {
   profile: { complete: boolean; missing: string[]; values: ProfileValues | null };
 };
 
+/**
+ * How work reaches the speaker. "planned": every mission is assigned up front. "pool": the speaker
+ * draws small leased batches (missions/draw). A card from a dashboard older than pool dispatch has
+ * no `dispatch`: it is planned.
+ */
+export type Dispatch = "planned" | "pool";
+
+/**
+ * Pay per hour of accepted audio. `accepted`: count of accepted takes (kept for compatibility);
+ * `accepted_s`: their payable seconds; `pending_s`: seconds submitted but not reviewed yet.
+ */
+export type Rewards = { accepted: number; accepted_s?: number; pending_s?: number };
+
 export type ConsentView = { required_version: string | null; signed: boolean; signed_version: string | null; text_url: string | null };
 
 export type CampaignCard = {
@@ -31,7 +44,12 @@ export type CampaignCard = {
   language: { code: string; name: string; varieties: string[] };
   topic: { domain: string; sub_domain: string | null };
   deadline: string | null;
+  dispatch?: Dispatch;
+  /** Pool campaigns: draw again when the speaker holds fewer open missions than this. */
+  refill_below?: number | null;
+  /** Pool campaigns: `total` is what the speaker has drawn so far, not a fixed plan. */
   progress: { total: number; todo: number; submitted: number; accepted: number; rejected: number };
+  rewards?: Rewards;
   next_step: NextStep;
   blocked_reason: string | null;
   consents: { account: ConsentView; campaign: ConsentView };
@@ -54,6 +72,22 @@ export type Mission = {
   partner_speaker_id: string | null;
   partner_ready: boolean;
   recording: { status: "uploaded" | "pre_annotated" | "accepted" | "rejected"; rejection_reason: string | null } | null;
+  /** Pool missions: record and submit before then, or the mission goes back to the pool. Null (or absent) when planned. */
+  lease_until?: string | null;
+};
+
+/** Why a draw added nothing: not an error, a state to show. */
+export type PoolStatus = "ok" | "cell_full" | "campaign_full" | "speaker_cap" | "quality_hold";
+
+export type PoolView = {
+  status: PoolStatus;
+  /** Open missions the speaker now holds. */
+  open: number;
+  refill_below: number;
+  /** When the earliest open lease ends; null with nothing open. */
+  lease_until: string | null;
+  /** cell_full / campaign_full: the speaker's other campaigns where a draw would succeed now. */
+  elsewhere?: { campaign_id: string; title: string; code: string | null }[];
 };
 
 export type ProfileInput = {

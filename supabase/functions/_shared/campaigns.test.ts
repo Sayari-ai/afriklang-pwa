@@ -26,6 +26,8 @@ describe("buildForward", () => {
       withdraw: { campaign_id: CID },
       missions: { campaign_id: CID },
       submit: { mission_id: CID, recording: RECORDING },
+      draw: { campaign_id: CID },
+      return: { campaign_id: CID, mission_ids: [DEVICE] },
     };
     for (const [a, fields] of Object.entries(valid)) {
       const f = buildForward(a, fields, WHO);
@@ -81,8 +83,24 @@ describe("buildForward", () => {
     expect(buildForward("campaigns", [1, 2], WHO)).toMatchObject({ ok: true });
   });
 
+  it("pool calls: draw needs the campaign, return a list of mission ids (deduplicated, at most 200)", () => {
+    expect(buildForward("draw", { campaign_id: CID.toUpperCase(), user_id: DEVICE }, WHO)).toEqual({ ok: true, path: "missions/draw", body: { user_id: WHO.userId, campaign_id: CID } });
+    expect(buildForward("draw", {}, WHO)).toMatchObject({ fieldErrors: { campaign_id: "campaign_id is required" } });
+    expect(buildForward("return", { campaign_id: CID, mission_ids: [DEVICE.toUpperCase(), ` ${DEVICE} `] }, WHO)).toEqual({
+      ok: true,
+      path: "missions/return",
+      body: { user_id: WHO.userId, campaign_id: CID, mission_ids: [DEVICE] },
+    });
+    expect(buildForward("return", { campaign_id: CID }, WHO)).toMatchObject({ fieldErrors: { mission_ids: "mission_ids is required" } });
+    expect(buildForward("return", { campaign_id: CID, mission_ids: [] }, WHO)).toMatchObject({ fieldErrors: { mission_ids: expect.stringContaining("at least one") } });
+    expect(buildForward("return", { campaign_id: CID, mission_ids: DEVICE }, WHO)).toMatchObject({ fieldErrors: { mission_ids: expect.stringContaining("list") } });
+    expect(buildForward("return", { campaign_id: CID, mission_ids: [DEVICE, "nope"] }, WHO)).toMatchObject({ fieldErrors: { mission_ids: expect.stringContaining("uuids only") } });
+    expect(buildForward("return", { campaign_id: CID, mission_ids: [DEVICE, 5] }, WHO)).toMatchObject({ fieldErrors: { mission_ids: expect.stringContaining("uuids only") } });
+    expect(buildForward("return", { campaign_id: CID, mission_ids: Array(201).fill(DEVICE) }, WHO)).toMatchObject({ fieldErrors: { mission_ids: expect.stringContaining("at most 200") } });
+  });
+
   it("every action maps to a real dashboard route", () => {
-    expect(Object.values(ACTIONS).map((a) => a.path).sort()).toEqual(["", "claim", "consent", "consent/withdraw", "missions", "missions/submit", "profile"]);
+    expect(Object.values(ACTIONS).map((a) => a.path).sort()).toEqual(["", "claim", "consent", "consent/withdraw", "missions", "missions/draw", "missions/return", "missions/submit", "profile"]);
   });
 });
 
