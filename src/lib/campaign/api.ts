@@ -109,6 +109,32 @@ async function call<T>(action: string, fields: Record<string, unknown> = {}): Pr
   // Fail at once when the device says it has no network, rather than after the timeout.
   if (isOffline()) return { ok: false, status: 0, code: "offline", message: "" };
 
+  const first = await send<T>(token, action, fields);
+  if (first.ok || first.code !== "unauthorized") return first;
+
+  // "Unauthorized" while holding a session. Showing the sign-in screen now would loop for ever
+  // when the session is fine and the refusal comes from further down (the dashboard rejecting
+  // the Edge Function's key): Google sign-in succeeds, the same call fails, sign-in again...
+  // So renew the session once. If that fails the session really is dead: drop it, and the
+  // screens show sign-in. If it works and the call is still refused, report a service fault.
+  const auth = getCampaignAuth().auth;
+  let fresh: string | undefined;
+  try {
+    const { data, error } = await auth.refreshSession();
+    fresh = error ? undefined : data.session?.access_token;
+  } catch {
+    fresh = undefined;
+  }
+  if (!fresh) {
+    await auth.signOut({ scope: "local" }).catch(() => undefined);
+    return first;
+  }
+  const second = await send<T>(fresh, action, fields);
+  if (second.ok || second.code !== "unauthorized") return second;
+  return { ...second, code: "misconfigured" };
+}
+
+async function send<T>(token: string, action: string, fields: Record<string, unknown>): Promise<CampaignResult<T>> {
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/campaigns`, {
       method: "POST",
