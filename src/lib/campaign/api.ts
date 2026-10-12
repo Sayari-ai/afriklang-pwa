@@ -156,10 +156,12 @@ async function send<T>(token: string, action: string, fields: Record<string, unk
 }
 
 export type CampaignList = { contributor: ContributorView; campaigns: CampaignCard[] };
+/** A claim answers with the ONE campaign the invitation was for, not the whole list. */
+export type ClaimResult = { contributor: ContributorView; campaign: CampaignCard };
 export type MissionList = { campaign: CampaignCard; missions: Mission[]; rewards: { accepted: number } };
 
 /** The invitation link: bind this account to the contributor it was sent to. */
-export const claimLink = (token: string, deviceId?: string) => call<CampaignList>("claim", { token, ...(deviceId ? { device_id: deviceId } : {}) });
+export const claimLink = (token: string, deviceId?: string) => call<ClaimResult>("claim", { token, ...(deviceId ? { device_id: deviceId } : {}) });
 export const listCampaigns = () => call<CampaignList>("campaigns");
 export const saveProfile = (p: ProfileInput) => call<{ contributor: ContributorView; blocked: unknown[] }>("profile", { ...p });
 export const signConsent = (a: { type: "account" | "campaign"; campaignId?: string; version: string; locale: "en" | "fr" }) =>

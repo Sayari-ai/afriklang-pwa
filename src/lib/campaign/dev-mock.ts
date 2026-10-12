@@ -120,6 +120,7 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
   const list = () => ({ contributor: contributor(s), campaigns: [card(s)] });
   switch (body.action) {
     case "claim":
+      return json({ contributor: contributor(s), campaign: card(s) });
     case "campaigns":
       return json(list());
     case "profile":
