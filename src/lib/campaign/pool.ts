@@ -73,8 +73,10 @@ export type LastDraw = { at: number; status: PoolStatus | "error" | "returned"; 
 
 /** No automatic draw sooner than this after the previous one (the batch is full or just drawn). */
 export const DRAW_PAUSE_MS = 60_000;
-/** After a refusal (cell full, cap, hold), a failed call or a return, wait this long before asking again by itself. */
+/** After a refusal (cell full, cap, hold) or a return, wait this long before asking again by itself. */
 export const DRAW_BACKOFF_MS = 15 * 60_000;
+/** After a failed call (network, server), try again by itself after this. */
+export const DRAW_RETRY_MS = 2 * 60_000;
 
 /**
  * Should the app draw now, by itself? Only for a pool campaign that is open for recording, when
@@ -89,8 +91,9 @@ export function shouldDraw(input: { card: Pick<CampaignCard, "dispatch" | "refil
   if (!last) return true;
   const since = now - last.at;
   if (since < 0) return true; // the clock moved back: do not stay stuck
-  if (last.status !== "ok") return since >= DRAW_BACKOFF_MS;
-  return since >= DRAW_PAUSE_MS;
+  if (last.status === "ok") return since >= DRAW_PAUSE_MS;
+  if (last.status === "error") return since >= DRAW_RETRY_MS;
+  return since >= DRAW_BACKOFF_MS;
 }
 
 /** A refusal that means "no more work for you here for now" (as opposed to "your batch is full"). */

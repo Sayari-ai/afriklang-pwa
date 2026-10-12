@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DRAW_BACKOFF_MS,
   DRAW_PAUSE_MS,
+  DRAW_RETRY_MS,
   addDrawn,
   earliestLease,
   elsewhereOf,
@@ -84,10 +85,12 @@ describe("shouldDraw", () => {
     expect(shouldDraw({ ...base, online: false })).toBe(false);
   });
 
-  it("waits a minute after a draw, and longer after a refusal or a failure", () => {
+  it("waits a minute after a draw, two after a failed call, and longer after a refusal or a return", () => {
     expect(shouldDraw({ ...base, last: { at: NOW - DRAW_PAUSE_MS + 1, status: "ok", added: 0 } })).toBe(false);
     expect(shouldDraw({ ...base, last: { at: NOW - DRAW_PAUSE_MS, status: "ok", added: 0 } })).toBe(true);
-    for (const status of ["cell_full", "campaign_full", "speaker_cap", "quality_hold", "error", "returned"] as const) {
+    expect(shouldDraw({ ...base, last: { at: NOW - DRAW_RETRY_MS + 1, status: "error", added: 0 } })).toBe(false);
+    expect(shouldDraw({ ...base, last: { at: NOW - DRAW_RETRY_MS, status: "error", added: 0 } })).toBe(true);
+    for (const status of ["cell_full", "campaign_full", "speaker_cap", "quality_hold", "returned"] as const) {
       expect(shouldDraw({ ...base, last: { at: NOW - DRAW_PAUSE_MS, status, added: 0 } })).toBe(false);
       expect(shouldDraw({ ...base, last: { at: NOW - DRAW_BACKOFF_MS, status, added: 0 } })).toBe(true);
     }

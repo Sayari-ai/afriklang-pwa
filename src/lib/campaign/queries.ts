@@ -82,6 +82,15 @@ export function refreshCampaign(userId: string, campaignId?: string) {
 // ── Pool campaigns ───────────────────────────────────────────────────────
 
 const drawing = new Map<string, Promise<CampaignResult<DrawResult>>>();
+const drawListeners = new Set<() => void>();
+const drawChanged = () => drawListeners.forEach((l) => l());
+
+/** Whether a draw for this campaign is running (screens show it; see subscribeDrawing). */
+export const isDrawing = (userId: string, campaignId: string) => drawing.has(cacheId(userId, poolKey(campaignId)));
+export function subscribeDrawing(fn: () => void) {
+  drawListeners.add(fn);
+  return () => void drawListeners.delete(fn);
+}
 
 /** Codes after which the card itself has changed (paused, closed, consent needed...): reload it. */
 const CARD_CHANGED = new Set(["campaign_paused", "campaign_not_open", "campaign_closed", "not_assigned", "profile_incomplete", "blocked", "account_consent", "campaign_consent"]);
@@ -119,12 +128,17 @@ export function drawForCampaign(userId: string, campaignId: string): Promise<Cam
       }
       const pool = res.data.pool && typeof res.data.pool === "object" ? res.data.pool : null;
       campaignCache.put<PoolMemo>(memoId, { last: { at, status: pool?.status ?? "ok", added }, pool });
-      // The server's own list and counts (its order, the leases) replace the local merge.
-      if (added > 0) refreshCampaign(userId, campaignId);
+      // The server's own list and counts (its order, the leases) replace the local merge. Also when
+      // nothing was added but the server says the speaker holds open missions: the saved list is old.
+      if (added > 0 || (pool?.status === "ok" && (pool.open ?? 0) > 0)) refreshCampaign(userId, campaignId);
       return res;
     })
-    .finally(() => drawing.delete(memoId));
+    .finally(() => {
+      drawing.delete(memoId);
+      drawChanged();
+    });
   drawing.set(memoId, p);
+  drawChanged();
   return p;
 }
 

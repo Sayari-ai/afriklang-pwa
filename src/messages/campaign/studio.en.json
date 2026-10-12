@@ -85,7 +85,8 @@
     "title": "All recorded!",
     "body": "You have recorded every mission available right now. Thank you! Your takes are checked by the team; you will see the results in your history.",
     "sessionCount": "{n, plural, one {# take} other {# takes}} this session",
-    "back": "Back to my campaign"
+    "back": "Back to my campaign",
+    "batchTitle": "Batch recorded!"
   },
   "guard": {
     "notReady": {

@@ -65,6 +65,12 @@ describe("drawForCampaign", () => {
     expect(campaignCache.read<PoolMemo>(memoId).data!.last.added).toBe(1);
   });
 
+  it("nothing new but open missions on the server: the saved list is old, reload it", async () => {
+    api.drawMissions.mockResolvedValue({ ok: true, data: { missions: [], pool: { ...POOL, open: 6 } } });
+    await drawForCampaign(USER, CID);
+    expect(api.getMissions).toHaveBeenCalled();
+  });
+
   it("a refusal is remembered as such, with nothing added and no reload", async () => {
     api.drawMissions.mockResolvedValue({ ok: true, data: { missions: [], pool: { ...POOL, status: "cell_full", open: 0, elsewhere: [{ campaign_id: "c2", title: "B", code: "B" }] } } });
     await drawForCampaign(USER, CID);

@@ -18,7 +18,9 @@
     "stats": {
       "accepted": "Acceptés",
       "inReview": "En vérification",
-      "streak": "{n, plural, =0 {Pas encore de série} one {# jour d'affilée} other {# jours d'affilée}}"
+      "streak": "{n, plural, =0 {Pas encore de série} one {# jour d'affilée} other {# jours d'affilée}}",
+      "acceptedTime": "Audio accepté",
+      "inReviewTime": "En vérification"
     },
     "yourMissions": "Vos missions",
     "noMissionsTitle": "Aucune mission pour vous pour l'instant",
@@ -41,7 +43,11 @@
     "waiting": "{n, plural, one {# prise en attente d'envoi} other {# prises en attente d'envoi}}",
     "paused": "En pause",
     "closed": "Terminée",
-    "redo": "{n, plural, one {# à refaire} other {# à refaire}}"
+    "redo": "{n, plural, one {# à refaire} other {# à refaire}}",
+    "sent": "{n, plural, one {# enregistrement envoyé} other {# enregistrements envoyés}}",
+    "getMissions": "Obtenir des missions",
+    "paid": "{time} accepté",
+    "noNewMissions": "Pas de nouvelles missions pour vous"
   },
   "outbox": {
     "sending": "Envoi de vos enregistrements…",
@@ -149,6 +155,7 @@
       "accepted": "Accepté",
       "rejected": "À refaire"
     },
-    "loadError": "Impossible de charger les enregistrements de cette campagne."
+    "loadError": "Impossible de charger les enregistrements de cette campagne.",
+    "paid": "Audio accepté : {accepted} · En vérification : {pending}"
   }
 }

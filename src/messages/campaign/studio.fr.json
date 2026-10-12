@@ -85,7 +85,8 @@
     "title": "Tout est enregistré !",
     "body": "Vous avez enregistré toutes les missions disponibles pour l'instant. Merci ! L'équipe vérifie vos prises ; vous verrez les résultats dans votre historique.",
     "sessionCount": "{n, plural, one {# prise} other {# prises}} pendant cette séance",
-    "back": "Retour à ma campagne"
+    "back": "Retour à ma campagne",
+    "batchTitle": "Lot enregistré !"
   },
   "guard": {
     "notReady": {

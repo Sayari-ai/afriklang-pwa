@@ -37,5 +37,48 @@
     "misconfigured": "Le service des campagnes n'est pas correctement configuré. Merci de prévenir l'équipe Afriklang.",
     "conflict": "Ces informations ont changé entre-temps. Rechargez la page, puis réessayez.",
     "rateLimitedWait": "Trop de requêtes. Patientez {s, plural, one {# seconde} other {# secondes}}, puis réessayez."
+  },
+  "time": {
+    "hm": "{h} h {m} min",
+    "m": "{m} min",
+    "underMinute": "moins d'1 min"
+  },
+  "pool": {
+    "drawing": "Nous préparons vos missions…",
+    "getMore": "Obtenir d'autres missions",
+    "batchDone": "Vous avez enregistré tout votre lot. Obtenez d'autres missions pour continuer.",
+    "drawFailed": "Impossible d'obtenir de nouvelles missions. Vérifiez votre connexion et réessayez.",
+    "leaseUntil": "À enregistrer avant le {date}. Les missions non envoyées à temps passent à d'autres locuteurs.",
+    "leaseSoon": "Plus que {n, plural, one {# heure} other {# heures}} pour enregistrer ces missions. Celles non envoyées à temps passent à d'autres locuteurs.",
+    "leaseRow": "{n, plural, one {# heure restante} other {# heures restantes}}",
+    "elsewhere": "Vous pouvez continuer à enregistrer dans :",
+    "status": {
+      "cell_full": {
+        "title": "Assez d'enregistrements pour votre profil",
+        "body": "Cette campagne a assez d'enregistrements de locuteurs ayant votre profil. Merci ! Terminez ceux que vous avez."
+      },
+      "campaign_full": {
+        "title": "Cette campagne est complète",
+        "body": "Cette campagne a tous les enregistrements dont elle a besoin. Merci ! Terminez ceux que vous avez."
+      },
+      "speaker_cap": {
+        "title": "Vous avez atteint la limite",
+        "body": "Vous avez atteint le maximum qu'un locuteur peut enregistrer dans cette campagne. Merci !"
+      },
+      "quality_hold": {
+        "title": "Nouvelles missions suspendues",
+        "body": "Trop de vos enregistrements récents ont été refusés. L'équipe est prévenue et vous contactera."
+      }
+    },
+    "giveBack": "Rendre les missions que je n'enregistrerai pas",
+    "giveBackHelp": "Elles passent tout de suite à d'autres locuteurs. Vous pourrez en obtenir de nouvelles plus tard.",
+    "giveBackConfirm": "Rendre {n, plural, one {# mission} other {# missions}} ? Elles passeront à d'autres locuteurs.",
+    "givenBack": "{n, plural, =0 {Aucune mission rendue.} one {# mission rendue.} other {# missions rendues.}}",
+    "giveBackFailed": "Impossible de rendre les missions. Réessayez."
+  },
+  "paid": {
+    "accepted": "Audio accepté",
+    "pending": "En vérification",
+    "help": "Vous êtes payé pour chaque heure d'audio acceptée."
   }
 }

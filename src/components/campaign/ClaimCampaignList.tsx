@@ -13,12 +13,14 @@ import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
 import type { CampaignList } from "@/lib/campaign/api";
 import { useOutbox } from "@/lib/campaign/outbox-client";
 import { streakDays } from "@/lib/campaign/activity";
+import { totalPaidTime } from "@/lib/campaign/pool";
 import { hasMissions, totals } from "@/lib/campaign/view";
 import { ActivityTimeline, useActivity } from "./ActivityTimeline";
 import { CampaignCardView } from "./CampaignCardView";
 import { useFailureText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { OutboxPanel } from "./OutboxPanel";
+import { useTimeText } from "./PoolParts";
 
 export function ClaimCampaignList() {
   const t = useTranslations("campaign.claim.home");
@@ -52,6 +54,9 @@ function Home({ data }: { data: CampaignList }) {
   const activity = useActivity(userId);
   const withMissions = data.campaigns.filter(hasMissions);
   const sum = totals(data.campaigns);
+  // Speakers are paid per hour of accepted audio: show time when the dashboard sends it, counts otherwise.
+  const paid = totalPaidTime(data.campaigns);
+  const time = useTimeText();
   const streak = streakDays(activity);
   const waitingFor = (campaignId: string) => box.items.filter((i) => i.campaignId === campaignId && i.userId === userId).length;
 
@@ -65,8 +70,17 @@ function Home({ data }: { data: CampaignList }) {
         <h1 className="text-2xl font-black">{t("hello")}</h1>
         <p className="text-sm text-white/85">{t("intro")}</p>
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <Stat icon={<CheckCircle2 size={18} aria-hidden />} value={sum.accepted} label={t("stats.accepted")} />
-          <Stat icon={<Hourglass size={18} aria-hidden />} value={sum.submitted} label={t("stats.inReview")} />
+          {paid ? (
+            <>
+              <Stat icon={<CheckCircle2 size={18} aria-hidden />} value={time(paid.acceptedS)} label={t("stats.acceptedTime")} small />
+              <Stat icon={<Hourglass size={18} aria-hidden />} value={time(paid.pendingS)} label={t("stats.inReviewTime")} small />
+            </>
+          ) : (
+            <>
+              <Stat icon={<CheckCircle2 size={18} aria-hidden />} value={sum.accepted} label={t("stats.accepted")} />
+              <Stat icon={<Hourglass size={18} aria-hidden />} value={sum.submitted} label={t("stats.inReview")} />
+            </>
+          )}
           <Stat icon={<Flame size={18} aria-hidden className="text-yellow" />} value={streak} label={t("stats.streak", { n: streak })} />
         </dl>
       </section>
@@ -101,12 +115,12 @@ function Home({ data }: { data: CampaignList }) {
   );
 }
 
-function Stat({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
+function Stat({ icon, value, label, small = false }: { icon: React.ReactNode; value: number | string; label: string; small?: boolean }) {
   return (
     <div className="rounded-2xl bg-white/10 px-2 py-3">
       <dt className="sr-only">{label}</dt>
       <dd>
-        <span className="flex items-center justify-center gap-1 text-2xl font-black tabular-nums">
+        <span className={`flex items-center justify-center gap-1 font-black tabular-nums ${small ? "text-base leading-7" : "text-2xl"}`}>
           {icon}
           {value}
         </span>

@@ -8,6 +8,7 @@ import { useFailureText } from "@/components/campaign/CampaignHubParts";
 import { Studio } from "@/components/campaign/studio/Studio";
 import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
+import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 
 const dark = "flex h-dvh flex-col items-center justify-center gap-4 bg-[#001b36] px-6 text-center text-white";
 const pill = "inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-6 font-bold text-primary";
@@ -26,8 +27,14 @@ export default function StudioPage() {
   // saved copy. Once open, it stays open through later refreshes.
   const [opened, setOpened] = useState(false);
   const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  // Pool campaigns: missions whose lease ended are not recorded, and a low batch is topped up, by
+  // itself, before the studio opens (and again while recording, as the batch runs low).
+  const live = useLiveMissions(missions.state === "ready" ? missions.data.missions : null);
+  const cardNow = (list.state === "ready" ? list.data.campaigns.find((c) => c.campaign_id === id) : null) ?? (missions.state === "ready" ? missions.data.campaign : null);
+  const pool = usePool(cardNow, cardNow?.next_step === "ready" ? live : null, true);
   const stale = !opened && missions.state === "ready" && online && (missions.saved || missions.refreshing) && !missions.failure;
-  if (!opened && missions.state === "ready" && !stale) setOpened(true);
+  const filling = !opened && pool.pool && pool.pending;
+  if (!opened && missions.state === "ready" && !stale && !filling) setOpened(true);
   const back = (
     <Link href={`/campaign/${id}`} className={pill}>
       {t("guard.back")}
@@ -56,11 +63,11 @@ export default function StudioPage() {
       </div>
     );
   }
-  if (list.state !== "ready" || missions.state !== "ready" || session.status !== "signedIn" || stale) {
+  if (list.state !== "ready" || missions.state !== "ready" || session.status !== "signedIn" || stale || filling) {
     return (
       <div className={dark} role="status">
         <span aria-hidden className="size-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />
-        <p className="text-white/80">{tc("loading")}</p>
+        <p className="text-white/80">{filling ? tc("pool.drawing") : tc("loading")}</p>
       </div>
     );
   }
@@ -82,11 +89,12 @@ export default function StudioPage() {
     <Studio
       campaignId={id}
       card={card}
-      missions={missions.data.missions}
+      missions={live ?? missions.data.missions}
       userId={session.userId}
       speakerId={speakerId!}
       contributor={list.data.contributor}
       startId={startId}
+      pool={pool.pool ? pool : null}
     />
   );
 }
