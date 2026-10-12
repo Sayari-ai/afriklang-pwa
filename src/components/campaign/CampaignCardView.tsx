@@ -45,7 +45,7 @@ export function CampaignCardView({ card, waiting }: { card: CampaignCard; waitin
   else cta = { href: hub, label: t("view"), tone: "quiet" };
 
   const ctaClass = {
-    go: "bg-submit text-white shadow-[0_6px_0_#3f8f43] active:translate-y-0.5 active:shadow-[0_3px_0_#3f8f43]",
+    go: "bg-submit text-white shadow-[0_6px_0_var(--color-primary-deep)] active:translate-y-0.5 active:shadow-[0_3px_0_var(--color-primary-deep)]",
     setup: "bg-primary text-white",
     warn: "bg-amber-100 text-amber-900",
     quiet: "bg-slate-100 text-slate-700",

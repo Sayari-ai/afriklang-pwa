@@ -506,7 +506,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     return shell(
       <div className="afk-pop m-auto flex max-w-sm flex-col items-center gap-4 text-center">
         <Confetti />
-        <div className="grid size-24 place-items-center rounded-full bg-points-reward text-5xl shadow-lg" aria-hidden>
+        <div className="grid size-24 place-items-center rounded-full bg-yellow text-5xl shadow-lg" aria-hidden>
           ★
         </div>
         <h1 className="text-3xl font-black">{t("goal.title")}</h1>
@@ -531,7 +531,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           <Check size={52} strokeWidth={3} aria-hidden />
         </div>
         <h1 className="text-3xl font-black">{t("done.title")}</h1>
-        {sessionCount > 0 ? <p className="text-lg font-bold text-points-reward">{t("done.sessionCount", { n: sessionCount })}</p> : null}
+        {sessionCount > 0 ? <p className="text-lg font-bold text-yellow">{t("done.sessionCount", { n: sessionCount })}</p> : null}
         <p className="text-base text-white/85">{t("done.body")}</p>
       </div>,
       <Link href={hubHref} className="grid min-h-14 place-items-center rounded-2xl bg-white text-lg font-bold text-primary">
@@ -573,7 +573,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
             <button type="button" onClick={start} disabled={phase === "saving"} className="flex min-h-14 items-center gap-2 rounded-2xl border border-white/30 px-4 font-semibold disabled:opacity-50">
               <RotateCcw size={18} aria-hidden /> {t("review.again")}
             </button>
-            <button type="button" onClick={() => void submit()} disabled={phase === "saving"} className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-submit text-lg font-bold text-white shadow-lg disabled:opacity-70">
+            <button type="button" onClick={() => void submit()} disabled={phase === "saving"} className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white text-lg font-bold text-primary shadow-lg disabled:opacity-70">
               {phase === "saving" ? t("review.preparing") : open > 1 ? t("review.submit") : t("review.submitLast")}
               {phase !== "saving" ? <ChevronRight size={20} aria-hidden /> : null}
             </button>

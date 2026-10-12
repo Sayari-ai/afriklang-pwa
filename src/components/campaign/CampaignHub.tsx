@@ -148,7 +148,7 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
           {open > 0 ? (
             <Link
               href={`/campaign/${card.campaign_id}/studio`}
-              className="flex items-center gap-4 rounded-3xl bg-submit p-4 text-white shadow-[0_6px_0_#3f8f43] transition active:translate-y-0.5 active:shadow-[0_3px_0_#3f8f43]"
+              className="flex items-center gap-4 rounded-3xl bg-submit p-4 text-white shadow-[0_6px_0_var(--color-primary-deep)] transition active:translate-y-0.5 active:shadow-[0_3px_0_var(--color-primary-deep)]"
             >
               <span className="grid size-14 shrink-0 place-items-center rounded-full bg-white text-record-active">
                 <Mic size={28} strokeWidth={2.5} aria-hidden />

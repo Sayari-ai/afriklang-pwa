@@ -80,7 +80,7 @@ function Home({ data }: { data: CampaignList }) {
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
           <Stat icon={<CheckCircle2 size={18} aria-hidden />} value={sum.accepted} label={t("stats.accepted")} />
           <Stat icon={<Hourglass size={18} aria-hidden />} value={sum.submitted} label={t("stats.inReview")} />
-          <Stat icon={<Flame size={18} aria-hidden className="text-points-reward" />} value={streak} label={t("stats.streak", { n: streak })} />
+          <Stat icon={<Flame size={18} aria-hidden className="text-yellow" />} value={streak} label={t("stats.streak", { n: streak })} />
         </dl>
       </section>
 

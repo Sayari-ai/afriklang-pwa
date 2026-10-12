@@ -192,7 +192,7 @@ export function SessionBar({ count, goal }: { count: number; goal: number | null
         <span>{t("sessionGoal", { n: count, goal })}</span>
       </div>
       <div role="progressbar" aria-valuemin={0} aria-valuemax={goal} aria-valuenow={Math.min(count, goal)} aria-label={t("sessionGoal", { n: count, goal })} className="h-2 overflow-hidden rounded-full bg-white/15">
-        <div className="h-full rounded-full bg-points-reward transition-[width] duration-500" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-full bg-yellow transition-[width] duration-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
