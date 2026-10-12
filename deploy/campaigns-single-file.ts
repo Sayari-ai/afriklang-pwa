@@ -51,50 +51,88 @@ function serviceClient() {
 //
 //   * who the user is (user_id, email, email_verified) comes from the VERIFIED session,
 //     never from the request body: whatever the browser sends under those names is dropped;
-//   * only the actions and fields listed in ACTIONS are forwarded;
+//   * only the actions and fields listed in ACTIONS are forwarded, each checked first: a
+//     missing or malformed field is a 400 naming every bad field (`fieldErrors`);
 //   * the dashboard's answer is relayed as is (status + JSON).
 //
 // Contract: afriklang-landing-page/docs/CAMPAIGN_BRIDGE_CONTRACT.md
 
 type Identity = { userId: string; email: string | null; emailVerified: boolean };
 
-type FieldKind = "string" | "uuid" | "object";
-type Spec = { path: string; fields: Record<string, { kind: FieldKind; max?: number; required?: boolean }>; sendEmail?: boolean };
+/**
+ * One body field: its type and the rule it must meet. Limits mirror what the dashboard
+ * accepts (src/lib/campaigns/{speaker-service,bridge-service,recording-metadata}.ts there),
+ * so a value the dashboard would refuse is refused here with a precise 400 instead.
+ */
+type Field =
+  | { kind: "text"; label: string; max: number; required?: boolean; pattern?: RegExp; patternHint?: string; oneOf?: readonly string[]; upper?: boolean }
+  | { kind: "uuid"; label: string; required?: boolean }
+  | { kind: "recording"; label: string; required?: boolean };
+type Spec = { path: string; fields: Record<string, Field>; sendEmail?: boolean; check?: (body: Record<string, unknown>, errors: FieldErrors) => void };
+type FieldErrors = Record<string, string>;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** The invitation token: 32 random bytes, base64url (the dashboard's invitation-token.ts). */
+const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+/** Letters or digits somewhere in a free-text answer (not only punctuation or spaces). */
+const HAS_WORD = /[\p{L}\p{N}]/u;
+const CONTROL = /[\u0000-\u001f\u007f]/;
+
+const GENDERS = ["female", "male", "other", "undisclosed"] as const;
+const AGE_BANDS = ["18-29", "30-44", "45-59", "60+"] as const;
 
 /** Browser action -> dashboard route and the body fields allowed through. */
 const ACTIONS: Record<string, Spec> = {
   // The invitation link. email/email_verified go along: the dashboard binds the account only
   // when the verified email is the invited contributor's.
-  claim: { path: "claim", sendEmail: true, fields: { token: { kind: "string", max: 128, required: true }, device_id: { kind: "string", max: 64 } } },
+  claim: {
+    path: "claim",
+    sendEmail: true,
+    fields: {
+      token: { kind: "text", label: "token", max: 43, required: true, pattern: TOKEN_RE, patternHint: "the 43-character code from the invitation link" },
+      device_id: { kind: "uuid", label: "device_id" },
+    },
+  },
   campaigns: { path: "", fields: {} },
   profile: {
     path: "profile",
     fields: {
-      native_language: { kind: "string", max: 10 },
-      variety: { kind: "string", max: 100 },
-      country: { kind: "string", max: 10 },
-      region: { kind: "string", max: 100 },
-      gender: { kind: "string", max: 20 },
-      age_band: { kind: "string", max: 10 },
-      device: { kind: "string", max: 100 },
+      native_language: { kind: "text", label: "native_language", max: 3, required: true, pattern: /^[a-z]{3}$/, patternHint: "an ISO 639-3 code such as wol" },
+      variety: { kind: "text", label: "variety", max: 80, required: true },
+      country: { kind: "text", label: "country", max: 2, required: true, upper: true, pattern: /^[A-Z]{2}$/, patternHint: "an ISO 3166-1 alpha-2 code such as SN" },
+      region: { kind: "text", label: "region", max: 80, required: true },
+      gender: { kind: "text", label: "gender", max: 20, required: true, oneOf: GENDERS },
+      age_band: { kind: "text", label: "age_band", max: 10, required: true, oneOf: AGE_BANDS },
+      device: { kind: "text", label: "device", max: 80, required: true },
     },
   },
   consent: {
     path: "consent",
-    fields: { type: { kind: "string", max: 20, required: true }, campaign_id: { kind: "uuid" }, version: { kind: "string", max: 50, required: true }, locale: { kind: "string", max: 5 } },
+    fields: {
+      type: { kind: "text", label: "type", max: 20, required: true, oneOf: ["account", "campaign"] },
+      campaign_id: { kind: "uuid", label: "campaign_id" },
+      version: { kind: "text", label: "version", max: 20, required: true },
+      locale: { kind: "text", label: "locale", max: 2, required: true, oneOf: ["en", "fr"] },
+    },
+    check: (body, errors) => {
+      if (body.type === "campaign" && !body.campaign_id && !errors.campaign_id) errors.campaign_id = "campaign_id is required for a campaign consent";
+      if (body.type === "account") delete body.campaign_id;
+    },
   },
-  withdraw: { path: "consent/withdraw", fields: { campaign_id: { kind: "uuid", required: true } } },
-  missions: { path: "missions", fields: { campaign_id: { kind: "uuid", required: true } } },
-  submit: { path: "missions/submit", fields: { mission_id: { kind: "uuid", required: true }, recording: { kind: "object", required: true } } },
+  withdraw: { path: "consent/withdraw", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
+  missions: { path: "missions", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
+  submit: { path: "missions/submit", fields: { mission_id: { kind: "uuid", label: "mission_id", required: true }, recording: { kind: "recording", label: "recording", required: true } } },
 };
 
-type Built = { ok: true; path: string; body: Record<string, unknown> } | { ok: false; error: string };
+type Built =
+  | { ok: true; path: string; body: Record<string, unknown> }
+  | { ok: false; code: "unknown_action" | "invalid_input"; error: string; fieldErrors?: FieldErrors };
 
 /** The dashboard body for one action, built from the verified identity and the allowed fields. */
 function buildForward(action: unknown, clientBody: unknown, who: Identity): Built {
-  if (typeof action !== "string" || !Object.prototype.hasOwnProperty.call(ACTIONS, action)) return { ok: false, error: "unknown_action" };
+  if (typeof action !== "string" || !Object.prototype.hasOwnProperty.call(ACTIONS, action)) {
+    return { ok: false, code: "unknown_action", error: `Unknown action${typeof action === "string" && action ? ` "${action.slice(0, 40)}"` : ""}. Expected one of: ${Object.keys(ACTIONS).join(", ")}.` };
+  }
   const spec = ACTIONS[action];
   const input = clientBody && typeof clientBody === "object" && !Array.isArray(clientBody) ? (clientBody as Record<string, unknown>) : {};
   const body: Record<string, unknown> = { user_id: who.userId };
@@ -102,24 +140,88 @@ function buildForward(action: unknown, clientBody: unknown, who: Identity): Buil
     body.email = who.email ?? "";
     body.email_verified = who.emailVerified;
   }
+  const errors: FieldErrors = {};
   for (const [name, f] of Object.entries(spec.fields)) {
     const v = input[name];
-    if (v === undefined || v === null) {
-      if (f.required) return { ok: false, error: `${name}_required` };
+    const blank = v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+    if (blank) {
+      if (f.required) errors[name] = `${f.label} is required`;
       continue;
     }
-    if (f.kind === "string") {
-      if (typeof v !== "string") return { ok: false, error: `${name}_invalid` };
-      body[name] = v.trim().slice(0, f.max ?? 200);
+    if (f.kind === "text") {
+      if (typeof v !== "string") {
+        errors[name] = `${f.label} must be text`;
+        continue;
+      }
+      let s = v.trim();
+      if (f.upper) s = s.toUpperCase();
+      if (CONTROL.test(s)) errors[name] = `${f.label} contains control characters`;
+      else if (s.length > f.max) errors[name] = `${f.label} is too long (${s.length} characters, at most ${f.max})`;
+      else if (f.oneOf && !f.oneOf.includes(s)) errors[name] = `${f.label} must be one of: ${f.oneOf.join(", ")}`;
+      else if (f.pattern && !f.pattern.test(s)) errors[name] = `${f.label} must be ${f.patternHint ?? "well formed"}`;
+      else if (!f.oneOf && !f.pattern && !HAS_WORD.test(s)) errors[name] = `${f.label} must contain letters or digits`;
+      else body[name] = s;
     } else if (f.kind === "uuid") {
-      if (typeof v !== "string" || !UUID_RE.test(v)) return { ok: false, error: `${name}_invalid` };
-      body[name] = v;
+      if (typeof v !== "string" || !UUID_RE.test(v.trim())) errors[name] = `${f.label} must be a uuid`;
+      else body[name] = v.trim().toLowerCase();
     } else {
-      if (typeof v !== "object" || Array.isArray(v)) return { ok: false, error: `${name}_invalid` };
-      body[name] = v; // the dashboard validates and normalises recording metadata itself
+      const r = checkRecording(v, errors);
+      if (r) body[name] = r;
     }
   }
+  spec.check?.(body, errors);
+  const names = Object.keys(errors);
+  if (names.length) return { ok: false, code: "invalid_input", error: `Invalid request: ${names.map((n) => errors[n]).join("; ")}.`, fieldErrors: errors };
   return { ok: true, path: spec.path, body };
+}
+
+const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+/**
+ * A recording's metadata, checked field by field and stripped of anything else. Errors go
+ * under "recording.<field>". The dashboard checks the take against the campaign's rules again.
+ */
+function checkRecording(v: unknown, errors: FieldErrors): Record<string, unknown> | null {
+  if (!v || typeof v !== "object" || Array.isArray(v)) {
+    errors.recording = "recording must be an object with the take's metadata";
+    return null;
+  }
+  const r = v as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  const bad = (k: string, msg: string) => void (errors[`recording.${k}`] = `recording.${k} ${msg}`);
+  const number = (k: string, rule: (n: number) => boolean, msg: string, required: boolean, integer = false) => {
+    const x = r[k];
+    if (x === undefined || x === null) {
+      if (required) bad(k, "is required");
+      return;
+    }
+    if (!isNum(x) || (integer && !Number.isInteger(x)) || !rule(x)) bad(k, msg);
+    else out[k] = x;
+  };
+  const text = (k: string, max: number) => {
+    const x = r[k];
+    if (x === undefined || x === null || x === "") return;
+    if (typeof x !== "string" || !x.trim()) bad(k, "must be text");
+    else if (x.trim().length > max || CONTROL.test(x)) bad(k, `must be at most ${max} plain characters`);
+    else out[k] = x.trim();
+  };
+
+  if (r.format !== "wav") bad("format", 'must be "wav"');
+  else out.format = "wav";
+  number("sample_rate", (n) => n >= 8_000 && n <= 192_000, "must be a whole number between 8000 and 192000", true, true);
+  number("channels", (n) => n === 1 || n === 2, "must be 1 or 2", true, true);
+  number("duration_s", (n) => n > 0 && n <= 3_600, "must be a number of seconds above 0 and at most 3600", true);
+  number("level_dbfs", (n) => n <= 0 && n >= -120, "must be a number of dBFS between -120 and 0", true);
+  // 0 dBFS or above is a clipped take: well formed, refused by the dashboard as recording_rejected.
+  number("peak_dbfs", (n) => n <= 20 && n >= -120, "must be a number of dBFS between -120 and 20", false);
+  number("silence_before_s", (n) => n >= 0 && n <= 3_600, "must be a number of seconds, 0 or more", false);
+  number("silence_after_s", (n) => n >= 0 && n <= 3_600, "must be a number of seconds, 0 or more", false);
+  const sha = typeof r.source_sha256 === "string" ? r.source_sha256.trim().toLowerCase() : "";
+  if (!/^[0-9a-f]{64}$/.test(sha)) bad("source_sha256", "must be the sha-256 of the file (64 hex characters)");
+  else out.source_sha256 = sha;
+  text("device", 80);
+  text("sayari_recording_id", 200);
+  return Object.keys(errors).some((k) => k === "recording" || k.startsWith("recording.")) ? null : out;
 }
 
 type AuthUserLike = {
@@ -179,30 +281,37 @@ Deno.serve(async (req) => {
 
   // Who is calling: the verified session, not the body.
   const token = bearerToken(req.headers.get("authorization"));
-  if (!token) return errorResponse("unauthorized", "Sign in first.", 401);
+  if (!token) return errorResponse("unauthorized", "No session token: sign in first.", 401);
   let who;
   try {
     const { data, error } = await serviceClient().auth.getUser(token);
-    if (error || !data.user) return errorResponse("unauthorized", "Sign in first.", 401);
+    if (error || !data.user) return errorResponse("unauthorized", "Your session has expired or is not valid: sign in again.", 401);
     who = identityFrom(data.user);
   } catch {
     return errorResponse("auth_unavailable", "Could not check your session; try again.", 502);
   }
-  if (!who) return errorResponse("unauthorized", "Sign in first.", 401);
+  if (!who) return errorResponse("unauthorized", "Your session has no usable account: sign in again.", 401);
 
   // Body: size-capped while reading (a chunked body has no Content-Length to trust).
-  const raw = await readCapped(req, MAX_BODY_BYTES);
-  if (raw === null) return errorResponse("too_large", "Request too large.", 413);
-  let parsed: Record<string, unknown> = {};
+  let raw: string | null;
+  try {
+    raw = await readCapped(req, MAX_BODY_BYTES);
+  } catch {
+    return errorResponse("invalid_body", "The request body could not be read; send it again.", 400);
+  }
+  if (raw === null) return errorResponse("too_large", `Request too large (at most ${MAX_BODY_BYTES / 1024} KB).`, 413);
+  let parsed: Record<string, unknown>;
   try {
     const j = raw ? JSON.parse(raw) : {};
-    if (j && typeof j === "object" && !Array.isArray(j)) parsed = j as Record<string, unknown>;
+    if (!j || typeof j !== "object" || Array.isArray(j)) return errorResponse("invalid_json", "The request body must be a JSON object like {\"action\": \"campaigns\"}.", 400);
+    parsed = j as Record<string, unknown>;
   } catch {
     return errorResponse("invalid_json", "The request body is not valid JSON.", 400);
   }
 
+  // Every field is checked before anything reaches the dashboard; a 400 names each bad field.
   const built = buildForward(parsed.action, parsed, who);
-  if (!built.ok) return errorResponse(built.error, "The request is not valid.", 400);
+  if (!built.ok) return jsonResponse({ error: built.error, code: built.code, ...(built.fieldErrors ? { fieldErrors: built.fieldErrors } : {}) }, 400);
 
   const url = `${base}/api/pwa/campaigns${built.path ? `/${built.path}` : ""}`;
   try {
@@ -224,7 +333,10 @@ Deno.serve(async (req) => {
     const retry = res.headers.get("retry-after");
     if (retry) headers["Retry-After"] = retry;
     return new Response(JSON.stringify(json), { status: res.status, headers });
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      return jsonResponse({ error: `The campaign service did not answer within ${TIMEOUT_MS / 1000} s.`, code: "bridge_timeout" }, 504);
+    }
     return jsonResponse({ error: "The campaign service is not reachable right now.", code: "bridge_unreachable" }, 502);
   }
 });

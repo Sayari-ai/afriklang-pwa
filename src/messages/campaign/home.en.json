@@ -1,0 +1,154 @@
+{
+  "shell": {
+    "missions": "Missions",
+    "history": "History",
+    "account": "My account",
+    "speakerId": "Your speaker ID",
+    "speakerIdHelp": "Only this ID travels with your recordings, never your name.",
+    "signedInAs": "Signed in as {email}",
+    "language": "App language",
+    "signOut": "Sign out",
+    "signOutPending": "{n, plural, one {# recording is} other {# recordings are}} still waiting on this phone. They stay here and are sent the next time you sign in with this account. Sign out anyway?",
+    "offline": "Offline: showing your saved data",
+    "close": "Close"
+  },
+  "home": {
+    "hello": "Hello!",
+    "intro": "Thank you for lending your voice to your language.",
+    "stats": {
+      "accepted": "Accepted",
+      "inReview": "In review",
+      "streak": "{n, plural, =0 {No streak yet} one {# day in a row} other {# days in a row}}"
+    },
+    "yourMissions": "Your missions",
+    "noMissionsTitle": "No missions for you right now",
+    "noMissionsBody": "When the team assigns you recordings, they appear here. Meanwhile, here is what you have done so far.",
+    "seeHistory": "See my full history",
+    "recent": "Recent activity"
+  },
+  "card": {
+    "daysLeft": "{n, plural, =0 {Ends today} one {# day left} other {# days left}}",
+    "ended": "Ended",
+    "recorded": "{done} of {total} recorded",
+    "start": "Start recording",
+    "continue": "Continue · {n} left",
+    "setup": "Finish setup to start",
+    "setupStep": "Step {n} of 3",
+    "blocked": "Check your profile",
+    "allSent": "All recorded. Under review.",
+    "view": "View my recordings",
+    "details": "Details",
+    "waiting": "{n, plural, one {# take waiting to send} other {# takes waiting to send}}",
+    "paused": "Paused",
+    "closed": "Ended",
+    "redo": "{n, plural, one {# to redo} other {# to redo}}"
+  },
+  "outbox": {
+    "sending": "Sending your recordings…",
+    "waiting": "{n, plural, one {# recording waiting to send} other {# recordings waiting to send}}",
+    "offline": "You are offline. They will be sent as soon as you reconnect.",
+    "retrying": "We will keep trying automatically.",
+    "held": "{n, plural, one {# recording on hold} other {# recordings on hold}}",
+    "failed": "{n, plural, one {# recording could not be sent} other {# recordings could not be sent}}",
+    "sendNow": "Send now",
+    "discard": "Delete",
+    "discardConfirm": "Delete this recording from your phone? You can record the mission again.",
+    "recordAgain": "Record again",
+    "state": {
+      "pending": "Waiting to send",
+      "sending": "Sending…",
+      "held": "On hold",
+      "failed": "Not sent"
+    },
+    "reason": {
+      "paused": "the campaign is paused",
+      "consent": "a consent is needed",
+      "signin": "sign in again to send it",
+      "partner": "your partner's consent is missing",
+      "closed": "the campaign has ended",
+      "file": "the file was refused; please record it again",
+      "server": "the service is having trouble",
+      "network": "the connection failed",
+      "generic": "it could not be saved"
+    }
+  },
+  "hub": {
+    "before": "Before you start",
+    "steps": {
+      "profile": "About you",
+      "account": "Your consent",
+      "campaign": "Campaign consent"
+    },
+    "done": "Done",
+    "current": "Now",
+    "start": "Start recording",
+    "toRecord": "{n, plural, one {# mission to record} other {# missions to record}}",
+    "allRecorded": "Everything is recorded. The team is reviewing your takes.",
+    "tips": {
+      "title": "How to record well",
+      "quiet": "A quiet room, no TV or fan",
+      "distance": "Phone {min}–{max} cm from your mouth",
+      "distanceDefault": "Phone a hand's width from your mouth",
+      "wait": "Wait for “Speak now”",
+      "listen": "Listen back before you submit"
+    },
+    "tabs": {
+      "todo": "To record",
+      "redo": "To redo",
+      "sent": "In review",
+      "accepted": "Accepted"
+    },
+    "empty": {
+      "todo": "Nothing left to record here.",
+      "redo": "Nothing to redo. Well done!",
+      "sent": "No recording waiting for review.",
+      "accepted": "No accepted recording yet."
+    },
+    "partnerWait": "Waiting for your partner's consent",
+    "more": "More options"
+  },
+  "history": {
+    "title": "My history",
+    "intro": "Everything you have recorded, and what happened to it.",
+    "stats": {
+      "recorded": "Recorded",
+      "accepted": "Accepted",
+      "inReview": "In review",
+      "toRedo": "To redo"
+    },
+    "onPhone": "On this phone",
+    "recordings": "My recordings",
+    "filters": {
+      "all": "All",
+      "accepted": "Accepted",
+      "review": "In review",
+      "redo": "To redo"
+    },
+    "empty": "No recordings here yet.",
+    "nothingYet": "You have not recorded anything yet. Your recordings and their results will appear here.",
+    "timeline": "Recent activity",
+    "noActivity": "No activity on this phone yet.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "activity": {
+      "sent": "{code} sent",
+      "rejected": "{code} not accepted by the automatic check ({reason})",
+      "failed": "{code} could not be sent",
+      "profile": "Profile saved",
+      "consent": "Consent signed",
+      "withdrawn": "Withdrew from a campaign"
+    },
+    "reasons": {
+      "duration": "length",
+      "level": "volume",
+      "silence": "silence",
+      "other": "other"
+    },
+    "status": {
+      "submitted": "In review",
+      "accepted": "Accepted",
+      "rejected": "To redo"
+    },
+    "loadError": "We could not load the recordings of this campaign."
+  }
+}

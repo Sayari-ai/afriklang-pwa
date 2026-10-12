@@ -73,7 +73,10 @@ describe("campaigns Edge Function", () => {
     expect((await call({}, {}, "GET")).status).toBe(405);
     expect((await call("{not json")).status).toBe(400);
     expect((await call({ action: "drop_tables" })).status).toBe(400);
-    expect((await call({ action: "missions", campaign_id: "nope" })).status).toBe(400);
+    const bad = await call({ action: "missions", campaign_id: "nope" });
+    expect(bad.status).toBe(400);
+    expect(await bad.json()).toEqual({ error: "Invalid request: campaign_id must be a uuid.", code: "invalid_input", fieldErrors: { campaign_id: "campaign_id must be a uuid" } });
+    expect((await call("[1,2]")).status).toBe(400);
     const big = await call({ action: "submit", mission_id: CID, recording: { pad: "x".repeat(50_000) } });
     expect(big.status).toBe(413);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -93,6 +96,10 @@ describe("campaigns Edge Function", () => {
     const down = await call({ action: "campaigns" });
     expect(down.status).toBe(502);
     expect((await down.json()).code).toBe("bridge_unreachable");
+    fetchMock.mockRejectedValue(new DOMException("timed out", "TimeoutError"));
+    const slow = await call({ action: "campaigns" });
+    expect(slow.status).toBe(504);
+    expect((await slow.json()).code).toBe("bridge_timeout");
     fetchMock.mockResolvedValue(new Response("<html>oops</html>", { status: 200 }));
     expect((await call({ action: "campaigns" })).status).toBe(502);
   });

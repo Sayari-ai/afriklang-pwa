@@ -23,6 +23,12 @@
     "continue": "Aller à mes campagnes",
     "contact": "Besoin d'aide ? Contactez l'équipe Afriklang."
   },
+  "brokenLink": {
+    "title": "Ce lien d'invitation est incomplet",
+    "body": "Une partie du lien semble manquer, souvent parce qu'il a été tronqué lors d'un copier-coller. Ouvrez le lien directement depuis votre e-mail d'invitation en appuyant dessus.",
+    "help": "Si cela ne fonctionne toujours pas, demandez à l'équipe Afriklang de vous envoyer une nouvelle invitation.",
+    "continue": "Continuer sans le lien"
+  },
   "notLinked": {
     "title": "Ouvrez votre lien d'invitation",
     "body": "Ouvrez le lien de votre e-mail d'invitation pour commencer.",

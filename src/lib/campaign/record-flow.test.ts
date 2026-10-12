@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMetadata, canStop, deviceLabel, formatClock, guardMission, nextTodo, problemMessageKey, submitFailureAction, takeRules } from "./record-flow";
+import { buildMetadata, buildSayariCampaignFields, canStop, deviceLabel, formatClock, guardMission, nextTodo, problemMessageKey, submitFailureAction, takeRules, uploadFailureKey } from "./record-flow";
 import type { CampaignCard, Mission } from "./types";
 
 const card = (over: Partial<CampaignCard> = {}): CampaignCard =>
@@ -95,5 +95,40 @@ describe("misc", () => {
     const a = { duration_s: 5, level_dbfs: -20, peak_dbfs: -3, silence_before_s: 1, silence_after_s: 1, sample_rate: 16000, channels: 1 };
     expect(buildMetadata(a, "x", "d", null)).not.toHaveProperty("sayari_recording_id");
     expect(buildMetadata(a, "x", "d", "id1").sayari_recording_id).toBe("id1");
+  });
+});
+
+describe("submit failures beyond the dashboard's codes", () => {
+  it("keeps the take when the network or the service is the problem", () => {
+    for (const code of ["offline", "timeout", "misconfigured"] as const) expect(submitFailureAction({ code }, { uploaded: true })).toEqual({ kind: "retry", reupload: false });
+  });
+  it("sends an unexpected conflict back to the missions", () => expect(submitFailureAction({ code: "conflict" }, { uploaded: true })).toEqual({ kind: "hub" }));
+});
+
+describe("uploadFailureKey", () => {
+  it("names each upload failure", () => {
+    expect(uploadFailureKey({ status: 0, isNetwork: true }, false)).toBe("offline");
+    expect(uploadFailureKey({ status: 0, isNetwork: true }, true)).toBe("network");
+    expect(uploadFailureKey({ status: 413, isNetwork: false }, true)).toBe("tooLarge");
+    expect(uploadFailureKey({ status: 429, isNetwork: false }, true)).toBe("rateLimited");
+    expect(uploadFailureKey({ status: 502, isNetwork: false }, true)).toBe("server");
+    expect(uploadFailureKey({ status: 400, isNetwork: false }, true)).toBe("refused");
+    expect(uploadFailureKey({ status: 302, isNetwork: false }, true)).toBe("other");
+  });
+});
+
+describe("buildSayariCampaignFields", () => {
+  const c = card({ campaign_id: "c1", code: "WOL_FIN_PILOT_01", topic: { domain: "Banking", sub_domain: null } });
+  const m = mission({ prompt: { id: "P7", text_or_topic: "x", category: null }, partner_speaker_id: null });
+  const meta = buildMetadata({ duration_s: 8.2, level_dbfs: -22, peak_dbfs: -1.5, silence_before_s: 1.1, silence_after_s: 1, sample_rate: 16000, channels: 1 }, "a".repeat(64), "Android Chrome", null);
+  it("sends identifiers and measurements as strings, leaving absent values out", () => {
+    const f = buildSayariCampaignFields(c, m, meta);
+    expect(f).toMatchObject({ campaign_code: "WOL_FIN_PILOT_01", mission_code: "S-1", mission_type: "spontaneous", prompt_id: "P7", duration_s: "8.2", channels: "1", domain: "Banking" });
+    expect(f).not.toHaveProperty("sub_domain");
+    expect(f).not.toHaveProperty("partner_speaker_id");
+    expect(f).not.toHaveProperty("prompt_category");
+  });
+  it("never carries a name, email or user id", () => {
+    expect(Object.keys(buildSayariCampaignFields(c, m, meta)).join(" ")).not.toMatch(/name|email|user_id/);
   });
 });

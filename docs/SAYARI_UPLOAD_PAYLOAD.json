@@ -1,0 +1,262 @@
+{
+  "title": "Audio upload from the Afriklang app to Sayari (campaign recordings)",
+  "version": "2026-10-12",
+  "request": {
+    "method": "POST",
+    "path": "/api/audio/upload",
+    "content_type": "multipart/form-data",
+    "auth": "X-Upload-Key header, added by the app's server-side proxy (/api/audio-upload). The browser never holds it.",
+    "notes": [
+      "All fields are multipart text parts; the audio is the 'files' part. Numbers are sent as decimal strings (for example \"8.2\").",
+      "Absent values are left out, never sent empty.",
+      "Fields marked campaign_only are sent for campaign recordings only; the older learning-app upload sends the first six fields and nothing else.",
+      "No name, email, phone number or account id is ever sent. The speaker_id is the only identity."
+    ]
+  },
+  "fields": {
+    "files": {
+      "required": true,
+      "type": "binary",
+      "content_type": "audio/wav",
+      "description": "The recording: WAV, PCM 16-bit, 16 kHz, mono. One file per request. Never re-encoded after capture, so its sha-256 equals source_sha256.",
+      "filename_format": "{language}_{speaker_id}_{YYYYMMDDTHHMMSSZ}_{mission_code}.wav",
+      "filename_example": "wol_SPK-7Q2M9X4D_20261011T143005Z_WOL_FIN_PILOT_01_M0007.wav"
+    },
+    "language": {
+      "required": true,
+      "type": "string",
+      "example": "wol",
+      "description": "ISO 639-3 code of the campaign's language."
+    },
+    "consent_recorded": {
+      "required": true,
+      "type": "string",
+      "enum": [
+        "true",
+        "false"
+      ],
+      "example": "true",
+      "description": "Always \"true\" for a campaign: the app does not let anyone record before the account and campaign consents are signed."
+    },
+    "dialect": {
+      "required": false,
+      "type": "string",
+      "example": "Baol-Baol",
+      "description": "The variety the contributor declared in their profile."
+    },
+    "english_description": {
+      "required": false,
+      "type": "string",
+      "example": "Ask your bank how to check your mobile money balance.",
+      "description": "The prompt the contributor was shown (the sentence to read, or the topic or scenario). Ground truth for read speech."
+    },
+    "speaker_id": {
+      "required": false,
+      "type": "string",
+      "pattern": "^SPK-[A-Z0-9]{8}$",
+      "example": "SPK-7Q2M9X4D",
+      "description": "Pseudonymous speaker ID, created on the contributor's first profile save and never changed. Always present for campaign recordings."
+    },
+    "campaign_id": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "format": "uuid",
+      "example": "3f1d2c4e-8a7b-4c59-9e0a-1b2c3d4e5f60",
+      "description": "Dashboard's campaign id."
+    },
+    "campaign_code": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "example": "WOL_FIN_PILOT_01",
+      "description": "Human-readable campaign code. Use it to look up the campaign's pre-annotation settings and delivery rules."
+    },
+    "domain": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "example": "Banking and Fintech",
+      "description": "Campaign topic domain."
+    },
+    "sub_domain": {
+      "campaign_only": true,
+      "required": false,
+      "type": "string",
+      "example": "Mobile money",
+      "description": "Campaign topic sub-domain."
+    },
+    "mission_id": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "format": "uuid",
+      "example": "a8c0e6d2-5b41-4f7e-9d13-2c6f0b7a9e11",
+      "description": "Dashboard's mission id (one mission = one prompt for one contributor)."
+    },
+    "mission_code": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "example": "WOL_FIN_PILOT_01_M0007",
+      "description": "Human-readable mission code."
+    },
+    "mission_type": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "enum": [
+        "read",
+        "spontaneous",
+        "conversational"
+      ],
+      "example": "read",
+      "description": "Speech type. Drives the transcription type and, for conversations, how the channels are read."
+    },
+    "prompt_id": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "example": "WOL_FIN_PILOT_01_P007",
+      "description": "The prompt the mission was generated from."
+    },
+    "prompt_category": {
+      "campaign_only": true,
+      "required": false,
+      "type": "string",
+      "example": "numbers",
+      "description": "The prompt's category, when the campaign defines one."
+    },
+    "partner_speaker_id": {
+      "campaign_only": true,
+      "required": false,
+      "type": "string",
+      "pattern": "^SPK-[A-Z0-9]{8}$",
+      "example": "SPK-K3N8T5WA",
+      "description": "Conversational missions only: the other speaker. One device records both, so both speaker IDs belong to this one file."
+    },
+    "source_sha256": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "example": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      "description": "SHA-256 of the uploaded file. The dashboard uses it to recognise a retried upload; Sayari can use it to refuse a duplicate."
+    },
+    "format": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string",
+      "enum": [
+        "wav"
+      ],
+      "example": "wav"
+    },
+    "sample_rate": {
+      "campaign_only": true,
+      "required": true,
+      "type": "integer",
+      "example": "16000",
+      "description": "Hz, as measured on the file."
+    },
+    "channels": {
+      "campaign_only": true,
+      "required": true,
+      "type": "integer",
+      "example": "1",
+      "description": "Always 1 today (two-device capture is not supported)."
+    },
+    "duration_s": {
+      "campaign_only": true,
+      "required": true,
+      "type": "number",
+      "example": "8.2",
+      "description": "Seconds, measured on the file."
+    },
+    "level_dbfs": {
+      "campaign_only": true,
+      "required": true,
+      "type": "number",
+      "example": "-22",
+      "description": "Average level in dBFS (0 is full scale; the campaign refuses anything quieter than its minimum, usually -35)."
+    },
+    "peak_dbfs": {
+      "campaign_only": true,
+      "required": false,
+      "type": "number",
+      "example": "-1.5",
+      "description": "Peak level in dBFS. 0 or above means clipped (the app refuses those takes before upload)."
+    },
+    "silence_before_s": {
+      "campaign_only": true,
+      "required": false,
+      "type": "number",
+      "example": "1.1",
+      "description": "Silence before the first speech, seconds."
+    },
+    "silence_after_s": {
+      "campaign_only": true,
+      "required": false,
+      "type": "number",
+      "example": "1.0",
+      "description": "Silence after the last speech, seconds."
+    },
+    "device": {
+      "campaign_only": true,
+      "required": false,
+      "type": "string",
+      "example": "Android Chrome",
+      "description": "Operating system and browser of the recording phone (coarse, from the user agent)."
+    },
+    "metadata": {
+      "campaign_only": true,
+      "required": true,
+      "type": "string (JSON)",
+      "schema_version": "afriklang.audio/2.0",
+      "description": "One JSON document with everything known about the recording: recording, audio, quality, campaign, mission, prompt, speaker (declared profile, pseudonymous), conversation, consent, device, session, app. Built by src/lib/campaign/audio-metadata.ts. Field reference: the 'Afriklang PWA -> Sayari' spec document. The flat fields above are kept for compatibility and always agree with it."
+    }
+  },
+  "example_request_fields": {
+    "language": "wol",
+    "consent_recorded": "true",
+    "dialect": "Baol-Baol",
+    "english_description": "Ask your bank how to check your mobile money balance.",
+    "speaker_id": "SPK-7Q2M9X4D",
+    "campaign_id": "3f1d2c4e-8a7b-4c59-9e0a-1b2c3d4e5f60",
+    "campaign_code": "WOL_FIN_PILOT_01",
+    "domain": "Banking and Fintech",
+    "sub_domain": "Mobile money",
+    "mission_id": "a8c0e6d2-5b41-4f7e-9d13-2c6f0b7a9e11",
+    "mission_code": "WOL_FIN_PILOT_01_M0007",
+    "mission_type": "read",
+    "prompt_id": "WOL_FIN_PILOT_01_P007",
+    "prompt_category": "numbers",
+    "source_sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "format": "wav",
+    "sample_rate": "16000",
+    "channels": "1",
+    "duration_s": "8.2",
+    "level_dbfs": "-22",
+    "peak_dbfs": "-1.5",
+    "silence_before_s": "1.1",
+    "silence_after_s": "1",
+    "device": "Android Chrome",
+    "files": "<binary: wol_SPK-7Q2M9X4D_20261011T143005Z_WOL_FIN_PILOT_01_M0007.wav>"
+  },
+  "response_expected": {
+    "status": 200,
+    "body": {
+      "audio_id": "string, Sayari's id for the recording"
+    },
+    "notes": [
+      "The app accepts audio_id, id or recording_id (also inside files/results/items/data/uploaded) and forwards it to the dashboard as sayari_recording_id. A missing id is tolerated.",
+      "The app never retries an upload by itself; an error shows a message and the contributor taps again. The dashboard answers a repeated source_sha256 with duplicate: true, so Sayari should accept or refuse a repeated source_sha256 consistently.",
+      "Error statuses the app understands: 413 too large, 429 rate limited, 5xx server, 4xx refused."
+    ]
+  },
+  "not_sent_by_the_app_decide_with_dashboard_team": {
+    "campaign_settings": "Pre-annotation settings (asr_model, language_code, vad_filter, condition_on_previous_text, low_conf_threshold, timestamps), annotation settings (transcription_type, tags, double_annotation_share, review_share, guideline_version) and quality thresholds live in the dashboard's campaign spec. The browser must not be the source of them. Proposal: Sayari looks them up by campaign_code, or the app's server-side proxy adds them.",
+    "recording_status_back_to_dashboard": "uploaded, pre_annotated, accepted or rejected (with a reason) is shown to contributors. The dashboard has the service function applyRecordingStatus but no HTTP route yet; Sayari's way of reporting it is not settled.",
+    "pre_annotation_tests": "The 5 pre-annotation tests are entered by hand by an admin on the campaign page; nothing flows from Sayari for them."
+  }
+}

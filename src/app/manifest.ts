@@ -17,14 +17,17 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Afriklang",
     short_name: "Afriklang",
-    description:
-      "Learn African languages through bite-sized, gamified speaking lessons.",
-    start_url: "/",
+    description: "Record your language for Afriklang: missions, recording studio and history.",
+    start_url: "/campaign",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
     background_color: "#F7F5FB",
     theme_color: "#F7F5FB",
+    shortcuts: [
+      { name: "My missions", short_name: "Missions", url: "/campaign" },
+      { name: "My history", short_name: "History", url: "/campaign/history" },
+    ],
     icons: [
       {
         src: "/icons/icon-192.png",

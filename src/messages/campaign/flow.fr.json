@@ -40,10 +40,31 @@
       "undisclosed": "Je préfère ne pas le dire"
     },
     "errors": {
-      "required": "Veuillez remplir ce champ.",
-      "tooLong": "C'est trop long (80 caractères au maximum).",
-      "invalid": "Veuillez choisir l'une des options."
+      "required": {
+        "native_language": "Choisissez votre langue maternelle.",
+        "variety": "Choisissez la variété de la langue que vous parlez.",
+        "country": "Choisissez le pays où vous vivez.",
+        "region": "Indiquez votre région ou votre ville.",
+        "gender": "Choisissez votre genre, ou « Je préfère ne pas le dire ».",
+        "age_band": "Choisissez votre tranche d'âge.",
+        "device": "Indiquez le téléphone ou l'appareil avec lequel vous enregistrez."
+      },
+      "tooLong": "C'est trop long : {max} caractères au maximum (vous en avez saisi {count}).",
+      "invalid": "Choisissez l'une des options de la liste.",
+      "noLetters": "Utilisez des lettres ou des chiffres, pas seulement des symboles ou des espaces.",
+      "control": "Supprimez les retours à la ligne ou les caractères spéciaux.",
+      "server": {
+        "native_language": "Cette langue n'a pas été acceptée. Choisissez-en une dans la liste.",
+        "variety": "Cette variété n'a pas été acceptée pour cette langue. Choisissez-en une dans la liste.",
+        "country": "Ce pays n'a pas été accepté. Choisissez-en un dans la liste.",
+        "region": "Cette région n'a pas été acceptée. Indiquez un nom de région ou de ville, 80 caractères au maximum.",
+        "gender": "Cette réponse n'a pas été acceptée. Choisissez l'une des options.",
+        "age_band": "Cette tranche d'âge n'a pas été acceptée. Choisissez l'une des options.",
+        "device": "Ce nom d'appareil n'a pas été accepté. Indiquez un nom court, 80 caractères au maximum."
+      }
     },
+    "noVarietiesTitle": "Aucune variété proposée pour l'instant",
+    "noVarietiesBody": "Cette campagne n'indique pas encore les variétés de sa langue : le profil ne peut donc pas être complété. Contactez l'équipe Afriklang.",
     "save": "Enregistrer et continuer",
     "saving": "Enregistrement…",
     "formError": "Vérifiez les champs signalés."
@@ -61,6 +82,7 @@
     "readText": "Lire le texte complet du consentement",
     "opensNewTab": "(s'ouvre dans un nouvel onglet)",
     "agree": "J'ai lu et j'accepte",
+    "agreeFirst": "Cochez la case ci-dessus après avoir lu le texte pour continuer.",
     "sign": "J'accepte",
     "signing": "Enregistrement…",
     "changed": "Le texte du consentement a changé : relisez-le avant d'accepter.",

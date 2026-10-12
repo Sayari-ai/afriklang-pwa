@@ -1,0 +1,122 @@
+{
+  "title": "Studio d'enregistrement",
+  "close": "Fermer le studio",
+  "closeConfirm": "Quitter le studio ? La prise que vous venez d'enregistrer n'a pas été envoyée et sera perdue.",
+  "missionOf": "Mission {n} sur {total}",
+  "textSize": "Taille du texte",
+  "textSmaller": "Texte plus petit",
+  "textBigger": "Texte plus grand",
+  "session": "{n, plural, =0 {Aucune prise pour l'instant} one {# prise pendant cette séance} other {# prises pendant cette séance}}",
+  "sessionGoal": "{n} sur {goal} pendant cette séance",
+  "type": {
+    "read": "Lecture à voix haute",
+    "spontaneous": "Parole libre",
+    "conversational": "Conversation"
+  },
+  "prompt": {
+    "read": "Lisez cette phrase à voix haute",
+    "spontaneous": "Parlez de ce sujet, avec vos mots",
+    "conversational": "Ayez cette conversation avec votre partenaire",
+    "partner": "Partenaire : {id}",
+    "onePhone": "Un seul téléphone enregistre, et vous êtes crédités tous les deux. Placez-le là où l'on entend bien vos deux voix.",
+    "length": "De {min} à {max} secondes",
+    "redo": "À refaire",
+    "redoReason": "Pourquoi elle revient : {reason}"
+  },
+  "phase": {
+    "idle": "Appuyez sur le bouton et attendez « Parlez »",
+    "countdown": "Préparez-vous…",
+    "lead": "Restez silencieux…",
+    "speaking": "Parlez",
+    "tail": "Restez silencieux un instant…",
+    "analyzing": "Vérification de votre prise…"
+  },
+  "button": {
+    "record": "Enregistrer",
+    "stop": "Arrêter",
+    "cancel": "Annuler"
+  },
+  "hint": {
+    "tooEarly": "Continuez : au moins {min} secondes.",
+    "quiet": "On vous entend à peine. Rapprochez-vous un peu ou parlez plus fort.",
+    "good": "Le son est bon",
+    "space": "Astuce : Espace pour enregistrer et arrêter, Entrée pour envoyer."
+  },
+  "review": {
+    "title": "Réécoutez",
+    "play": "Écouter",
+    "pause": "Pause",
+    "length": "{time} enregistrées",
+    "again": "Recommencer",
+    "submit": "Envoyer et continuer",
+    "submitLast": "Envoyer",
+    "preparing": "Enregistrement…"
+  },
+  "problem": {
+    "title": "Essayons encore une fois",
+    "silent": "Aucun son n'est arrivé à l'application. Vérifiez que le micro n'est ni couvert ni coupé, puis parlez clairement.",
+    "too_short": "Trop court : parlez au moins {min} secondes.",
+    "too_long": "Trop long : restez sous {max} secondes.",
+    "too_quiet": "Un peu trop faible. Rapprochez le téléphone de votre bouche et parlez plus fort.",
+    "clipped": "Trop fort, le son sature. Éloignez un peu le téléphone.",
+    "silence": "Laissez un court silence avant et après avoir parlé : attendez « Parlez », et restez silencieux un instant à la fin.",
+    "again": "Recommencer"
+  },
+  "saved": {
+    "flash": "Enregistrée ! Elle sera envoyée automatiquement.",
+    "flashOffline": "Gardée sur votre téléphone. Elle sera envoyée dès votre retour en ligne."
+  },
+  "skip": "Passer pour l'instant",
+  "mic": {
+    "permission-denied": "Le micro est bloqué. Autorisez l'accès au micro pour cette application dans les réglages du navigateur, puis réessayez.",
+    "no-mic": "Aucun micro trouvé. Vérifiez votre appareil, puis réessayez.",
+    "unsupported": "Ce navigateur ne peut pas enregistrer de son. Ouvrez l'application dans une version récente de Chrome ou Safari.",
+    "internal": "L'enregistrement n'a pas pu démarrer. Fermez les autres applications qui utilisent le micro, puis réessayez.",
+    "stopFailed": "La prise n'a pas pu être terminée : aucun son n'est arrivé. Vérifiez le micro, puis recommencez.",
+    "prepare": "Votre prise n'a pas pu être préparée sur cet appareil. Réessayez, ou mettez à jour votre navigateur."
+  },
+  "goal": {
+    "title": "Objectif de la séance atteint !",
+    "body": "{n} prises enregistrées. Faites une petite pause, buvez un peu d'eau, puis continuez si vous le souhaitez.",
+    "keepGoing": "Continuer",
+    "finish": "Terminer pour l'instant"
+  },
+  "done": {
+    "title": "Tout est enregistré !",
+    "body": "Vous avez enregistré toutes les missions disponibles pour l'instant. Merci ! L'équipe vérifie vos prises ; vous verrez les résultats dans votre historique.",
+    "sessionCount": "{n, plural, one {# prise} other {# prises}} pendant cette séance",
+    "back": "Retour à ma campagne"
+  },
+  "guard": {
+    "notReady": {
+      "title": "Pas encore prêt à enregistrer",
+      "body": "Terminez d'abord les étapes sur la page de la campagne."
+    },
+    "paused": {
+      "title": "L'enregistrement est en pause",
+      "body": "La campagne est en pause. L'enregistrement reprendra avec elle."
+    },
+    "closed": {
+      "title": "Campagne terminée",
+      "body": "Cette campagne n'accepte plus d'enregistrements."
+    },
+    "partner": {
+      "title": "En attente de votre partenaire",
+      "body": "Votre partenaire de conversation n'a pas encore terminé son consentement."
+    },
+    "back": "Retour à ma campagne"
+  },
+  "status": {
+    "idle": "Prêt à enregistrer",
+    "countdown": "L'enregistrement commence dans un instant",
+    "lead": "Enregistrement. Restez silencieux.",
+    "speaking": "Enregistrement. Parlez.",
+    "tail": "Enregistrement. Restez silencieux.",
+    "analyzing": "Vérification de votre prise",
+    "review": "Prise terminée. Écoutez et envoyez.",
+    "problem": "La prise a un problème",
+    "saving": "Enregistrement de votre prise",
+    "goal": "Objectif de la séance atteint",
+    "done": "Tout est enregistré"
+  }
+}

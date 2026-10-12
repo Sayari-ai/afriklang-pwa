@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { signConsent } from "@/lib/campaign/api";
 import type { CampaignCard, CampaignFailure } from "@/lib/campaign/types";
 import { FailureMessage, Notice, buttonPrimary } from "./CampaignHubParts";
@@ -15,6 +15,7 @@ export function ConsentStep({ type, card, onSigned }: Props) {
   const consent = card.consents[type];
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const sending = useRef(false); // a second tap before the re-render must not sign twice
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
   const [changed, setChanged] = useState(false);
 
@@ -22,17 +23,22 @@ export function ConsentStep({ type, card, onSigned }: Props) {
   const topic = card.topic.sub_domain ? `${card.topic.domain}, ${card.topic.sub_domain}` : card.topic.domain;
 
   async function sign() {
-    if (!version || !agreed || busy) return;
+    if (!version || !agreed || sending.current) return;
+    sending.current = true;
     setBusy(true);
     setFailure(null);
-    const res = await signConsent({ type, campaignId: type === "campaign" ? card.campaign_id : undefined, version, locale });
-    setBusy(false);
-    if (res.ok) return onSigned();
-    if (res.code === "consent_version_changed") {
-      setChanged(true);
-      setAgreed(false);
-      onSigned(); // reload so the new text and version appear
-    } else setFailure(res);
+    try {
+      const res = await signConsent({ type, campaignId: type === "campaign" ? card.campaign_id : undefined, version, locale });
+      if (res.ok) return onSigned();
+      if (res.code === "consent_version_changed") {
+        setChanged(true);
+        setAgreed(false);
+        onSigned(); // reload so the new text and version appear
+      } else setFailure(res);
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
   }
 
   return (
@@ -61,9 +67,10 @@ export function ConsentStep({ type, card, onSigned }: Props) {
             <span className="text-base font-semibold text-slate-900">{t("agree")}</span>
           </label>
           {failure ? <FailureMessage failure={failure} /> : null}
-          <button type="button" onClick={sign} disabled={!agreed || busy || !consent.text_url} className={buttonPrimary}>
+          <button type="button" onClick={sign} disabled={!agreed || busy || !consent.text_url} aria-describedby={!agreed && consent.text_url ? `${id}-hint` : undefined} className={buttonPrimary}>
             {busy ? t("signing") : t("sign")}
           </button>
+          {!agreed && consent.text_url ? <p id={`${id}-hint`} className="text-sm text-slate-600">{t("agreeFirst")}</p> : null}
         </>
       )}
     </section>

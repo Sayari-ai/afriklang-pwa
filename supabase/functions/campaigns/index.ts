@@ -25,30 +25,37 @@ Deno.serve(async (req) => {
 
   // Who is calling: the verified session, not the body.
   const token = bearerToken(req.headers.get("authorization"));
-  if (!token) return errorResponse("unauthorized", "Sign in first.", 401);
+  if (!token) return errorResponse("unauthorized", "No session token: sign in first.", 401);
   let who;
   try {
     const { data, error } = await serviceClient().auth.getUser(token);
-    if (error || !data.user) return errorResponse("unauthorized", "Sign in first.", 401);
+    if (error || !data.user) return errorResponse("unauthorized", "Your session has expired or is not valid: sign in again.", 401);
     who = identityFrom(data.user);
   } catch {
     return errorResponse("auth_unavailable", "Could not check your session; try again.", 502);
   }
-  if (!who) return errorResponse("unauthorized", "Sign in first.", 401);
+  if (!who) return errorResponse("unauthorized", "Your session has no usable account: sign in again.", 401);
 
   // Body: size-capped while reading (a chunked body has no Content-Length to trust).
-  const raw = await readCapped(req, MAX_BODY_BYTES);
-  if (raw === null) return errorResponse("too_large", "Request too large.", 413);
-  let parsed: Record<string, unknown> = {};
+  let raw: string | null;
+  try {
+    raw = await readCapped(req, MAX_BODY_BYTES);
+  } catch {
+    return errorResponse("invalid_body", "The request body could not be read; send it again.", 400);
+  }
+  if (raw === null) return errorResponse("too_large", `Request too large (at most ${MAX_BODY_BYTES / 1024} KB).`, 413);
+  let parsed: Record<string, unknown>;
   try {
     const j = raw ? JSON.parse(raw) : {};
-    if (j && typeof j === "object" && !Array.isArray(j)) parsed = j as Record<string, unknown>;
+    if (!j || typeof j !== "object" || Array.isArray(j)) return errorResponse("invalid_json", "The request body must be a JSON object like {\"action\": \"campaigns\"}.", 400);
+    parsed = j as Record<string, unknown>;
   } catch {
     return errorResponse("invalid_json", "The request body is not valid JSON.", 400);
   }
 
+  // Every field is checked before anything reaches the dashboard; a 400 names each bad field.
   const built = buildForward(parsed.action, parsed, who);
-  if (!built.ok) return errorResponse(built.error, "The request is not valid.", 400);
+  if (!built.ok) return jsonResponse({ error: built.error, code: built.code, ...(built.fieldErrors ? { fieldErrors: built.fieldErrors } : {}) }, 400);
 
   const url = `${base}/api/pwa/campaigns${built.path ? `/${built.path}` : ""}`;
   try {
@@ -70,7 +77,10 @@ Deno.serve(async (req) => {
     const retry = res.headers.get("retry-after");
     if (retry) headers["Retry-After"] = retry;
     return new Response(JSON.stringify(json), { status: res.status, headers });
-  } catch {
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      return jsonResponse({ error: `The campaign service did not answer within ${TIMEOUT_MS / 1000} s.`, code: "bridge_timeout" }, 504);
+    }
     return jsonResponse({ error: "The campaign service is not reachable right now.", code: "bridge_unreachable" }, 502);
   }
 });

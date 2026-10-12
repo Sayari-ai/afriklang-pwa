@@ -14,6 +14,7 @@
  *       dialect             (optional)
  *       english_description (optional)
  *       speaker_id          (optional)
+ *       + campaign fields   (optional, campaign recordings only; docs/SAYARI_UPLOAD_PAYLOAD.json)
  *     files:
  *       files               (required)  binary, content-type audio/wav
  *
@@ -97,6 +98,8 @@ export interface UploadAudioArgs {
   englishDescription?: string;
   /** Stable speaker UUID same as our `device_id`. */
   speakerId?: string;
+  /** Extra text fields appended to the multipart body (campaign context: see docs/SAYARI_UPLOAD_PAYLOAD.json). Never overrides the fields above. */
+  extraFields?: Record<string, string>;
   /** Optional `AbortSignal` for cancel-on-unmount. */
   signal?: AbortSignal;
 }
@@ -159,6 +162,7 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioRes
     form.append("english_description", args.englishDescription);
   }
   if (args.speakerId != null) form.append("speaker_id", args.speakerId);
+  for (const [k, v] of Object.entries(args.extraFields ?? {})) if (!form.has(k)) form.append(k, v);
   // Wrap the blob in a File so the multipart part carries the
   // filename (browsers drop bare Blob filenames otherwise).
   const wavFile = new File([args.file], args.filename, { type: "audio/wav" });

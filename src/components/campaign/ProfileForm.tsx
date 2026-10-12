@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import {
   useId,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
   type ReactNode,
@@ -17,7 +18,9 @@ import {
   countryOptions,
   initialValues,
   languageOptions,
+  profileErrorsFromServer,
   validateProfile,
+  type FieldError,
   type ProfileErrors,
   type ProfileValues,
 } from "@/lib/campaign/profile-form";
@@ -53,6 +56,8 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
   const [busy, setBusy] = useState(false);
+  // State updates are not synchronous: a ref stops a second tap from sending the form twice.
+  const sending = useRef(false);
 
   const countries = useMemo(() => {
     let names: Intl.DisplayNames | null = null;
@@ -72,9 +77,14 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
 
+  const focusFirst = (found: ProfileErrors) => {
+    const first = Object.keys(found)[0];
+    if (first) document.getElementById(`${uid}-${first}`)?.focus();
+  };
+
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (busy || otherVariety) return;
+    if (sending.current || otherVariety) return;
     const { input, errors: found } = validateProfile(
       values,
       card.language.varieties,
@@ -82,16 +92,39 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     setErrors(found);
     if (!input) {
       setFailure(null);
-      document.getElementById(`${uid}-${Object.keys(found)[0]}`)?.focus();
+      focusFirst(found);
       return;
     }
+    sending.current = true;
     setBusy(true);
     setFailure(null);
-    const res = await saveProfile(input);
-    setBusy(false);
-    if (res.ok) onSaved();
-    else setFailure(res);
+    try {
+      const res = await saveProfile(input);
+      if (res.ok) return onSaved();
+      // A 400 that names fields: mark them (with each field's own hint) rather than one vague line.
+      const fromServer = res.code === "invalid_input" ? profileErrorsFromServer(res.fieldErrors) : {};
+      if (Object.keys(fromServer).length) {
+        setErrors(fromServer);
+        focusFirst(fromServer);
+      } else setFailure(res);
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
   }
+
+  const errorText = (k: keyof ProfileInput, err: FieldError) => {
+    switch (err) {
+      case "required":
+        return t(`errors.required.${k}`);
+      case "server":
+        return t(`errors.server.${k}`);
+      case "tooLong":
+        return t("errors.tooLong", { max: MAX_TEXT, count: values[k].trim().length });
+      default:
+        return t(`errors.${err}`);
+    }
+  };
 
   const field = (
     k: keyof ProfileInput,
@@ -125,7 +158,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
         ) : null}
         {err ? (
           <p id={`${id}-err`} role="alert" className="text-sm text-red-700">
-            {t(`errors.${err}`)}
+            {errorText(k, err)}
           </p>
         ) : null}
       </div>
@@ -147,6 +180,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
           id={p.id}
           aria-describedby={p.describedBy}
           aria-invalid={p.invalid}
+          required
           value={values[k]}
           onChange={(e) => set(k)(e.target.value)}
           className={control}
@@ -173,6 +207,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
           type="text"
           maxLength={MAX_TEXT + 20}
           autoComplete={autoComplete}
+          required
           aria-describedby={p.describedBy}
           aria-invalid={p.invalid}
           value={values[k]}
@@ -206,6 +241,11 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
           { value: OTHER_VARIETY, label: t("varietyOther") },
         ),
       )}
+      {card.language.varieties.length === 0 ? (
+        <Notice title={t("noVarietiesTitle")} tone="warn">
+          <p>{t("noVarietiesBody")}</p>
+        </Notice>
+      ) : null}
       {otherVariety ? (
         <Notice title={t("varietyOtherTitle")} tone="warn">
           <p>{t("varietyOtherBody")}</p>

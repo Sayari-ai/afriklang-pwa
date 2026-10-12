@@ -49,6 +49,8 @@ describe("checkTake", () => {
     expect(checkTake({ ...good, peak_dbfs: 0 }, rules)).toBe("clipped");
     expect(checkTake({ ...good, silence_before_s: 0.2 }, rules)).toBe("silence");
     expect(checkTake({ ...good, silence_after_s: 0.4 }, rules)).toBe("silence");
+    // nothing above the silence threshold: said as "silent", before any length problem
+    expect(checkTake(analyzeSamples(new Float32Array(16000 * 2), 16000), rules)).toBe("silent");
     expect(checkTake({ ...good, silence_before_s: 0.5 }, rules)).toBeNull(); // half the margin is enough
   });
 });
