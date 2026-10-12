@@ -13,8 +13,11 @@ import { useEffect } from "react";
 export default function EntryPage() {
   const router = useRouter();
   useEffect(() => {
-    // Keep a fragment (an invitation link opened on "/") so the campaign screen can read it.
-    router.replace(`/campaign${window.location.hash}`);
+    // Keep the query and the fragment: an invitation link opened on "/" (#t=...), and Google's
+    // sign-in code (?code=...) when Supabase sends the sign-in back to the site's root (its
+    // "Site URL") instead of /campaign. Dropping the code there sent people back to the welcome
+    // screen after choosing their Google account, every time.
+    router.replace(`/campaign${window.location.search}${window.location.hash}`);
   }, [router]);
 
   return (
