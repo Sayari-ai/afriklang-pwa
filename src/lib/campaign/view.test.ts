@@ -16,8 +16,18 @@ describe("speaker view facts", () => {
     expect(setupStep("campaign_consent")).toBe(3);
     expect(setupStep("ready")).toBeNull();
   });
-  it("hides campaigns without assigned missions", () => {
-    expect(hasMissions({ progress: { total: 0, todo: 0, submitted: 0, accepted: 0, rejected: 0 } })).toBe(false);
+  it("hides planned campaigns without assigned missions", () => {
+    const none = { total: 0, todo: 0, submitted: 0, accepted: 0, rejected: 0 };
+    expect(hasMissions({ progress: none, next_step: "ready" })).toBe(false);
+    expect(hasMissions({ progress: none, next_step: "profile", dispatch: "planned" })).toBe(false);
+    expect(hasMissions({ progress: { ...none, total: 3, todo: 3 }, next_step: "profile" })).toBe(true);
+  });
+  it("shows a pool campaign before anything is drawn, unless it is paused or over", () => {
+    const none = { total: 0, todo: 0, submitted: 0, accepted: 0, rejected: 0 };
+    for (const next_step of ["profile", "blocked", "account_consent", "campaign_consent", "ready"] as const) expect(hasMissions({ progress: none, next_step, dispatch: "pool" }), next_step).toBe(true);
+    expect(hasMissions({ progress: none, next_step: "paused", dispatch: "pool" })).toBe(false);
+    expect(hasMissions({ progress: none, next_step: "closed", dispatch: "pool" })).toBe(false);
+    expect(hasMissions({ progress: { ...none, total: 2, accepted: 2 }, next_step: "closed", dispatch: "pool" })).toBe(true);
   });
   it("explains outbox codes briefly", () => {
     expect(outboxReasonKey("campaign_paused")).toBe("paused");

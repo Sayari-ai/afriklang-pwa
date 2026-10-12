@@ -5,11 +5,14 @@
  * straight into the studio when they can record, or to the setup step that is missing.
  */
 
-import { AlertTriangle, CalendarClock, ChevronRight, Mic, PauseCircle, UploadCloud } from "lucide-react";
+import { AlertTriangle, CalendarClock, ChevronRight, Coins, Mic, PauseCircle, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { isPool, isRefusal, paidTime } from "@/lib/campaign/pool";
+import { usePoolMemo } from "@/lib/campaign/pool-client";
 import type { CampaignCard } from "@/lib/campaign/types";
 import { daysLeft, openCount, setupStep } from "@/lib/campaign/view";
+import { useTimeText } from "./PoolParts";
 
 export function ProgressRing({ value, total, size = 64 }: { value: number; total: number; size?: number }) {
   const r = size / 2 - 5;
@@ -36,9 +39,15 @@ export function CampaignCardView({ card, waiting }: { card: CampaignCard; waitin
   const step = setupStep(card.next_step);
   const hub = `/campaign/${card.campaign_id}`;
   const topic = [card.topic.domain, card.topic.sub_domain].filter(Boolean).join(" · ");
+  const pool = isPool(card);
+  const memo = usePoolMemo(card.campaign_id);
+  const time = useTimeText();
+  const paid = paidTime(card.rewards);
 
   let cta: { href: string; label: string; tone: "go" | "setup" | "warn" | "quiet" };
   if (card.next_step === "ready" && open > 0) cta = { href: `${hub}/studio`, label: done > 0 ? t("continue", { n: open }) : t("start"), tone: "go" };
+  // Pool: an empty batch is filled when the studio opens, unless the last draw was refused.
+  else if (card.next_step === "ready" && pool) cta = isRefusal(memo?.last.status) ? { href: hub, label: t("noNewMissions"), tone: "quiet" } : { href: `${hub}/studio`, label: t("getMissions"), tone: "go" };
   else if (card.next_step === "ready") cta = { href: hub, label: t("allSent"), tone: "quiet" };
   else if (card.next_step === "blocked") cta = { href: hub, label: t("blocked"), tone: "warn" };
   else if (step) cta = { href: hub, label: t("setup"), tone: "setup" };
@@ -66,11 +75,17 @@ export function CampaignCardView({ card, waiting }: { card: CampaignCard; waitin
       <div className="flex items-center gap-4 px-4 pb-3">
         <div className="relative text-submit">
           <ProgressRing value={done} total={progress.total} />
-          <span className="absolute inset-0 grid place-items-center text-sm font-black text-slate-900">{progress.total ? Math.round((done / progress.total) * 100) : 0}%</span>
+          {/* A pool campaign has no fixed total (it grows with each batch): show the count, not a share. */}
+          <span className="absolute inset-0 grid place-items-center text-sm font-black text-slate-900">{pool ? done : `${progress.total ? Math.round((done / progress.total) * 100) : 0}%`}</span>
         </div>
         <div className="min-w-0 flex-1 space-y-1 text-sm">
-          <p className="font-bold text-slate-900">{t("recorded", { done, total: progress.total })}</p>
+          <p className="font-bold text-slate-900">{pool ? t("sent", { n: done }) : t("recorded", { done, total: progress.total })}</p>
           <div className="flex flex-wrap gap-1.5">
+            {paid && paid.acceptedS > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                <Coins size={12} aria-hidden /> {t("paid", { time: time(paid.acceptedS) })}
+              </span>
+            ) : null}
             {days != null ? (
               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${days <= 3 && days >= 0 ? "bg-red-50 text-red-700" : "bg-slate-100 text-slate-700"}`}>
                 <CalendarClock size={12} aria-hidden /> {days < 0 ? t("ended") : t("daysLeft", { n: days })}

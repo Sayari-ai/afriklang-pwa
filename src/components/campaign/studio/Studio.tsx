@@ -25,7 +25,10 @@ import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import { buildMetadata, buildSayariCampaignFields, deviceLabel, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
 import { QUIET_HINT_AFTER_S, TEXT_SIZES, canRecordNow, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
+import { isRefusal } from "@/lib/campaign/pool";
+import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
+import { PoolRefusal } from "../PoolParts";
 import { Confetti, PromptCard, RecordButton, SessionBar, TakePlayer } from "./StudioParts";
 
 type Phase = "idle" | "countdown" | "lead" | "speaking" | "tail" | "analyzing" | "problem" | "review" | "saving" | "goal" | "done";
@@ -45,14 +48,16 @@ const SIZE_KEY = "afriklang.studio.textSize";
 type Props = {
   campaignId: string;
   card: CampaignCard;
-  missions: Mission[];
+  missions: readonly Mission[];
   userId: string;
   speakerId: string;
   contributor: ContributorView;
   startId: string | null;
+  /** Pool campaigns: the batch's draws (the studio asks for more when it is recorded). Null when planned. */
+  pool?: PoolState | null;
 };
 
-export function Studio({ campaignId, card, missions, userId, speakerId, contributor, startId }: Props) {
+export function Studio({ campaignId, card, missions, userId, speakerId, contributor, startId, pool = null }: Props) {
   const dialect = contributor.profile.values?.variety ?? null;
   const locale = useLocale();
   // One id per studio visit: groups the takes of a sitting in the dataset.
@@ -60,6 +65,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const quietShownRef = useRef(false);
   const takesRef = useRef(new Map<string, number>());
   const t = useTranslations("campaign.studio");
+  const tp = useTranslations("campaign.common.pool");
+  const tc = useTranslations("campaign.common");
   const hubHref = `/campaign/${campaignId}`;
   const box = useOutbox();
   const onPhone = useMemo(() => missionsInOutbox(box.items.filter((i) => i.userId === userId)), [box.items, userId]);
@@ -88,13 +95,25 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     }
   });
 
-  // Missions that became recordable during the session (sent back by the team) join the end of the queue.
+  // Missions that became recordable during the session (sent back by the team, or drawn for a pool
+  // campaign) join the end of the queue. A pool session that had run out picks up the new batch.
+  const isPoolSession = pool != null;
   useEffect(() => {
     const fresh = sessionQueue(missions, onPhoneRef.current, null).filter((id) => !queue.includes(id));
-    if (fresh.length) setQueue((q) => [...q, ...fresh.filter((id) => !q.includes(id))]);
-  }, [missions, queue]);
+    if (!fresh.length) return;
+    setQueue((q) => [...q, ...fresh.filter((id) => !q.includes(id))]);
+    if (isPoolSession && phase === "done") {
+      setCurrentId(fresh[0]);
+      setPhase("idle");
+    }
+  }, [missions, queue, isPoolSession, phase]);
 
-  const mission = currentId ? byId.get(currentId) ?? null : null;
+  // The mission on screen keeps its last known copy: in a pool campaign it can leave the list while
+  // it is being recorded (its lease ended, or a refresh came in), and the take must still go through.
+  const [held, setHeld] = useState<Mission | null>(null);
+  const found = currentId ? byId.get(currentId) ?? null : null;
+  if (found && found !== held) setHeld(found);
+  const mission = found ?? (held && held.mission_id === currentId ? held : null);
   const rules = mission ? takeRules(card, mission) : null;
   const pad = paddingS(card);
   const goal = sessionGoal(card);
@@ -519,6 +538,43 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         <Link href={hubHref} className="grid min-h-14 place-items-center rounded-2xl border border-white/30 text-base font-semibold">
           {t("goal.finish")}
         </Link>
+      </div>,
+    );
+  }
+
+  if ((phase === "done" || !mission || !rules) && pool) {
+    // Pool: the batch is recorded. Draw the next one here, or say why there is none.
+    const refused = isRefusal(pool.memo?.last.status) ? (pool.memo!.last.status as Parameters<typeof PoolRefusal>[0]["status"]) : null;
+    const back = (
+      <Link href={hubHref} className="grid min-h-14 place-items-center rounded-2xl border border-white/30 text-base font-semibold">
+        {t("done.back")}
+      </Link>
+    );
+    return shell(
+      <div className="afk-pop m-auto flex max-w-sm flex-col items-center gap-4 text-center">
+        {sessionCount > 0 && !refused ? <Confetti /> : null}
+        {refused ? (
+          <PoolRefusal status={refused} campaignId={campaignId} elsewhere={pool.memo?.pool} dark />
+        ) : (
+          <>
+            <div className="grid size-24 place-items-center rounded-full bg-emerald-500 shadow-lg">
+              <Check size={52} strokeWidth={3} aria-hidden />
+            </div>
+            <h1 className="text-3xl font-black">{t("done.batchTitle")}</h1>
+            {sessionCount > 0 ? <p className="text-lg font-bold text-yellow">{t("done.sessionCount", { n: sessionCount })}</p> : null}
+            <p role={pool.drawFailed ? "alert" : "status"} className="text-base text-white/85">
+              {pool.drawing ? tp("drawing") : pool.drawFailed ? tp("drawFailed") : tp("batchDone")}
+            </p>
+          </>
+        )}
+      </div>,
+      <div className="flex flex-col gap-3">
+        {!refused ? (
+          <button type="button" autoFocus onClick={() => void pool.drawNow()} disabled={pool.drawing} className="min-h-14 rounded-2xl bg-white text-lg font-bold text-primary disabled:opacity-70">
+            {pool.drawFailed ? tc("retry") : tp("getMore")}
+          </button>
+        ) : null}
+        {back}
       </div>,
     );
   }

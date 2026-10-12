@@ -16,7 +16,9 @@ import { useOutbox } from "@/lib/campaign/outbox-client";
 import { canRecordNow } from "@/lib/campaign/studio-flow";
 import type { Mission, SpeechType } from "@/lib/campaign/types";
 import { useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
+import { useLiveMissions } from "@/lib/campaign/pool-client";
 import { useFailureText } from "./CampaignHubParts";
+import { LeaseLeft } from "./PoolParts";
 
 type Tab = "todo" | "redo" | "sent" | "accepted";
 const TYPE_ICON: Record<SpeechType, typeof BookOpen> = { read: BookOpen, spontaneous: MessageCircle, conversational: MessagesSquare };
@@ -42,12 +44,14 @@ export function MissionList({ campaignId, readOnly }: Props) {
   const userId = session.status === "signedIn" ? session.userId : null;
   const onPhone = useMemo(() => missionsInOutbox(box.items.filter((i) => i.userId === userId && i.campaignId === campaignId)), [box.items, userId, campaignId]);
   const [picked, setPicked] = useState<Tab | null>(null);
+  // Pool missions whose lease ended are back in the pool: not listed, even from a saved copy.
+  const live = useLiveMissions(res.state === "ready" ? res.data.missions : null);
 
   const groups = useMemo(() => {
     const g: Record<Tab, Mission[]> = { todo: [], redo: [], sent: [], accepted: [] };
-    if (res.state === "ready") for (const m of [...res.data.missions].sort((a, b) => a.position - b.position)) g[tabOf(m, onPhone.get(m.mission_id))].push(m);
+    if (live) for (const m of [...live].sort((a, b) => a.position - b.position)) g[tabOf(m, onPhone.get(m.mission_id))].push(m);
     return g;
-  }, [res, onPhone]);
+  }, [live, onPhone]);
 
   if (res.state === "error") {
     return (
@@ -123,6 +127,7 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly }: { campa
         </span>
         <span className="block text-sm font-semibold text-slate-900">{truncate(m.prompt.text_or_topic, 110)}</span>
         {m.status === "rejected" && !local ? <span className="mt-1 block text-xs font-semibold text-amber-800">{m.rejection_reason ? tm("reason", { reason: m.rejection_reason }) : tm("noReason")}</span> : null}
+        {!local ? <LeaseLeft mission={m} /> : null}
         {partnerWait ? (
           <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-800">
             <Users size={12} aria-hidden /> {t("hub.partnerWait")}

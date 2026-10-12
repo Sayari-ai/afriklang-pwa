@@ -32,6 +32,30 @@ contributors, tracking) lives in `afriklang-landing-page`; the contract between 
 8. **History** (`/campaign/history`): totals, takes still on the phone (send now, record again,
    delete), every recording with its review result, and the activity on this phone by day.
 
+**Pay is per hour of accepted audio.** When the dashboard sends `rewards.accepted_s` / `pending_s`, the
+home, each card, the campaign page and the history show accepted and in-review audio as hours and
+minutes, rounded down (never more than will be paid). With an older dashboard they fall back to counts.
+
+### Planned and pool campaigns
+
+Each card says how work reaches the speaker (`dispatch`; a card without it is planned).
+
+- **Planned**: every mission is assigned up front. Everything above applies as is.
+- **Pool** (large campaigns): nothing is assigned up front, so the card shows from the first setup
+  step. Once set up, the speaker **draws** a small batch (`draw`). Each mission is held under a
+  **lease** (`lease_until`, usually 72 h); one not submitted in time goes back to the pool.
+  - The app draws by itself when the speaker opens the campaign or the studio holding fewer than
+    `refill_below` missions they can still record, and again while recording as the batch runs low.
+    It waits a minute after a draw, 2 minutes after a failed call, and 15 minutes after a refusal
+    or a give-back (`src/lib/campaign/pool.ts`, `shouldDraw`). "Get more missions" asks at once.
+  - The campaign page shows when the batch must be recorded by (amber within 24 h; rows show the
+    hours left). Missions whose lease ended are hidden and never started, even from the saved copy.
+  - A refusal is not an error: `cell_full`, `campaign_full`, `speaker_cap` and `quality_hold` each
+    get a message, and a full cell lists the speaker's other campaigns that still need them.
+  - "More options" → **Give back the missions I will not record** frees them for others at once.
+  - A take recorded before the lease ended but sent after it is still sent: the dashboard keeps it
+    (late submission). The outbox never drops a take because of a lease.
+
 Only a pseudonymous **speaker ID** (for example `SPK-7Q2M9X4D`) travels with the audio, never a name.
 
 ## 2. Architecture
@@ -48,7 +72,8 @@ browser  ──►  /api/audio-upload (existing proxy)  ──►  Sayari      (
   the user id and the verified Google email from the signed-in session
   (`supabase/functions/_shared/campaigns.ts`) and drops any `user_id` / `email` the browser sends.
 - Only the actions and fields listed in `ACTIONS` are forwarded: `claim`, `campaigns`, `profile`,
-  `consent`, `withdraw`, `missions`, `submit`. Each field is checked first (type, length, allowed
+  `consent`, `withdraw`, `missions`, `submit`, and for pool campaigns `draw` and `return` (1 to 200
+  mission ids). Each field is checked first (type, length, allowed
   values, formats, recording metadata ranges, with the dashboard's limits); a bad request gets a 400
   `{ error, code: "invalid_input", fieldErrors: { <field>: <problem> } }` naming every bad field,
   and the profile form marks those fields.
@@ -149,6 +174,8 @@ Do this with staff accounts before inviting anyone:
 | `src/lib/campaign/cache.ts`, `queries.ts` | Read cache and the local edits after a write |
 | `src/lib/campaign/outbox*.ts` | Takes waiting on the phone and the background sender |
 | `src/lib/campaign/studio-flow.ts`, `view.ts`, `activity.ts` | Studio order and timing, screen facts, local activity log |
+| `src/lib/campaign/pool.ts`, `pool-client.ts` | Pool campaigns (leases, when to draw) and paid time; the screens' hook |
+| `src/components/campaign/PoolParts.tsx` | Lease notice, refusals, "get more", give back, paid time |
 | `src/lib/campaign/dev-mock.ts` | Pretend backend for trying the app (development only) |
 | `src/components/campaign/**` | Screen components |
 | `src/messages/campaign/*.{en,fr}.json` | Strings, one file per area, English and French |
@@ -159,10 +186,17 @@ Do this with staff accounts before inviting anyone:
 NEXT_PUBLIC_CAMPAIGN_MOCK=1 NEXT_PUBLIC_SUPABASE_URL=https://mock.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=mock npx next dev --webpack
 ```
 
-Opens signed in as a fake speaker with one Wolof campaign of 12 missions (setup not done yet). Audio
-uploads are accepted locally. In the browser console: `__afkMock.review()` plays the reviewer (first
-submitted take sent back, the others accepted), `__afkMock.reset()` starts over. Never active in a
-production build.
+Opens signed in as a fake speaker with two Wolof campaigns (setup not done yet): a planned one of 12
+missions and a pool one (batches of 6, draw again under 3, 72 h leases). Audio uploads are accepted
+locally. In the browser console:
+
+- `__afkMock.review()` plays the reviewer (first submitted take sent back, the others accepted)
+- `__afkMock.poolStatus("cell_full")` refuses the next draws with that status (`"ok"` lifts it; pass
+  `true` as a second argument to list another campaign in `elsewhere`)
+- `__afkMock.leaseSoon()` / `__afkMock.expire()` end the pool batch's leases in 5 hours / now
+- `__afkMock.reset()` starts over
+
+Never active in a production build. The mock's answers must follow the bridge contract exactly.
 
 ## 8. Tests
 

@@ -67,6 +67,7 @@ type Identity = { userId: string; email: string | null; emailVerified: boolean }
 type Field =
   | { kind: "text"; label: string; max: number; required?: boolean; pattern?: RegExp; patternHint?: string; oneOf?: readonly string[]; upper?: boolean }
   | { kind: "uuid"; label: string; required?: boolean }
+  | { kind: "uuids"; label: string; max: number; required?: boolean }
   | { kind: "recording"; label: string; required?: boolean };
 type Spec = { path: string; fields: Record<string, Field>; sendEmail?: boolean; check?: (body: Record<string, unknown>, errors: FieldErrors) => void };
 type FieldErrors = Record<string, string>;
@@ -77,6 +78,9 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
 /** Letters or digits somewhere in a free-text answer (not only punctuation or spaces). */
 const HAS_WORD = /[\p{L}\p{N}]/u;
 const CONTROL = /[\u0000-\u001f\u007f]/;
+
+/** The dashboard refuses a `return` of more missions than this in one call. */
+const MAX_RETURN_IDS = 200;
 
 const GENDERS = ["female", "male", "other", "undisclosed"] as const;
 const AGE_BANDS = ["18-29", "30-44", "45-59", "60+"] as const;
@@ -122,6 +126,12 @@ const ACTIONS: Record<string, Spec> = {
   withdraw: { path: "consent/withdraw", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
   missions: { path: "missions", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
   submit: { path: "missions/submit", fields: { mission_id: { kind: "uuid", label: "mission_id", required: true }, recording: { kind: "recording", label: "recording", required: true } } },
+  // Pool campaigns only: draw a leased batch, or give open missions back (at most 200 per call).
+  draw: { path: "missions/draw", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
+  return: {
+    path: "missions/return",
+    fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true }, mission_ids: { kind: "uuids", label: "mission_ids", max: MAX_RETURN_IDS, required: true } },
+  },
 };
 
 type Built =
@@ -164,6 +174,13 @@ function buildForward(action: unknown, clientBody: unknown, who: Identity): Buil
     } else if (f.kind === "uuid") {
       if (typeof v !== "string" || !UUID_RE.test(v.trim())) errors[name] = `${f.label} must be a uuid`;
       else body[name] = v.trim().toLowerCase();
+    } else if (f.kind === "uuids") {
+      if (!Array.isArray(v)) errors[name] = `${f.label} must be a list of uuids`;
+      else if (v.length === 0) {
+        if (f.required) errors[name] = `${f.label} must list at least one id`;
+      } else if (v.length > f.max) errors[name] = `${f.label} lists ${v.length} ids, at most ${f.max}`;
+      else if (v.some((x) => typeof x !== "string" || !UUID_RE.test(x.trim()))) errors[name] = `${f.label} must contain uuids only`;
+      else body[name] = [...new Set(v.map((x: string) => x.trim().toLowerCase()))];
     } else {
       const r = checkRecording(v, errors);
       if (r) body[name] = r;

@@ -11,12 +11,14 @@ import { useState } from "react";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { truncate } from "@/lib/campaign/mission-list";
 import type { CampaignCard, Mission } from "@/lib/campaign/types";
+import { totalPaidTime } from "@/lib/campaign/pool";
 import { totals } from "@/lib/campaign/view";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { LanguageBadge } from "./CampaignCardView";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { MissionSkeleton } from "./MissionList";
 import { OutboxPanel } from "./OutboxPanel";
+import { useTimeText } from "./PoolParts";
 
 type Filter = "all" | "accepted" | "review" | "redo";
 const MATCH: Record<Filter, (m: Mission) => boolean> = {
@@ -32,12 +34,14 @@ export function HistoryScreen() {
   const session = useCampaignSession();
   const list = useCampaignList();
   const [filter, setFilter] = useState<Filter>("all");
+  const time = useTimeText();
 
   if (list.state === "error" && list.error.code === "not_linked") return <ClaimNotLinked />;
   if (list.state !== "ready" || session.status !== "signedIn") return <ClaimSpinner title={tc("loading")} />;
 
   const cards = list.data.campaigns;
   const sum = totals(cards);
+  const paid = totalPaidTime(cards);
   // The bridge lists missions only once both consents are signed.
   const readable = cards.filter((c) => c.progress.total > 0 && ["ready", "paused", "closed"].includes(c.next_step) && c.progress.total - c.progress.todo > 0);
 
@@ -62,6 +66,7 @@ export function HistoryScreen() {
           </div>
         ))}
       </dl>
+      {paid ? <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">{t("paid", { accepted: time(paid.acceptedS), pending: time(paid.pendingS) })}</p> : null}
 
       <OutboxPanel />
 

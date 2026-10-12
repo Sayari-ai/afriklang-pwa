@@ -11,7 +11,8 @@ import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 import { logActivity } from "@/lib/campaign/activity";
 import { isRetryable } from "@/lib/campaign/errors";
-import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
+import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
+import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView } from "@/lib/campaign/types";
 import { daysLeft, hasMissions, openCount, setupStep } from "@/lib/campaign/view";
 import { LanguageBadge, ProgressRing } from "./CampaignCardView";
@@ -19,6 +20,7 @@ import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignH
 import { ConsentStep } from "./ConsentStep";
 import { Instructions } from "./Instructions";
 import { MissionList, MissionSkeleton } from "./MissionList";
+import { GiveBack, PaidTime, PoolPanel } from "./PoolParts";
 import { ProfileForm } from "./ProfileForm";
 
 export function CampaignHub({ campaignId }: { campaignId: string }) {
@@ -70,7 +72,12 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
   const step = setupStep(card.next_step);
   const done = card.progress.submitted + card.progress.accepted;
   const days = daysLeft(card.deadline);
-  const open = openCount(card);
+  // Pool campaigns: the batch (lapsed leases dropped) decides what is left, and a low batch is
+  // topped up by itself when the speaker opens the campaign. Planned campaigns: the card's counts.
+  const missionRes = useCampaignMissions(card.campaign_id, card.next_step === "ready");
+  const live = useLiveMissions(missionRes.state === "ready" ? missionRes.data.missions : null);
+  const pool = usePool(card, card.next_step === "ready" ? live : null, true);
+  const open = pool.pool && pool.open != null ? pool.open : openCount(card);
 
   const after = useCallback(
     (type: "profile" | "consent" | "withdrawn") => () => {
@@ -106,6 +113,8 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
       </header>
 
       {step ? <Stepper current={step} /> : null}
+
+      {!step && card.next_step !== "blocked" ? <PaidTime card={card} /> : null}
 
       {card.next_step === "profile" || (card.next_step === "blocked" && correcting) ? (
         <Panel>
@@ -145,6 +154,7 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
 
       {card.next_step === "ready" ? (
         <>
+          {pool.pool ? <PoolPanel card={card} missions={live ?? []} state={pool} /> : null}
           {open > 0 ? (
             <Link
               href={`/campaign/${card.campaign_id}/studio`}
@@ -158,7 +168,7 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
                 <span className="block text-sm font-semibold text-white/90">{t("hub.toRecord", { n: open })}</span>
               </span>
             </Link>
-          ) : (
+          ) : pool.pool ? null : (
             <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
               <Check size={18} aria-hidden /> {t("hub.allRecorded")}
             </p>
@@ -167,8 +177,9 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
           <MissionList campaignId={card.campaign_id} readOnly={false} />
           <details className="group rounded-2xl bg-white p-4 ring-1 ring-slate-200">
             <summary className="cursor-pointer list-none text-sm font-bold text-slate-700">{t("hub.more")}</summary>
-            <div className="mt-3">
+            <div className="mt-3 space-y-3">
               <Instructions card={card} onWithdrawn={after("withdrawn")} />
+              <GiveBack state={pool} />
             </div>
           </details>
         </>
