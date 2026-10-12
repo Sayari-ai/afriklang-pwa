@@ -193,8 +193,8 @@ function Stepper({ current }: { current: 1 | 2 | 3 }) {
           const state = n < current ? "done" : n === current ? "current" : "next";
           return (
             <li key={label} aria-current={state === "current" ? "step" : undefined} className="relative flex flex-1 flex-col items-center gap-1 text-center">
-              {i > 0 ? <span aria-hidden className={`absolute top-4 right-1/2 h-0.5 w-full -translate-x-4 ${n <= current ? "bg-submit" : "bg-slate-200"}`} /> : null}
-              <span className={`relative grid size-8 place-items-center rounded-full text-sm font-black ${state === "done" ? "bg-submit text-white" : state === "current" ? "bg-primary text-white ring-4 ring-primary/20" : "bg-slate-200 text-slate-500"}`}>
+              {i > 0 ? <span aria-hidden className={`absolute top-[15px] right-1/2 -left-1/2 h-0.5 ${n <= current ? "bg-submit" : "bg-slate-200"}`} /> : null}
+              <span className={`relative z-10 grid size-8 place-items-center rounded-full text-sm font-black ${state === "done" ? "bg-submit text-white" : state === "current" ? "bg-primary text-white ring-4 ring-primary/20" : "bg-slate-200 text-slate-500"}`}>
                 {state === "done" ? <Check size={16} strokeWidth={3} aria-hidden /> : n}
               </span>
               <span className={`text-[11px] leading-tight font-semibold ${state === "current" ? "text-primary" : "text-slate-600"}`}>{label}</span>

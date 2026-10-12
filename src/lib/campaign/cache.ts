@@ -50,7 +50,8 @@ export function createCache(opts: { storage?: () => Store | null; now?: () => nu
       const raw = storage()?.getItem(PERSIST_PREFIX + id);
       if (raw) {
         const saved = JSON.parse(raw) as { data: unknown; at: number };
-        if (saved && typeof saved.at === "number" && saved.data != null) loaded = { data: saved.data, at: saved.at, failure: null, refreshing: false };
+        // A copy from an earlier visit is shown at once but always refreshed (at: 0 is never fresh).
+        if (saved && typeof saved.at === "number" && saved.data != null) loaded = { data: saved.data, at: 0, failure: null, refreshing: false };
       }
     } catch {
       // unreadable copy: start empty

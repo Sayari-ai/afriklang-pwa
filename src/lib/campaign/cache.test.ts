@@ -48,7 +48,9 @@ describe("campaign cache", () => {
     s.setItem("afriklang.campaign.cache.v1:k", JSON.stringify({ data: { saved: true }, at: 1 }));
     const c = createCache({ storage: () => s });
     expect(c.read("k").data).toEqual({ saved: true });
-    await c.load("k", () => Promise.resolve({ ok: false, status: 0, code: "offline", message: "" }));
+    const loader = vi.fn(() => Promise.resolve({ ok: false as const, status: 0, code: "offline" as const, message: "" }));
+    await c.load("k", loader);
+    expect(loader).toHaveBeenCalledTimes(1); // a saved copy is always refreshed once
     expect(c.read("k").data).toEqual({ saved: true });
     expect(c.read("k").failure?.code).toBe("offline");
   });

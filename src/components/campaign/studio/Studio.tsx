@@ -73,6 +73,12 @@ export function Studio({ campaignId, card, missions, userId, speakerId, dialect,
     }
   });
 
+  // Missions that became recordable during the session (sent back by the team) join the end of the queue.
+  useEffect(() => {
+    const fresh = sessionQueue(missions, onPhoneRef.current, null).filter((id) => !queue.includes(id));
+    if (fresh.length) setQueue((q) => [...q, ...fresh.filter((id) => !q.includes(id))]);
+  }, [missions, queue]);
+
   const mission = currentId ? byId.get(currentId) ?? null : null;
   const rules = mission ? takeRules(card, mission) : null;
   const pad = paddingS(card);

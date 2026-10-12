@@ -51,7 +51,16 @@ const sameSession = (a: SessionState, b: SessionState) =>
 
 export type Loaded<T> =
   | { state: "waiting" | "signedOut" | "loading"; error: null; data: null; reload: () => void }
-  | { state: "ready"; error: null; data: T; reload: () => void; refreshing: boolean; failure: CampaignFailure | null }
+  | {
+      state: "ready";
+      error: null;
+      data: T;
+      reload: () => void;
+      refreshing: boolean;
+      failure: CampaignFailure | null;
+      /** The data is a copy saved on an earlier visit, not yet confirmed by the server. */
+      saved: boolean;
+    }
   | { state: "error"; error: CampaignFailure; data: null; reload: () => void };
 
 // ── Revalidation of what is on screen ────────────────────────────────────
@@ -109,7 +118,7 @@ function useCached<T>(key: string | null, load: ((userId: string, force: boolean
   if (!entry) return { state: "loading", error: null, data: null, reload };
   // A rejected session is "signed out" as far as the screens are concerned.
   if (entry.failure && needsSignIn(entry.failure.code)) return { state: "signedOut", error: null, data: null, reload };
-  if (entry.data != null) return { state: "ready", error: null, data: entry.data, reload, refreshing: entry.refreshing, failure: entry.failure };
+  if (entry.data != null) return { state: "ready", error: null, data: entry.data, reload, refreshing: entry.refreshing, failure: entry.failure, saved: entry.at === 0 };
   if (entry.failure && !entry.refreshing) return { state: "error", error: entry.failure, data: null, reload };
   return { state: "loading", error: null, data: null, reload };
 }

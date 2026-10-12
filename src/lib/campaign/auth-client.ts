@@ -9,6 +9,7 @@
  */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { installCampaignMock } from "./dev-mock";
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -20,6 +21,7 @@ let client: SupabaseClient | null = null;
 export function getCampaignAuth(): SupabaseClient {
   if (!isCampaignAuthConfigured) throw new Error("Supabase is not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).");
   if (client) return client;
+  installCampaignMock();
   client = createClient(URL_, ANON, {
     auth: {
       flowType: "pkce",
@@ -35,6 +37,10 @@ export function getCampaignAuth(): SupabaseClient {
 /** Start Google sign-in and come back to `returnPath` (same origin). */
 export async function signInWithGoogle(returnPath = "/campaign"): Promise<void> {
   const target = returnPath.startsWith("/") && !returnPath.startsWith("//") ? returnPath : "/campaign";
+  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_CAMPAIGN_MOCK === "1") {
+    localStorage.removeItem("afriklang.mock.signedOut");
+    return window.location.assign(target);
+  }
   const { error } = await getCampaignAuth().auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: `${window.location.origin}${target}`, queryParams: { prompt: "select_account" } },

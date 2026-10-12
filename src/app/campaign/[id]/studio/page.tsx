@@ -22,6 +22,12 @@ export default function StudioPage() {
   const missions = useCampaignMissions(id);
   // Read once: which mission the studio opens on (the address is then kept up to date by the studio).
   const [startId] = useState(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("m")));
+  // Online, the studio opens on a fresh mission list (its order is fixed when it opens); offline, on the
+  // saved copy. Once open, it stays open through later refreshes.
+  const [opened, setOpened] = useState(false);
+  const online = typeof navigator === "undefined" || navigator.onLine !== false;
+  const stale = !opened && missions.state === "ready" && online && (missions.saved || missions.refreshing) && !missions.failure;
+  if (!opened && missions.state === "ready" && !stale) setOpened(true);
   const back = (
     <Link href={`/campaign/${id}`} className={pill}>
       {t("guard.back")}
@@ -50,7 +56,7 @@ export default function StudioPage() {
       </div>
     );
   }
-  if (list.state !== "ready" || missions.state !== "ready" || session.status !== "signedIn") {
+  if (list.state !== "ready" || missions.state !== "ready" || session.status !== "signedIn" || stale) {
     return (
       <div className={dark} role="status">
         <span aria-hidden className="size-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />
