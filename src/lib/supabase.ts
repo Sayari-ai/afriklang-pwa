@@ -59,9 +59,11 @@ export function getSupabase(): SupabaseClient {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      // The campaign area has its own client (lib/campaign/auth-client.ts) that finishes its own
-      // Google sign-in on /campaign; this one must not try to exchange that code.
-      detectSessionInUrl: (url) => !url.pathname.startsWith("/campaign"),
+      // The speaker app signs in through the campaign client (lib/campaign/auth-client.ts), which
+      // finishes Google's sign-in on /campaign. This client must never try to exchange a sign-in
+      // code: it does not hold the code verifier, and "/" and "/login" forward the code to
+      // /campaign.
+      detectSessionInUrl: false,
       flowType: "pkce",
     },
   });

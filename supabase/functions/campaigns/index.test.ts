@@ -57,6 +57,13 @@ describe("campaigns Edge Function", () => {
     expect(await res.json()).toEqual({ error: "Too many", code: "rate" });
   });
 
+  it("a dashboard 401 (bridge key refused) is a server fault, never 'sign in again'", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error: "Unauthorized." }), { status: 401 }));
+    const res = await call({ action: "campaigns" });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ error: "server_misconfigured" });
+  });
+
   it("refuses without a usable session and never calls the dashboard", async () => {
     expect((await call({ action: "campaigns" }, {})).status).toBe(401);
     expect((await call({ action: "campaigns" }, { authorization: "Basic abc" })).status).toBe(401);

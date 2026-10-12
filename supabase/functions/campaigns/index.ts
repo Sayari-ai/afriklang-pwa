@@ -73,6 +73,14 @@ Deno.serve(async (req) => {
       // not JSON: handled below
     }
     if (json === null || typeof json !== "object") return errorResponse("bridge_error", "The campaign service answered unexpectedly.", 502);
+    // The user's session was checked above, so a 401 here is the dashboard refusing THIS
+    // function's key (BRIDGE_SECRET differs from the dashboard's PWA_BRIDGE_SECRET, or that one
+    // is unset). Passed through as 401 it read as "session expired" and sent the speaker back
+    // to Google sign-in in a loop.
+    if (res.status === 401) {
+      console.error("campaigns: the dashboard refused the bridge key (check BRIDGE_SECRET = PWA_BRIDGE_SECRET)");
+      return errorResponse("server_misconfigured", "The campaign service refused the app's key.", 500);
+    }
     const headers: Record<string, string> = { ...corsHeaders, "Content-Type": "application/json" };
     const retry = res.headers.get("retry-after");
     if (retry) headers["Retry-After"] = retry;
