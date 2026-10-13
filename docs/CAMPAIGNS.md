@@ -73,8 +73,10 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
 - **The upload proxy only forwards for a signed-in contributor** (since 2026-10-13): it reads
   `Authorization: Bearer <Supabase access token>`, checks it with Supabase Auth (cached 60 s), and
   refuses a body over 25 MB or without `Content-Length`. Limits, in each server instance's memory:
-  120 uploads per person per 10 minutes, 20 failed sign-in checks per address per 10 minutes, 600
-  Auth lookups per minute in total. Sayari's 5xx text and a refused upload key never reach the
+  120 uploads per person per 10 minutes, 20 failed sign-in checks per address per 10 minutes (the
+  token is checked first, so a valid one always passes; the address comes from the CDN's
+  `CloudFront-Viewer-Address`, or `SAYARI_UPLOAD_CLIENT_IP_HEADER`, else the last X-Forwarded-For hop),
+  600 Auth lookups per minute in total. Sayari's 5xx text and a refused upload key never reach the
   browser (`502 upstream_error`, `500 server_misconfigured`). Code: `src/lib/server/upload-guard.ts`.
   The outbox sends the token, renews it once on a 401, and otherwise holds the take until the
   speaker signs in again. The old learning-app screen (`/level/*`) sends no token and can no longer

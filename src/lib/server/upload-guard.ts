@@ -155,9 +155,21 @@ export class RateLimiter {
   }
 }
 
-/** The client address as the platform's proxy reports it (best effort; used only to slow down bad tokens). */
-export function clientIp(headers: Headers): string {
+/**
+ * The client address, from a header only the platform can set (APP-014). Used only to slow down an
+ * address that keeps sending bad tokens, so it must not be forgeable:
+ *   - `trustedHeader` (env SAYARI_UPLOAD_CLIENT_IP_HEADER, default "cloudfront-viewer-address": the viewer
+ *     address CloudFront adds, "ip:port"), when the request has it;
+ *   - otherwise the LAST X-Forwarded-For entry: the one our own proxy appended. The first entries
+ *     are whatever the client sent, so trusting them let anyone pick the address to block.
+ */
+export function clientIp(headers: Headers, trustedHeader = "cloudfront-viewer-address"): string {
+  const trusted = trustedHeader ? headers.get(trustedHeader)?.trim() : "";
+  if (trusted) return trusted.replace(/:\d{1,5}$/, "").replace(/^\[|\]$/g, "").slice(0, 64) || "unknown";
   const xff = headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0].trim().slice(0, 64) || "unknown";
+  if (xff) {
+    const hops = xff.split(",").map((h) => h.trim()).filter(Boolean);
+    if (hops.length) return hops[hops.length - 1].slice(0, 64);
+  }
   return headers.get("x-real-ip")?.trim().slice(0, 64) || "unknown";
 }

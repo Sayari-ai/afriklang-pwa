@@ -109,9 +109,14 @@ describe("RateLimiter", () => {
   });
 });
 
-describe("clientIp", () => {
-  it("takes the first forwarded address", () => {
-    expect(clientIp(new Headers({ "x-forwarded-for": "1.2.3.4, 10.0.0.1" }))).toBe("1.2.3.4");
+describe("clientIp (APP-014)", () => {
+  it("trusts the CDN's viewer address, without its port", () => {
+    expect(clientIp(new Headers({ "cloudfront-viewer-address": "198.51.100.10:46532", "x-forwarded-for": "6.6.6.6" }))).toBe("198.51.100.10");
+    expect(clientIp(new Headers({ "cloudfront-viewer-address": "2001:db8::1:46532" }))).toBe("2001:db8::1");
+  });
+  it("otherwise takes the last forwarded hop (the one our proxy added), never the client's own claim", () => {
+    expect(clientIp(new Headers({ "x-forwarded-for": "6.6.6.6, 1.2.3.4" }))).toBe("1.2.3.4");
+    expect(clientIp(new Headers({ "x-forwarded-for": "1.2.3.4" }), "")).toBe("1.2.3.4");
     expect(clientIp(new Headers())).toBe("unknown");
   });
 });

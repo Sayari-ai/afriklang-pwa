@@ -76,7 +76,10 @@ const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim
 
 // Per signed-in person: a speaker sending a backlog after being offline stays well under this.
 const perUser = new RateLimiter(120, 10 * 60_000);
-// Failed sign-in checks per client address (best effort: the address header can be forged).
+// The header carrying the client address that the platform sets (see clientIp). Empty: use the last
+// X-Forwarded-For hop only.
+const CLIENT_IP_HEADER = (process.env.SAYARI_UPLOAD_CLIENT_IP_HEADER ?? "cloudfront-viewer-address").trim().toLowerCase();
+// Failed sign-in checks per client address.
 const badTokenPerIp = new RateLimiter(20, 10 * 60_000);
 // Supabase Auth lookups this instance may make (cache misses only): forged tokens that pass the
 // local precheck cannot turn into a flood of Auth calls, whatever address they claim.
@@ -99,9 +102,9 @@ export async function POST(request: NextRequest) {
   const length = checkLength(request.headers.get("content-length"));
   if (!length.ok) return refuse(length.status, length.status === 413 ? "too_large" : "length_required");
 
-  // 2. A signed-in contributor. Bad tokens are limited per address, Auth lookups in total.
-  const ip = clientIp(request.headers);
-  if (badTokenPerIp.blocked(ip)) return refuse(429, "rate_limited", { "retry-after": "600" });
+  // 2. A signed-in contributor. The token is checked first, so a valid one always passes, even from an
+  //    address shared with someone sending junk (mobile carriers put many speakers behind one, APP-014).
+  //    Only failures count against the address; Auth lookups have a ceiling in total.
   const token = readBearer(request.headers.get("authorization"));
   let userId: string | null = null;
   if (token) {
@@ -114,7 +117,9 @@ export async function POST(request: NextRequest) {
     }
   }
   if (!userId) {
-    badTokenPerIp.take(ip);
+    const ip = clientIp(request.headers, CLIENT_IP_HEADER);
+    const bad = badTokenPerIp.take(ip);
+    if (!bad.ok) return refuse(429, "rate_limited", { "retry-after": String(bad.retryAfterS) });
     return refuse(401, "unauthorized");
   }
 

@@ -68,9 +68,16 @@ describe("POST /api/audio-upload", () => {
     expect(upstream).toHaveLength(0);
   });
 
-  it("slows down an address that keeps sending bad tokens", async () => {
-    for (let i = 0; i < 20; i++) await POST(req({ ip: "6.6.6.6" }));
-    expect((await POST(req({ ip: "6.6.6.6", token: tokenFor("user-z") }))).status).toBe(429);
+  it("slows down an address that keeps sending bad tokens, but never a valid token from it (APP-014)", async () => {
+    for (let i = 0; i < 20; i++) expect((await POST(req({ ip: "6.6.6.6" }))).status).toBe(401);
+    expect((await POST(req({ ip: "6.6.6.6" }))).status).toBe(429);
+    // Someone else behind the same carrier address, signed in: goes through.
+    expect((await POST(req({ ip: "6.6.6.6", token: tokenFor("user-z") }))).status).toBe(200);
+  });
+
+  it("a forged X-Forwarded-For cannot get another address blocked", async () => {
+    for (let i = 0; i < 25; i++) await POST(req({ ip: "7.7.7.7, 5.5.5.5" }));
+    expect((await POST(req({ ip: "7.7.7.7" }))).status).toBe(401);
   });
 
   it("limits one person to 120 uploads per 10 minutes", async () => {
