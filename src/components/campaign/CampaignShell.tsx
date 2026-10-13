@@ -139,12 +139,38 @@ function AccountSheet({ email, onClose }: { email: string | null; onClose: () =>
   const closeRef = useRef<HTMLButtonElement>(null);
   const speakerId = list.state === "ready" ? list.data.contributor.speaker_id : null;
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+  // A modal: focus moves in, Tab stays inside, Escape closes, and focus returns to the account
+  // button on close (APP-027).
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return onCloseRef.current();
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter((el) => !el.hasAttribute("disabled"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+    // Once per opening: the parent re-renders (network, outbox) must not move the focus.
+  }, []);
 
   function leave() {
     // This person's takes only (APP-025): another account's takes are not theirs to worry about.
@@ -155,7 +181,7 @@ function AccountSheet({ email, onClose }: { email: string | null; onClose: () =>
 
   return (
     <div className="fixed inset-0 z-40 mx-auto flex max-w-[480px] items-end bg-black/50" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="acct-title" onClick={(e) => e.stopPropagation()} className="afk-pop w-full rounded-t-3xl bg-primary px-5 pt-4 pb-[max(env(safe-area-inset-bottom),20px)] text-white">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="acct-title" onClick={(e) => e.stopPropagation()} className="afk-pop w-full rounded-t-3xl bg-primary px-5 pt-4 pb-[max(env(safe-area-inset-bottom),20px)] text-white">
         <div className="mb-4 flex items-center justify-between">
           <h2 id="acct-title" className="text-lg font-black">{t("account")}</h2>
           <button ref={closeRef} type="button" onClick={onClose} aria-label={t("close")} className="grid size-10 place-items-center rounded-full bg-white/15">

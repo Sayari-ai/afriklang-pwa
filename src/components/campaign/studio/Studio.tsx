@@ -699,8 +699,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
             {maxS ? <span className="text-lg font-semibold text-white/60"> / {formatClock(maxS)}</span> : null}
           </p>
         ) : null}
-        <RecordButton mode={buttonMode} count={count} onPress={press} disabled={phase === "speaking" && !canStop} levelRef={levelRef} minLevelDbfs={rules.minLevelDbfs} progress={progress} label={buttonLabel} />
-        <p className="min-h-5 text-center text-sm text-white/75">
+        <RecordButton mode={buttonMode} count={count} onPress={press} disabled={phase === "speaking" && !canStop} describedBy="rec-hint" levelRef={levelRef} minLevelDbfs={rules.minLevelDbfs} progress={progress} label={buttonLabel} />
+        <p id="rec-hint" className="min-h-5 text-center text-sm text-white/75">
           {phase === "speaking" && quiet ? <span className="font-semibold text-amber-200">{t("hint.quiet")}</span> : phase === "speaking" && !canStop ? t("hint.tooEarly", { min: minS }) : null}
         </p>
         {phase === "idle" || phase === "problem" ? (
