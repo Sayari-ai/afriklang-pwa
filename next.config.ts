@@ -91,12 +91,18 @@ const APP_BUILD = (process.env.AWS_COMMIT_ID ?? "").slice(0, 12) || String(Date.
 //     buttons and no "paste this into the page" tricks inside a look-alike frame.
 //   - base-uri / object-src / form-action: close the classic injection footholds.
 //   - Permissions-Policy: the microphone for this origin only; camera and location off.
+//   - Strict-Transport-Security, Cross-Origin-Opener-Policy (APP-023). A nonce-based script-src
+//     (as the dashboard has) is still to do.
 const securityHeaders = [
   { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "microphone=(self), camera=(), geolocation=()" },
+  // HTTPS only, for two years, subdomains included (ignored by browsers on plain-http localhost).
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+  // No other site's window keeps a handle on ours (Google sign-in is a redirect, not a popup).
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
 ];
 
 const nextConfig: NextConfig = {
