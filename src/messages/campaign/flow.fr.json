@@ -9,7 +9,9 @@
     "paused": "L'enregistrement est en pause pour le moment. Vous pouvez voir vos missions ci-dessous ; il reprendra quand la campagne reprendra.",
     "closed": "Cette campagne est terminée. Vous pouvez encore voir vos missions ci-dessous, mais vous ne pouvez plus enregistrer.",
     "pausedTitle": "Enregistrement en pause",
-    "closedTitle": "Campagne terminée"
+    "closedTitle": "Campagne terminée",
+    "withdrawnTitle": "Votre retrait de cette campagne est enregistré",
+    "withdrawnDeleted": "{n, plural, =0 {Aucun enregistrement de cette campagne n'attendait sur ce téléphone.} one {L'enregistrement de cette campagne qui attendait sur ce téléphone a été supprimé.} other {Les # enregistrements de cette campagne qui attendaient sur ce téléphone ont été supprimés.}}"
   },
   "profile": {
     "title": "À propos de vous",
@@ -106,6 +108,7 @@
     "withdraw": "Me retirer de cette campagne",
     "withdrawTitle": "Vous retirer de cette campagne ?",
     "withdrawBody": "Vous ne pourrez plus enregistrer pour cette campagne et l'équipe sera prévenue. Votre consentement général à l'enregistrement est conservé.",
+    "withdrawPending": "{n, plural, one {# enregistrement de cette campagne est encore sur ce téléphone. Il sera supprimé et ne sera jamais envoyé.} other {# enregistrements de cette campagne sont encore sur ce téléphone. Ils seront supprimés et ne seront jamais envoyés.}}",
     "withdrawConfirm": "Oui, me retirer",
     "withdrawing": "Retrait en cours…",
     "cancel": "Annuler"

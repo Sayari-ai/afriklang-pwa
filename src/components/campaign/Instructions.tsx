@@ -2,15 +2,21 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
-import { withdrawConsent } from "@/lib/campaign/api";
+import { useCampaignSession } from "@/lib/campaign/hooks";
+import { useOutbox, withdrawFromCampaign } from "@/lib/campaign/outbox-client";
 import type { CampaignCard, CampaignFailure } from "@/lib/campaign/types";
 import { FailureMessage, buttonSecondary } from "./CampaignHubParts";
 
 const SPEECH_ORDER = ["read", "spontaneous", "conversational"] as const;
 
 /** The rules and per-type guidance. Open the first time, collapsed afterwards (remembered per campaign on this device). */
-export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWithdrawn: () => void }) {
+/** `onWithdrawn(deleted)`: the consent is withdrawn and `deleted` takes of the campaign were removed from the phone. */
+export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWithdrawn: (deleted: number) => void }) {
   const t = useTranslations("campaign.flow.instructions");
+  const session = useCampaignSession();
+  const userId = session.status === "signedIn" ? session.userId : null;
+  const box = useOutbox();
+  const onPhone = box.items.filter((i) => i.userId === userId && i.campaignId === card.campaign_id).length;
   const storeKey = `afriklang.instructions.seen.${card.campaign_id}`;
   const [open, setOpen] = useState(() => {
     try {
@@ -38,14 +44,15 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
   }, [storeKey]);
 
   async function withdraw() {
-    if (sending.current) return;
+    if (sending.current || !userId) return;
     sending.current = true;
     setBusy(true);
     setFailure(null);
     try {
-      const res = await withdrawConsent(card.campaign_id);
-      if (res.ok) onWithdrawn();
-      else setFailure(res);
+      // Stops this campaign's uploads first, then deletes its takes once the withdrawal is recorded.
+      const res = await withdrawFromCampaign(userId, card.campaign_id);
+      if (res.ok) onWithdrawn(res.deleted);
+      else setFailure(res.failure);
     } finally {
       sending.current = false;
       setBusy(false);
@@ -93,7 +100,10 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
         {confirming ? (
           <div role="alertdialog" aria-labelledby="wd-title" aria-describedby="wd-body" className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
             <h2 id="wd-title" className="text-base font-bold text-red-900">{t("withdrawTitle")}</h2>
-            <p id="wd-body" className="text-sm text-red-900">{t("withdrawBody")}</p>
+            <p id="wd-body" className="text-sm text-red-900">
+              {t("withdrawBody")}
+              {onPhone > 0 ? <> {t("withdrawPending", { n: onPhone })}</> : null}
+            </p>
             {failure ? <FailureMessage failure={failure} /> : null}
             <div className="flex flex-col gap-2">
               <button type="button" onClick={withdraw} disabled={busy} className="min-h-12 rounded-xl bg-red-700 px-4 text-base font-bold text-white disabled:opacity-50">

@@ -28,7 +28,7 @@ const item = (over: Partial<OutboxItem> = {}): OutboxItem => ({
 
 function memStore(initial: OutboxItem[] = []) {
   const m = new Map(initial.map((i) => [i.id, i]));
-  return { m, all: async () => [...m.values()], put: async (i: OutboxItem) => void m.set(i.id, i), remove: async (id: string) => void m.delete(id) };
+  return { m, all: async () => [...m.values()], get: async (id: string) => m.get(id), put: async (i: OutboxItem) => void m.set(i.id, i), remove: async (id: string) => void m.delete(id) };
 }
 
 describe("outbox decisions", () => {
@@ -46,6 +46,8 @@ describe("outbox decisions", () => {
     expect(decideSubmit({ ok: false, code: "recording_rejected", reason: "level" }, 0)).toEqual({ kind: "rejected", reason: "level" });
     expect(decideSubmit({ ok: false, code: "already_submitted" }, 0).kind).toBe("superseded");
     expect(decideSubmit({ ok: false, code: "campaign_paused" }, 0).kind).toBe("hold");
+    expect(decideSubmit({ ok: false, code: "campaign_consent" }, 0)).toEqual({ kind: "drop", code: "campaign_consent" });
+    expect(decideSubmit({ ok: false, code: "consent_version_changed" }, 0).kind).toBe("hold");
     expect(decideSubmit({ ok: false, code: "campaign_closed" }, 0).kind).toBe("fail");
     expect(decideSubmit({ ok: false, code: "server_error" }, 0).kind).toBe("retry");
     expect(decideSubmit({ ok: false, code: "invalid_input" }, 0).kind).toBe("fail");
@@ -150,6 +152,66 @@ describe("outbox runner", () => {
     await ob.drain("u1");
     expect(store.m.size).toBe(0);
     expect(events[0]).toMatchObject({ type: "rejected", reason: "silence" });
+  });
+});
+
+describe("consent withdrawal (APP-004)", () => {
+  it("a submit refused for the campaign consent deletes the take", async () => {
+    const store = memStore([item({ uploaded: true })]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: async () => ({ ok: false, status: 403, code: "campaign_consent", message: "" }), online: () => true });
+    const events: OutboxEvent[] = [];
+    ob.onEvent((e) => events.push(e));
+    await ob.drain("u1");
+    expect(store.m.size).toBe(0);
+    expect(events[0]).toMatchObject({ type: "dropped", code: "campaign_consent" });
+  });
+
+  it("never uploads a take whose saved card says the consent is missing", async () => {
+    const store = memStore([item()]);
+    const upload = vi.fn();
+    const ob = createOutbox({ store, upload, submit: vi.fn(), online: () => true, precheck: () => "campaign_consent", now: () => 5 });
+    await ob.drain("u1");
+    expect(upload).not.toHaveBeenCalled();
+    expect(store.m.get("sha1")).toMatchObject({ state: "held", lastCode: "campaign_consent" });
+  });
+
+  it("discardCampaign aborts the upload going on, deletes the campaign's takes, and nothing comes back", async () => {
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 }), item({ id: "other", campaignId: "c2", createdAt: 3 })]);
+    let started!: () => void;
+    const startedP = new Promise<void>((r) => (started = r));
+    const upload = vi.fn(
+      (_i: OutboxItem, _p: unknown, signal: AbortSignal) =>
+        new Promise<{ recordingId: string | null }>((resolve, reject) => {
+          if (_i.campaignId === "c2") return resolve({ recordingId: null });
+          started();
+          signal.addEventListener("abort", () => reject(new Error("aborted")));
+        }),
+    );
+    const submit = vi.fn(async () => ({ ok: true as const, data: { duplicate: false } }));
+    const ob = createOutbox({ store, upload, submit, online: () => true });
+    const run = ob.drain("u1");
+    await startedP;
+    expect(await ob.discardCampaign("u1", "c1")).toBe(2);
+    await run;
+    expect([...store.m.keys()]).toEqual([]);
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledWith("m1", expect.anything());
+    expect(upload.mock.calls.filter((c) => c[0].campaignId === "c1")).toHaveLength(1);
+  });
+
+  it("a take deleted while its upload finishes is not written back", async () => {
+    const store = memStore([item()]);
+    const ob = createOutbox({
+      store,
+      upload: async () => {
+        store.m.delete("sha1");
+        return { recordingId: "x" };
+      },
+      submit: vi.fn(),
+      online: () => true,
+    });
+    await ob.drain("u1");
+    expect(store.m.size).toBe(0);
   });
 });
 

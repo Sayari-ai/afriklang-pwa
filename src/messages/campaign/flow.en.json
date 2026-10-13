@@ -9,7 +9,9 @@
     "paused": "Recording is paused for now. You can see your missions below, and recording reopens when the campaign resumes.",
     "closed": "This campaign has ended. You can still see your missions below, but you can no longer record.",
     "pausedTitle": "Recording is paused",
-    "closedTitle": "Campaign ended"
+    "closedTitle": "Campaign ended",
+    "withdrawnTitle": "You have withdrawn from this campaign",
+    "withdrawnDeleted": "{n, plural, =0 {No recording of this campaign was waiting on this phone.} one {The recording of this campaign that was waiting on this phone has been deleted.} other {The # recordings of this campaign that were waiting on this phone have been deleted.}}"
   },
   "profile": {
     "title": "About you",
@@ -106,6 +108,7 @@
     "withdraw": "Withdraw from this campaign",
     "withdrawTitle": "Withdraw from this campaign?",
     "withdrawBody": "You will not be able to record for this campaign any more, and the team will be told. Your consent to record in general stays.",
+    "withdrawPending": "{n, plural, one {# recording of this campaign is still on this phone. It will be deleted and never sent.} other {# recordings of this campaign are still on this phone. They will be deleted and never sent.}}",
     "withdrawConfirm": "Yes, withdraw",
     "withdrawing": "Withdrawing…",
     "cancel": "Cancel"

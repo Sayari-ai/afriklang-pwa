@@ -69,6 +69,8 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
   const session = useCampaignSession();
   const userId = session.status === "signedIn" ? session.userId : null;
   const [correcting, setCorrecting] = useState(false);
+  /** After a withdrawal: how many takes of the campaign were deleted from the phone. */
+  const [withdrawn, setWithdrawn] = useState<number | null>(null);
   const step = setupStep(card.next_step);
   const done = card.progress.submitted + card.progress.accepted;
   const days = daysLeft(card.deadline);
@@ -111,6 +113,14 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
           </span>
         </div>
       </header>
+
+      {withdrawn !== null ? (
+        <div role="status">
+          <Notice title={tf("hub.withdrawnTitle")}>
+            <p>{tf("hub.withdrawnDeleted", { n: withdrawn })}</p>
+          </Notice>
+        </div>
+      ) : null}
 
       {step ? <Stepper current={step} /> : null}
 
@@ -178,7 +188,13 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
           <details className="group rounded-2xl bg-white p-4 ring-1 ring-slate-200">
             <summary className="cursor-pointer list-none text-sm font-bold text-slate-700">{t("hub.more")}</summary>
             <div className="mt-3 space-y-3">
-              <Instructions card={card} onWithdrawn={after("withdrawn")} />
+              <Instructions
+                card={card}
+                onWithdrawn={(deleted) => {
+                  setWithdrawn(deleted);
+                  after("withdrawn")();
+                }}
+              />
               <GiveBack state={pool} />
             </div>
           </details>

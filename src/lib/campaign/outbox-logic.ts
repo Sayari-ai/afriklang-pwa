@@ -62,7 +62,9 @@ export type Decision =
   /** The dashboard refused the take for the specification: the mission is to record again. */
   | { kind: "rejected"; reason: NonNullable<CampaignFailure["reason"]> }
   /** The mission already has another recording: nothing more to send. */
-  | { kind: "superseded" };
+  | { kind: "superseded" }
+  /** The take must not be kept (the speaker withdrew their consent for the campaign): delete it. */
+  | { kind: "drop"; code: string };
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -100,7 +102,13 @@ export function decideUploadFailure(e: UploadOutcome, attempts: number, online: 
 }
 
 /** Codes that may clear by themselves: keep the take and try again later. */
-const HOLD_CODES = new Set(["campaign_paused", "partner_consent", "unauthorized", "account_consent", "campaign_consent", "profile_incomplete", "consent_version_changed"]);
+const HOLD_CODES = new Set(["campaign_paused", "partner_consent", "unauthorized", "account_consent", "profile_incomplete", "consent_version_changed"]);
+/**
+ * Codes after which the audio must not stay on the phone: the take was recorded with the campaign
+ * consent (the studio requires it), so "no campaign consent" now means it was withdrawn (APP-004).
+ * A new consent version answers consent_version_changed, which only holds the take.
+ */
+const DROP_CODES = new Set(["campaign_consent"]);
 /** Codes after which the take can never be saved for this mission. */
 const DEAD_CODES = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "blocked", "not_linked"]);
 
@@ -114,6 +122,7 @@ export function decideSubmit(
   if (res.code === "recording_rejected") return { kind: "rejected", reason: res.reason ?? "other" };
   if (res.code === "already_submitted") return { kind: "superseded" };
   if (res.code === "offline") return { kind: "retry", code: "offline", delayMs: 0 };
+  if (DROP_CODES.has(res.code)) return { kind: "drop", code: res.code };
   if (HOLD_CODES.has(res.code)) return { kind: "hold", code: res.code, delayMs: res.code === "unauthorized" ? 0 : 10 * MINUTE };
   if (DEAD_CODES.has(res.code)) return { kind: "fail", code: res.code };
   if (res.code === "rate_limited") {
@@ -127,12 +136,13 @@ export function decideSubmit(
   return { kind: "fail", code: res.code };
 }
 
-/** The item after a retry/hold/fail decision (done, rejected and superseded remove it). */
+/** The item after a retry/hold/fail decision (done, rejected, superseded and drop remove it). */
 export function applyDecision(item: OutboxItem, d: Decision, now: number): OutboxItem | null {
   switch (d.kind) {
     case "done":
     case "rejected":
     case "superseded":
+    case "drop":
       return null;
     case "retry":
       return { ...item, state: "pending", attempts: item.attempts + 1, nextAttemptAt: now + d.delayMs, lastCode: d.code };
@@ -166,4 +176,23 @@ export function missionsInOutbox(items: readonly Pick<OutboxItem, "missionId" | 
   const m = new Map<string, OutboxState>();
   for (const i of items) m.set(i.missionId, i.state);
   return m;
+}
+
+/**
+ * Before spending data on an upload: what the saved campaign card already says about this take's
+ * campaign, as a submit code, or null to go ahead. Uploading audio the dashboard will refuse (a
+ * withdrawn consent above all: that audio must not reach Sayari) is avoided; the card may be a
+ * little old, so these only hold the take until the card says otherwise.
+ */
+export function precheckFromCard(nextStep: string | null | undefined): string | null {
+  switch (nextStep) {
+    case "campaign_consent":
+      return "campaign_consent";
+    case "account_consent":
+      return "account_consent";
+    case "paused":
+      return "campaign_paused";
+    default:
+      return null;
+  }
 }

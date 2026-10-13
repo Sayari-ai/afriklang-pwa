@@ -118,7 +118,10 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
   byte), and the speaker sees its progress. A network failure stops the run (the next take would fail
   the same way and cost data); uploaded takes and the smallest files go first. Retries back off (5 s to
   5 min; 15 s to 15 min after an upload lost on the network, since each retry resends the file);
-  "campaign paused" and similar hold the take for later; a take the dashboard refuses is removed and
+  "campaign paused" and similar hold the take for later (the saved campaign card is checked before
+  each upload, so a take of a paused campaign or one without consent is not uploaded);
+  **withdrawing the campaign consent** stops that campaign's uploads at once, then deletes its
+  takes from the phone and says how many; a submit refused for the campaign consent deletes the take; a take the dashboard refuses is removed and
   the mission comes back to redo. A cross-tab lock keeps two tabs from sending the same take. An
   upload whose answer was lost is sent again, so Sayari may hold two copies with the same
   `source_sha256`; the dashboard stores the recording once.

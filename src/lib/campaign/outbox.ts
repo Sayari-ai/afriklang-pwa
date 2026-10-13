@@ -17,10 +17,13 @@
  */
 
 import { applyDecision, decideSubmit, decideUploadFailure, dueItems, nextWake, STOP_RUN_CODES, type Decision, type OutboxItem, type OutboxSummary } from "./outbox-logic";
+
+const MINUTE = 60_000;
 import type { CampaignResult, RecordingMetadata } from "./types";
 
 export type OutboxStore = {
   all(): Promise<OutboxItem[]>;
+  get(id: string): Promise<OutboxItem | undefined>;
   put(item: OutboxItem): Promise<void>;
   remove(id: string): Promise<void>;
 };
@@ -30,14 +33,17 @@ export type OutboxEvent =
   | { type: "rejected"; item: OutboxSummary; reason: string }
   | { type: "superseded"; item: OutboxSummary }
   | { type: "failed"; item: OutboxSummary; code: string }
+  | { type: "dropped"; item: OutboxSummary; code: string }
   | { type: "held"; item: OutboxSummary; code: string };
 
 export type OutboxDeps = {
   store: OutboxStore;
-  /** Send the audio. `onProgress` reports bytes sent so far. */
-  upload: (item: OutboxItem, onProgress: (sent: number, total: number) => void) => Promise<{ recordingId: string | null }>;
+  /** Send the audio. `onProgress` reports bytes sent so far; `signal` aborts it. */
+  upload: (item: OutboxItem, onProgress: (sent: number, total: number) => void, signal: AbortSignal) => Promise<{ recordingId: string | null }>;
   submit: (missionId: string, metadata: RecordingMetadata) => Promise<CampaignResult<{ duplicate: boolean }>>;
   online: () => boolean;
+  /** What the saved campaign card says before an upload: a submit code to hold or drop the take, or null (precheckFromCard). */
+  precheck?: (item: OutboxItem) => string | null;
   now?: () => number;
   /** Serialise runs across tabs when the browser can. */
   withLock?: (run: () => Promise<void>) => Promise<void>;
@@ -67,6 +73,10 @@ export function createOutbox(deps: OutboxDeps) {
   /** The take being sent right now (for a "sending…" state). */
   let activeId: string | null = null;
   let progress: OutboxProgress | null = null;
+  /** The upload going now, so a withdrawal or a delete can stop it. */
+  let inflight: { id: string; campaignId: string; ctrl: AbortController } | null = null;
+  /** Campaigns whose takes must not be sent (a consent withdrawal in progress). */
+  const blocked = new Set<string>();
   const listeners = new Set<() => void>();
   const eventListeners = new Set<(e: OutboxEvent) => void>();
   let snapshot: { items: OutboxSummary[]; activeId: string | null; loaded: boolean; progress: OutboxProgress | null } = { items, activeId, loaded, progress };
@@ -106,6 +116,17 @@ export function createOutbox(deps: OutboxDeps) {
     else if (d.kind === "superseded") emit({ type: "superseded", item: s });
     else if (d.kind === "fail") emit({ type: "failed", item: s, code: d.code });
     else if (d.kind === "hold") emit({ type: "held", item: s, code: d.code });
+    else if (d.kind === "drop") emit({ type: "dropped", item: s, code: d.code });
+  }
+
+  /** The item is still to be sent: not deleted meanwhile, its campaign not blocked. */
+  async function stillWanted(item: OutboxItem): Promise<boolean> {
+    if (blocked.has(item.campaignId)) return false;
+    try {
+      return Boolean(await deps.store.get(item.id));
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -116,11 +137,24 @@ export function createOutbox(deps: OutboxDeps) {
     let current = item;
     if (!current.uploaded) {
       if (!deps.online()) return false;
+      const pre = deps.precheck?.(current) ?? null;
+      if (pre) {
+        // Hold for the card's reason (a withdrawn consent is never uploaded; see precheckFromCard).
+        await settle(current, { kind: "hold", code: pre, delayMs: 10 * MINUTE });
+        return true;
+      }
+      const ctrl = new AbortController();
+      inflight = { id: current.id, campaignId: current.campaignId, ctrl };
       try {
-        const res = await deps.upload(current, onProgress(current.id));
+        const res = await deps.upload(current, onProgress(current.id), ctrl.signal);
+        inflight = null;
+        // Deleted or withdrawn while it was going: do not write it back.
+        if (!(await stillWanted(current))) return true;
         current = { ...current, uploaded: true, sayariId: res.recordingId, metadata: { ...current.metadata, ...(res.recordingId ? { sayari_recording_id: res.recordingId } : {}) } };
         await deps.store.put(current);
       } catch (e) {
+        inflight = null;
+        if (ctrl.signal.aborted) return true;
         const err = (e ?? {}) as UploadErrorLike;
         const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork) }, current.attempts, deps.online());
         await settle(current, d);
@@ -145,7 +179,10 @@ export function createOutbox(deps: OutboxDeps) {
     } catch {
       return;
     }
-    for (const item of dueItems(all, userId, now())) {
+    for (const listed of dueItems(all, userId, now())) {
+      // Read it again: it may have been deleted, sent by another tab or changed since the list was read.
+      const item = blocked.has(listed.campaignId) ? undefined : await deps.store.get(listed.id).catch(() => undefined);
+      if (!item || item.state === "failed" || item.nextAttemptAt > now()) continue;
       activeId = item.id;
       notify();
       const keepGoing = await sendOne(item);
@@ -185,10 +222,42 @@ export function createOutbox(deps: OutboxDeps) {
       await deps.store.put(item);
       await refresh();
     },
-    /** Drop a take (the contributor discards it, or records the mission again). */
+    /** Drop a take (the contributor discards it, or records the mission again). Stops its upload if it is going. */
     async discard(id: string) {
+      if (inflight?.id === id) inflight.ctrl.abort();
       await deps.store.remove(id);
       await refresh();
+    },
+    /** Stop sending a campaign's takes at once (the upload going now is aborted), until `unblock`. */
+    block(campaignId: string) {
+      blocked.add(campaignId);
+      if (inflight?.campaignId === campaignId) inflight.ctrl.abort();
+    },
+    unblock(campaignId: string) {
+      blocked.delete(campaignId);
+    },
+    /** Takes of a campaign on the phone for this user. */
+    async countCampaign(userId: string, campaignId: string) {
+      const all = await deps.store.all().catch(() => [] as OutboxItem[]);
+      return all.filter((i) => i.userId === userId && i.campaignId === campaignId).length;
+    },
+    /**
+     * Delete every take of a campaign for this user (consent withdrawn, APP-004): the one being
+     * uploaded is aborted, none is sent afterwards. Returns how many were deleted.
+     */
+    async discardCampaign(userId: string, campaignId: string): Promise<number> {
+      blocked.add(campaignId);
+      if (inflight?.campaignId === campaignId) inflight.ctrl.abort();
+      try {
+        const all = await deps.store.all();
+        const mine = all.filter((i) => i.userId === userId && i.campaignId === campaignId);
+        for (const i of mine) await deps.store.remove(i.id);
+        return mine.length;
+      } finally {
+        // The runner re-reads each take before sending it, so nothing deleted comes back.
+        blocked.delete(campaignId);
+        await refresh();
+      }
     },
     /** Make held and failed-by-network takes due now (a manual "send now"). */
     async retryNow(userId: string) {
