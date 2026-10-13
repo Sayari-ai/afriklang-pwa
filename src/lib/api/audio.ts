@@ -41,18 +41,20 @@
  * to deliberate user action.
  *
  * We still:
- *   - Refuse to send when `navigator.onLine === false` (saves a 45 s
- *     wait for a guaranteed-failure fetch). Surfaces as
+ *   - Refuse to send when `navigator.onLine === false`. Surfaces as
  *     `AudioUploadError(isNetwork=true)`.
- *   - Apply a per-call timeout via `AbortController`, since `fetch()`
- *     itself has no built-in timeout and a hung TCP socket would
- *     otherwise spin forever on flaky networks. A timeout *is* one of
- *     the request states that could leave a half-written file on the
- *     server, but the alternative letting the upload hang is
- *     worse UX. The user manually decides whether to retry.
- *   - Map low-level `TypeError: Failed to fetch` (the browser's catch-
- *     all for offline / DNS / CORS / mixed-content) to a friendlier
- *     message so the snackbar isn't a stack trace.
+ *   - Abort a request that has stopped moving (APP-001). The timeout is
+ *     **idle-based**, not a wall clock: on a slow uplink a 10 MB take may
+ *     need many minutes, and that is fine as long as bytes keep flowing.
+ *     The body goes through `XMLHttpRequest`, the only browser API with
+ *     upload progress: no progress for `IDLE_TIMEOUT_MS` aborts, and once
+ *     the last byte is sent the server has `RESPONSE_TIMEOUT_MS` to answer
+ *     (the proxy forwards to Sayari, which may be cold). A timeout *is* one
+ *     of the request states that could leave a half-written file on the
+ *     server; the outbox sends again and the dashboard dedupes on sha-256.
+ *   - Report progress (`onProgress`) so the screens can show "34 %".
+ *   - Map low-level network failures to a friendlier message so the
+ *     snackbar isn't a stack trace.
  */
 
 const DEFAULT_BASE_URL = "";
@@ -65,9 +67,10 @@ const DEFAULT_BASE_URL = "";
 // see successful uploads as `TypeError: Failed to fetch`.
 const BASE_URL = DEFAULT_BASE_URL;
 
-/** Per-call timeout. Railway cold starts can take ~20 s, so don't
- *  set this too aggressively. */
-const REQUEST_TIMEOUT_MS = 45_000;
+/** Abort when no upload bytes have moved for this long (a dead link, not a slow one). */
+export const IDLE_TIMEOUT_MS = 30_000;
+/** Once the whole body is sent: how long the proxy (and Sayari behind it) may take to answer. */
+export const RESPONSE_TIMEOUT_MS = 90_000;
 
 export class AudioUploadError extends Error {
   constructor(
@@ -78,6 +81,8 @@ export class AudioUploadError extends Error {
      *  socket timed out. Useful for callers that want to show a
      *  reconnect prompt rather than a generic upload error. */
     public readonly isNetwork: boolean = false,
+    /** Seconds the server asked to wait (`Retry-After` on 429/503), when it said. */
+    public readonly retryAfterS: number | null = null,
   ) {
     super(message);
     this.name = "AudioUploadError";
@@ -104,6 +109,8 @@ export interface UploadAudioArgs {
   signal?: AbortSignal;
   /** The signed-in contributor's Supabase access token: the upload proxy refuses uploads without one. */
   accessToken?: string;
+  /** Upload progress in bytes (the multipart body, so a little more than the file). */
+  onProgress?: (sent: number, total: number) => void;
 }
 
 /** What Sayari answered, best effort: the recording's id when the response carries one. */
@@ -138,10 +145,8 @@ export function recordingIdFromResponse(body: unknown): string | null {
 export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioResult> {
   // Fail fast when the device reports offline. `navigator.onLine` is
   // not 100% reliable (it only catches "no interface"), but when it
-  // *is* false we know the fetch will fail in 45 s with the same
-  // outcome better to surface the offline state immediately. The
-  // level screen uses `isNetwork` to render an offline-specific
-  // snackbar.
+  // *is* false we know the request will fail: surface the offline
+  // state immediately (`isNetwork`).
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     throw new AudioUploadError(
       "You appear to be offline. Reconnect and try again.",
@@ -176,82 +181,111 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioRes
     throw new AudioUploadError("Upload cancelled.", 0, false);
   }
 
-  // Per-call timeout. Linked to the caller's signal via a tiny
-  // controller so an external abort still wins.
-  const ctrl = new AbortController();
-  const timeoutId = setTimeout(
-    () =>
-      ctrl.abort(new DOMException("Request timed out", "TimeoutError")),
-    REQUEST_TIMEOUT_MS,
-  );
-  const onCallerAbort = () => ctrl.abort(args.signal?.reason);
-  args.signal?.addEventListener("abort", onCallerAbort, { once: true });
-
-  let response: Response;
+  let response: RawResponse;
   try {
-    response = await fetch(url, {
-      method: "POST",
-      body: form,
-      signal: ctrl.signal,
-      // Do NOT set `Content-Type` manually fetch needs to add the
-      // multipart boundary itself.
-      ...(args.accessToken ? { headers: { Authorization: `Bearer ${args.accessToken}` } } : {}),
-    });
+    response = await send(url, form, args);
   } catch (e) {
-    clearTimeout(timeoutId);
-    args.signal?.removeEventListener("abort", onCallerAbort);
-
     // Caller cancelled propagate as cancellation.
     if (args.signal?.aborted) {
       throw new AudioUploadError("Upload cancelled.", 0, false);
     }
-
-    // Distinguish timeout vs generic network failure so the user
-    // sees an actionable message in the snackbar.
     const isTimeout = e instanceof DOMException && e.name === "TimeoutError";
-    const rawMsg = e instanceof Error ? e.message : String(e);
-
-    // Browsers throw `TypeError: Failed to fetch` for: offline, DNS
-    // miss, CORS block, mixed content, refused TCP, killed by
-    // extension. We can't tell them apart from the JS side give one
-    // friendly message. With at-most-once semantics, a transient
-    // hiccup now requires a manual retry tap from the user; that's
-    // intentional.
-    const friendly = isTimeout
-      ? "The server took too long to respond. Please try again."
-      : /failed to fetch|networkerror|load failed/i.test(rawMsg)
-        ? "Couldn't reach the server. Check your connection and try again."
-        : `Network error: ${rawMsg}`;
-
-    throw new AudioUploadError(friendly, 0, true);
+    throw new AudioUploadError(
+      isTimeout
+        ? "The connection stopped moving. We will try again."
+        : "Couldn't reach the server. Check your connection and try again.",
+      0,
+      true,
+    );
   }
 
-  clearTimeout(timeoutId);
-  args.signal?.removeEventListener("abort", onCallerAbort);
-
-  if (response.ok) {
-    // Read the body (this also lets the connection be reused). The id is optional: the
-    // dashboard identifies a recording by the file's sha-256, so a missing id is fine.
-    const text = await response.text().catch(() => "");
+  if (response.status >= 200 && response.status < 300) {
+    // The id is optional: the dashboard identifies a recording by the file's sha-256.
     let parsed: unknown = null;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(response.text);
     } catch {
       // not JSON
     }
     return { recordingId: recordingIdFromResponse(parsed) };
   }
 
-  // HTTP-level error. Read body once for diagnostics.
-  let body = "";
-  try {
-    body = await response.text();
-  } catch {
-    // ignore
-  }
   throw new AudioUploadError(
-    `Upload failed (${response.status}): ${body || response.statusText}`,
+    `Upload failed (${response.status}): ${response.text.slice(0, 500) || response.statusText}`,
     response.status,
     false,
+    parseRetryAfter(response.retryAfter),
   );
+}
+
+type RawResponse = { status: number; statusText: string; text: string; retryAfter: string | null };
+
+/** `Retry-After` in seconds (delta form only; dates are not used by our proxy), capped at 1 h. */
+export function parseRetryAfter(v: string | null): number | null {
+  if (!v || !/^\d{1,6}$/.test(v.trim())) return null;
+  return Math.min(3600, Number(v.trim()));
+}
+
+/** POST the form with an idle timeout and progress. Rejects with a TimeoutError DOMException on a stall. */
+function send(url: string, form: FormData, args: UploadAudioArgs): Promise<RawResponse> {
+  const headers: Record<string, string> = args.accessToken ? { Authorization: `Bearer ${args.accessToken}` } : {};
+  if (typeof XMLHttpRequest === "undefined") return sendWithFetch(url, form, headers, args.signal);
+  return new Promise<RawResponse>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let settled = false;
+    const done = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      args.signal?.removeEventListener("abort", onCallerAbort);
+      fn();
+    };
+    const arm = (ms: number) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        xhr.abort();
+        done(() => reject(new DOMException("No progress", "TimeoutError")));
+      }, ms);
+    };
+    const onCallerAbort = () => {
+      xhr.abort();
+      done(() => reject(args.signal?.reason ?? new DOMException("Aborted", "AbortError")));
+    };
+
+    xhr.open("POST", url);
+    for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+    xhr.upload.onprogress = (e) => {
+      arm(IDLE_TIMEOUT_MS);
+      if (e.lengthComputable) args.onProgress?.(e.loaded, e.total);
+    };
+    // The whole body is out: now the server has a while to answer.
+    xhr.upload.onload = () => arm(RESPONSE_TIMEOUT_MS);
+    xhr.onload = () =>
+      done(() => resolve({ status: xhr.status, statusText: xhr.statusText, text: typeof xhr.responseText === "string" ? xhr.responseText : "", retryAfter: xhr.getResponseHeader("retry-after") }));
+    xhr.onerror = () => done(() => reject(new TypeError("Failed to fetch")));
+    xhr.onabort = () => done(() => reject(new DOMException("Aborted", "AbortError")));
+    xhr.ontimeout = () => done(() => reject(new DOMException("No progress", "TimeoutError")));
+    args.signal?.addEventListener("abort", onCallerAbort, { once: true });
+    arm(IDLE_TIMEOUT_MS);
+    xhr.send(form);
+  });
+}
+
+/** Without XMLHttpRequest (not a browser): plain fetch, no progress, a generous overall timeout. */
+async function sendWithFetch(url: string, form: FormData, headers: Record<string, string>, signal?: AbortSignal): Promise<RawResponse> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new DOMException("No progress", "TimeoutError")), RESPONSE_TIMEOUT_MS + IDLE_TIMEOUT_MS);
+  const onCallerAbort = () => ctrl.abort(signal?.reason);
+  signal?.addEventListener("abort", onCallerAbort, { once: true });
+  try {
+    const res = await fetch(url, { method: "POST", body: form, signal: ctrl.signal, headers });
+    const text = await res.text().catch(() => "");
+    return { status: res.status, statusText: res.statusText, text, retryAfter: res.headers.get("retry-after") };
+  } catch (e) {
+    throw ctrl.signal.reason instanceof DOMException && ctrl.signal.reason.name === "TimeoutError" ? ctrl.signal.reason : e;
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onCallerAbort);
+  }
 }

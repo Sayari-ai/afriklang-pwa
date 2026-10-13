@@ -26,7 +26,9 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
   const held = items.filter((i) => i.state === "held");
   const failed = items.filter((i) => i.state === "failed");
   const sending = box.activeId !== null;
+  const pct = box.progress && box.progress.id === box.activeId && box.progress.total > 0 ? Math.floor((100 * box.progress.sent) / box.progress.total) : null;
 
+  // The percentage is kept out of the live region: a screen reader would read every step.
   const headline = sending ? t("sending") : pending.length ? t("waiting", { n: pending.length }) : held.length ? t("held", { n: held.length }) : t("failed", { n: failed.length });
   const sub = !online ? t("offline") : failed.length && !pending.length && !held.length ? null : t("retrying");
   const tone = failed.length && !pending.length ? "border-red-200 bg-red-50 text-red-900" : !online ? "border-amber-200 bg-amber-50 text-amber-900" : "border-primary/20 bg-white text-slate-900";
@@ -39,7 +41,10 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
           <Icon size={20} className={sending ? "animate-spin" : ""} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-bold">{headline}</p>
+          <p className="font-bold">
+            {headline}
+            {sending && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
+          </p>
           {sub ? <p className="text-xs opacity-80">{sub}</p> : null}
         </div>
         {online && (pending.length || held.length) && !sending ? (
@@ -59,6 +64,7 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                   <p className="truncate font-mono text-xs font-semibold">{i.missionCode}</p>
                   <p className="text-xs text-slate-600">
                     {t(`state.${state}`)}
+                    {state === "sending" && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
                     {(state === "held" || state === "failed") && i.lastCode ? ` · ${t(`reason.${outboxReasonKey(i.lastCode)}`)}` : ""}
                   </p>
                 </div>

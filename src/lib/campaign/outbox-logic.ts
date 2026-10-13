@@ -67,16 +67,29 @@ export type Decision =
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 
-/** 5 s, 10 s, 20 s … capped at 5 minutes, with ±20% jitter so many phones do not retry together. */
-export function backoffMs(attempts: number, random: () => number = Math.random): number {
-  const base = Math.min(5 * MINUTE, 5 * SECOND * 2 ** Math.max(0, attempts));
+/** 5 s, 10 s, 20 s … capped at `capMs` (5 minutes), with ±20% jitter so many phones do not retry together. */
+export function backoffMs(attempts: number, random: () => number = Math.random, capMs = 5 * MINUTE): number {
+  const base = Math.min(capMs, 5 * SECOND * 2 ** Math.max(0, attempts));
   return Math.round(base * (0.8 + random() * 0.4));
 }
+
+/**
+ * After an upload that died on the network: every attempt sends the whole file again from byte 0,
+ * so on a weak link each retry costs the speaker data. Start at 15 s and stretch to 15 minutes.
+ * Coming back online, the app returning to the foreground and "Send now" still try at once.
+ */
+export const UPLOAD_RETRY_CAP_MS = 15 * MINUTE;
+export function uploadBackoffMs(attempts: number, random: () => number = Math.random): number {
+  return Math.max(15 * SECOND, backoffMs(attempts + 1, random, UPLOAD_RETRY_CAP_MS));
+}
+
+/** Network codes after which the next take would fail the same way: stop the run, save the data. */
+export const STOP_RUN_CODES: ReadonlySet<string> = new Set(["offline", "network", "timeout", "bridge_unreachable"]);
 
 /** After a failed audio upload. `online`: what the device says about its network. */
 export function decideUploadFailure(e: UploadOutcome, attempts: number, online: boolean, random?: () => number): Decision {
   if (!online) return { kind: "retry", code: "offline", delayMs: 0 };
-  if (e.isNetwork || e.status === 0) return { kind: "retry", code: "network", delayMs: backoffMs(attempts, random) };
+  if (e.isNetwork || e.status === 0) return { kind: "retry", code: "network", delayMs: uploadBackoffMs(attempts, random) };
   if (e.status === 413) return { kind: "fail", code: "tooLarge" };
   // Signed out (or the session could not be renewed): keep the take until they sign in again.
   if (e.status === 401) return { kind: "hold", code: "unauthorized", delayMs: MINUTE };
@@ -130,11 +143,16 @@ export function applyDecision(item: OutboxItem, d: Decision, now: number): Outbo
   }
 }
 
-/** Items to send now, oldest first. Failed ones wait for the contributor; held ones wait for their time. */
-export function dueItems<T extends Pick<OutboxItem, "state" | "nextAttemptAt" | "createdAt" | "userId">>(items: readonly T[], userId: string, now: number): T[] {
+/**
+ * Items to send now. Failed ones wait for the contributor; held ones wait for their time.
+ * Takes already uploaded go first (only the small metadata is left), then the smallest files, so
+ * on a weak link as many takes as possible get through before the link drops; oldest first on a tie.
+ */
+export function dueItems<T extends Pick<OutboxItem, "state" | "nextAttemptAt" | "createdAt" | "userId"> & { uploaded?: boolean; blob?: Blob }>(items: readonly T[], userId: string, now: number): T[] {
+  const cost = (i: T) => (i.uploaded ? 0 : (i.blob?.size ?? 0));
   return items
     .filter((i) => i.userId === userId && i.state !== "failed" && i.nextAttemptAt <= now)
-    .sort((a, b) => a.createdAt - b.createdAt);
+    .sort((a, b) => cost(a) - cost(b) || a.createdAt - b.createdAt);
 }
 
 /** When the runner should wake up next for this user (ms), or null when nothing is waiting on a timer. */

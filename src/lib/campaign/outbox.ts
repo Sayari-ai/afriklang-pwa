@@ -16,7 +16,7 @@
  * field, and the dashboard stores the recording once.
  */
 
-import { applyDecision, decideSubmit, decideUploadFailure, dueItems, nextWake, type Decision, type OutboxItem, type OutboxSummary } from "./outbox-logic";
+import { applyDecision, decideSubmit, decideUploadFailure, dueItems, nextWake, STOP_RUN_CODES, type Decision, type OutboxItem, type OutboxSummary } from "./outbox-logic";
 import type { CampaignResult, RecordingMetadata } from "./types";
 
 export type OutboxStore = {
@@ -34,7 +34,8 @@ export type OutboxEvent =
 
 export type OutboxDeps = {
   store: OutboxStore;
-  upload: (item: OutboxItem) => Promise<{ recordingId: string | null }>;
+  /** Send the audio. `onProgress` reports bytes sent so far. */
+  upload: (item: OutboxItem, onProgress: (sent: number, total: number) => void) => Promise<{ recordingId: string | null }>;
   submit: (missionId: string, metadata: RecordingMetadata) => Promise<CampaignResult<{ duplicate: boolean }>>;
   online: () => boolean;
   now?: () => number;
@@ -44,6 +45,12 @@ export type OutboxDeps = {
 
 /** An error from `upload` that carries an HTTP status (AudioUploadError has this shape). */
 type UploadErrorLike = { status?: number; isNetwork?: boolean };
+
+/** How far the take being sent has gone (bytes of the request body). */
+export type OutboxProgress = { id: string; sent: number; total: number };
+
+/** A decision after which the next take would fail the same way (the network is gone or too weak). */
+const stopsRun = (d: Decision) => d.kind === "retry" && STOP_RUN_CODES.has(d.code);
 
 const summary = (item: OutboxItem): OutboxSummary => {
   const { blob, ...rest } = item;
@@ -59,13 +66,21 @@ export function createOutbox(deps: OutboxDeps) {
   let again = false;
   /** The take being sent right now (for a "sending…" state). */
   let activeId: string | null = null;
+  let progress: OutboxProgress | null = null;
   const listeners = new Set<() => void>();
   const eventListeners = new Set<(e: OutboxEvent) => void>();
-  let snapshot: { items: OutboxSummary[]; activeId: string | null; loaded: boolean } = { items, activeId, loaded };
+  let snapshot: { items: OutboxSummary[]; activeId: string | null; loaded: boolean; progress: OutboxProgress | null } = { items, activeId, loaded, progress };
 
   const notify = () => {
-    snapshot = { items, activeId, loaded };
+    snapshot = { items, activeId, loaded, progress };
     for (const l of [...listeners]) l();
+  };
+  /** Progress events come many times a second: tell the screens only when the whole percent changes. */
+  const onProgress = (id: string) => (sent: number, total: number) => {
+    const pct = (b: number, t: number) => (t > 0 ? Math.floor((100 * b) / t) : 0);
+    if (progress && progress.id === id && pct(progress.sent, progress.total) === pct(sent, total)) return;
+    progress = { id, sent, total };
+    notify();
   };
   const emit = (e: OutboxEvent) => {
     for (const l of [...eventListeners]) l(e);
@@ -93,20 +108,23 @@ export function createOutbox(deps: OutboxDeps) {
     else if (d.kind === "hold") emit({ type: "held", item: s, code: d.code });
   }
 
-  /** Send one take as far as it can go. Returns false when the network is gone (stop the run). */
+  /**
+   * Send one take as far as it can go. Returns false when the network is gone or failing (stop
+   * the run): trying the next take on the same weak link would only spend more of the speaker's data.
+   */
   async function sendOne(item: OutboxItem): Promise<boolean> {
     let current = item;
     if (!current.uploaded) {
       if (!deps.online()) return false;
       try {
-        const res = await deps.upload(current);
+        const res = await deps.upload(current, onProgress(current.id));
         current = { ...current, uploaded: true, sayariId: res.recordingId, metadata: { ...current.metadata, ...(res.recordingId ? { sayari_recording_id: res.recordingId } : {}) } };
         await deps.store.put(current);
       } catch (e) {
         const err = (e ?? {}) as UploadErrorLike;
         const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork) }, current.attempts, deps.online());
         await settle(current, d);
-        return d.kind !== "retry" || d.code !== "offline";
+        return !stopsRun(d);
       }
     }
     let res: CampaignResult<{ duplicate: boolean }>;
@@ -117,7 +135,7 @@ export function createOutbox(deps: OutboxDeps) {
     }
     const d = decideSubmit(res.ok ? { ok: true, duplicate: res.data.duplicate } : res, current.attempts);
     await settle(current, d);
-    return !(d.kind === "retry" && d.code === "offline");
+    return !stopsRun(d);
   }
 
   async function runOnce(userId: string) {
@@ -132,6 +150,7 @@ export function createOutbox(deps: OutboxDeps) {
       notify();
       const keepGoing = await sendOne(item);
       activeId = null;
+      progress = null;
       await refresh();
       if (!keepGoing) break;
     }
@@ -152,6 +171,7 @@ export function createOutbox(deps: OutboxDeps) {
     })().finally(() => {
       running = null;
       activeId = null;
+      progress = null;
       notify();
     });
     return running;

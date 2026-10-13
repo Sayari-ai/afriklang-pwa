@@ -51,6 +51,7 @@
   },
   "outbox": {
     "sending": "Sending your recordings…",
+    "percent": "{pct}%",
     "waiting": "{n, plural, one {# recording waiting to send} other {# recordings waiting to send}}",
     "offline": "You are offline. They will be sent as soon as you reconnect.",
     "retrying": "We will keep trying automatically.",

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createOutbox, type OutboxEvent } from "./outbox";
-import { backoffMs, decideSubmit, decideUploadFailure, dueItems, type OutboxItem } from "./outbox-logic";
+import { backoffMs, decideSubmit, decideUploadFailure, dueItems, uploadBackoffMs, type OutboxItem } from "./outbox-logic";
 import { shiftProgress } from "./queries";
 import { byDay, streakDays } from "./activity";
 
@@ -55,6 +55,15 @@ describe("outbox decisions", () => {
     expect(backoffMs(0, () => 0.5)).toBe(5000);
     expect(backoffMs(20, () => 0.5)).toBe(300000);
   });
+  it("waits longer after an upload lost on the network (each retry resends the file)", () => {
+    expect(uploadBackoffMs(0, () => 0.5)).toBe(15_000);
+    expect(uploadBackoffMs(30, () => 0.5)).toBe(15 * 60_000);
+    expect(decideUploadFailure({ status: 0, isNetwork: true }, 0, true, () => 0.5)).toEqual({ kind: "retry", code: "network", delayMs: 15_000 });
+  });
+  it("sends what is cheapest first: uploaded takes, then the smallest files", () => {
+    const list = [item({ id: "big", blob: new Blob(["x".repeat(100)]), createdAt: 1 }), item({ id: "small", blob: new Blob(["x"]), createdAt: 2 }), item({ id: "up", uploaded: true, blob: new Blob(["x".repeat(500)]), createdAt: 3 })];
+    expect(dueItems(list, "u1", 10).map((i) => i.id)).toEqual(["up", "small", "big"]);
+  });
   it("sends only this user's due takes, oldest first, never failed ones", () => {
     const list = [item({ id: "b", createdAt: 2 }), item({ id: "a", createdAt: 1 }), item({ id: "f", state: "failed" }), item({ id: "o", userId: "u2" }), item({ id: "later", nextAttemptAt: 99 })];
     expect(dueItems(list, "u1", 10).map((i) => i.id)).toEqual(["a", "b"]);
@@ -98,6 +107,39 @@ describe("outbox runner", () => {
     await ob.drain("u1");
     expect(upload).not.toHaveBeenCalled();
     expect(store.m.get("sha1")!.attempts).toBe(0);
+  });
+
+  it("stops the run after a network failure instead of trying every take on a dead link", async () => {
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 })]);
+    const upload = vi.fn(async () => {
+      throw { status: 0, isNetwork: true };
+    });
+    const ob = createOutbox({ store, upload, submit: vi.fn(), online: () => true, now: () => 100 });
+    await ob.drain("u1");
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(store.m.get("sha1")!.lastCode).toBe("network");
+    expect(store.m.get("sha2")!.attempts).toBe(0);
+  });
+
+  it("reports upload progress for the take being sent, then clears it", async () => {
+    const store = memStore([item()]);
+    const seen: (number | null)[] = [];
+    const ob = createOutbox({
+      store,
+      upload: async (_i, onProgress) => {
+        onProgress(10, 100);
+        onProgress(11, 100);
+        onProgress(11, 100);
+        onProgress(100, 100);
+        return { recordingId: null };
+      },
+      submit: async () => ({ ok: true as const, data: { duplicate: false } }),
+      online: () => true,
+    });
+    ob.subscribe(() => seen.push(ob.snapshot().progress?.sent ?? null));
+    await ob.drain("u1");
+    expect(seen.filter((v) => v !== null)).toEqual([10, 11, 100]);
+    expect(ob.snapshot().progress).toBeNull();
   });
 
   it("a refused take is dropped and reported so the mission is recorded again", async () => {

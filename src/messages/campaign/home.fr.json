@@ -51,6 +51,7 @@
   },
   "outbox": {
     "sending": "Envoi de vos enregistrements…",
+    "percent": "{pct} %",
     "waiting": "{n, plural, one {# enregistrement en attente d'envoi} other {# enregistrements en attente d'envoi}}",
     "offline": "Vous êtes hors ligne. Ils seront envoyés dès votre reconnexion.",
     "retrying": "Nous réessaierons automatiquement.",

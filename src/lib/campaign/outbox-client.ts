@@ -21,7 +21,7 @@ import { markSubmitted, refreshCampaign } from "./queries";
  * the client still thought valid gets one renewal and one more try; a second 401 goes back to
  * the outbox, which holds the take until the speaker is signed in again.
  */
-async function uploadSignedIn(item: OutboxItem) {
+async function uploadSignedIn(item: OutboxItem, onProgress: (sent: number, total: number) => void) {
   const send = (accessToken: string) =>
     uploadAudio({
       file: item.blob,
@@ -33,6 +33,7 @@ async function uploadSignedIn(item: OutboxItem) {
       speakerId: item.upload.speakerId,
       extraFields: item.upload.extraFields,
       accessToken,
+      onProgress,
     });
   const token = await campaignAccessToken();
   if (!token) throw new AudioUploadError("Sign in to send your recordings.", 401, false);
@@ -56,7 +57,7 @@ export const outbox = createOutbox({
     put: (item) => set(item.id, item, db()),
     remove: (id) => del(id, db()),
   },
-  upload: (item) => uploadSignedIn(item),
+  upload: (item, onProgress) => uploadSignedIn(item, onProgress),
   submit: (missionId, metadata) => submitRecording(missionId, metadata),
   online: () => typeof navigator === "undefined" || navigator.onLine !== false,
   withLock: (run) =>

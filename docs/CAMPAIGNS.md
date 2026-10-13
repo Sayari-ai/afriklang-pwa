@@ -107,7 +107,11 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
   A `missions` answer also refreshes that campaign's card on the home screen. Sign-out clears it.
 - **Takes go through an outbox** (`src/lib/campaign/outbox*.ts`, IndexedDB `afriklang.campaign.outbox`):
   saved the moment the speaker submits, then sent in the background, audio first, metadata second,
-  each step remembered so neither is repeated without need. Retries back off (5 s to 5 min);
+  each step remembered so neither is repeated without need. The upload has no fixed time limit: it is
+  aborted only when no bytes have moved for 30 s (or the server has not answered 90 s after the last
+  byte), and the speaker sees its progress. A network failure stops the run (the next take would fail
+  the same way and cost data); uploaded takes and the smallest files go first. Retries back off (5 s to
+  5 min; 15 s to 15 min after an upload lost on the network, since each retry resends the file);
   "campaign paused" and similar hold the take for later; a take the dashboard refuses is removed and
   the mission comes back to redo. A cross-tab lock keeps two tabs from sending the same take. An
   upload whose answer was lost is sent again, so Sayari may hold two copies with the same
