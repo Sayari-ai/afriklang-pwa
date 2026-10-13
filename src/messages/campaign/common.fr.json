@@ -86,5 +86,15 @@
     "body": "Cette page n'est pas encore enregistrée sur votre téléphone. Vos missions et les enregistrements en attente d'envoi sont en sécurité.",
     "open": "Ouvrir mes missions",
     "retry": "Réessayer"
+  },
+  "rejection": {
+    "level": "Trop faible ou trop bruyant. Mettez-vous dans un endroit calme et tenez le téléphone à 20 cm.",
+    "duration": "Trop court ou trop long pour cette consigne.",
+    "silence": "Trop de silence avant ou après la parole.",
+    "variety": "Cet enregistrement ne correspond pas à la variété de langue de la campagne. L'équipe vous contactera.",
+    "banned_topic": "Cet enregistrement aborde un sujet que la campagne n'autorise pas.",
+    "reading_gap": "L'enregistrement ne correspond pas à la phrase. Lisez-la exactement comme elle est écrite.",
+    "speaker_balance": "Une seule voix a occupé presque toute la conversation. Parlez chacun à peu près autant.",
+    "other": "La personne qui a vérifié l'enregistrement n'a pas pu l'accepter."
   }
 }

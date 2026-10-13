@@ -148,13 +148,17 @@ export type CampaignErrorCode =
   | "rate_limited"
   | "unknown";
 
+/** The dashboard's rejection reasons (REJECTION_REASONS there). */
+export const REJECTION_REASONS = ["level", "duration", "silence", "variety", "banned_topic", "reading_gap", "speaker_balance", "other"] as const;
+export type RejectionReason = (typeof REJECTION_REASONS)[number];
+
 export type CampaignFailure = {
   ok: false;
   status: number;
   code: CampaignErrorCode;
   message: string;
   nextStep?: NextStep;
-  reason?: "duration" | "level" | "silence" | "other";
+  reason?: RejectionReason;
   retryAfterS?: number;
   /** Per-field problems of a 400 (Edge Function or dashboard), keyed by the body field name, e.g. "variety" or "recording.duration_s". */
   fieldErrors?: Record<string, string>;

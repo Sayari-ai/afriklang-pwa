@@ -1,6 +1,15 @@
 /** Small pure facts the speaker screens show (kept out of the components so they can be tested). */
 
-import type { CampaignCard, NextStep } from "./types";
+import { REJECTION_REASONS, type CampaignCard, type NextStep, type RejectionReason } from "./types";
+
+/**
+ * A mission's `rejection_reason` as one of the dashboard's reason codes, or null when it is not one
+ * (empty, or a reviewer's own words, which are shown as they are).
+ */
+export function rejectionReasonCode(reason: string | null | undefined): RejectionReason | null {
+  const r = reason?.trim().toLowerCase() ?? "";
+  return (REJECTION_REASONS as readonly string[]).includes(r) ? (r as RejectionReason) : null;
+}
 
 /**
  * A campaign has something for the speaker once missions were assigned to them (planned), or,

@@ -86,5 +86,15 @@
     "body": "This page is not saved on your phone yet. Your missions and the recordings waiting to be sent are safe.",
     "open": "Open my missions",
     "retry": "Try again"
+  },
+  "rejection": {
+    "level": "Too quiet or too noisy. Find a quiet place and hold the phone 20 cm away.",
+    "duration": "Too short or too long for this prompt.",
+    "silence": "Too much silence before or after speaking.",
+    "variety": "This recording did not match the campaign's language variety. The team will contact you.",
+    "banned_topic": "This recording touches a topic the campaign does not allow.",
+    "reading_gap": "The recording does not match the sentence. Read it exactly as written.",
+    "speaker_balance": "One voice took almost all of the conversation. Both of you should speak about as much.",
+    "other": "The reviewer could not accept this take."
   }
 }

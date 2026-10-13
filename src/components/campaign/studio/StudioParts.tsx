@@ -7,11 +7,13 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { TEXT_SIZES } from "@/lib/campaign/studio-flow";
 import type { Mission } from "@/lib/campaign/types";
+import { useRejectionText } from "../CampaignHubParts";
 
 // ── Prompt ───────────────────────────────────────────────────────────────
 
 export function PromptCard({ mission, lang, size, onSize }: { mission: Mission; lang: string; size: number; onSize: (n: number) => void }) {
   const t = useTranslations("campaign.studio");
+  const why = useRejectionText()(mission.rejection_reason);
   const { min, max } = mission.duration_s;
   const text = TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, Math.max(0, size))];
   return (
@@ -29,7 +31,7 @@ export function PromptCard({ mission, lang, size, onSize }: { mission: Mission; 
       </div>
       {mission.status === "rejected" ? (
         <p role="note" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
-          {mission.rejection_reason ? t("prompt.redoReason", { reason: mission.rejection_reason }) : t("prompt.redo")}
+          {why ? t("prompt.redoReason", { reason: why }) : t("prompt.redo")}
         </p>
       ) : null}
       <p lang={lang} className={`${text} font-semibold leading-snug ${mission.type === "read" ? "" : "text-slate-800"}`}>

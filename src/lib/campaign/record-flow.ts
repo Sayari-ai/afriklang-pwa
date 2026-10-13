@@ -54,7 +54,7 @@ export function takeRules(card: CampaignCard, mission: Mission): TakeRules {
 export const autoStopS = (mission: Mission, rules: TakeRules): number | null => (isTimed(mission.type) ? (mission.duration_s.max ?? rules.durationMaxS) : null);
 
 export type SubmitAction =
-  | { kind: "rerecord"; reason: "duration" | "level" | "silence" | "other" }
+  | { kind: "rerecord"; reason: NonNullable<CampaignFailure["reason"]> }
   | { kind: "already" }
   | { kind: "hub" }
   | { kind: "signin" }

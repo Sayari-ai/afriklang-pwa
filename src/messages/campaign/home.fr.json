@@ -149,6 +149,10 @@
       "duration": "durée",
       "level": "volume",
       "silence": "silence",
+      "variety": "variété de langue",
+      "banned_topic": "sujet non autorisé",
+      "reading_gap": "texte non respecté",
+      "speaker_balance": "équilibre des voix",
       "other": "autre"
     },
     "status": {

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { daysLeft, hasMissions, outboxReasonKey, setupStep, totals } from "./view";
+import { daysLeft, hasMissions, outboxReasonKey, rejectionReasonCode, setupStep, totals } from "./view";
+import { REJECTION_REASONS } from "./types";
+import en from "../../messages/campaign/common.en.json";
+import fr from "../../messages/campaign/common.fr.json";
 
 describe("speaker view facts", () => {
   it("counts days to the deadline in local days", () => {
@@ -38,5 +41,20 @@ describe("speaker view facts", () => {
   it("sums progress", () => {
     const p = (n: number) => ({ progress: { total: n, todo: 0, submitted: n, accepted: n, rejected: 0 } });
     expect(totals([p(1), p(2)])).toEqual({ accepted: 3, submitted: 3, rejected: 0, total: 3 });
+  });
+});
+
+describe("rejection reasons (MAN-002)", () => {
+  it("recognises the dashboard's eight codes and leaves a reviewer's own words alone", () => {
+    expect(rejectionReasonCode("level")).toBe("level");
+    expect(rejectionReasonCode(" Speaker_Balance ")).toBe("speaker_balance");
+    expect(rejectionReasonCode("Background noise (a radio)")).toBeNull();
+    expect(rejectionReasonCode(null)).toBeNull();
+  });
+  it("has one sentence per reason in English and French", () => {
+    for (const r of REJECTION_REASONS) {
+      expect(en.rejection[r]).toMatch(/\.$/);
+      expect(fr.rejection[r]).toMatch(/\.$/);
+    }
   });
 });
