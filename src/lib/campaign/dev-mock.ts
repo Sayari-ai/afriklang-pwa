@@ -15,6 +15,9 @@
  *                                      a second argument `true` lists the planned campaign in `elsewhere`
  *   __afkMock.leaseSoon()              the pool batch's leases end in 5 hours
  *   __afkMock.expire()                 the pool batch's leases have ended
+ *   __afkMock.tickets("old_dashboard")  upload tickets: "ok" (default), "old_dashboard" (404 without a
+ *                                      code, as a dashboard without the route), or a refusal code
+ *                                      such as "campaign_closed" or "campaign_paused"
  *
  * The answers mirror afriklang-landing-page/docs/CAMPAIGN_BRIDGE_CONTRACT.md: keep them in step.
  */
@@ -41,6 +44,8 @@ type State = {
   pool: { consent: boolean; missions: PoolMission[]; nextPrompt: number; forced: Exclude<PoolStatus, "ok"> | null; elsewhere: boolean };
   /** Seconds of each submitted take (for the paid time), by mission id. */
   seconds: Record<string, number>;
+  /** How `upload_ticket` answers: "ok", "old_dashboard", or a refusal code. */
+  tickets?: string;
 };
 
 const PROMPTS: [Mission["type"], string][] = [
@@ -277,6 +282,72 @@ function draw(s: State) {
   return { missions: fresh, pool: view(!fresh.length && !open().length && s.pool.nextPrompt >= POOL_PROMPTS.length ? "campaign_full" : "ok") };
 }
 
+const b64url = (bytes: Uint8Array) => {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+
+/**
+ * A ticket in the contract's exact format: base64url(payload_json) "." base64url(HMAC-SHA256(key,
+ * base64url(payload_json))), no padding (docs/contracts/README.md §1). The mock signs with a
+ * made-up key; the real app never signs or checks a ticket. Exported for the contract test.
+ */
+export async function signMockTicket(payloadJson: string, key = "mock-ticket-secret"): Promise<string> {
+  const enc = new TextEncoder();
+  const head = b64url(enc.encode(payloadJson));
+  const k = await crypto.subtle.importKey("raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", k, enc.encode(head)));
+  return `${head}.${b64url(mac)}`;
+}
+
+/** Refusal statuses the dashboard uses for upload_ticket (the same codes as submit). */
+const TICKET_REFUSALS: Record<string, number> = {
+  campaign_closed: 410,
+  campaign_not_open: 403,
+  not_assigned: 404,
+  not_linked: 403,
+  blocked: 403,
+  campaign_paused: 403,
+  campaign_consent: 403,
+  account_consent: 403,
+  partner_consent: 403,
+  profile_incomplete: 403,
+};
+
+/** The `upload_ticket` answer: { ticket, expires_at }, the ticket's payload as upload-ticket.schema.json. */
+async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Response> {
+  const mode = s.tickets ?? "ok";
+  if (mode === "old_dashboard") return json({ error: "route_not_found", message: "The campaign service does not offer this call yet." }, 404);
+  if (mode !== "ok") return json({ error: "Refused (mock).", code: mode }, TICKET_REFUSALS[mode] ?? 403);
+  const planned = s.planned.missions.find((x) => x.mission_id === body.mission_id);
+  const pooled = s.pool.missions.find((x) => x.mission_id === body.mission_id);
+  const m = planned ?? pooled;
+  if (!m) return notAssigned();
+  const refused = gate(s, planned ? s.planned.consent : s.pool.consent);
+  if (refused) return refused;
+  const card = planned ? plannedCard(s) : poolCard(s);
+  const exp = Math.floor(Date.now() / 1000) + 30 * 60;
+  const payload = {
+    v: 1,
+    jti: crypto.randomUUID(),
+    exp,
+    campaign_id: card.campaign_id,
+    campaign_code: card.code,
+    mission_id: m.mission_id,
+    mission_code: m.code,
+    mission_type: m.type,
+    prompt_id: m.prompt.id,
+    language: card.language.code,
+    variety: s.variety || null,
+    domain: planned ? "FIN" : "GEN",
+    speaker_ids: m.type === "conversational" && m.partner_speaker_id ? [s.speakerId ?? "SPK-7Q2M9X4D", m.partner_speaker_id] : [s.speakerId ?? "SPK-7Q2M9X4D"],
+    source_sha256: String(body.source_sha256),
+    duration_max_s: m.duration_s.max ?? 3600,
+  };
+  return json({ ticket: await signMockTicket(JSON.stringify(payload)), expires_at: new Date(exp * 1000).toISOString() });
+}
+
 async function bridge(body: Record<string, unknown>): Promise<Response> {
   await delay(250);
   const s = load();
@@ -351,6 +422,8 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       save(s);
       return json({ recording_id: "r-" + m.code, mission_status: "submitted", duplicate: false });
     }
+    case "upload_ticket":
+      return uploadTicket(s, body);
     case "withdraw":
       return json({ withdrawn: true });
   }
@@ -378,7 +451,7 @@ export function installCampaignMock() {
       if (init?.body instanceof FormData) {
         const fields: Record<string, string> = {};
         init.body.forEach((v, k) => (fields[k] = typeof v === "string" ? v : `<file ${(v as File).name}, ${(v as File).size} bytes>`));
-        (window as unknown as { __afkLastUpload?: unknown }).__afkLastUpload = fields;
+        (window as unknown as { __afkLastUpload?: unknown }).__afkLastUpload = { ...fields, "X-Campaign-Ticket": new Headers(init.headers).get("x-campaign-ticket") ?? "(none)" };
       }
       await delay(900);
       if (navigator.onLine === false) throw new TypeError("Failed to fetch");
@@ -396,6 +469,7 @@ export function installCampaignMock() {
     private real: XMLHttpRequest | null = null;
     private url = "";
     private aborted = false;
+    private ticket: string | null = null;
     upload: { onprogress: ((e: { loaded: number; total: number; lengthComputable: boolean }) => void) | null; onload: (() => void) | null } = { onprogress: null, onload: null };
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
@@ -412,6 +486,7 @@ export function installCampaignMock() {
       }
     }
     setRequestHeader(k: string, v: string) {
+      if (k.toLowerCase() === "x-campaign-ticket") this.ticket = v;
       this.real?.setRequestHeader(k, v);
     }
     getResponseHeader(h: string) {
@@ -437,7 +512,8 @@ export function installCampaignMock() {
       if (body instanceof FormData) {
         const fields: Record<string, string> = {};
         body.forEach((v, k) => (fields[k] = typeof v === "string" ? v : `<file ${(v as File).name}, ${(v as File).size} bytes>`));
-        (window as unknown as { __afkLastUpload?: unknown }).__afkLastUpload = fields;
+        // The ticket header as the proxy would forward it (none: the old path without tickets).
+        (window as unknown as { __afkLastUpload?: unknown }).__afkLastUpload = { ...fields, "X-Campaign-Ticket": this.ticket ?? "(none)" };
       }
       const total = 100_000;
       void (async () => {
@@ -488,6 +564,12 @@ export function installCampaignMock() {
     leaseSoon: () => {
       const s = load();
       for (const m of s.pool.missions) if (!m.cancelled && isOpen(m)) m.lease_until = new Date(Date.now() + 5 * 3_600_000).toISOString();
+      save(s);
+    },
+    /** How upload tickets are answered: "ok", "old_dashboard", or a refusal code ("campaign_closed", "campaign_paused"...). */
+    tickets: (mode = "ok") => {
+      const s = load();
+      s.tickets = mode;
       save(s);
     },
     /** The pool batch's leases have ended. */

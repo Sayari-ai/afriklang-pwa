@@ -55,13 +55,21 @@ describe("campaigns Edge Function", () => {
     expect(JSON.parse(init.body)).toEqual({ user_id: USER, mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9 });
   });
 
-  it("upload_ticket relays a refusal (403 not_assigned) and an old dashboard's 404 as they are", async () => {
+  it("upload_ticket relays a refusal as it is, and names an old dashboard's missing route", async () => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "Not yours.", code: "not_assigned" }), { status: 403 }));
     const refused = await call({ action: "upload_ticket", mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9 });
     expect(refused.status).toBe(403);
     expect(await refused.json()).toEqual({ error: "Not yours.", code: "not_assigned" });
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "Not found" }), { status: 404 }));
-    expect((await call({ action: "upload_ticket", mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9 })).status).toBe(404);
+    // An older dashboard without the route: Next's HTML 404, or JSON with no code.
+    for (const body of ["<!DOCTYPE html><title>404</title>", JSON.stringify({ error: "Not found" })]) {
+      fetchMock.mockResolvedValueOnce(new Response(body, { status: 404 }));
+      const missing = await call({ action: "upload_ticket", mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9 });
+      expect(missing.status).toBe(404);
+      expect(await missing.json()).toMatchObject({ error: "route_not_found" });
+    }
+    // A coded 404 is a refusal and goes through as it is.
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "Not yours.", code: "not_assigned" }), { status: 404 }));
+    expect(await (await call({ action: "upload_ticket", mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9 })).json()).toEqual({ error: "Not yours.", code: "not_assigned" });
   });
 
   it("upload_ticket with a bad field is a 400 naming it, and never reaches the dashboard", async () => {

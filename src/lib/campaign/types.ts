@@ -146,6 +146,8 @@ export type CampaignErrorCode =
   | "misconfigured"
   | "conflict"
   | "rate_limited"
+  /** The backend has no such call yet (an Edge Function or a dashboard older than the app). */
+  | "unsupported"
   | "unknown";
 
 /** The dashboard's rejection reasons (REJECTION_REASONS there). */

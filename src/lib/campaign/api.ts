@@ -41,7 +41,9 @@ const EDGE_CODES: Record<string, CampaignErrorCode> = {
   server_misconfigured: "misconfigured",
   invalid_json: "invalid_input",
   invalid_body: "invalid_input",
-  unknown_action: "invalid_input",
+  // An Edge Function older than the app, or a dashboard without the route: the call does not exist yet.
+  unknown_action: "unsupported",
+  route_not_found: "unsupported",
   too_large: "invalid_input",
   method_not_allowed: "invalid_input",
   bridge_timeout: "timeout",
@@ -183,6 +185,15 @@ export const withdrawConsent = (campaignId: string) => call<{ withdrawn: true }>
 export const getMissions = (campaignId: string) => call<MissionList>("missions", { campaign_id: campaignId });
 export const submitRecording = (missionId: string, recording: RecordingMetadata) =>
   call<{ recording_id: string; mission_status: string; duplicate: boolean }>("submit", { mission_id: missionId, recording });
+/** A signed upload ticket, passed through untouched (docs/contracts/README.md §1). */
+export type UploadTicket = { ticket: string; expires_at: string };
+/**
+ * Ask the dashboard for a ticket for ONE file of one mission. The app never reads or checks the
+ * ticket (it has no secret): it hands it to the upload proxy in `X-Campaign-Ticket`. A failure
+ * coded `unsupported` means the dashboard (or the Edge Function) does not issue tickets yet.
+ */
+export const requestUploadTicket = (missionId: string, sourceSha256: string, durationS: number) =>
+  call<UploadTicket>("upload_ticket", { mission_id: missionId, source_sha256: sourceSha256, duration_s: durationS });
 /** Pool campaigns: draw a leased batch. Safe to repeat: the dashboard never draws beyond the batch size. */
 export const drawMissions = (campaignId: string) => call<DrawResult>("draw", { campaign_id: campaignId });
 /** Pool campaigns: give back open missions the speaker will not record (at most 200 per call). */
