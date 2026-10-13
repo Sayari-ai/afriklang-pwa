@@ -91,7 +91,7 @@
   "rejection": {
     "level": "Trop faible ou trop bruyant. Mettez-vous dans un endroit calme et tenez le téléphone à 20 cm.",
     "duration": "Trop court ou trop long pour cette consigne.",
-    "silence": "Trop de silence avant ou après la parole.",
+    "silence": "Le silence n’était pas bon : attendez « Parlez », lisez sans longues pauses et restez silencieux un instant à la fin.",
     "variety": "Cet enregistrement ne correspond pas à la variété de langue de la campagne. L'équipe vous contactera.",
     "banned_topic": "Cet enregistrement aborde un sujet que la campagne n'autorise pas.",
     "reading_gap": "L'enregistrement ne correspond pas à la phrase. Lisez-la exactement comme elle est écrite.",

@@ -91,7 +91,7 @@
   "rejection": {
     "level": "Too quiet or too noisy. Find a quiet place and hold the phone 20 cm away.",
     "duration": "Too short or too long for this prompt.",
-    "silence": "Too much silence before or after speaking.",
+    "silence": "The silence was not right: wait for “Speak now”, read without long pauses, and stay silent a moment at the end.",
     "variety": "This recording did not match the campaign's language variety. The team will contact you.",
     "banned_topic": "This recording touches a topic the campaign does not allow.",
     "reading_gap": "The recording does not match the sentence. Read it exactly as written.",
