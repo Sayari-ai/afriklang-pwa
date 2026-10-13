@@ -76,7 +76,8 @@
     "unsupported": "Ce navigateur ne peut pas enregistrer de son. Ouvrez l'application dans une version récente de Chrome ou Safari.",
     "internal": "L'enregistrement n'a pas pu démarrer. Fermez les autres applications qui utilisent le micro, puis réessayez.",
     "stopFailed": "La prise n'a pas pu être terminée : aucun son n'est arrivé. Vérifiez le micro, puis recommencez.",
-    "prepare": "Votre prise n'a pas pu être préparée sur cet appareil. Réessayez, ou mettez à jour votre navigateur."
+    "prepare": "Votre prise n'a pas pu être préparée sur cet appareil. Réessayez, ou mettez à jour votre navigateur.",
+    "interrupted": "L'enregistrement a été interrompu (un appel, une autre application, ou le micro a été déconnecté) : il n'a pas été gardé. Recommencez, s'il vous plaît."
   },
   "goal": {
     "title": "Objectif de la séance atteint !",

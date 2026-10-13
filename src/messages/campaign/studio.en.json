@@ -76,7 +76,8 @@
     "unsupported": "This browser cannot record audio. Open the app in a recent Chrome or Safari.",
     "internal": "Recording could not start. Close other apps that use the microphone, then try again.",
     "stopFailed": "The take could not be finished: no sound reached the app. Check the microphone, then record again.",
-    "prepare": "Your take could not be prepared on this device. Try again, or update your browser."
+    "prepare": "Your take could not be prepared on this device. Try again, or update your browser.",
+    "interrupted": "The recording was interrupted (a call, another app, or the microphone was disconnected), so it was not kept. Please record it again."
   },
   "goal": {
     "title": "Session goal reached!",

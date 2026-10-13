@@ -160,6 +160,27 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     return teardown;
   }, [teardown]);
 
+  // A take cut by a call, a lost microphone or the app going to the background is dropped, with a
+  // clear message, instead of being kept with a gap (APP-032).
+  const interrupt = () => {
+    if (!recorderRef.current) return;
+    teardown();
+    setElapsed(0);
+    setQuiet(false);
+    setMicError(t("mic.interrupted"));
+    setPhase("idle");
+    vibrate([40, 60, 40]);
+  };
+  const interruptRef = useRef(interrupt);
+  useEffect(() => {
+    const onHide = () => {
+      const p = phaseRef.current;
+      if (document.visibilityState === "hidden" && (p === "lead" || p === "speaking" || p === "tail")) interruptRef.current();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, []);
+
   // Keep the screen on while the studio is open.
   useEffect(() => {
     let lock: WakeLockSentinel | null = null;
@@ -289,6 +310,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       }
       const rec = new WavRecorder();
       recorderRef.current = rec;
+      // Cut by the system (call, mic gone): the take would have a gap, drop it and say so (APP-032).
+      rec.onInterrupted = () => interruptRef.current();
       await rec.start(stream ?? undefined);
       if (attempt !== attemptRef.current) return void rec.dispose();
       const startedAt = Date.now();
@@ -498,6 +521,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   useLayoutEffect(() => {
     onPhoneRef.current = onPhone;
     phaseRef.current = phase;
+    interruptRef.current = interrupt;
     currentIdRef.current = currentId;
     byIdRef.current = byId;
     beginTailRef.current = beginTail;

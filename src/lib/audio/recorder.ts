@@ -187,6 +187,12 @@ export class WavRecorder {
   private meter = createTakeMeter(WAV_TARGET_SAMPLE_RATE);
   private starting: Promise<void> | null = null;
   private isRecording = false;
+  /**
+   * Called when capture is cut by the system while recording (APP-032): the microphone track
+   * ended (a Bluetooth headset disconnected, another app took the mic) or the audio context was
+   * interrupted or suspended (a phone call, Siri). The take would have a gap: the caller drops it.
+   */
+  onInterrupted: ((cause: "mic-ended" | "interrupted") => void) | null = null;
   /** Smoothed RMS of the latest audio (0..1), for a live level meter. */
   private rms = 0;
   private frames = 0;
@@ -298,6 +304,14 @@ export class WavRecorder {
     this.source = source;
     this.node = node;
     this.isRecording = true;
+
+    const track = stream.getAudioTracks()[0];
+    if (track) track.onended = () => this.isRecording && this.onInterrupted?.("mic-ended");
+    // iOS reports "interrupted" during a call; others suspend the context.
+    ctx.onstatechange = () => {
+      const state = ctx.state as AudioContextState | "interrupted";
+      if (this.isRecording && this.ctx === ctx && (state === "interrupted" || state === "suspended")) this.onInterrupted?.("interrupted");
+    };
   }
 
   private resetBuffers(inputRate: number) {
