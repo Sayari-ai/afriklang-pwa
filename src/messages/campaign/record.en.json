@@ -26,9 +26,9 @@
   },
   "hint": {
     "read": "Read the sentence aloud, clearly and at your normal pace. Tap Stop when you finish.",
-    "timed": "Speak for at least {min} seconds. Find a quiet place and hold the phone at a comfortable distance.",
+    "timed": "Speak for at least {min, plural, one {# second} other {# seconds}}. Find a quiet place and hold the phone at a comfortable distance.",
     "canStop": "You can stop whenever you are done.",
-    "tooEarly": "Keep going: a recording needs at least {min} seconds."
+    "tooEarly": "Keep going: a recording needs at least {min, plural, one {# second} other {# seconds}}."
   },
   "mic": {
     "permission-denied": "The microphone is blocked. Allow microphone access for this site in your browser settings, then try again.",
@@ -54,8 +54,8 @@
   "problem": {
     "title": "Let's record it again",
     "silent": "No sound was picked up. Check that the microphone is not covered or muted, then record again and speak clearly.",
-    "too_short": "The recording is too short. Please speak for at least {min} seconds.",
-    "too_long": "The recording is too long. Please keep it under {max} seconds.",
+    "too_short": "The recording is too short. Please speak for at least {min, plural, one {# second} other {# seconds}}.",
+    "too_long": "The recording is too long. Please keep it under {max, plural, one {# second} other {# seconds}}.",
     "too_quiet": "The recording is too quiet. Move the phone a little closer to your mouth and speak up.",
     "clipped": "The recording is distorted because it is too loud. Move the phone further away and try again.",
     "silence": "Leave about a second of silence before you start and after you finish. Wait a moment before you speak and before you tap Stop."

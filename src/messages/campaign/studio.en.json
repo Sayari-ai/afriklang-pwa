@@ -37,7 +37,7 @@
     "cancel": "Cancel"
   },
   "hint": {
-    "tooEarly": "Keep going: at least {min} seconds.",
+    "tooEarly": "Keep going: at least {min, plural, one {# second} other {# seconds}}.",
     "quiet": "We can barely hear you. Come a little closer or speak up.",
     "good": "Sounds good",
     "space": "Tip: press Space to record and stop, Enter to submit."
@@ -56,8 +56,8 @@
   "problem": {
     "title": "Let's try that again",
     "silent": "No sound reached the app. Check the microphone is not covered or muted, then speak clearly.",
-    "too_short": "Too short: please speak for at least {min} seconds.",
-    "too_long": "Too long: please keep it under {max} seconds.",
+    "too_short": "Too short: please speak for at least {min, plural, one {# second} other {# seconds}}.",
+    "too_long": "Too long: please keep it under {max, plural, one {# second} other {# seconds}}.",
     "too_quiet": "A bit too quiet. Hold the phone closer to your mouth and speak up.",
     "clipped": "Too loud, the sound is distorted. Hold the phone a little further away.",
     "silence": "Leave a short silence before and after you speak: wait for “Speak now”, and stay silent a moment after you finish.",
@@ -78,7 +78,7 @@
   },
   "goal": {
     "title": "Session goal reached!",
-    "body": "{n} takes recorded. Take a short break, drink some water, then carry on if you like.",
+    "body": "{n, plural, one {# take recorded.} other {# takes recorded.}} Take a short break, drink some water, then carry on if you like.",
     "keepGoing": "Keep going",
     "finish": "Finish for now"
   },

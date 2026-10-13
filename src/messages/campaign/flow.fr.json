@@ -96,7 +96,7 @@
     "micMin": "Tenez le téléphone à au moins {min} cm de votre bouche.",
     "micMax": "Tenez le téléphone à {max} cm au plus de votre bouche.",
     "level": "Parlez clairement et assez fort : l'enregistrement doit atteindre au moins {level} dBFS en moyenne. L'application le vérifie pour vous.",
-    "silence": "Restez silencieux environ {s} seconde avant de commencer et après avoir fini.",
+    "silence": "Restez silencieux environ {s, plural, one {# seconde} other {# secondes}} avant de commencer et après avoir fini.",
     "byType": "Quoi faire, selon le type",
     "duration": "{min} à {max} secondes",
     "perSession": "Environ {min} à {max} missions par séance.",

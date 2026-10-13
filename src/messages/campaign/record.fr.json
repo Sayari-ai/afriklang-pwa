@@ -26,9 +26,9 @@
   },
   "hint": {
     "read": "Lisez la phrase à voix haute, clairement et à votre rythme normal. Touchez Arrêter quand vous avez fini.",
-    "timed": "Parlez au moins {min} secondes. Installez-vous dans un endroit calme et tenez le téléphone à une distance confortable.",
+    "timed": "Parlez au moins {min, plural, one {# seconde} other {# secondes}}. Installez-vous dans un endroit calme et tenez le téléphone à une distance confortable.",
     "canStop": "Vous pouvez arrêter quand vous avez terminé.",
-    "tooEarly": "Continuez : un enregistrement doit durer au moins {min} secondes."
+    "tooEarly": "Continuez : un enregistrement doit durer au moins {min, plural, one {# seconde} other {# secondes}}."
   },
   "mic": {
     "permission-denied": "Le microphone est bloqué. Autorisez l'accès au microphone pour ce site dans les réglages de votre navigateur, puis réessayez.",
@@ -54,8 +54,8 @@
   "problem": {
     "title": "Refaisons l'enregistrement",
     "silent": "Aucun son n'a été capté. Vérifiez que le microphone n'est ni couvert ni coupé, puis recommencez en parlant distinctement.",
-    "too_short": "L'enregistrement est trop court. Parlez au moins {min} secondes.",
-    "too_long": "L'enregistrement est trop long. Gardez-le sous {max} secondes.",
+    "too_short": "L'enregistrement est trop court. Parlez au moins {min, plural, one {# seconde} other {# secondes}}.",
+    "too_long": "L'enregistrement est trop long. Gardez-le sous {max, plural, one {# seconde} other {# secondes}}.",
     "too_quiet": "L'enregistrement est trop faible. Rapprochez un peu le téléphone de votre bouche et parlez plus fort.",
     "clipped": "L'enregistrement est déformé car le son est trop fort. Éloignez le téléphone et recommencez.",
     "silence": "Laissez environ une seconde de silence avant de commencer et après avoir fini. Attendez un instant avant de parler et avant de toucher Arrêter."

@@ -37,7 +37,7 @@
     "cancel": "Annuler"
   },
   "hint": {
-    "tooEarly": "Continuez : au moins {min} secondes.",
+    "tooEarly": "Continuez : au moins {min, plural, one {# seconde} other {# secondes}}.",
     "quiet": "On vous entend à peine. Rapprochez-vous un peu ou parlez plus fort.",
     "good": "Le son est bon",
     "space": "Astuce : Espace pour enregistrer et arrêter, Entrée pour envoyer."
@@ -56,8 +56,8 @@
   "problem": {
     "title": "Essayons encore une fois",
     "silent": "Aucun son n'est arrivé à l'application. Vérifiez que le micro n'est ni couvert ni coupé, puis parlez clairement.",
-    "too_short": "Trop court : parlez au moins {min} secondes.",
-    "too_long": "Trop long : restez sous {max} secondes.",
+    "too_short": "Trop court : parlez au moins {min, plural, one {# seconde} other {# secondes}}.",
+    "too_long": "Trop long : restez sous {max, plural, one {# seconde} other {# secondes}}.",
     "too_quiet": "Un peu trop faible. Rapprochez le téléphone de votre bouche et parlez plus fort.",
     "clipped": "Trop fort, le son sature. Éloignez un peu le téléphone.",
     "silence": "Laissez un court silence avant et après avoir parlé : attendez « Parlez », et restez silencieux un instant à la fin.",
@@ -78,7 +78,7 @@
   },
   "goal": {
     "title": "Objectif de la séance atteint !",
-    "body": "{n} prises enregistrées. Faites une petite pause, buvez un peu d'eau, puis continuez si vous le souhaitez.",
+    "body": "{n, plural, one {# prise enregistrée.} other {# prises enregistrées.}} Faites une petite pause, buvez un peu d'eau, puis continuez si vous le souhaitez.",
     "keepGoing": "Continuer",
     "finish": "Terminer pour l'instant"
   },

@@ -40,4 +40,15 @@ describe("campaign messages", () => {
       for (const [k, v] of flat(en)) expect(placeholders(frMap.get(k) ?? ""), `${area}.${k}`).toBe(placeholders(v));
     }
   });
+
+  it("counts are ICU plurals, never \"{n} takes\" (MAN-005)", () => {
+    // A range ("{min} to {max} seconds") reads fine; a single count needs a plural.
+    const counted = /(?<!(?:to|à) )\{(\w+)\} (takes?|recordings?|missions?|seconds?|minutes?|hours?|prises?|enregistrements?|secondes?|heures?)\b/i;
+    for (const area of areas) {
+      for (const locale of ["en", "fr"]) {
+        const flat = (o: unknown, p = ""): [string, string][] => (o && typeof o === "object" ? Object.entries(o).flatMap(([k, v]) => flat(v, p ? `${p}.${k}` : k)) : [[p, String(o)]]);
+        for (const [k, v] of flat(load(`${area}.${locale}.json`))) expect(counted.test(v), `${area}.${locale}: ${k} = ${v}`).toBe(false);
+      }
+    }
+  });
 });

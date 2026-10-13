@@ -96,7 +96,7 @@
     "micMin": "Hold the phone at least {min} cm from your mouth.",
     "micMax": "Hold the phone at most {max} cm from your mouth.",
     "level": "Speak clearly and loud enough: the recording must reach at least {level} dBFS on average. The app checks this for you.",
-    "silence": "Stay silent for about {s} second before you start and after you finish.",
+    "silence": "Stay silent for about {s, plural, one {# second} other {# seconds}} before you start and after you finish.",
     "byType": "What to do, by type",
     "duration": "{min} to {max} seconds",
     "perSession": "About {min} to {max} missions per sitting.",
