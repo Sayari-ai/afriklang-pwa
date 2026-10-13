@@ -242,7 +242,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     setPhase("analyzing");
     try {
       // The recorder measured the take while it was recorded: no second pass over the audio.
-      const { blob, analysis, inputSampleRate, processing } = await rec.stop();
+      // The lead (recorded before "Speak now") is known silence: it gives the background level.
+      const { blob, analysis, inputSampleRate, processing } = await rec.stop({ leadS: pad });
       const recordedAt = new Date();
       recorderRef.current = null;
       if (attempt !== attemptRef.current) return;
@@ -265,7 +266,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       setMicError(t("mic.stopFailed"));
       setPhase("idle");
     }
-  }, [rules, t, userId, campaignId]);
+  }, [rules, t, userId, campaignId, pad]);
 
   const beginTail = useCallback(() => {
     clearTimers();

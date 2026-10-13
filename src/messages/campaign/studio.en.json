@@ -61,6 +61,7 @@
     "too_quiet": "A bit too quiet. Hold the phone closer to your mouth and speak up.",
     "clipped": "Too loud, the sound is distorted. Hold the phone a little further away.",
     "silence": "Leave a short silence before and after you speak: wait for “Speak now”, and stay silent a moment after you finish.",
+    "noisy": "Too much background noise: your voice does not stand out. Move away from the noise (TV, fan, street) or hold the phone a little closer.",
     "again": "Record again"
   },
   "saved": {

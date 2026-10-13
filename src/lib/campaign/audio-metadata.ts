@@ -84,6 +84,7 @@ export function buildAudioMetadata(args: {
       silence_before_s: a.silence_before_s,
       silence_after_s: a.silence_after_s,
       clipped: a.peak_dbfs >= 0,
+      noise_floor_dbfs: nn(a.noise_floor_dbfs),
       app_checks_passed: true,
       rules: { duration_min_s: rules.durationMinS, duration_max_s: rules.durationMaxS, min_level_dbfs: rules.minLevelDbfs, silence_margin_s: rules.silenceMarginS },
       studio_padding_s: c.paddingS,

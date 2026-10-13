@@ -61,6 +61,7 @@
     "too_quiet": "Un peu trop faible. Rapprochez le téléphone de votre bouche et parlez plus fort.",
     "clipped": "Trop fort, le son sature. Éloignez un peu le téléphone.",
     "silence": "Laissez un court silence avant et après avoir parlé : attendez « Parlez », et restez silencieux un instant à la fin.",
+    "noisy": "Trop de bruit de fond : votre voix ne ressort pas assez. Éloignez-vous du bruit (télévision, ventilateur, rue) ou rapprochez un peu le téléphone.",
     "again": "Recommencer"
   },
   "saved": {

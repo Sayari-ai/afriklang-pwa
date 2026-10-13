@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeSamples, checkTake, parseWav, sha256Hex } from "./analyze";
+import { analyzeSamples, analyzeStats, checkTake, createTakeMeter, parseWav, sha256Hex } from "./analyze";
 import { encodeWav, floatToPCM16 } from "./wav-encoder";
 
 const RATE = 16_000;
@@ -75,5 +75,45 @@ describe("parseWav and sha256Hex", () => {
 
   it("sha256 matches the known digest of 'abc'", async () => {
     expect(await sha256Hex(new Blob(["abc"]))).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  });
+});
+
+describe("background noise (APP-012)", () => {
+  const rules = { durationMinS: 3, durationMaxS: 15, minLevelDbfs: -35, silenceMarginS: 1 };
+  /** Deterministic noise at about `db` dBFS RMS. */
+  const noise = (seconds: number, db: number) => {
+    const amp = 10 ** (db / 20) * Math.sqrt(3);
+    let x = 12345;
+    return Float32Array.from({ length: Math.round(seconds * RATE) }, () => {
+      x = (x * 1103515245 + 12345) & 0x7fffffff;
+      return amp * (2 * (x / 0x7fffffff) - 1);
+    });
+  };
+  const mix = (a: Float32Array, b: Float32Array) => a.map((v, i) => v + (b[i] ?? 0));
+  const meter = (samples: Float32Array) => {
+    const m = createTakeMeter(RATE);
+    m.push(samples);
+    return m.stats();
+  };
+
+  it("measures the floor in the lead and finds the pause above a -42 dBFS background", () => {
+    const take = mix(join(silence(1.2), tone(3, 0.1), silence(1.2)), noise(5.4, -42));
+    const a = analyzeStats(meter(take), { leadS: 1.2 });
+    expect(a.noise_floor_dbfs).toBeCloseTo(-42, 0);
+    expect(a.silence_before_s).toBeCloseTo(1.2, 1);
+    expect(checkTake(a, rules)).toBeNull();
+  });
+
+  it("names the noise, not the pause, when the voice does not stand out", () => {
+    const take = mix(join(silence(1.2), tone(3, 0.02), silence(1.2)), noise(5.4, -38));
+    const a = analyzeStats(meter(take), { leadS: 1.2 });
+    expect(checkTake({ ...a, level_dbfs: Math.max(a.level_dbfs, -34) }, rules)).toBe("noisy");
+    expect(checkTake({ duration_s: 8, level_dbfs: -20, peak_dbfs: -3, silence_before_s: 0, silence_after_s: 1, noise_floor_dbfs: -40 }, rules)).toBe("noisy");
+    expect(checkTake({ duration_s: 8, level_dbfs: -20, peak_dbfs: -3, silence_before_s: 0, silence_after_s: 1, noise_floor_dbfs: -70 }, rules)).toBe("silence");
+  });
+
+  it("keeps the -50 dBFS rule in a quiet room (the dashboard's numbers do not move)", () => {
+    const take = join(silence(1.2), tone(3, 0.1), silence(1.1));
+    expect(analyzeStats(meter(take), { leadS: 1.2 })).toMatchObject(analyzeSamples(take, RATE));
   });
 });

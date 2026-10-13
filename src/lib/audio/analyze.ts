@@ -56,11 +56,19 @@ export type TakeAnalysis = {
   peak_dbfs: number;
   silence_before_s: number;
   silence_after_s: number;
+  /** Background level measured in the silence before the voice (dBFS), when known (APP-012). */
+  noise_floor_dbfs?: number;
 };
 
 const FLOOR_DB = -120;
-/** A 20 ms frame quieter than this counts as silence. */
+/** A 20 ms frame quieter than this counts as silence (in a quiet room; see speechThresholdDb). */
 export const SILENCE_THRESHOLD_DBFS = -50;
+/** Speech starts this far above the background noise (APP-012). */
+export const SPEECH_ABOVE_FLOOR_DB = 10;
+/** Background noise louder than this is what makes the silence check fail, not the speaker. */
+export const NOISY_FLOOR_DBFS = -50;
+/** Voice less than this far above the background: the take is too noisy to use. */
+export const MIN_SNR_DB = 8;
 const FRAME_S = 0.02;
 
 const toDb = (x: number) => (x <= 0 ? FLOOR_DB : Math.max(FLOOR_DB, 20 * Math.log10(x)));
@@ -125,13 +133,41 @@ export function createTakeMeter(sampleRate: number) {
   };
 }
 
-export function analyzeStats(st: FrameStats): TakeAnalysis {
+/**
+ * The background noise level, from frames known to be silence: the studio's lead (it records
+ * `leadS` seconds before saying "Speak now"). The first 100 ms are skipped (the microphone and its
+ * gain control settle), and the median is taken so a cough or a click does not count.
+ * Without a lead, the quietest tenth of the take stands in for it. Null when there is too little.
+ */
+export function noiseFloorDb(st: FrameStats, leadS?: number): number | null {
+  const frameS = st.frameLen / st.sampleRate;
+  let pool: number[];
+  if (leadS && leadS > 0.3) {
+    const from = Math.ceil(0.1 / frameS);
+    const to = Math.min(st.rms.length, Math.floor((leadS * 0.9) / frameS));
+    pool = st.rms.slice(from, to);
+  } else {
+    const sorted = [...st.rms].sort((a, b) => a - b);
+    pool = sorted.slice(0, Math.max(1, Math.floor(sorted.length / 10)));
+  }
+  if (pool.length < 5) return null;
+  const sorted = [...pool].sort((a, b) => a - b);
+  return toDb(sorted[Math.floor(sorted.length / 2)]);
+}
+
+/** Frames above this are speech: -50 dBFS in a quiet room, higher where the background is louder. */
+export const speechThresholdDb = (floor: number | null) => Math.max(SILENCE_THRESHOLD_DBFS, floor == null ? SILENCE_THRESHOLD_DBFS : floor + SPEECH_ABOVE_FLOOR_DB);
+
+export function analyzeStats(st: FrameStats, opts: { leadS?: number } = {}): TakeAnalysis {
   const duration = st.samples / st.sampleRate;
   const frames = st.rms.length;
-  const active = st.rms.map((r) => toDb(r) > SILENCE_THRESHOLD_DBFS);
+  const floor = noiseFloorDb(st, opts.leadS);
+  const threshold = speechThresholdDb(floor);
+  const withFloor = floor == null ? {} : { noise_floor_dbfs: round2(floor) };
+  const active = st.rms.map((r) => toDb(r) > threshold);
   const first = active.indexOf(true);
   if (first === -1) {
-    return { duration_s: round2(duration), level_dbfs: FLOOR_DB, peak_dbfs: round2(toDb(st.peak)), silence_before_s: round2(duration), silence_after_s: round2(duration) };
+    return { duration_s: round2(duration), level_dbfs: FLOOR_DB, peak_dbfs: round2(toDb(st.peak)), silence_before_s: round2(duration), silence_after_s: round2(duration), ...withFloor };
   }
   const last = active.lastIndexOf(true);
 
@@ -149,6 +185,7 @@ export function analyzeStats(st: FrameStats): TakeAnalysis {
     peak_dbfs: round2(toDb(st.peak)),
     silence_before_s: round2(secondsOfFrame(first)),
     silence_after_s: round2(Math.max(0, duration - secondsOfFrame(last + 1))),
+    ...withFloor,
   };
 }
 
@@ -192,8 +229,8 @@ export function waveformPeaks(samples: Float32Array, n: number): number[] {
 
 export type FullAnalysis = TakeAnalysis & { sample_rate: number; channels: number; peaks: number[] };
 
-/** The analysis of a take measured while it was recorded. */
-export const analysisFromStats = (st: FrameStats): FullAnalysis => ({ ...analyzeStats(st), sample_rate: st.sampleRate, channels: 1, peaks: peaksFromStats(st, 64) });
+/** The analysis of a take measured while it was recorded. `leadS`: the silence recorded before "Speak now". */
+export const analysisFromStats = (st: FrameStats, opts: { leadS?: number } = {}): FullAnalysis => ({ ...analyzeStats(st, opts), sample_rate: st.sampleRate, channels: 1, peaks: peaksFromStats(st, 64) });
 
 export async function analyzeWav(blob: Blob): Promise<FullAnalysis> {
   const wav = parseWav(await blob.arrayBuffer());
@@ -208,7 +245,7 @@ export async function sha256Hex(blob: Blob): Promise<string> {
 
 // ── Capture checks (the same rules the dashboard applies) ────────────────
 
-export type TakeProblem = "silent" | "too_short" | "too_long" | "too_quiet" | "clipped" | "silence";
+export type TakeProblem = "silent" | "too_short" | "too_long" | "too_quiet" | "clipped" | "silence" | "noisy";
 
 export type TakeRules = {
   durationMinS: number;
@@ -222,13 +259,18 @@ const SILENCE_SLACK = 0.5;
 
 /** The first thing wrong with a take, or null when it is fine. */
 export function checkTake(a: TakeAnalysis, rules: TakeRules): TakeProblem | null {
-  // Not one frame above the silence threshold: the microphone heard nothing (muted, covered or not working).
-  if (a.level_dbfs <= FLOOR_DB) return "silent";
+  const noisyRoom = a.noise_floor_dbfs != null && a.noise_floor_dbfs > NOISY_FLOOR_DBFS;
+  // Not one frame above the speech threshold: the microphone heard nothing (muted, covered or not
+  // working), or nothing rose above a loud background.
+  if (a.level_dbfs <= FLOOR_DB) return noisyRoom ? "noisy" : "silent";
   if (a.duration_s < rules.durationMinS - DURATION_TOLERANCE_S) return "too_short";
   if (a.duration_s > rules.durationMaxS + DURATION_TOLERANCE_S) return "too_long";
   if (a.level_dbfs < rules.minLevelDbfs) return "too_quiet";
   if (a.peak_dbfs >= 0) return "clipped";
+  // The voice barely stands out from the background (APP-012).
+  if (a.noise_floor_dbfs != null && a.level_dbfs - a.noise_floor_dbfs < MIN_SNR_DB) return "noisy";
   const needed = rules.silenceMarginS * SILENCE_SLACK;
-  if (a.silence_before_s < needed || a.silence_after_s < needed) return "silence";
+  // In a loud place the pause was there but drowned: say what is wrong (the noise), not "leave a pause".
+  if (a.silence_before_s < needed || a.silence_after_s < needed) return noisyRoom ? "noisy" : "silence";
   return null;
 }

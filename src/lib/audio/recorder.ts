@@ -337,7 +337,7 @@ export class WavRecorder {
    * Stops the pipeline and returns the encoded WAV. Always cleans up
    * the mic stream and AudioContext before resolving, even on error.
    */
-  async stop(): Promise<RecordingResult> {
+  async stop(opts: { leadS?: number } = {}): Promise<RecordingResult> {
     if (!this.isRecording) {
       throw new RecorderError("stop() called before start().", "internal");
     }
@@ -376,7 +376,7 @@ export class WavRecorder {
     const blocks = this.fill > 0 ? [...this.blocks, this.block.slice(0, this.fill)] : this.blocks;
     const blob = wavBlobFromChunks(blocks, WAV_TARGET_SAMPLE_RATE);
     const durationSec = this.outSamples / WAV_TARGET_SAMPLE_RATE;
-    const analysis = analysisFromStats(this.meter.stats());
+    const analysis = analysisFromStats(this.meter.stats(), opts);
     this.resetBuffers(WAV_TARGET_SAMPLE_RATE);
     this.downsampler = null;
 
