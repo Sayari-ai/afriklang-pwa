@@ -8,13 +8,15 @@
 import { ArrowLeft, Check, Ear, Hand, Mic, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { logActivity } from "@/lib/campaign/activity";
 import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView } from "@/lib/campaign/types";
-import { daysLeft, hasMissions, openCount, setupStep } from "@/lib/campaign/view";
+import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
+import { useOutbox } from "@/lib/campaign/outbox-client";
+import { daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
 import { LanguageBadge, ProgressRing } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
 import { ConsentStep } from "./ConsentStep";
@@ -79,7 +81,10 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
   const missionRes = useCampaignMissions(card.campaign_id, card.next_step === "ready");
   const live = useLiveMissions(missionRes.state === "ready" ? missionRes.data.missions : null);
   const pool = usePool(card, card.next_step === "ready" ? live : null, true);
-  const open = pool.pool && pool.open != null ? pool.open : openCount(card);
+  const box = useOutbox();
+  const onPhone = useMemo(() => missionsInOutbox(box.items.filter((i) => i.userId === userId && i.campaignId === card.campaign_id)), [box.items, userId, card.campaign_id]);
+  // The same count as the mission tabs: the list minus the takes waiting on the phone (MAN-004).
+  const open = live ? toRecordCount(live, onPhone) : openCountOnPhone(card, [...onPhone.values()].filter((s) => s !== "failed").length);
 
   const after = useCallback(
     (type: "profile" | "consent" | "withdrawn") => () => {

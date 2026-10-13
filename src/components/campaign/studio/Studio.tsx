@@ -29,6 +29,7 @@ import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, nextInQueue,
 import { isRefusal } from "@/lib/campaign/pool";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
+import { toRecordCount } from "@/lib/campaign/view";
 import { PoolRefusal } from "../PoolParts";
 import { Confetti, PromptCard, RecordButton, SessionBar, TakePlayer } from "./StudioParts";
 
@@ -534,7 +535,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // ── Render ──────────────────────────────────────────────────────────────
 
-  const open = missions.filter((m) => m.status === "todo" || m.status === "rejected").length;
+  // Takes waiting on the phone are done as far as the speaker is concerned (MAN-004, APP-026).
+  const open = toRecordCount(missions, onPhone);
   const shell = (children: React.ReactNode, footer?: React.ReactNode) => (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_80%_at_50%_0%,#0a5bb0_0%,#00396f_45%,#001b36_100%)] text-white">
       <p ref={statusRef} className="sr-only" role="status" aria-live="polite">

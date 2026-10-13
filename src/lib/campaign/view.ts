@@ -1,6 +1,7 @@
 /** Small pure facts the speaker screens show (kept out of the components so they can be tested). */
 
-import { REJECTION_REASONS, type CampaignCard, type NextStep, type RejectionReason } from "./types";
+import type { OutboxState } from "./outbox-logic";
+import { REJECTION_REASONS, type CampaignCard, type Mission, type NextStep, type RejectionReason } from "./types";
 
 /**
  * A mission's `rejection_reason` as one of the dashboard's reason codes, or null when it is not one
@@ -20,8 +21,19 @@ export function rejectionReasonCode(reason: string | null | undefined): Rejectio
 export const hasMissions = (c: Pick<CampaignCard, "progress" | "dispatch" | "next_step">) =>
   c.progress.total > 0 || (c.dispatch === "pool" && c.next_step !== "paused" && c.next_step !== "closed");
 
-/** Left to record (to do + to redo). */
+/** Left to record (to do + to redo), by the server's counts. */
 export const openCount = (c: Pick<CampaignCard, "progress">) => c.progress.todo + c.progress.rejected;
+
+/**
+ * Left to record, the one count every screen shows (MAN-004): to do + to redo, minus the missions
+ * whose take is already waiting on the phone (a failed take still needs the speaker). From the
+ * mission list when it is known; from the card's counts otherwise (`waitingOnPhone`: takes of the
+ * campaign on the phone, failed ones excluded).
+ */
+export function toRecordCount(missions: readonly Pick<Mission, "mission_id" | "status">[], onPhone: ReadonlyMap<string, OutboxState>): number {
+  return missions.filter((m) => (m.status === "todo" || m.status === "rejected") && !(onPhone.has(m.mission_id) && onPhone.get(m.mission_id) !== "failed")).length;
+}
+export const openCountOnPhone = (c: Pick<CampaignCard, "progress">, waitingOnPhone: number) => Math.max(0, openCount(c) - waitingOnPhone);
 
 /** Which of the three setup steps the speaker is on (1-3), or null when setup is over. */
 export function setupStep(step: NextStep): 1 | 2 | 3 | null {
