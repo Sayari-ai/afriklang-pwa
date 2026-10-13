@@ -102,6 +102,8 @@ export interface UploadAudioArgs {
   extraFields?: Record<string, string>;
   /** Optional `AbortSignal` for cancel-on-unmount. */
   signal?: AbortSignal;
+  /** The signed-in contributor's Supabase access token: the upload proxy refuses uploads without one. */
+  accessToken?: string;
 }
 
 /** What Sayari answered, best effort: the recording's id when the response carries one. */
@@ -193,6 +195,7 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioRes
       signal: ctrl.signal,
       // Do NOT set `Content-Type` manually fetch needs to add the
       // multipart boundary itself.
+      ...(args.accessToken ? { headers: { Authorization: `Bearer ${args.accessToken}` } } : {}),
     });
   } catch (e) {
     clearTimeout(timeoutId);

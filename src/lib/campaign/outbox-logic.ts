@@ -78,6 +78,8 @@ export function decideUploadFailure(e: UploadOutcome, attempts: number, online: 
   if (!online) return { kind: "retry", code: "offline", delayMs: 0 };
   if (e.isNetwork || e.status === 0) return { kind: "retry", code: "network", delayMs: backoffMs(attempts, random) };
   if (e.status === 413) return { kind: "fail", code: "tooLarge" };
+  // Signed out (or the session could not be renewed): keep the take until they sign in again.
+  if (e.status === 401) return { kind: "hold", code: "unauthorized", delayMs: MINUTE };
   if (e.status === 429) return { kind: "retry", code: "rateLimited", delayMs: Math.max(30 * SECOND, backoffMs(attempts, random)) };
   if (e.status >= 500) return { kind: "retry", code: "server", delayMs: backoffMs(attempts, random) };
   if (e.status >= 400) return { kind: "fail", code: "refused" };
