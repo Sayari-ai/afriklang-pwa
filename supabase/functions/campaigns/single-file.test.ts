@@ -15,7 +15,7 @@ const post = (body: unknown, headers: Record<string, string> = { authorization: 
 beforeEach(async () => {
   vi.resetModules();
   fetchMock.mockReset();
-  auth.getUser.mockReset().mockResolvedValue({ data: { user: { id: USER, email: "awa@gmail.com", app_metadata: { provider: "google" }, identities: [{ provider: "google", identity_data: { email_verified: true } }] } }, error: null });
+  auth.getUser.mockReset().mockResolvedValue({ data: { user: { id: USER, email: "awa@gmail.com", app_metadata: { provider: "google" }, identities: [{ provider: "google", identity_data: { email: "awa@gmail.com", email_verified: true } }] } }, error: null });
   (globalThis as Record<string, unknown>).Deno = { env: { get: (k: string) => env[k] }, serve: (h: typeof handler) => void (handler = h) };
   vi.stubGlobal("fetch", fetchMock);
   await import("../../../deploy/campaigns-single-file.ts");

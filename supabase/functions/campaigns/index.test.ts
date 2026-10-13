@@ -16,7 +16,7 @@ let handler: (req: Request) => Promise<Response>;
 const env: Record<string, string> = {};
 const fetchMock = vi.fn();
 
-const googleUser = { id: USER, email: "awa@gmail.com", app_metadata: { provider: "google" }, identities: [{ provider: "google", identity_data: { email_verified: true } }] };
+const googleUser = { id: USER, email: "awa@gmail.com", app_metadata: { provider: "google" }, identities: [{ provider: "google", identity_data: { email: "awa@gmail.com", email_verified: true } }] };
 const call = (body: unknown, headers: Record<string, string> = { authorization: "Bearer good.token" }, method = "POST") =>
   handler(new Request("https://x.supabase.co/functions/v1/campaigns", { method, headers: { "content-type": "application/json", ...headers }, body: method === "POST" ? (typeof body === "string" ? body : JSON.stringify(body)) : undefined }));
 

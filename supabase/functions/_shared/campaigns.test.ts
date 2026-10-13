@@ -110,17 +110,24 @@ describe("identityFrom", () => {
     email: "Awa@Gmail.com",
     app_metadata: { provider: "google" },
     user_metadata: {},
-    identities: [{ provider: "google", identity_data: { email_verified: true } }],
+    identities: [{ provider: "google", identity_data: { email: "awa@gmail.com", email_verified: true } }],
     ...over,
   });
 
   it("a Google account with a provider-verified email is verified, and the email is lowercased", () => {
     expect(identityFrom(google())).toEqual({ userId: WHO.userId, email: "awa@gmail.com", emailVerified: true });
-    expect(identityFrom(google({ identities: [], user_metadata: { email_verified: true } }))).toMatchObject({ emailVerified: true });
+  });
+
+  it("trusts only the Google identity, and only for the email Google verified (APP-020)", () => {
+    // user_metadata can be written by the user: not enough.
+    expect(identityFrom(google({ identities: [], user_metadata: { email_verified: true } }))).toMatchObject({ emailVerified: false });
+    // The account email was changed to another address after the Google sign-in.
+    expect(identityFrom(google({ email: "invited@school.org" }))).toMatchObject({ email: "invited@school.org", emailVerified: false });
+    expect(identityFrom(google({ identities: [{ provider: "google", identity_data: { email_verified: true } }] }))).toMatchObject({ emailVerified: false });
   });
 
   it("is not verified when Google does not say so, for other providers, or without an email", () => {
-    expect(identityFrom(google({ identities: [{ provider: "google", identity_data: { email_verified: false } }] }))).toMatchObject({ emailVerified: false });
+    expect(identityFrom(google({ identities: [{ provider: "google", identity_data: { email: "awa@gmail.com", email_verified: false } }] }))).toMatchObject({ emailVerified: false });
     expect(identityFrom(google({ identities: [{ provider: "email", identity_data: { email_verified: true } }], app_metadata: { provider: "email" }, user_metadata: { email_verified: true } }))).toMatchObject({ emailVerified: false });
     expect(identityFrom(google({ email: undefined }))).toMatchObject({ email: null, emailVerified: false });
     expect(identityFrom(google({ email: "no-at-sign" }))).toMatchObject({ email: null, emailVerified: false });

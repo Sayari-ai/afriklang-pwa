@@ -201,21 +201,23 @@ type AuthUserLike = {
   email_confirmed_at?: unknown;
   app_metadata?: { provider?: unknown } | null;
   user_metadata?: { email_verified?: unknown } | null;
-  identities?: { provider?: unknown; identity_data?: { email_verified?: unknown } | null }[] | null;
+  identities?: { provider?: unknown; identity_data?: { email?: unknown; email_verified?: unknown } | null }[] | null;
 };
 
 /**
- * Who the verified session belongs to. The email counts as verified only for a Google
- * sign-in whose provider confirms it (Google reports email_verified), never for an
- * address someone typed.
+ * Who the verified session belongs to. The email counts as verified only when the Google
+ * identity itself says so (identity_data.email_verified) AND that identity's email is the
+ * account's email. `user_metadata` is not trusted: users can write it themselves
+ * (auth.updateUser({ data })), and an account email changed after the Google sign-in is not
+ * the one Google verified (APP-020).
  */
 export function identityFrom(user: AuthUserLike | null | undefined): Identity | null {
   if (!user || typeof user.id !== "string" || !UUID_RE.test(user.id)) return null;
   const email = typeof user.email === "string" && user.email.includes("@") ? user.email.trim().toLowerCase() : null;
   const google = user.identities?.find((i) => i?.provider === "google");
-  const viaGoogle = Boolean(google) || user.app_metadata?.provider === "google";
-  const providerSays = google?.identity_data?.email_verified === true || user.user_metadata?.email_verified === true;
-  return { userId: user.id, email, emailVerified: Boolean(email) && viaGoogle && providerSays };
+  const googleEmail = typeof google?.identity_data?.email === "string" ? google.identity_data.email.trim().toLowerCase() : null;
+  const googleSays = google?.identity_data?.email_verified === true && googleEmail !== null && googleEmail === email;
+  return { userId: user.id, email, emailVerified: Boolean(email) && googleSays };
 }
 
 export function bearerToken(header: string | null): string | null {
