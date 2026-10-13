@@ -11,10 +11,12 @@
 import { ClipboardList, CloudOff, History, LogOut, UserRound, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { LocalePicker } from "@/components/locale-picker";
+import { isSupportedLocale } from "@/i18n/locales";
+import { applyInvitationLocale } from "@/stores/app-locale";
 import { signOutHere } from "@/lib/campaign/sign-out";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
 import { useAppUpdate } from "@/lib/campaign/app-update";
@@ -39,6 +41,7 @@ export function CampaignShell({ children }: { children: ReactNode }) {
   const userId = session.status === "signedIn" ? session.userId : null;
   useOutboxRunner(userId);
   useOfflinePages();
+  useInvitationLocale(/^\/campaign\/[^/]+\/studio/.test(pathname));
   // Signed in: ask for storage the browser will not clear by itself (APP-007).
   useEffect(() => {
     if (userId) void askPersistentStorage();
@@ -47,6 +50,21 @@ export function CampaignShell({ children }: { children: ReactNode }) {
   // The studio is a full-screen, focused space.
   if (/^\/campaign\/[^/]+\/studio/.test(pathname)) return <>{children}</>;
   return <Frame signedIn={session.status === "signedIn"} email={session.status === "signedIn" ? session.email : null}>{children}</Frame>;
+}
+
+/**
+ * The app opens in the language of the speaker's invitation (and consent) rather than the phone's,
+ * unless they chose a language in the app (APP-029). Never switched inside the studio.
+ */
+function useInvitationLocale(inStudio: boolean) {
+  const list = useCampaignList();
+  const current = useLocale();
+  const router = useRouter();
+  const wanted = list.state === "ready" ? list.data.contributor.locale : null;
+  useEffect(() => {
+    if (inStudio || !wanted || !isSupportedLocale(wanted)) return;
+    if (applyInvitationLocale(wanted, current)) router.refresh();
+  }, [wanted, current, inStudio, router]);
 }
 
 /** Keep the speaker's pages saved on the phone so the app opens offline (offline-pages.ts). */

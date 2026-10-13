@@ -1,12 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 
-import {
-  DEFAULT_LOCALE,
-  LOCALE_COOKIE,
-  resolveLocale,
-  type Locale,
-} from "./locales";
+import { isSupportedLocale, LOCALE_COOKIE, resolveLocale, type Locale } from "./locales";
 
 /** One message file per screen group (see src/messages/campaign). */
 const CAMPAIGN_AREAS = ["common", "claim", "flow", "record", "studio", "home"] as const;
@@ -32,10 +27,9 @@ export default getRequestConfig(async () => {
   // First language tag, before any quality factor: "fr-FR,en;q=0.5" -> "fr-FR".
   const acceptPrimary = acceptLanguage?.split(",")[0]?.trim();
 
-  const locale: Locale =
-    resolveLocale(cookieValue) !== DEFAULT_LOCALE
-      ? resolveLocale(cookieValue)
-      : resolveLocale(acceptPrimary);
+  // A chosen language wins, English included: comparing with the default made an "en" choice fall
+  // through to Accept-Language, so English could not be picked on a French phone.
+  const locale: Locale = isSupportedLocale(cookieValue) ? cookieValue : resolveLocale(acceptPrimary);
 
   // Campaign screens keep their strings in src/messages/campaign/<area>.<locale>.json,
   // all under one "campaign" namespace: useTranslations("campaign.<area>").
