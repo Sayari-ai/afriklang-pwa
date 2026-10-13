@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle2, FileSignature, LogOut, UploadCloud, UserRo
 import { useFormatter, useTranslations } from "next-intl";
 import { useSyncExternalStore } from "react";
 import { byDay, readActivity, subscribeActivity, type Activity, type ActivityType } from "@/lib/campaign/activity";
+import { rejectionReasonCode } from "@/lib/campaign/view";
 
 const ICON: Record<ActivityType, typeof CheckCircle2> = {
   sent: UploadCloud,
@@ -45,7 +46,7 @@ export function ActivityTimeline({ userId, limit }: { userId: string; limit?: nu
   const text = (a: Activity) => {
     const code = a.missionCode ?? "";
     if (a.type === "rejected") {
-      const reason = ["duration", "level", "silence"].includes(a.detail ?? "") ? (a.detail as "duration" | "level" | "silence") : "other";
+      const reason = rejectionReasonCode(a.detail) ?? "other";
       return t("activity.rejected", { code, reason: t(`reasons.${reason}`) });
     }
     if (a.type === "sent" || a.type === "failed") return t(`activity.${a.type}`, { code });

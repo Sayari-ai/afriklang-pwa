@@ -42,6 +42,11 @@ describe("toResult: precise failures", () => {
     expect(toResult(400, { error: "invalid_json", message: "x" })).toMatchObject({ code: "invalid_input" });
     expect(toResult(413, { error: "too_large", message: "x" })).toMatchObject({ code: "invalid_input" });
     expect(toResult(400, { error: "toString" })).toMatchObject({ code: "invalid_input", message: "toString" });
+    // A call the backend does not have yet: an older Edge Function, or a dashboard without the route.
+    expect(toResult(400, { error: "unknown_action", message: "x" })).toMatchObject({ code: "unsupported" });
+    expect(toResult(404, { error: "route_not_found", message: "x" })).toMatchObject({ code: "unsupported" });
+    // A coded 404 stays a refusal.
+    expect(toResult(404, { error: "Not yours.", code: "not_assigned" })).toMatchObject({ code: "not_assigned" });
   });
 
   it("guesses the kind of failure from the status when no code is known", () => {

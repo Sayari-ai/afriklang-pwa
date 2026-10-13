@@ -72,6 +72,11 @@ Deno.serve(async (req) => {
     } catch {
       // not JSON: handled below
     }
+    // A 404 that names no code is a route this dashboard does not have yet (an older deploy), not a
+    // refusal: refusals always carry a `code` (not_assigned, ...). The app then works without it.
+    if (res.status === 404 && !(json && typeof json === "object" && typeof (json as Record<string, unknown>).code === "string")) {
+      return errorResponse("route_not_found", "The campaign service does not offer this call yet.", 404);
+    }
     if (json === null || typeof json !== "object") return errorResponse("bridge_error", "The campaign service answered unexpectedly.", 502);
     // The user's session was checked above, so a 401 here is the dashboard refusing THIS
     // function's key (BRIDGE_SECRET differs from the dashboard's PWA_BRIDGE_SECRET, or that one

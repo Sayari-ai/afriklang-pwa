@@ -32,7 +32,6 @@
 
 import { create } from "zustand";
 
-import { track } from "@/lib/api/events";
 import { safeStorage } from "@/lib/safe-storage";
 import { StorageKeys } from "@/lib/storage-keys";
 
@@ -136,13 +135,8 @@ export const useInstallPrompt = create<InstallPromptState>((set, get) => ({
     try {
       await evt.prompt();
       const { outcome } = await evt.userChoice;
-      if (outcome === "accepted") {
-        track("install_prompt_accepted");
-      } else {
-        // Declining the OS sheet counts as a dismissal start the
-        // cool-off window rather than re-offering next level.
-        get().dismiss();
-      }
+      // Declining the OS sheet counts as a dismissal: start the cool-off window.
+      if (outcome !== "accepted") get().dismiss();
       return outcome;
     } catch {
       return "unavailable";
@@ -153,7 +147,6 @@ export const useInstallPrompt = create<InstallPromptState>((set, get) => ({
     const stamp = new Date().toISOString();
     safeStorage.setItem(StorageKeys.installPromptDismissedAt, stamp);
     set({ dismissedAt: stamp });
-    track("install_prompt_dismissed");
   },
 }));
 
@@ -187,6 +180,5 @@ export function initInstallPromptCapture(): void {
 
   window.addEventListener("appinstalled", () => {
     useInstallPrompt.setState({ deferredEvent: null, isStandalone: true });
-    track("app_installed");
   });
 }

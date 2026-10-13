@@ -37,7 +37,7 @@
     "cancel": "Annuler"
   },
   "hint": {
-    "tooEarly": "Continuez : au moins {min} secondes.",
+    "tooEarly": "Continuez : au moins {min, plural, one {# seconde} other {# secondes}}.",
     "quiet": "On vous entend à peine. Rapprochez-vous un peu ou parlez plus fort.",
     "good": "Le son est bon",
     "space": "Astuce : Espace pour enregistrer et arrêter, Entrée pour envoyer."
@@ -47,6 +47,7 @@
     "play": "Écouter",
     "pause": "Pause",
     "length": "{time} enregistrées",
+    "restored": "Nous avons gardé l'enregistrement fait avant la fermeture de l'application. Écoutez-le, puis envoyez-le ou recommencez.",
     "again": "Recommencer",
     "submit": "Envoyer et continuer",
     "submitLast": "Envoyer",
@@ -55,16 +56,18 @@
   "problem": {
     "title": "Essayons encore une fois",
     "silent": "Aucun son n'est arrivé à l'application. Vérifiez que le micro n'est ni couvert ni coupé, puis parlez clairement.",
-    "too_short": "Trop court : parlez au moins {min} secondes.",
-    "too_long": "Trop long : restez sous {max} secondes.",
+    "too_short": "Trop court : parlez au moins {min, plural, one {# seconde} other {# secondes}}.",
+    "too_long": "Trop long : restez sous {max, plural, one {# seconde} other {# secondes}}.",
     "too_quiet": "Un peu trop faible. Rapprochez le téléphone de votre bouche et parlez plus fort.",
     "clipped": "Trop fort, le son sature. Éloignez un peu le téléphone.",
     "silence": "Laissez un court silence avant et après avoir parlé : attendez « Parlez », et restez silencieux un instant à la fin.",
+    "noisy": "Trop de bruit de fond : votre voix ne ressort pas assez. Éloignez-vous du bruit (télévision, ventilateur, rue) ou rapprochez un peu le téléphone.",
     "again": "Recommencer"
   },
   "saved": {
     "flash": "Enregistrée ! Elle sera envoyée automatiquement.",
-    "flashOffline": "Gardée sur votre téléphone. Elle sera envoyée dès votre retour en ligne."
+    "flashOffline": "Gardée sur votre téléphone. Elle sera envoyée dès votre retour en ligne.",
+    "lowSpace": "Votre téléphone est presque plein. Libérez de la place (photos, vidéos, applications) pour que vos enregistrements soient gardés jusqu'à leur envoi."
   },
   "skip": "Passer pour l'instant",
   "mic": {
@@ -73,11 +76,12 @@
     "unsupported": "Ce navigateur ne peut pas enregistrer de son. Ouvrez l'application dans une version récente de Chrome ou Safari.",
     "internal": "L'enregistrement n'a pas pu démarrer. Fermez les autres applications qui utilisent le micro, puis réessayez.",
     "stopFailed": "La prise n'a pas pu être terminée : aucun son n'est arrivé. Vérifiez le micro, puis recommencez.",
-    "prepare": "Votre prise n'a pas pu être préparée sur cet appareil. Réessayez, ou mettez à jour votre navigateur."
+    "prepare": "Votre prise n'a pas pu être préparée sur cet appareil. Réessayez, ou mettez à jour votre navigateur.",
+    "interrupted": "L'enregistrement a été interrompu (un appel, une autre application, ou le micro a été déconnecté) : il n'a pas été gardé. Recommencez, s'il vous plaît."
   },
   "goal": {
     "title": "Objectif de la séance atteint !",
-    "body": "{n} prises enregistrées. Faites une petite pause, buvez un peu d'eau, puis continuez si vous le souhaitez.",
+    "body": "{n, plural, one {# prise enregistrée.} other {# prises enregistrées.}} Faites une petite pause, buvez un peu d'eau, puis continuez si vous le souhaitez.",
     "keepGoing": "Continuer",
     "finish": "Terminer pour l'instant"
   },

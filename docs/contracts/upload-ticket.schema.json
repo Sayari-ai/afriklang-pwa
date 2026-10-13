@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Upload ticket payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "v",
+    "jti",
+    "exp",
+    "campaign_id",
+    "campaign_code",
+    "mission_id",
+    "mission_code",
+    "mission_type",
+    "prompt_id",
+    "language",
+    "speaker_ids",
+    "source_sha256",
+    "duration_max_s"
+  ],
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "jti": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "exp": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "campaign_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "campaign_code": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "mission_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "mission_code": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "mission_type": {
+      "enum": [
+        "read",
+        "spontaneous",
+        "conversational"
+      ]
+    },
+    "prompt_id": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{3}$"
+    },
+    "variety": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 80
+    },
+    "domain": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 8
+    },
+    "speaker_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^SPK-[A-Z0-9]{8}$"
+      },
+      "minItems": 1,
+      "maxItems": 2
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "duration_max_s": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 3600
+    }
+  }
+}

@@ -15,9 +15,11 @@ import { totalPaidTime } from "@/lib/campaign/pool";
 import { totals } from "@/lib/campaign/view";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { LanguageBadge } from "./CampaignCardView";
+import { buttonPrimary, useFailureText, useRejectionText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { MissionSkeleton } from "./MissionList";
 import { OutboxPanel } from "./OutboxPanel";
+import { SignInCard } from "./SignInCard";
 import { useTimeText } from "./PoolParts";
 
 type Filter = "all" | "accepted" | "review" | "redo";
@@ -35,8 +37,24 @@ export function HistoryScreen() {
   const list = useCampaignList();
   const [filter, setFilter] = useState<Filter>("all");
   const time = useTimeText();
+  const failureText = useFailureText();
 
   if (list.state === "error" && list.error.code === "not_linked") return <ClaimNotLinked />;
+  // Signed out (the "My history" shortcut opens here too) or a failed load: say so, never spin for ever (APP-017).
+  if (list.state === "signedOut" || session.status === "signedOut") return <SignInCard hasInvitation={false} />;
+  if (list.state === "error") {
+    return (
+      <section className="flex flex-col gap-4">
+        <h1 className="text-2xl font-black">{t("title")}</h1>
+        <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900">
+          {failureText(list.error)}
+        </p>
+        <button type="button" onClick={list.reload} className={buttonPrimary}>
+          {tc("retry")}
+        </button>
+      </section>
+    );
+  }
   if (list.state !== "ready" || session.status !== "signedIn") return <ClaimSpinner title={tc("loading")} />;
 
   const cards = list.data.campaigns;
@@ -100,6 +118,7 @@ export function HistoryScreen() {
 
 function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filter }) {
   const t = useTranslations("campaign.home.history");
+  const rejectionText = useRejectionText();
   const res = useCampaignMissions(card.campaign_id);
   if (res.state === "error") return <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-800">{t("loadError")}</p>;
   if (res.state !== "ready") return <MissionSkeleton />;
@@ -131,7 +150,7 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
                 <p className="text-sm text-slate-900">{truncate(m.prompt.text_or_topic, 90)}</p>
                 <p className="text-xs text-slate-500">
                   <span className="font-mono">#{m.position}</span> · {t(`status.${m.status as "submitted" | "accepted" | "rejected"}`)}
-                  {m.status === "rejected" && m.rejection_reason ? ` · ${m.rejection_reason}` : ""}
+                  {m.status === "rejected" && rejectionText(m.rejection_reason) ? ` · ${rejectionText(m.rejection_reason)}` : ""}
                 </p>
               </div>
             </li>

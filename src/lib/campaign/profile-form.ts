@@ -2,13 +2,9 @@
 
 import type { CampaignCard, ContributorView, ProfileInput } from "./types";
 
-// Mirrors the dashboard's closed lists (src/lib/campaigns/reference.ts). The server validates again.
-export const LANGUAGES: Record<string, string> = {
-  amh: "Amharic", bam: "Bambara", ewe: "Ewe", fon: "Fon", ful: "Fulfulde", hau: "Hausa", ibo: "Igbo", kik: "Kikuyu", kin: "Kinyarwanda",
-  kri: "Krio", lin: "Lingala", lug: "Luganda", orm: "Oromo", sna: "Shona", som: "Somali", swh: "Swahili", tir: "Tigrinya", twi: "Twi",
-  wol: "Wolof", xho: "Xhosa", yor: "Yoruba", zul: "Zulu", eng: "English", fra: "French", por: "Portuguese", ara: "Arabic",
-};
-export const GENDERS = ["female", "male", "other", "undisclosed"] as const;
+// Mirror the dashboard's closed lists (src/lib/campaigns/reference.ts); the server validates again.
+// The app asks Female or Male only; the dashboard also knows "other" / "undisclosed" (set by an admin).
+export const GENDERS = ["female", "male"] as const;
 export const AGE_BANDS = ["18-29", "30-44", "45-59", "60+"] as const;
 
 // The dashboard stores region and device in 80 characters; stay under that so a save never truncates.
@@ -40,9 +36,6 @@ export function countryOptions(nameOf: (code: string) => string, locale: string)
   return [...toOptions(AFRICAN_COUNTRIES), ...toOptions(OTHER_COUNTRIES)];
 }
 
-export const languageOptions = (): Option[] =>
-  Object.entries(LANGUAGES).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, "en"));
-
 export type ProfileValues = { [K in keyof ProfileInput]: string };
 /**
  * What is wrong with one field. "server": the field was refused by the server (a 400 with
@@ -71,7 +64,8 @@ export function validateProfile(v: ProfileValues, varieties: readonly string[]):
     else if (CONTROL.test(s)) errors[k] = "control";
     else if (!HAS_WORD.test(s)) errors[k] = "noLetters";
   };
-  need("native_language", (s) => s in LANGUAGES);
+  // Not asked: it is the campaign's language (see initialValues). The server checks it again.
+  need("native_language", () => true);
   need("variety", (s) => varieties.includes(s));
   need("country", (s) => ALL_COUNTRIES.has(s));
   text("region");
@@ -90,13 +84,15 @@ export function validateProfile(v: ProfileValues, varieties: readonly string[]):
 
 /**
  * The profile fields a server 400 named in `fieldErrors`. Keys may be the body names
- * ("age_band") or the dashboard's camelCase ("ageBand"); others are ignored.
+ * ("age_band") or the dashboard's camelCase ("ageBand"); others are ignored. The native language
+ * has no field of its own on the form (it is the campaign's), so its error shows on the variety.
  */
 export function profileErrorsFromServer(fieldErrors: Record<string, string> | undefined): ProfileErrors {
   const out: ProfileErrors = {};
   for (const key of Object.keys(fieldErrors ?? {})) {
     const snake = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) as keyof ProfileInput;
-    if (PROFILE_FIELDS.includes(snake)) out[snake] = "server";
+    if (snake === "native_language") out.variety = "server";
+    else if (PROFILE_FIELDS.includes(snake)) out[snake] = "server";
   }
   return out;
 }
@@ -111,15 +107,20 @@ export function guessDevice(ua: string): string {
   return "";
 }
 
-/** Stored values win; the native language defaults to the campaign's. */
+/**
+ * Stored values win, except:
+ * - the native language is always the campaign's: the varieties offered belong to it, and the
+ *   dashboard checks the variety against the native language;
+ * - a stored gender the form does not offer ("other", "undisclosed") is asked again.
+ */
 export function initialValues(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile">, ua: string): ProfileValues {
   const s = contributor.profile.values;
   return {
-    native_language: s?.nativeLanguage ?? card.language.code,
+    native_language: card.language.code,
     variety: s?.variety ?? "",
     country: s?.country ?? "",
     region: s?.region ?? "",
-    gender: s?.gender ?? "",
+    gender: s?.gender && (GENDERS as readonly string[]).includes(s.gender) ? s.gender : "",
     age_band: s?.ageBand ?? "",
     device: s?.device ?? guessDevice(ua),
   };

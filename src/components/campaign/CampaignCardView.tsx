@@ -11,7 +11,7 @@ import { useTranslations } from "next-intl";
 import { isPool, isRefusal, paidTime } from "@/lib/campaign/pool";
 import { usePoolMemo } from "@/lib/campaign/pool-client";
 import type { CampaignCard } from "@/lib/campaign/types";
-import { daysLeft, openCount, setupStep } from "@/lib/campaign/view";
+import { daysLeft, openCountOnPhone, setupStep } from "@/lib/campaign/view";
 import { useTimeText } from "./PoolParts";
 
 export function ProgressRing({ value, total, size = 64 }: { value: number; total: number; size?: number }) {
@@ -30,11 +30,12 @@ export function LanguageBadge({ code, className = "" }: { code: string; classNam
   return <span className={`grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-sm font-black uppercase tracking-wide text-white ${className}`}>{code.slice(0, 3)}</span>;
 }
 
-export function CampaignCardView({ card, waiting }: { card: CampaignCard; waiting: number }) {
+/** `waiting`: takes of the campaign on the phone; `waitingOk`: those not failed (they no longer count as to record). */
+export function CampaignCardView({ card, waiting, waitingOk = 0 }: { card: CampaignCard; waiting: number; waitingOk?: number }) {
   const t = useTranslations("campaign.home.card");
   const { progress } = card;
   const done = progress.submitted + progress.accepted;
-  const open = openCount(card);
+  const open = openCountOnPhone(card, waitingOk);
   const days = daysLeft(card.deadline);
   const step = setupStep(card.next_step);
   const hub = `/campaign/${card.campaign_id}`;

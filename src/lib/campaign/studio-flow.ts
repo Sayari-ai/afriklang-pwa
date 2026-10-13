@@ -69,3 +69,18 @@ export const QUIET_HINT_AFTER_S = 1.5;
 
 /** Text size steps for the prompt. */
 export const TEXT_SIZES = ["text-xl", "text-2xl", "text-3xl"] as const;
+
+/** No take runs longer than this, whatever the campaign allows: memory and upload size on low-end phones (APP-005). */
+export const MAX_TAKE_S = 600;
+
+/**
+ * When the studio stops a take by itself, in seconds from the start of the recording (the silent
+ * tail then follows). Timed types stop at their maximum (tail included, so the take is exactly
+ * that long). A read sentence has no timer on screen: it stops 1 s past its maximum, so a
+ * recording the speaker forgot to stop ends (as "too long") instead of growing until the phone
+ * runs out of memory.
+ */
+export function autoStopAtS(timed: boolean, maxS: number, pad: number): number {
+  const cap = Math.min(MAX_TAKE_S, maxS > 0 ? maxS : MAX_TAKE_S);
+  return timed ? Math.max(pad, cap - pad) : Math.min(MAX_TAKE_S - pad, cap + 1);
+}

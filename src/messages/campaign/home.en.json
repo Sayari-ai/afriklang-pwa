@@ -7,9 +7,16 @@
     "speakerIdHelp": "Only this ID travels with your recordings, never your name.",
     "signedInAs": "Signed in as {email}",
     "language": "App language",
+    "languages": {
+      "system": "System default",
+      "english": "English",
+      "french": "Français"
+    },
     "signOut": "Sign out",
     "signOutPending": "{n, plural, one {# recording is} other {# recordings are}} still waiting on this phone. They stay here and are sent the next time you sign in with this account. Sign out anyway?",
     "offline": "Offline: showing your saved data",
+    "update": "A new version of the app is ready.",
+    "updateRestart": "Restart",
     "close": "Close"
   },
   "home": {
@@ -51,15 +58,25 @@
   },
   "outbox": {
     "sending": "Sending your recordings…",
+    "percent": "{pct}%",
     "waiting": "{n, plural, one {# recording waiting to send} other {# recordings waiting to send}}",
     "offline": "You are offline. They will be sent as soon as you reconnect.",
     "retrying": "We will keep trying automatically.",
+    "remaining": "{mb, number} MB left to send. Keep the app open until it is done.",
+    "unsafe": "These recordings exist only on this phone, and the browser may delete them when it needs space. Install the app to keep them safe.",
+    "install": "Install the app",
+    "installIos": "On iPhone: tap Share, then “Add to Home Screen”.",
     "held": "{n, plural, one {# recording on hold} other {# recordings on hold}}",
     "failed": "{n, plural, one {# recording could not be sent} other {# recordings could not be sent}}",
     "sendNow": "Send now",
     "discard": "Delete",
     "discardConfirm": "Delete this recording from your phone? You can record the mission again.",
+    "others": "{n, plural, one {# recording of another account is on this phone.} other {# recordings of another account are on this phone.}} They are sent only when that account signs in here.",
+    "othersDelete": "Delete them",
+    "othersConfirm": "Delete the recordings of the other account from this phone? They were never sent and cannot be recovered.",
+    "expiresNote": "Recordings that can never be sent are deleted from the phone after 30 days.",
     "recordAgain": "Record again",
+    "tryAgain": "Try again",
     "state": {
       "pending": "Waiting to send",
       "sending": "Sending…",
@@ -72,6 +89,7 @@
       "signin": "sign in again to send it",
       "partner": "your partner's consent is missing",
       "closed": "the campaign has ended",
+      "unassigned": "this mission is no longer yours",
       "file": "the file was refused; please record it again",
       "server": "the service is having trouble",
       "network": "the connection failed",
@@ -148,6 +166,10 @@
       "duration": "length",
       "level": "volume",
       "silence": "silence",
+      "variety": "language variety",
+      "banned_topic": "topic not allowed",
+      "reading_gap": "text not matched",
+      "speaker_balance": "voice balance",
       "other": "other"
     },
     "status": {

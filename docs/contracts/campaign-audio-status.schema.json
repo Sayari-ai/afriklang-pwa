@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Campaign audio status (pull)",
+  "type": "object",
+  "required": [
+    "items",
+    "unknown"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "mission_id",
+          "source_sha256",
+          "verdict_status",
+          "reject_reason",
+          "original_duration_s"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mission_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "verdict_status": {
+            "enum": [
+              null,
+              "pre_annotated",
+              "accepted",
+              "rejected"
+            ]
+          },
+          "reject_reason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "enum": [
+                  "level",
+                  "duration",
+                  "silence",
+                  "variety",
+                  "banned_topic",
+                  "reading_gap",
+                  "speaker_balance",
+                  "other"
+                ]
+              }
+            ]
+          },
+          "language_flag": {
+            "type": "boolean"
+          },
+          "original_duration_s": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "unknown": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ERROR_KEY } from "@/lib/campaign/errors";
+import { rejectionReasonCode } from "@/lib/campaign/view";
 import type { CampaignFailure } from "@/lib/campaign/types";
 
 export const buttonPrimary =
@@ -25,6 +26,19 @@ export function useFailureText() {
     const text = t(ERROR_KEY[failure.code]);
     if (failure.code === "invalid_input" && failure.message && locale === "en") return `${text} (${failure.message})`;
     return text;
+  };
+}
+
+/**
+ * Why a mission came back, as a sentence (MAN-002): a reason code becomes one clear sentence in the
+ * speaker's language; a reviewer's own words are shown as written; nothing gives null.
+ */
+export function useRejectionText() {
+  const t = useTranslations("campaign.common.rejection");
+  return (reason: string | null | undefined): string | null => {
+    const code = rejectionReasonCode(reason);
+    if (code) return t(code);
+    return reason?.trim() ? reason.trim() : null;
   };
 }
 

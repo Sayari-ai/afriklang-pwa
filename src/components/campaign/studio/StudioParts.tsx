@@ -7,11 +7,13 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { TEXT_SIZES } from "@/lib/campaign/studio-flow";
 import type { Mission } from "@/lib/campaign/types";
+import { useRejectionText } from "../CampaignHubParts";
 
 // ── Prompt ───────────────────────────────────────────────────────────────
 
 export function PromptCard({ mission, lang, size, onSize }: { mission: Mission; lang: string; size: number; onSize: (n: number) => void }) {
   const t = useTranslations("campaign.studio");
+  const why = useRejectionText()(mission.rejection_reason);
   const { min, max } = mission.duration_s;
   const text = TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, Math.max(0, size))];
   return (
@@ -19,17 +21,17 @@ export function PromptCard({ mission, lang, size, onSize }: { mission: Mission; 
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-xs font-bold uppercase tracking-wider text-primary">{t(`prompt.${mission.type}`)}</p>
         <div className="flex items-center gap-1" role="group" aria-label={t("textSize")}>
-          <button type="button" onClick={() => onSize(size - 1)} disabled={size <= 0} aria-label={t("textSmaller")} className="grid size-9 place-items-center rounded-full bg-slate-100 text-slate-700 disabled:opacity-40">
+          <button type="button" onClick={() => onSize(size - 1)} disabled={size <= 0} aria-label={t("textSmaller")} className="grid size-11 place-items-center rounded-full bg-slate-100 text-slate-700 disabled:opacity-40">
             <Minus size={16} aria-hidden />
           </button>
-          <button type="button" onClick={() => onSize(size + 1)} disabled={size >= TEXT_SIZES.length - 1} aria-label={t("textBigger")} className="grid size-9 place-items-center rounded-full bg-slate-100 text-slate-700 disabled:opacity-40">
+          <button type="button" onClick={() => onSize(size + 1)} disabled={size >= TEXT_SIZES.length - 1} aria-label={t("textBigger")} className="grid size-11 place-items-center rounded-full bg-slate-100 text-slate-700 disabled:opacity-40">
             <Plus size={16} aria-hidden />
           </button>
         </div>
       </div>
       {mission.status === "rejected" ? (
         <p role="note" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
-          {mission.rejection_reason ? t("prompt.redoReason", { reason: mission.rejection_reason }) : t("prompt.redo")}
+          {why ? t("prompt.redoReason", { reason: why }) : t("prompt.redo")}
         </p>
       ) : null}
       <p lang={lang} className={`${text} font-semibold leading-snug ${mission.type === "read" ? "" : "text-slate-800"}`}>
@@ -68,6 +70,7 @@ export function RecordButton({
   minLevelDbfs,
   progress,
   label,
+  describedBy,
 }: {
   mode: ButtonMode;
   count?: number;
@@ -78,6 +81,8 @@ export function RecordButton({
   /** 0..1 of the allowed length, drawn as an arc. */
   progress: number | null;
   label: string;
+  /** The id of the text saying why the button does nothing yet (it stays focusable: APP-027). */
+  describedBy?: string;
 }) {
   const ringRef = useRef<HTMLDivElement>(null);
   const live = mode === "recording";
@@ -114,10 +119,11 @@ export function RecordButton({
       ) : null}
       <button
         type="button"
-        onClick={onPress}
-        disabled={disabled}
+        onClick={() => !disabled && onPress()}
+        aria-disabled={disabled || undefined}
+        aria-describedby={describedBy}
         aria-label={label}
-        className={`relative grid size-28 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform active:scale-95 disabled:opacity-50 ${
+        className={`relative grid size-28 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform active:scale-95 aria-disabled:opacity-50 ${
           mode === "recording" ? "bg-record-active" : mode === "countdown" ? "bg-white/15 ring-2 ring-white/60" : "bg-white"
         }`}
       >

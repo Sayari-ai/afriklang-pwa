@@ -59,6 +59,7 @@ function Home({ data }: { data: CampaignList }) {
   const time = useTimeText();
   const streak = streakDays(activity);
   const waitingFor = (campaignId: string) => box.items.filter((i) => i.campaignId === campaignId && i.userId === userId).length;
+  const waitingOkFor = (campaignId: string) => box.items.filter((i) => i.campaignId === campaignId && i.userId === userId && i.state !== "failed").length;
 
   // Campaigns that need the speaker first: ready to record, then setup, then the rest.
   const rank = (s: string) => (s === "ready" ? 0 : s === "paused" || s === "closed" ? 2 : 1);
@@ -91,7 +92,7 @@ function Home({ data }: { data: CampaignList }) {
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-black text-slate-900">{t("yourMissions")}</h2>
           {ordered.map((card) => (
-            <CampaignCardView key={card.assignment_id} card={card} waiting={waitingFor(card.campaign_id)} />
+            <CampaignCardView key={card.assignment_id} card={card} waiting={waitingFor(card.campaign_id)} waitingOk={waitingOkFor(card.campaign_id)} />
           ))}
         </section>
       ) : (

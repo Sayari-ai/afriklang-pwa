@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRecordNow, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "./studio-flow";
+import { autoStopAtS, canRecordNow, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "./studio-flow";
 import type { CampaignCard, Mission } from "./types";
 
 const m = (id: string, position: number, over: Partial<Mission> = {}): Mission => ({
@@ -46,5 +46,19 @@ describe("studio queue", () => {
     expect(sessionGoal(card({ speech_types: [{ type: "read", duration_min_s: 3, duration_max_s: 15, missions_per_session: { min: 20, max: 50 } }, { type: "spontaneous", duration_min_s: 3, duration_max_s: 15, missions_per_session: { min: 10, max: 20 } }] }))).toBe(10);
     expect(paddingS(card())).toBe(1.2);
     expect(paddingS(card({ recording: { min_level_dbfs: -35, silence_margin_s: 0 } }))).toBe(1.2);
+  });
+});
+
+describe("auto-stop (APP-005)", () => {
+  it("timed takes stop at their maximum, tail included", () => {
+    expect(autoStopAtS(true, 60, 1.2)).toBeCloseTo(58.8);
+  });
+  it("a read take stops 1 s past its maximum", () => {
+    expect(autoStopAtS(false, 15, 1.2)).toBe(16);
+  });
+  it("nothing runs past 10 minutes", () => {
+    expect(autoStopAtS(true, 3600, 1)).toBe(599);
+    expect(autoStopAtS(false, 3600, 1)).toBe(599);
+    expect(autoStopAtS(false, 0, 1)).toBe(599);
   });
 });

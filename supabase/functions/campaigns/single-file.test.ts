@@ -15,7 +15,7 @@ const post = (body: unknown, headers: Record<string, string> = { authorization: 
 beforeEach(async () => {
   vi.resetModules();
   fetchMock.mockReset();
-  auth.getUser.mockReset().mockResolvedValue({ data: { user: { id: USER, email: "awa@gmail.com", app_metadata: { provider: "google" }, identities: [{ provider: "google", identity_data: { email_verified: true } }] } }, error: null });
+  auth.getUser.mockReset().mockResolvedValue({ data: { user: { id: USER, email: "awa@gmail.com", app_metadata: { provider: "google" }, identities: [{ provider: "google", identity_data: { email: "awa@gmail.com", email_verified: true } }] } }, error: null });
   (globalThis as Record<string, unknown>).Deno = { env: { get: (k: string) => env[k] }, serve: (h: typeof handler) => void (handler = h) };
   vi.stubGlobal("fetch", fetchMock);
   await import("../../../deploy/campaigns-single-file.ts");
@@ -34,6 +34,15 @@ describe("single-file build", () => {
     expect(url).toBe("https://dash.example.com/api/pwa/campaigns/claim");
     expect(init.headers.Authorization).toBe(`Bearer ${"s".repeat(32)}`);
     expect(JSON.parse(init.body)).toEqual({ user_id: USER, email: "awa@gmail.com", email_verified: true, token: "T".repeat(43) });
+  });
+
+  it("has the upload_ticket action", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ticket: "a.b", expires_at: "2026-10-13T12:30:00Z" }), { status: 200 }));
+    const res = await post({ action: "upload_ticket", mission_id: "22222222-2222-4222-8222-222222222222", source_sha256: "d".repeat(64), duration_s: 4 });
+    expect(res.status).toBe(200);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://dash.example.com/api/pwa/campaigns/missions/upload-ticket");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ user_id: USER, mission_id: "22222222-2222-4222-8222-222222222222", source_sha256: "d".repeat(64), duration_s: 4 });
+    expect((await post({ action: "upload_ticket", mission_id: "x", source_sha256: "d".repeat(64), duration_s: 4 })).status).toBe(400);
   });
 
   it("refuses without a session and for unknown actions", async () => {

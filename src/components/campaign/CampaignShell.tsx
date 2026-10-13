@@ -11,13 +11,18 @@
 import { ClipboardList, CloudOff, History, LogOut, UserRound, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { LocalePicker } from "@/components/locale-picker";
-import { signOut } from "@/lib/campaign/auth-client";
-import { campaignCache } from "@/lib/campaign/cache";
+import { isSupportedLocale } from "@/i18n/locales";
+import { applyInvitationLocale } from "@/stores/app-locale";
+import { signOutHere } from "@/lib/campaign/sign-out";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
+import { useAppUpdate } from "@/lib/campaign/app-update";
+import { measureClockSkew } from "@/lib/campaign/clock";
+import { saveOfflinePages } from "@/lib/campaign/offline-pages";
+import { askPersistentStorage } from "@/lib/campaign/storage-safety";
 import { useOutbox, useOutboxRunner } from "@/lib/campaign/outbox-client";
 
 const subscribeOnline = (fn: () => void) => {
@@ -35,16 +40,57 @@ export function CampaignShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const userId = session.status === "signedIn" ? session.userId : null;
   useOutboxRunner(userId);
+  useOfflinePages();
+  useInvitationLocale(/^\/campaign\/[^/]+\/studio/.test(pathname));
+  // Signed in: ask for storage the browser will not clear by itself (APP-007).
+  useEffect(() => {
+    if (userId) void askPersistentStorage();
+  }, [userId]);
 
   // The studio is a full-screen, focused space.
   if (/^\/campaign\/[^/]+\/studio/.test(pathname)) return <>{children}</>;
   return <Frame signedIn={session.status === "signedIn"} email={session.status === "signedIn" ? session.email : null}>{children}</Frame>;
 }
 
+/**
+ * The app opens in the language of the speaker's invitation (and consent) rather than the phone's,
+ * unless they chose a language in the app (APP-029). Never switched inside the studio.
+ */
+function useInvitationLocale(inStudio: boolean) {
+  const list = useCampaignList();
+  const current = useLocale();
+  const router = useRouter();
+  const wanted = list.state === "ready" ? list.data.contributor.locale : null;
+  useEffect(() => {
+    if (inStudio || !wanted || !isSupportedLocale(wanted)) return;
+    if (applyInvitationLocale(wanted, current)) router.refresh();
+  }, [wanted, current, inStudio, router]);
+}
+
+/** Keep the speaker's pages saved on the phone so the app opens offline (offline-pages.ts). */
+function useOfflinePages() {
+  const list = useCampaignList();
+  const online = useOnline();
+  // The phone's clock against the server's, for pool leases (clock.ts; at most every few hours).
+  useEffect(() => {
+    if (online) void measureClockSkew();
+  }, [online]);
+  const ids = list.state === "ready" ? list.data.campaigns.map((c) => c.campaign_id).join("\n") : null;
+  useEffect(() => {
+    if (ids === null || !online) return;
+    // After the page has settled: never compete with what the speaker is loading.
+    const t = setTimeout(() => void saveOfflinePages(ids ? ids.split("\n") : []), 3000);
+    return () => clearTimeout(t);
+  }, [ids, online]);
+}
+
 function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: boolean; email: string | null }) {
   const t = useTranslations("campaign.home.shell");
   const pathname = usePathname() ?? "";
   const online = useOnline();
+  // Offered here only, never in the studio, and not while a take is being sent (APP-022).
+  const update = useAppUpdate();
+  const box = useOutbox();
   const [account, setAccount] = useState(false);
   const tabs = [
     { href: "/campaign", label: t("missions"), Icon: ClipboardList, active: pathname === "/campaign" || (/^\/campaign\/[^/]+/.test(pathname) && !pathname.startsWith("/campaign/history")) },
@@ -64,6 +110,14 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
           </button>
         ) : null}
       </header>
+      {update.ready && online && !box.activeId ? (
+        <div role="status" className="flex items-center justify-center gap-3 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
+          <span>{t("update")}</span>
+          <button type="button" onClick={update.apply} className="min-h-8 rounded-full bg-primary px-3 font-bold text-white">
+            {t("updateRestart")}
+          </button>
+        </div>
+      ) : null}
       {!online ? (
         <p role="status" className="flex items-center justify-center gap-2 bg-amber-100 px-4 py-1.5 text-xs font-semibold text-amber-900">
           <CloudOff size={14} aria-hidden /> {t("offline")}
@@ -96,28 +150,56 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
 
 function AccountSheet({ email, onClose }: { email: string | null; onClose: () => void }) {
   const t = useTranslations("campaign.home.shell");
+  const session = useCampaignSession();
+  const userId = session.status === "signedIn" ? session.userId : null;
   const list = useCampaignList();
   const box = useOutbox();
   const closeRef = useRef<HTMLButtonElement>(null);
   const speakerId = list.state === "ready" ? list.data.contributor.speaker_id : null;
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+  // A modal: focus moves in, Tab stays inside, Escape closes, and focus returns to the account
+  // button on close (APP-027).
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") return onCloseRef.current();
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter((el) => !el.hasAttribute("disabled"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+    // Once per opening: the parent re-renders (network, outbox) must not move the focus.
+  }, []);
 
   function leave() {
-    const waiting = box.items.length;
+    // This person's takes only (APP-025): another account's takes are not theirs to worry about.
+    const waiting = box.items.filter((i) => i.userId === userId).length;
     if (waiting > 0 && !window.confirm(t("signOutPending", { n: waiting }))) return;
-    campaignCache.clear();
-    void signOut().finally(() => window.location.assign("/campaign"));
+    void signOutHere(userId).finally(() => window.location.assign("/campaign"));
   }
 
   return (
     <div className="fixed inset-0 z-40 mx-auto flex max-w-[480px] items-end bg-black/50" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="acct-title" onClick={(e) => e.stopPropagation()} className="afk-pop w-full rounded-t-3xl bg-primary px-5 pt-4 pb-[max(env(safe-area-inset-bottom),20px)] text-white">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="acct-title" onClick={(e) => e.stopPropagation()} className="afk-pop w-full rounded-t-3xl bg-primary px-5 pt-4 pb-[max(env(safe-area-inset-bottom),20px)] text-white">
         <div className="mb-4 flex items-center justify-between">
           <h2 id="acct-title" className="text-lg font-black">{t("account")}</h2>
           <button ref={closeRef} type="button" onClick={onClose} aria-label={t("close")} className="grid size-10 place-items-center rounded-full bg-white/15">

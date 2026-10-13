@@ -35,6 +35,7 @@ export const ERROR_KEY: Record<CampaignErrorCode, string> = {
   misconfigured: "misconfigured",
   conflict: "conflict",
   rate_limited: "rateLimited",
+  unsupported: "generic",
   unknown: "generic",
 };
 

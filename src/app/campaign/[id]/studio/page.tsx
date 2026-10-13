@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useFailureText } from "@/components/campaign/CampaignHubParts";
 import { Studio } from "@/components/campaign/studio/Studio";
@@ -32,7 +32,14 @@ export default function StudioPage() {
   const live = useLiveMissions(missions.state === "ready" ? missions.data.missions : null);
   const cardNow = (list.state === "ready" ? list.data.campaigns.find((c) => c.campaign_id === id) : null) ?? (missions.state === "ready" ? missions.data.campaign : null);
   const pool = usePool(cardNow, cardNow?.next_step === "ready" ? live : null, true);
-  const stale = !opened && missions.state === "ready" && online && (missions.saved || missions.refreshing) && !missions.failure;
+  // On a slow network do not keep the speaker waiting for the fresh list: after 3 s the saved copy
+  // opens, and the fresh list merges in when it comes (APP-034).
+  const [waitedEnough, setWaitedEnough] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setWaitedEnough(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+  const stale = !opened && !waitedEnough && missions.state === "ready" && online && (missions.saved || missions.refreshing) && !missions.failure;
   const filling = !opened && pool.pool && pool.pending;
   if (!opened && missions.state === "ready" && !stale && !filling) setOpened(true);
   const back = (
