@@ -58,11 +58,14 @@ describe("verifySession", () => {
 
   it("returns null when Auth refuses the token, or names another user", async () => {
     expect(await verifySession(jwt(good), cfg, { now, fetch: authSays(401) })).toBeNull();
+    expect(await verifySession(jwt(good), cfg, { now, fetch: authSays(403, { error_code: "bad_jwt" }) })).toBeNull();
+    expect(await verifySession(jwt(good), cfg, { now, fetch: authSays(400) })).toBeNull();
     expect(await verifySession(jwt(good), cfg, { now, fetch: authSays(200, { id: "someone-else" }) })).toBeNull();
   });
 
   it("throws when Auth is down, so the caller says 'retry' and not 'sign in'", async () => {
     await expect(verifySession(jwt(good), cfg, { now, fetch: authSays(502) })).rejects.toThrow();
+    await expect(verifySession(jwt(good), cfg, { now, fetch: authSays(429) })).rejects.toThrow();
   });
 
   it("throws without calling Auth when the lookup budget is spent", async () => {

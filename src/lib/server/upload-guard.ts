@@ -93,7 +93,9 @@ export async function verifySession(
     signal: AbortSignal.timeout(8_000),
     cache: "no-store",
   });
-  if (res.status === 401 || res.status === 403) return null;
+  // Any refusal of the token (401, 403 "bad_jwt", 400 …) means "not signed in". Only 429 and 5xx
+  // mean Auth itself is unavailable.
+  if (res.status >= 400 && res.status < 500 && res.status !== 429) return null;
   if (!res.ok) throw new Error(`auth_unavailable_${res.status}`);
   const body = (await res.json().catch(() => null)) as { id?: unknown } | null;
   if (!body || typeof body.id !== "string" || body.id !== pre.sub) return null;
