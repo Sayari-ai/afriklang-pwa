@@ -17,6 +17,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { LocalePicker } from "@/components/locale-picker";
 import { signOutHere } from "@/lib/campaign/sign-out";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
+import { useAppUpdate } from "@/lib/campaign/app-update";
 import { measureClockSkew } from "@/lib/campaign/clock";
 import { saveOfflinePages } from "@/lib/campaign/offline-pages";
 import { askPersistentStorage } from "@/lib/campaign/storage-safety";
@@ -69,6 +70,9 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
   const t = useTranslations("campaign.home.shell");
   const pathname = usePathname() ?? "";
   const online = useOnline();
+  // Offered here only, never in the studio, and not while a take is being sent (APP-022).
+  const update = useAppUpdate();
+  const box = useOutbox();
   const [account, setAccount] = useState(false);
   const tabs = [
     { href: "/campaign", label: t("missions"), Icon: ClipboardList, active: pathname === "/campaign" || (/^\/campaign\/[^/]+/.test(pathname) && !pathname.startsWith("/campaign/history")) },
@@ -88,6 +92,14 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
           </button>
         ) : null}
       </header>
+      {update.ready && online && !box.activeId ? (
+        <div role="status" className="flex items-center justify-center gap-3 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
+          <span>{t("update")}</span>
+          <button type="button" onClick={update.apply} className="min-h-8 rounded-full bg-primary px-3 font-bold text-white">
+            {t("updateRestart")}
+          </button>
+        </div>
+      ) : null}
       {!online ? (
         <p role="status" className="flex items-center justify-center gap-2 bg-amber-100 px-4 py-1.5 text-xs font-semibold text-amber-900">
           <CloudOff size={14} aria-hidden /> {t("offline")}
