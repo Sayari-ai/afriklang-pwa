@@ -19,35 +19,56 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { CampaignList, MissionList } from "./api";
-import { getCampaignAuth, isCampaignAuthConfigured } from "./auth-client";
+import { getCampaignAuth, isCampaignAuthConfigured, storedCampaignUser } from "./auth-client";
 import { cacheId, campaignCache, type Entry } from "./cache";
 import { needsSignIn } from "./errors";
 import { CAMPAIGNS, loadCampaigns, loadMissions, missionsKey } from "./queries";
 import type { CampaignFailure } from "./types";
 
-export type SessionState = { status: "waiting" } | { status: "signedOut" } | { status: "signedIn"; email: string | null; userId: string };
+/**
+ * `verified: false`: a known speaker whose session could not be renewed because the phone is
+ * offline (APP-003). Screens show their saved data and the outbox keeps their takes; calls answer
+ * "offline" until the session is renewed, which happens by itself once the network is back.
+ */
+export type SessionState = { status: "waiting" } | { status: "signedOut" } | { status: "signedIn"; email: string | null; userId: string; verified: boolean };
 
 let lastSession: SessionState | null = null;
+
+/** The session state for what getSession / onAuthStateChange gave. Pure apart from reading the saved session. */
+export function sessionStateFor(s: { user: { id: string; email?: string | null } } | null, signedOutEvent = false): SessionState {
+  if (s) return { status: "signedIn", email: s.user.email ?? null, userId: s.user.id, verified: true };
+  if (signedOutEvent) return { status: "signedOut" };
+  // No usable session, but one is still saved: the renewal failed on the network (supabase-js
+  // deletes the saved session when Auth refuses it). The speaker is known, just offline.
+  const known = storedCampaignUser();
+  return known ? { status: "signedIn", email: known.email, userId: known.id, verified: false } : { status: "signedOut" };
+}
 
 export function useCampaignSession(): SessionState {
   const [state, setState] = useState<SessionState>(() => lastSession ?? (isCampaignAuthConfigured ? { status: "waiting" } : { status: "signedOut" }));
   useEffect(() => {
     if (!isCampaignAuthConfigured) return;
     const auth = getCampaignAuth().auth;
-    const apply = (s: { user: { id: string; email?: string | null } } | null) => {
-      const next: SessionState = s ? { status: "signedIn", email: s.user.email ?? null, userId: s.user.id } : { status: "signedOut" };
+    const apply = (next: SessionState) => {
       lastSession = next;
       setState((prev) => (sameSession(prev, next) ? prev : next));
     };
-    void auth.getSession().then(({ data }) => apply(data.session));
-    const { data } = auth.onAuthStateChange((_event, session) => apply(session));
-    return () => data.subscription.unsubscribe();
+    const check = () => void auth.getSession().then(({ data }) => apply(sessionStateFor(data.session)), () => apply(sessionStateFor(null)));
+    check();
+    const { data } = auth.onAuthStateChange((event, session) => apply(sessionStateFor(session, event === "SIGNED_OUT")));
+    // Back online: renew a session that could not be renewed offline.
+    const onOnline = () => lastSession?.status === "signedIn" && !lastSession.verified && check();
+    window.addEventListener("online", onOnline);
+    return () => {
+      data.subscription.unsubscribe();
+      window.removeEventListener("online", onOnline);
+    };
   }, []);
   return state;
 }
 
 const sameSession = (a: SessionState, b: SessionState) =>
-  a.status === b.status && (a.status !== "signedIn" || (b.status === "signedIn" && a.userId === b.userId && a.email === b.email));
+  a.status === b.status && (a.status !== "signedIn" || (b.status === "signedIn" && a.userId === b.userId && a.email === b.email && a.verified === b.verified));
 
 export type Loaded<T> =
   | { state: "waiting" | "signedOut" | "loading"; error: null; data: null; reload: () => void }

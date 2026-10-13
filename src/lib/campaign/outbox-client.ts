@@ -11,7 +11,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { AudioUploadError, uploadAudio } from "@/lib/api/audio";
 import { logActivity } from "./activity";
 import { submitRecording } from "./api";
-import { campaignAccessToken } from "./auth-client";
+import { campaignAccessToken, storedCampaignUser } from "./auth-client";
 import { createOutbox, type OutboxEvent } from "./outbox";
 import type { OutboxItem } from "./outbox-logic";
 import { markSubmitted, refreshCampaign } from "./queries";
@@ -36,13 +36,21 @@ async function uploadSignedIn(item: OutboxItem, onProgress: (sent: number, total
       onProgress,
     });
   const token = await campaignAccessToken();
-  if (!token) throw new AudioUploadError("Sign in to send your recordings.", 401, false);
+  if (!token) {
+    // A saved session that could not be renewed (network): wait for the network, not for a sign-in.
+    if (storedCampaignUser()) throw new AudioUploadError("The session could not be renewed.", 0, true);
+    throw new AudioUploadError("Sign in to send your recordings.", 401, false);
+  }
   try {
     return await send(token);
   } catch (e) {
     if (!(e instanceof AudioUploadError) || e.status !== 401) throw e;
     const fresh = await campaignAccessToken(true);
-    if (!fresh) throw e;
+    if (!fresh) {
+      // Renewal failed on the network (the saved session is kept): retry later, do not ask to sign in.
+      if (storedCampaignUser()) throw new AudioUploadError("The session could not be renewed.", 0, true);
+      throw e;
+    }
     return send(fresh);
   }
 }

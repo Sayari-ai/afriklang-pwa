@@ -8,7 +8,8 @@
  * values (with the dashboard's code), never exceptions, so screens can branch on `code`.
  */
 
-import { getCampaignAuth } from "./auth-client";
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
+import { getCampaignAuth, storedCampaignUser } from "./auth-client";
 import type {
   CampaignCard,
   CampaignErrorCode,
@@ -101,15 +102,20 @@ export function toResult<T>(status: number, json: unknown, retryAfter?: string |
 const isOffline = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
 async function call<T>(action: string, fields: Record<string, unknown> = {}): Promise<CampaignResult<T>> {
+  // Fail at once when the device says it has no network, rather than after the timeout. Checked
+  // before the session: offline, an expired token cannot be renewed, and that is not "signed out".
+  if (isOffline()) return { ok: false, status: 0, code: "offline", message: "" };
   let token: string | undefined;
   try {
     token = (await getCampaignAuth().auth.getSession()).data.session?.access_token;
   } catch {
     token = undefined;
   }
-  if (!token) return { ok: false, status: 401, code: "unauthorized", message: "" };
-  // Fail at once when the device says it has no network, rather than after the timeout.
-  if (isOffline()) return { ok: false, status: 0, code: "offline", message: "" };
+  if (!token) {
+    // A session is still saved: its renewal failed on the network (APP-003). Not "sign in again".
+    if (storedCampaignUser()) return { ok: false, status: 0, code: isOffline() ? "offline" : "network", message: "" };
+    return { ok: false, status: 401, code: "unauthorized", message: "" };
+  }
 
   const first = await send<T>(token, action, fields);
   if (first.ok || first.code !== "unauthorized") return first;
@@ -123,6 +129,8 @@ async function call<T>(action: string, fields: Record<string, unknown> = {}): Pr
   let fresh: string | undefined;
   try {
     const { data, error } = await auth.refreshSession();
+    // The renewal itself failed on the network: nothing says the session is dead, keep it.
+    if (error && isAuthRetryableFetchError(error)) return { ok: false, status: 0, code: isOffline() ? "offline" : "network", message: "" };
     fresh = error ? undefined : data.session?.access_token;
   } catch {
     fresh = undefined;

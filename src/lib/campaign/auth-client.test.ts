@@ -80,3 +80,47 @@ describe("campaign auth client", () => {
     expect(location.hash).toBe("#t=invite-token");
   });
 });
+
+describe("known speaker offline (APP-003)", () => {
+  it("reads the saved session's user only when a refresh token is kept", async () => {
+    openPage("/campaign");
+    const { storedCampaignUser } = await import("./auth-client");
+    expect(storedCampaignUser()).toBeNull();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    expect(storedCampaignUser()).toEqual({ id: "u1", email: "a@example.com" });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...session, refresh_token: "" }));
+    expect(storedCampaignUser()).toBeNull();
+    localStorage.setItem(STORAGE_KEY, "{not json");
+    expect(storedCampaignUser()).toBeNull();
+  });
+
+  it("an expired token whose renewal fails offline keeps the speaker signed in (unverified)", async () => {
+    openPage("/campaign");
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...session, expires_at: 1 }));
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("Failed to fetch"); }));
+    const client = await freshClient();
+    // supabase-js retries a failed renewal with backoff for a while before giving up.
+    vi.useFakeTimers();
+    try {
+      const pending = client.auth.getSession();
+      await vi.advanceTimersByTimeAsync(120_000);
+      const { data } = await pending;
+      expect(data.session).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+    const { sessionStateFor } = await import("./hooks");
+    expect(sessionStateFor(null)).toEqual({ status: "signedIn", userId: "u1", email: "a@example.com", verified: false });
+    expect(sessionStateFor(null, true)).toEqual({ status: "signedOut" });
+  });
+
+  it("a refresh token Auth refuses: signed out", async () => {
+    openPage("/campaign");
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...session, expires_at: 1 }));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "invalid_grant", error_description: "Invalid Refresh Token" }), { status: 400, headers: { "content-type": "application/json" } })));
+    const client = await freshClient();
+    await client.auth.getSession();
+    const { sessionStateFor } = await import("./hooks");
+    expect(sessionStateFor(null)).toEqual({ status: "signedOut" });
+  });
+});

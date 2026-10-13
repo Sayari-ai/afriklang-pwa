@@ -16,6 +16,9 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 export const isCampaignAuthConfigured = URL_.length > 0 && ANON.length > 0;
 
+/** Where supabase-js keeps this client's session on the phone. */
+export const CAMPAIGN_AUTH_STORAGE_KEY = "afriklang.campaign.auth.v1";
+
 let client: SupabaseClient | null = null;
 
 export function getCampaignAuth(): SupabaseClient {
@@ -31,7 +34,7 @@ export function getCampaignAuth(): SupabaseClient {
       // test, so a PKCE "?code=" would be rejected and never exchanged (endless sign-in screen).
       // Only codes whose verifier this client stored (under its own storageKey) are exchanged.
       detectSessionInUrl: true,
-      storageKey: "afriklang.campaign.auth.v1",
+      storageKey: CAMPAIGN_AUTH_STORAGE_KEY,
     },
   });
   return client;
@@ -51,6 +54,26 @@ export async function campaignAccessToken(renew = false): Promise<string | undef
     return (await auth.getSession()).data.session?.access_token;
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * The person whose session is saved on this phone, read without the network and without checking
+ * it (APP-003). supabase-js keeps the saved session when a renewal fails for a network reason and
+ * deletes it when Auth refuses it, so "a saved session with a refresh token" after getSession()
+ * answered null means: a known speaker who is offline, not a signed-out one.
+ */
+export function storedCampaignUser(): { id: string; email: string | null } | null {
+  try {
+    const raw = typeof localStorage === "undefined" ? null : localStorage.getItem(CAMPAIGN_AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as { refresh_token?: unknown; user?: { id?: unknown; email?: unknown } } | null;
+    if (!s || typeof s.refresh_token !== "string" || !s.refresh_token) return null;
+    const id = s.user?.id;
+    if (typeof id !== "string" || !id) return null;
+    return { id, email: typeof s.user?.email === "string" ? s.user.email : null };
+  } catch {
+    return null;
   }
 }
 
