@@ -70,6 +70,7 @@
     "discard": "Supprimer",
     "discardConfirm": "Supprimer cet enregistrement de votre téléphone ? Vous pourrez refaire la mission.",
     "recordAgain": "Recommencer",
+    "tryAgain": "Réessayer",
     "state": {
       "pending": "En attente d'envoi",
       "sending": "Envoi…",

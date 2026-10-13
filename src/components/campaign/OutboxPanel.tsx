@@ -95,6 +95,11 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                 </div>
                 {state === "failed" ? (
                   <>
+                    {online && i.lastCode !== "tooLarge" ? (
+                      <button type="button" onClick={() => void outbox.retryFailed(i.id, userId)} className="min-h-9 rounded-full border border-primary/40 px-3 py-2 text-xs font-bold text-primary">
+                        {t("tryAgain")}
+                      </button>
+                    ) : null}
                     <Link href={`/campaign/${i.campaignId}/studio?m=${encodeURIComponent(i.missionId)}`} className="min-h-9 rounded-full bg-primary px-3 py-2 text-xs font-bold text-white">
                       {t("recordAgain")}
                     </Link>

@@ -39,6 +39,11 @@ describe("outbox decisions", () => {
     expect(decideUploadFailure({ status: 413, isNetwork: false }, 0, true).kind).toBe("fail");
     expect(decideUploadFailure({ status: 401, isNetwork: false }, 0, true)).toEqual({ kind: "hold", code: "unauthorized", delayMs: 60_000 });
     expect(decideUploadFailure({ status: 400, isNetwork: false }, 0, true).kind).toBe("fail");
+    expect(decideUploadFailure({ status: 422, isNetwork: false }, 0, true).kind).toBe("fail");
+    // A proxy, the CDN or a deploy in progress: not the file's fault (APP-018).
+    for (const status of [404, 408, 409, 411, 425]) expect(decideUploadFailure({ status, isNetwork: false }, 0, true).kind).toBe("retry");
+    // The proxy's Retry-After is honoured.
+    expect(decideUploadFailure({ status: 429, isNetwork: false, retryAfterS: 600 }, 0, true, () => 0.5)).toEqual({ kind: "retry", code: "rateLimited", delayMs: 600_000 });
     expect(decideUploadFailure({ status: 503, isNetwork: false }, 0, true).kind).toBe("retry");
   });
   it("maps submit answers", () => {

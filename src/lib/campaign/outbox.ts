@@ -50,7 +50,7 @@ export type OutboxDeps = {
 };
 
 /** An error from `upload` that carries an HTTP status (AudioUploadError has this shape). */
-type UploadErrorLike = { status?: number; isNetwork?: boolean };
+type UploadErrorLike = { status?: number; isNetwork?: boolean; retryAfterS?: number | null };
 
 /** How far the take being sent has gone (bytes of the request body). */
 export type OutboxProgress = { id: string; sent: number; total: number };
@@ -158,7 +158,7 @@ export function createOutbox(deps: OutboxDeps) {
         // nothing written) and stop; the runner wakes when the network is back (APP-006).
         if (!deps.online()) return false;
         const err = (e ?? {}) as UploadErrorLike;
-        const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork) }, current.attempts, deps.online());
+        const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork), retryAfterS: err.retryAfterS ?? null }, current.attempts, deps.online());
         await settle(current, d);
         return !stopsRun(d);
       }
@@ -244,6 +244,14 @@ export function createOutbox(deps: OutboxDeps) {
     },
     unblock(campaignId: string) {
       blocked.delete(campaignId);
+    },
+    /** Send a failed take again (the speaker's "Try again", APP-018). */
+    async retryFailed(id: string, userId: string) {
+      const i = await deps.store.get(id);
+      if (!i || i.state !== "failed") return;
+      await deps.store.put({ ...i, state: "pending", nextAttemptAt: 0, lastCode: null });
+      await refresh();
+      return drain(userId);
     },
     /** Takes of a campaign on the phone for this user. */
     async countCampaign(userId: string, campaignId: string) {

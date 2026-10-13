@@ -52,7 +52,7 @@ export type OutboxItem = {
 /** What the UI sees of an item (no audio): `bytes` is the audio's size. */
 export type OutboxSummary = Omit<OutboxItem, "blob"> & { bytes: number };
 
-export type UploadOutcome = { status: number; isNetwork: boolean };
+export type UploadOutcome = { status: number; isNetwork: boolean; retryAfterS?: number | null };
 
 export type Decision =
   | { kind: "done"; duplicate?: boolean }
@@ -88,6 +88,9 @@ export function uploadBackoffMs(attempts: number, random: () => number = Math.ra
 /** Network codes after which the next take would fail the same way: stop the run, save the data. */
 export const STOP_RUN_CODES: ReadonlySet<string> = new Set(["offline", "network", "timeout", "bridge_unreachable"]);
 
+/** Upload answers that refuse the file itself: retrying the same bytes cannot help. */
+const FINAL_UPLOAD_STATUSES: ReadonlySet<number> = new Set([400, 415, 422]);
+
 /** After a failed audio upload. `online`: what the device says about its network. */
 export function decideUploadFailure(e: UploadOutcome, attempts: number, online: boolean, random?: () => number): Decision {
   if (!online) return { kind: "retry", code: "offline", delayMs: 0 };
@@ -95,10 +98,14 @@ export function decideUploadFailure(e: UploadOutcome, attempts: number, online: 
   if (e.status === 413) return { kind: "fail", code: "tooLarge" };
   // Signed out (or the session could not be renewed): keep the take until they sign in again.
   if (e.status === 401) return { kind: "hold", code: "unauthorized", delayMs: MINUTE };
-  if (e.status === 429) return { kind: "retry", code: "rateLimited", delayMs: Math.max(30 * SECOND, backoffMs(attempts, random)) };
-  if (e.status >= 500) return { kind: "retry", code: "server", delayMs: backoffMs(attempts, random) };
-  if (e.status >= 400) return { kind: "fail", code: "refused" };
-  return { kind: "retry", code: "other", delayMs: backoffMs(attempts, random) };
+  // The server said how long to wait (429, 503): do that, not less (each try resends the file).
+  const asked = e.retryAfterS && e.retryAfterS > 0 ? Math.min(3600, e.retryAfterS) * SECOND : 0;
+  if (e.status === 429) return { kind: "retry", code: "rateLimited", delayMs: Math.max(asked, 30 * SECOND, backoffMs(attempts, random)) };
+  if (e.status >= 500) return { kind: "retry", code: "server", delayMs: Math.max(asked, backoffMs(attempts, random)) };
+  // Only a refusal of the file itself is final (APP-018). 404, 408, 409, 411, 425… come from a proxy,
+  // the CDN or a deploy in progress: try again later.
+  if (FINAL_UPLOAD_STATUSES.has(e.status)) return { kind: "fail", code: "refused" };
+  return { kind: "retry", code: e.status >= 400 ? "server" : "other", delayMs: backoffMs(attempts, random) };
 }
 
 /** Codes that may clear by themselves: keep the take and try again later. */

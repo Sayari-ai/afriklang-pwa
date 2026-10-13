@@ -70,6 +70,7 @@
     "discard": "Delete",
     "discardConfirm": "Delete this recording from your phone? You can record the mission again.",
     "recordAgain": "Record again",
+    "tryAgain": "Try again",
     "state": {
       "pending": "Waiting to send",
       "sending": "Sending…",
