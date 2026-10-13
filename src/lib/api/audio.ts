@@ -109,6 +109,11 @@ export interface UploadAudioArgs {
   signal?: AbortSignal;
   /** The signed-in contributor's Supabase access token: the upload proxy refuses uploads without one. */
   accessToken?: string;
+  /**
+   * The dashboard's signed upload ticket for this file (docs/contracts/README.md §1), sent as
+   * `X-Campaign-Ticket`. Passed through untouched; without one the upload goes as before.
+   */
+  ticket?: string;
   /** Upload progress in bytes (the multipart body, so a little more than the file). */
   onProgress?: (sent: number, total: number) => void;
 }
@@ -229,6 +234,7 @@ export function parseRetryAfter(v: string | null): number | null {
 /** POST the form with an idle timeout and progress. Rejects with a TimeoutError DOMException on a stall. */
 function send(url: string, form: FormData, args: UploadAudioArgs): Promise<RawResponse> {
   const headers: Record<string, string> = args.accessToken ? { Authorization: `Bearer ${args.accessToken}` } : {};
+  if (args.ticket) headers["X-Campaign-Ticket"] = args.ticket;
   if (typeof XMLHttpRequest === "undefined") return sendWithFetch(url, form, headers, args.signal);
   return new Promise<RawResponse>((resolve, reject) => {
     const xhr = new XMLHttpRequest();

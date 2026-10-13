@@ -32,11 +32,12 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function req(opts: { token?: string; length?: string | null; ip?: string } = {}): NextRequest {
+function req(opts: { token?: string; length?: string | null; ip?: string; extra?: Record<string, string> } = {}): NextRequest {
   const body = "--b\r\nContent-Disposition: form-data; name=\"language\"\r\n\r\nwol\r\n--b--\r\n";
   const headers = new Headers({ "content-type": "multipart/form-data; boundary=b", "x-forwarded-for": opts.ip ?? "9.9.9.9" });
   if (opts.length !== null) headers.set("content-length", opts.length ?? String(Buffer.byteLength(body)));
   if (opts.token) headers.set("authorization", `Bearer ${opts.token}`);
+  for (const [k, v] of Object.entries(opts.extra ?? {})) headers.set(k, v);
   return new Request("http://localhost/api/audio-upload", { method: "POST", headers, body, duplex: "half" } as RequestInit) as unknown as NextRequest;
 }
 
@@ -86,6 +87,43 @@ describe("POST /api/audio-upload", () => {
     const res = await POST(req({ token: t }));
     expect(res.status).toBe(429);
     expect(res.headers.get("retry-after")).toBeTruthy();
+  });
+
+  const TICKET = `${b64({ v: 1, mission_id: "m" })}.${"A".repeat(43)}`;
+
+  it("forwards the upload ticket, and no other browser header (cookies, auth, made-up x- headers)", async () => {
+    const res = await POST(req({ token: tokenFor("user-t"), extra: { "x-campaign-ticket": TICKET, cookie: "sb=secret", "x-upload-key": "forged", "x-sayari-anything": "1", origin: "https://evil.example" } }));
+    expect(res.status).toBe(200);
+    expect(upstream[0].headers["x-campaign-ticket"]).toBe(TICKET);
+    expect(upstream[0].headers["x-upload-key"]).toBe("secret-upload-key");
+    expect(Object.keys(upstream[0].headers).sort()).toEqual(["content-length", "content-type", "x-campaign-ticket", "x-upload-key"]);
+  });
+
+  it("without a ticket uploads exactly as before (an app or dashboard without tickets)", async () => {
+    await POST(req({ token: tokenFor("user-t") }));
+    expect(Object.keys(upstream[0].headers).sort()).toEqual(["content-length", "content-type", "x-upload-key"]);
+  });
+
+  it("refuses a header that does not look like a ticket, without reaching Sayari", async () => {
+    for (const bad of ["", "no-dot", "a.b c", "a.b.c.d", `a.${"b".repeat(5000)}`, "a.b+c", "a.b=="]) {
+      expect((await POST(req({ token: tokenFor("user-t"), extra: { "x-campaign-ticket": bad } }))).status, bad.slice(0, 20)).toBe(400);
+    }
+    expect(upstream).toHaveLength(0);
+  });
+
+  it("a ticket Sayari refuses is a 409 invalid_ticket (ask for a new one), not a key problem", async () => {
+    sayariReply = () => new Response(JSON.stringify({ detail: "invalid_ticket" }), { status: 401 });
+    const res = await POST(req({ token: tokenFor("user-t"), extra: { "x-campaign-ticket": TICKET } }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "invalid_ticket" });
+    // Without that code, a 401 is still the upload key being refused.
+    sayariReply = () => new Response("Invalid upload key", { status: 401 });
+    expect((await POST(req({ token: tokenFor("user-t"), extra: { "x-campaign-ticket": TICKET } }))).status).toBe(500);
+    // Sayari's own ticket answers go through: 409 ticket_used, 422 sha_mismatch.
+    sayariReply = () => new Response(JSON.stringify({ detail: "sha_mismatch" }), { status: 422, headers: { "content-type": "application/json" } });
+    const mismatch = await POST(req({ token: tokenFor("user-t"), extra: { "x-campaign-ticket": TICKET } }));
+    expect(mismatch.status).toBe(422);
+    sayariReply = () => new Response(JSON.stringify({ results: [{ id: 7 }] }), { status: 200, headers: { "content-type": "application/json" } });
   });
 
   it("does not pass Sayari's errors or key refusals through", async () => {

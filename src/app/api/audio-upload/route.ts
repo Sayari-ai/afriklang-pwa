@@ -30,6 +30,16 @@ import { checkLength, clientIp, RateLimiter, readBearer, verifySession } from "@
  * no declared length) and rate-limits per person, plus a ceiling on failed sign-in checks so
  * forged tokens cannot be used to flood Supabase Auth. Limits live in this instance's memory.
  *
+ * Upload tickets (added 2026-10-13)
+ * ---------------------------------
+ * A campaign take carries a ticket signed by the dashboard in `X-Campaign-Ticket`
+ * (docs/contracts/README.md §1). This proxy cannot verify it (it has no secret) and does not
+ * try: it checks only that it looks like a ticket (base64url segments, at most 4 KB) and
+ * forwards it. That header is the ONLY one taken from the browser besides `content-type`.
+ * Sayari answering 401 `invalid_ticket` (expired in flight, clock skew) is relayed as
+ * `409 { error: "invalid_ticket" }`: the app then asks for a new ticket. A 401 without that
+ * code is still the upload key being refused (server_misconfigured).
+ *
  * Streaming + memory
  * ------------------
  * The recorder produces ~1–2 MB WAVs (16 kHz mono PCM16, ~30 s). We forward
@@ -85,6 +95,10 @@ const badTokenPerIp = new RateLimiter(20, 10 * 60_000);
 // local precheck cannot turn into a flood of Auth calls, whatever address they claim.
 const authLookups = new RateLimiter(600, 60_000);
 
+/** A ticket as the contract shapes it: two (or three, JWS) base64url segments. Never parsed here. */
+const TICKET_RE = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+){1,2}$/;
+const MAX_TICKET_CHARS = 4096;
+
 const refuse = (status: number, error: string, extra: Record<string, string> = {}) =>
   NextResponse.json({ error }, { status, headers: { "cache-control": "no-store", ...extra } });
 
@@ -135,6 +149,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // The ticket, when the app has one (an app or a dashboard without tickets sends none).
+  const ticket = request.headers.get("x-campaign-ticket");
+  if (ticket !== null && (ticket.length > MAX_TICKET_CHARS || !TICKET_RE.test(ticket))) return refuse(400, "invalid_ticket");
+
   if (!UPLOAD_KEY) {
     // Fail fast with a clear server error rather than letting the upstream
     // reject with a confusing 401. Signals a misconfigured deployment.
@@ -153,11 +171,13 @@ export async function POST(request: NextRequest) {
       // `X-Upload-Key` so the hardened endpoint accepts the request. We
       // deliberately do NOT forward `host`, `cookie` or browser auth headers.
       // The `X-Upload-Key` is injected server-side from env, never taken
-      // from the incoming request.
+      // from the incoming request. `X-Campaign-Ticket` is the one browser
+      // header passed on, checked for shape above.
       headers: {
         "content-type": contentType,
         "X-Upload-Key": UPLOAD_KEY,
         "content-length": String(length.bytes),
+        ...(ticket ? { "X-Campaign-Ticket": ticket } : {}),
       },
       body: request.body,
       // Required when streaming a request body via fetch.
@@ -178,7 +198,11 @@ export async function POST(request: NextRequest) {
   // Sayari refusing the upload key is our misconfiguration. Answering 401 would tell the app the
   // speaker's session expired (and make it ask them to sign in again), so say what it is.
   if (upstream.status === 401 || upstream.status === 403) {
-    await upstream.body?.cancel().catch(() => undefined);
+    // A refused ticket is not a refused key: tell the app to fetch a new ticket.
+    if (ticket && upstream.status === 401) {
+      const text = await upstream.text().catch(() => "");
+      if (text.slice(0, 4096).includes("invalid_ticket")) return refuse(409, "invalid_ticket");
+    } else await upstream.body?.cancel().catch(() => undefined);
     console.error("[audio-upload] Sayari refused the upload key:", upstream.status);
     return refuse(500, "server_misconfigured");
   }

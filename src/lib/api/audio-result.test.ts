@@ -78,6 +78,15 @@ describe("uploadAudio over a slow link", () => {
     expect(seen).toHaveLength(20);
   });
 
+  it("sends the upload ticket in X-Campaign-Ticket, and no such header without one", async () => {
+    void uploadAudio({ ...args, ticket: "aGVhZA.bWFj" }).catch(() => undefined);
+    expect(FakeXhr.last!.headers).toEqual({ Authorization: "Bearer tok", "X-Campaign-Ticket": "aGVhZA.bWFj" });
+    FakeXhr.last!.onabort?.();
+    void uploadAudio(args).catch(() => undefined);
+    expect(FakeXhr.last!.headers).toEqual({ Authorization: "Bearer tok" });
+    FakeXhr.last!.onabort?.();
+  });
+
   it("aborts as a network failure when nothing moves", async () => {
     const p = uploadAudio(args);
     const err = p.catch((e) => e);
