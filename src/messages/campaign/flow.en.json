@@ -16,8 +16,7 @@
     "intro": "A few details help us match your voice to the right project. Everything is required.",
     "privacy": "Your name never travels with your audio: only a pseudonymous speaker ID does.",
     "correctTitle": "Correct my profile",
-    "nativeLanguage": "Native language",
-    "variety": "Variety of your language",
+    "variety": "Which variety of {language} do you speak?",
     "varietyPlaceholder": "Choose your variety",
     "varietyOther": "None of these / another variety",
     "varietyOtherTitle": "This campaign is for a different variety",
@@ -26,7 +25,7 @@
     "countryPlaceholder": "Choose your country",
     "region": "Region or city",
     "regionHint": "For example: Thiès",
-    "gender": "Gender",
+    "gender": "Sex",
     "genderPlaceholder": "Choose",
     "age": "Age group",
     "agePlaceholder": "Choose",
@@ -35,17 +34,14 @@
     "choose": "Choose…",
     "genders": {
       "female": "Female",
-      "male": "Male",
-      "other": "Other",
-      "undisclosed": "Prefer not to say"
+      "male": "Male"
     },
     "errors": {
       "required": {
-        "native_language": "Choose your native language.",
         "variety": "Choose the variety of the language you speak.",
         "country": "Choose the country you live in.",
         "region": "Enter your region or city.",
-        "gender": "Choose your gender, or \"Prefer not to say\".",
+        "gender": "Choose Female or Male.",
         "age_band": "Choose your age group.",
         "device": "Enter the phone or device you record with."
       },
@@ -54,7 +50,6 @@
       "noLetters": "Use letters or numbers, not only symbols or spaces.",
       "control": "Remove the line breaks or special characters.",
       "server": {
-        "native_language": "This language was not accepted. Choose one from the list.",
         "variety": "This variety was not accepted for this language. Choose one from the list.",
         "country": "This country was not accepted. Choose one from the list.",
         "region": "This region was not accepted. Enter a region or city name, 80 characters at most.",

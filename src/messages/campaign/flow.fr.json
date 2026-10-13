@@ -16,8 +16,7 @@
     "intro": "Quelques informations nous aident à associer votre voix au bon projet. Tous les champs sont obligatoires.",
     "privacy": "Votre nom ne voyage jamais avec votre audio : seul un identifiant de locuteur pseudonyme l'accompagne.",
     "correctTitle": "Corriger mon profil",
-    "nativeLanguage": "Langue maternelle",
-    "variety": "Variété de votre langue",
+    "variety": "Quelle variété de {language} parlez-vous ?",
     "varietyPlaceholder": "Choisissez votre variété",
     "varietyOther": "Aucune de celles-ci / une autre variété",
     "varietyOtherTitle": "Cette campagne concerne une autre variété",
@@ -26,7 +25,7 @@
     "countryPlaceholder": "Choisissez votre pays",
     "region": "Région ou ville",
     "regionHint": "Par exemple : Thiès",
-    "gender": "Genre",
+    "gender": "Sexe",
     "genderPlaceholder": "Choisissez",
     "age": "Tranche d'âge",
     "agePlaceholder": "Choisissez",
@@ -35,17 +34,14 @@
     "choose": "Choisir…",
     "genders": {
       "female": "Femme",
-      "male": "Homme",
-      "other": "Autre",
-      "undisclosed": "Je préfère ne pas le dire"
+      "male": "Homme"
     },
     "errors": {
       "required": {
-        "native_language": "Choisissez votre langue maternelle.",
         "variety": "Choisissez la variété de la langue que vous parlez.",
         "country": "Choisissez le pays où vous vivez.",
         "region": "Indiquez votre région ou votre ville.",
-        "gender": "Choisissez votre genre, ou « Je préfère ne pas le dire ».",
+        "gender": "Choisissez Femme ou Homme.",
         "age_band": "Choisissez votre tranche d'âge.",
         "device": "Indiquez le téléphone ou l'appareil avec lequel vous enregistrez."
       },
@@ -54,7 +50,6 @@
       "noLetters": "Utilisez des lettres ou des chiffres, pas seulement des symboles ou des espaces.",
       "control": "Supprimez les retours à la ligne ou les caractères spéciaux.",
       "server": {
-        "native_language": "Cette langue n'a pas été acceptée. Choisissez-en une dans la liste.",
         "variety": "Cette variété n'a pas été acceptée pour cette langue. Choisissez-en une dans la liste.",
         "country": "Ce pays n'a pas été accepté. Choisissez-en un dans la liste.",
         "region": "Cette région n'a pas été acceptée. Indiquez un nom de région ou de ville, 80 caractères au maximum.",
