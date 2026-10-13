@@ -105,6 +105,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // The retired learning app's addresses (APP-010) lead to the speaker app. Temporary (307), so a
+  // browser does not keep them for ever; the query (a sign-in ?code=) is passed on.
+  async redirects() {
+    const old = ["/home", "/leaderboard", "/notifications", "/profile", "/login", "/onboarding", "/consent", "/path-setup", "/level/:path*"];
+    return old.map((source) => ({ source, destination: "/campaign", permanent: false }));
+  },
   // LAN dev access: when running `next dev` and hitting the dev
   // server from another device on the local network (phone, tablet)
   // Next 15+ rejects the request unless the origin is allow-listed.

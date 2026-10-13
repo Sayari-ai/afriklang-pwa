@@ -25,20 +25,20 @@ interface PillSpec {
 }
 
 export function LocalePicker({ className }: { className?: string }) {
-  const t = useTranslations();
+  const t = useTranslations("campaign.home.shell");
   const override = useAppLocale((s) => s.override);
   const setLocale = useSetAppLocale();
 
   const pills: PillSpec[] = [
-    { value: null, label: t("profileAppLanguageSystem") },
-    { value: "en" satisfies Locale, label: t("profileAppLanguageEnglish") },
-    { value: "fr" satisfies Locale, label: t("profileAppLanguageFrench") },
+    { value: null, label: t("languages.system") },
+    { value: "en" satisfies Locale, label: t("languages.english") },
+    { value: "fr" satisfies Locale, label: t("languages.french") },
   ];
 
   return (
     <div
       role="radiogroup"
-      aria-label={t("profileAppLanguageLabel")}
+      aria-label={t("language")}
       className={`flex flex-wrap gap-2 ${className ?? ""}`}
     >
       {pills.map((pill) => {

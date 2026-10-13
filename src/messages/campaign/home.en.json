@@ -7,6 +7,11 @@
     "speakerIdHelp": "Only this ID travels with your recordings, never your name.",
     "signedInAs": "Signed in as {email}",
     "language": "App language",
+    "languages": {
+      "system": "System default",
+      "english": "English",
+      "french": "Français"
+    },
     "signOut": "Sign out",
     "signOutPending": "{n, plural, one {# recording is} other {# recordings are}} still waiting on this phone. They stay here and are sent the next time you sign in with this account. Sign out anyway?",
     "offline": "Offline: showing your saved data",

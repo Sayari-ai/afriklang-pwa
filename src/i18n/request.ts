@@ -37,9 +37,6 @@ export default getRequestConfig(async () => {
       ? resolveLocale(cookieValue)
       : resolveLocale(acceptPrimary);
 
-  // Lazy-load the message bundle to keep cold-start small.
-  const messages = (await import(`../messages/${locale}.json`)).default;
-
   // Campaign screens keep their strings in src/messages/campaign/<area>.<locale>.json,
   // all under one "campaign" namespace: useTranslations("campaign.<area>").
   const campaign = Object.fromEntries(
@@ -48,5 +45,6 @@ export default getRequestConfig(async () => {
     ),
   );
 
-  return { locale, messages: { ...messages, campaign } };
+  // Only the speaker app's strings: the retired learning app's bundle is gone (APP-010).
+  return { locale, messages: { campaign } };
 });

@@ -98,11 +98,11 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
 - The dashboard receives only the recording's
   **metadata** (duration, level, peak, silence margins, sample rate, sha-256 of the file, Sayari id when
   Sayari returns one) and checks it again.
-- The campaign area has its **own persistent Google session** (`src/lib/campaign/auth-client.ts`). The
-  app's other Supabase client keeps no session on purpose (it identifies a device, not a person).
+- The campaign area has its **own persistent Google session** (`src/lib/campaign/auth-client.ts`), the
+  app's only Supabase client.
 - The app is the speaker app: `/` redirects to `/campaign`; the manifest starts there and has shortcuts
-  to Missions and History. (The learning-app screens are still in the code but no longer reachable
-  from the entry point.)
+  to Missions and History. The retired learning app is removed: its old addresses redirect to
+  `/campaign`, and what it stored on phones (device id, its own session, progress) is deleted once.
 - **Reads are cached** (`src/lib/campaign/cache.ts`): one request per key however many screens ask,
   the last answer saved on the device per user and painted at once (also offline), refreshed in the
   background on app start, when the app returns to the foreground and when the network comes back.

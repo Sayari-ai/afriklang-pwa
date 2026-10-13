@@ -7,6 +7,11 @@
     "speakerIdHelp": "Seul cet identifiant accompagne vos enregistrements, jamais votre nom.",
     "signedInAs": "Connecté avec {email}",
     "language": "Langue de l'application",
+    "languages": {
+      "system": "Langue du système",
+      "english": "English",
+      "french": "Français"
+    },
     "signOut": "Se déconnecter",
     "signOutPending": "{n, plural, one {# enregistrement attend} other {# enregistrements attendent}} encore sur ce téléphone. Ils restent ici et seront envoyés à votre prochaine connexion avec ce compte. Se déconnecter quand même ?",
     "offline": "Hors ligne : vos données enregistrées s'affichent",
