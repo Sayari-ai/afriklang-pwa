@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { cacheId, campaignCache } from "./cache";
+import { serverNow } from "./clock";
 import { useCampaignSession } from "./hooks";
 import { missionsInOutbox } from "./outbox-logic";
 import { useOutbox } from "./outbox-client";
@@ -15,26 +16,30 @@ import { drawForCampaign, giveBack, isDrawing, poolKey, subscribeDrawing, type P
 import { canRecordNow } from "./studio-flow";
 import type { CampaignCard, Mission } from "./types";
 
-/** The current time, moved on every minute while `enabled` (leases end while a screen is open). */
-export function useMinuteClock(enabled = true): number {
-  const [now, setNow] = useState(() => Date.now());
+/**
+ * The current time, moved on every minute while `enabled` (leases end while a screen is open).
+ * `server`: the server's time as estimated from the phone's (clock.ts), for comparing with leases.
+ */
+export function useMinuteClock(enabled = true, server = false): number {
+  const read = server ? serverNow : Date.now;
+  const [now, setNow] = useState(read);
   useEffect(() => {
     if (!enabled) return;
-    const id = setInterval(() => setNow(Date.now()), 60_000);
-    const onShow = () => document.visibilityState === "visible" && setNow(Date.now());
+    const id = setInterval(() => setNow(read()), 60_000);
+    const onShow = () => document.visibilityState === "visible" && setNow(read());
     document.addEventListener("visibilitychange", onShow);
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onShow);
     };
-  }, [enabled]);
+  }, [enabled, read]);
   return now;
 }
 
 /** The missions still the speaker's (lapsed pool leases removed), recomputed as time passes. */
 export function useLiveMissions(missions: readonly Mission[] | null): readonly Mission[] | null {
   const leased = Boolean(missions?.some((m) => m.lease_until));
-  const now = useMinuteClock(leased);
+  const now = useMinuteClock(leased, true);
   return useMemo(() => (missions && leased ? liveMissions(missions, now) : missions), [missions, leased, now]);
 }
 

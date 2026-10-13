@@ -48,6 +48,7 @@
     "getMore": "Obtenir d'autres missions",
     "batchDone": "Plus rien à enregistrer dans votre lot. Obtenez d'autres missions pour continuer.",
     "drawFailed": "Impossible d'obtenir de nouvelles missions. Vérifiez votre connexion et réessayez.",
+    "clockWrong": "La date ou l'heure de votre téléphone semble fausse : les nouvelles missions paraissent expirer tout de suite. Réglez la date et l'heure en automatique dans les paramètres du téléphone, puis réessayez.",
     "leaseUntil": "À enregistrer avant le {date}. Les missions non envoyées à temps passent à d'autres locuteurs.",
     "leaseSoon": "Plus que {n, plural, one {# heure} other {# heures}} pour enregistrer ces missions. Celles non envoyées à temps passent à d'autres locuteurs.",
     "leaseRow": "{n, plural, one {# heure restante} other {# heures restantes}}",

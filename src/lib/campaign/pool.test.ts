@@ -147,3 +147,12 @@ describe("pay per hour", () => {
     expect(timeParts(1000 * 3600)).toEqual({ key: "hm", h: 1000, m: 0 });
   });
 });
+
+describe("a wrong phone clock (APP-011)", () => {
+  it("after a draw whose missions looked expired, waits 15 minutes instead of drawing every minute", () => {
+    const card = { dispatch: "pool" as const, refill_below: 3, next_step: "ready" as const };
+    const last = { at: 0, status: "clock" as const, added: 6 };
+    expect(shouldDraw({ card, open: 0, last, now: 2 * 60_000, online: true })).toBe(false);
+    expect(shouldDraw({ card, open: 0, last, now: 15 * 60_000, online: true })).toBe(true);
+  });
+});

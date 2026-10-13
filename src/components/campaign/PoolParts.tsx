@@ -52,7 +52,7 @@ export function PaidTime({ card }: { card: Pick<CampaignCard, "rewards"> }) {
 export function LeaseNotice({ missions }: { missions: readonly Mission[] }) {
   const t = useTranslations("campaign.common.pool");
   const locale = useLocale();
-  const now = useMinuteClock();
+  const now = useMinuteClock(true, true);
   const end = earliestLease(missions, now);
   if (end == null) return null;
   const urgent = end - now < LEASE_URGENT_MS;
@@ -68,7 +68,7 @@ export function LeaseNotice({ missions }: { missions: readonly Mission[] }) {
 /** Hours left on one mission's lease, only when it ends within a day. */
 export function LeaseLeft({ mission }: { mission: Pick<Mission, "status" | "lease_until"> }) {
   const t = useTranslations("campaign.common.pool");
-  const now = useMinuteClock(Boolean(mission.lease_until));
+  const now = useMinuteClock(Boolean(mission.lease_until), true);
   if (mission.status !== "todo" && mission.status !== "rejected") return null;
   const end = mission.lease_until ? Date.parse(mission.lease_until) : Number.NaN;
   if (!Number.isFinite(end) || end <= now || end - now >= LEASE_URGENT_MS) return null;
@@ -132,6 +132,11 @@ export function PoolPanel({ card, missions, state }: { card: CampaignCard; missi
       ) : null}
       {refused ? <PoolRefusal status={refused} campaignId={card.campaign_id} elsewhere={state.memo?.pool} /> : null}
       <LeaseNotice missions={missions} />
+      {!state.drawing && status === "clock" ? (
+        <p role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+          {t("clockWrong")}
+        </p>
+      ) : null}
       {!state.drawing && state.drawFailed ? (
         <div role="alert" className="space-y-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           <p>{t("drawFailed")}</p>

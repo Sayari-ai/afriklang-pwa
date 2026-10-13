@@ -17,6 +17,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } fro
 import { LocalePicker } from "@/components/locale-picker";
 import { signOutHere } from "@/lib/campaign/sign-out";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
+import { measureClockSkew } from "@/lib/campaign/clock";
 import { saveOfflinePages } from "@/lib/campaign/offline-pages";
 import { useOutbox, useOutboxRunner } from "@/lib/campaign/outbox-client";
 
@@ -46,6 +47,10 @@ export function CampaignShell({ children }: { children: ReactNode }) {
 function useOfflinePages() {
   const list = useCampaignList();
   const online = useOnline();
+  // The phone's clock against the server's, for pool leases (clock.ts; at most every few hours).
+  useEffect(() => {
+    if (online) void measureClockSkew();
+  }, [online]);
   const ids = list.state === "ready" ? list.data.campaigns.map((c) => c.campaign_id).join("\n") : null;
   useEffect(() => {
     if (ids === null || !online) return;
