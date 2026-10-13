@@ -5,7 +5,7 @@
  * signed-in contributor, within a size cap and a per-person rate. Server-only: no "use client".
  *
  *   readBearer      the access token from an Authorization header
- *   precheckJwt     cheap shape/expiry/issuer test, so junk never costs a network call
+ *   precheckJwt     cheap shape/expiry/role test, so junk never costs a network call
  *   verifySession   asks Supabase Auth who the token belongs to (cached briefly)
  *   checkLength     the declared body size against the cap
  *   RateLimiter     fixed-window counter per key, in this server instance's memory
@@ -40,16 +40,17 @@ function decodeSegment(seg: string): Record<string, unknown> | null {
  * Rejects what cannot be a live access token of this project, without the network.
  * NOT a verification: the signature is checked by Supabase in verifySession.
  */
-export function precheckJwt(token: string, supabaseUrl: string, nowS: number): { ok: true; sub: string; exp: number } | { ok: false } {
+export function precheckJwt(token: string, nowS: number): { ok: true; sub: string; exp: number } | { ok: false } {
   const parts = token.split(".");
   if (parts.length !== 3) return { ok: false };
   const payload = decodeSegment(parts[1]);
   if (!payload) return { ok: false };
-  const { sub, exp, iss, role } = payload;
+  const { sub, exp, role } = payload;
   if (typeof sub !== "string" || !sub || typeof exp !== "number" || exp <= nowS) return { ok: false };
   if (role !== "authenticated") return { ok: false };
-  const expectedIss = `${supabaseUrl.replace(/\/+$/, "")}/auth/v1`;
-  if (typeof iss === "string" && iss !== expectedIss) return { ok: false };
+  // The issuer is NOT compared with the app's Supabase URL: it differs behind a custom domain or a
+  // proxy, which refused every real upload. Auth checks the signature, and the user id it returns
+  // must equal `sub` (verifySession).
   return { ok: true, sub, exp };
 }
 
@@ -79,7 +80,7 @@ export async function verifySession(
   } = {},
 ): Promise<Verified | null> {
   const now = opts.now ?? Date.now;
-  const pre = precheckJwt(token, cfg.supabaseUrl, Math.floor(now() / 1000));
+  const pre = precheckJwt(token, Math.floor(now() / 1000));
   if (!pre.ok) return null;
 
   const key = tokenKey(token);

@@ -20,20 +20,20 @@ describe("readBearer", () => {
 });
 
 describe("precheckJwt", () => {
-  it("accepts a live token of this project", () => {
-    expect(precheckJwt(jwt(good), URL_, NOW_S)).toEqual({ ok: true, sub: "user-1", exp: good.exp });
+  it("accepts a live user token, whatever address issued it (custom domain, proxy)", () => {
+    expect(precheckJwt(jwt({ ...good, iss: "https://auth.example.com/auth/v1" }), NOW_S).ok).toBe(true);
+    expect(precheckJwt(jwt(good), NOW_S)).toEqual({ ok: true, sub: "user-1", exp: good.exp });
   });
   it.each([
     ["expired", { ...good, exp: NOW_S - 1 }],
-    ["another project", { ...good, iss: "https://other.supabase.co/auth/v1" }],
     ["the anon key", { ...good, role: "anon" }],
     ["no subject", { ...good, sub: "" }],
   ])("refuses %s", (_, p) => {
-    expect(precheckJwt(jwt(p), URL_, NOW_S).ok).toBe(false);
+    expect(precheckJwt(jwt(p), NOW_S).ok).toBe(false);
   });
   it("refuses what is not a JWT", () => {
-    expect(precheckJwt("abc.def", URL_, NOW_S).ok).toBe(false);
-    expect(precheckJwt("a.%%%.c", URL_, NOW_S).ok).toBe(false);
+    expect(precheckJwt("abc.def", NOW_S).ok).toBe(false);
+    expect(precheckJwt("a.%%%.c", NOW_S).ok).toBe(false);
   });
 });
 
