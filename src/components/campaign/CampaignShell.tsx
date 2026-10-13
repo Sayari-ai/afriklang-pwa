@@ -15,8 +15,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { LocalePicker } from "@/components/locale-picker";
-import { signOut } from "@/lib/campaign/auth-client";
-import { campaignCache } from "@/lib/campaign/cache";
+import { signOutHere } from "@/lib/campaign/sign-out";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
 import { saveOfflinePages } from "@/lib/campaign/offline-pages";
 import { useOutbox, useOutboxRunner } from "@/lib/campaign/outbox-client";
@@ -111,6 +110,8 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
 
 function AccountSheet({ email, onClose }: { email: string | null; onClose: () => void }) {
   const t = useTranslations("campaign.home.shell");
+  const session = useCampaignSession();
+  const userId = session.status === "signedIn" ? session.userId : null;
   const list = useCampaignList();
   const box = useOutbox();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -124,10 +125,10 @@ function AccountSheet({ email, onClose }: { email: string | null; onClose: () =>
   }, [onClose]);
 
   function leave() {
-    const waiting = box.items.length;
+    // This person's takes only (APP-025): another account's takes are not theirs to worry about.
+    const waiting = box.items.filter((i) => i.userId === userId).length;
     if (waiting > 0 && !window.confirm(t("signOutPending", { n: waiting }))) return;
-    campaignCache.clear();
-    void signOut().finally(() => window.location.assign("/campaign"));
+    void signOutHere(userId).finally(() => window.location.assign("/campaign"));
   }
 
   return (

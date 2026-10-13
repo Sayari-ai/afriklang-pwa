@@ -2,7 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { signOut } from "@/lib/campaign/auth-client";
+import { useCampaignSession } from "@/lib/campaign/hooks";
+import { signOutHere } from "@/lib/campaign/sign-out";
 import { claimOutcome } from "@/lib/campaign/claim-flow";
 import type { CampaignFailure } from "@/lib/campaign/types";
 import { useFailureText } from "./CampaignHubParts";
@@ -25,7 +26,9 @@ export function ClaimFailureCard({ failure, email, onRetry, onContinue }: Props)
   const title = outcome.offerOtherAccount ? t("titleAccount") : outcome.retryable ? t("titleRetry") : t("titleLink");
 
   // The token stays saved, so after signing out the sign-in card shows and the claim resumes.
-  const useAnother = () => void signOut().finally(() => window.location.assign("/campaign"));
+  const session = useCampaignSession();
+  const userId = session.status === "signedIn" ? session.userId : null;
+  const useAnother = () => void signOutHere(userId, { keepInvitation: true }).finally(() => window.location.assign("/campaign"));
 
   return (
     <section className="flex flex-col gap-4">

@@ -124,3 +124,21 @@ describe("known speaker offline (APP-003)", () => {
     expect(sessionStateFor(null)).toEqual({ status: "signedOut" });
   });
 });
+
+describe("sign-out on this phone (APP-008)", () => {
+  it("removes the saved session even when the server cannot be reached, and only for this device", async () => {
+    openPage("/campaign");
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await freshClient();
+    const { signOut, storedCampaignUser } = await import("./auth-client");
+    await signOut();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    expect(storedCampaignUser()).toBeNull();
+    const logout = fetchMock.mock.calls.map((c) => String((c as unknown[])[0])).find((u) => u.includes("/logout"));
+    if (logout) expect(logout).toContain("scope=local");
+  });
+});

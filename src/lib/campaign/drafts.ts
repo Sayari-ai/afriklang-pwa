@@ -7,7 +7,7 @@
  * recorded again or discarded.
  */
 
-import { createStore, del, get, set, type UseStore } from "idb-keyval";
+import { createStore, del, get, keys, set, type UseStore } from "idb-keyval";
 import type { FullAnalysis } from "@/lib/audio/analyze";
 
 export type Draft = {
@@ -49,6 +49,16 @@ export async function loadDraft(userId: string, campaignId: string): Promise<Dra
 export async function clearDraft(userId: string, campaignId: string): Promise<void> {
   try {
     await del(key(userId, campaignId), db());
+  } catch {
+    // ignore
+  }
+}
+
+/** Every draft of a person (sign-out). */
+export async function clearDrafts(userId: string): Promise<void> {
+  try {
+    const all = await keys<string>(db());
+    await Promise.all(all.filter((k) => typeof k === "string" && k.startsWith(`${userId}|`)).map((k) => del(k, db())));
   } catch {
     // ignore
   }

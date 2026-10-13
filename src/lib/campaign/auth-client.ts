@@ -91,6 +91,31 @@ export async function signInWithGoogle(returnPath = "/campaign"): Promise<void> 
   if (error) throw error;
 }
 
+/**
+ * Sign out on this phone (APP-008). Scope "local": the default "global" would also sign the speaker
+ * out of every other device. Online, this session is revoked on the server too. supabase-js keeps
+ * the saved session when that call fails (offline, bad network), so the saved session is then
+ * removed here by hand: signing out on a shared phone must work without a network.
+ * The caller reloads the page afterwards (the client still holds the session in memory).
+ */
 export async function signOut(): Promise<void> {
-  await getCampaignAuth().auth.signOut();
+  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_CAMPAIGN_MOCK === "1") {
+    try {
+      localStorage.setItem("afriklang.mock.signedOut", "1");
+    } catch {
+      // ignore
+    }
+  }
+  try {
+    await getCampaignAuth().auth.signOut({ scope: "local" });
+  } catch {
+    // removed below
+  }
+  try {
+    localStorage.removeItem(CAMPAIGN_AUTH_STORAGE_KEY);
+    localStorage.removeItem(`${CAMPAIGN_AUTH_STORAGE_KEY}-code-verifier`);
+    localStorage.removeItem(`${CAMPAIGN_AUTH_STORAGE_KEY}-user`);
+  } catch {
+    // storage blocked: nothing was saved there either
+  }
 }
