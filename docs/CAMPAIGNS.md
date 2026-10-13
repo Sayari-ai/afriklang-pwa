@@ -105,6 +105,12 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
   the last answer saved on the device per user and painted at once (also offline), refreshed in the
   background on app start, when the app returns to the foreground and when the network comes back.
   A `missions` answer also refreshes that campaign's card on the home screen. Sign-out clears it.
+- **The installed app opens offline** (service worker, `next.config.ts`). Page loads are network
+  first with a 4 s timeout and kept with no age limit, one copy per path; the shell saves home,
+  history and each campaign's page and studio ahead of time (`src/lib/campaign/offline-pages.ts`,
+  again after each new build); a page never saved falls back to `/~offline`. The page is not
+  reloaded when the network comes back (that would end a take being recorded). Other origins
+  (Supabase, the bridge) are never cached by the service worker.
 - **Takes go through an outbox** (`src/lib/campaign/outbox*.ts`, IndexedDB `afriklang.campaign.outbox`):
   saved the moment the speaker submits, then sent in the background, audio first, metadata second,
   each step remembered so neither is repeated without need. The upload has no fixed time limit: it is

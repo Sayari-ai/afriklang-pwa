@@ -80,5 +80,11 @@
     "accepted": "Accepted audio",
     "pending": "In review",
     "help": "You are paid for each hour of accepted audio."
+  },
+  "offlinePage": {
+    "title": "You are offline",
+    "body": "This page is not saved on your phone yet. Your missions and the recordings waiting to be sent are safe.",
+    "open": "Open my missions",
+    "retry": "Try again"
   }
 }

@@ -18,6 +18,7 @@ import { LocalePicker } from "@/components/locale-picker";
 import { signOut } from "@/lib/campaign/auth-client";
 import { campaignCache } from "@/lib/campaign/cache";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
+import { saveOfflinePages } from "@/lib/campaign/offline-pages";
 import { useOutbox, useOutboxRunner } from "@/lib/campaign/outbox-client";
 
 const subscribeOnline = (fn: () => void) => {
@@ -35,10 +36,24 @@ export function CampaignShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const userId = session.status === "signedIn" ? session.userId : null;
   useOutboxRunner(userId);
+  useOfflinePages();
 
   // The studio is a full-screen, focused space.
   if (/^\/campaign\/[^/]+\/studio/.test(pathname)) return <>{children}</>;
   return <Frame signedIn={session.status === "signedIn"} email={session.status === "signedIn" ? session.email : null}>{children}</Frame>;
+}
+
+/** Keep the speaker's pages saved on the phone so the app opens offline (offline-pages.ts). */
+function useOfflinePages() {
+  const list = useCampaignList();
+  const online = useOnline();
+  const ids = list.state === "ready" ? list.data.campaigns.map((c) => c.campaign_id).join("\n") : null;
+  useEffect(() => {
+    if (ids === null || !online) return;
+    // After the page has settled: never compete with what the speaker is loading.
+    const t = setTimeout(() => void saveOfflinePages(ids ? ids.split("\n") : []), 3000);
+    return () => clearTimeout(t);
+  }, [ids, online]);
 }
 
 function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: boolean; email: string | null }) {

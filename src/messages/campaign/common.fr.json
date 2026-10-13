@@ -80,5 +80,11 @@
     "accepted": "Audio accepté",
     "pending": "En vérification",
     "help": "Vous êtes payé pour chaque heure d'audio acceptée."
+  },
+  "offlinePage": {
+    "title": "Vous êtes hors ligne",
+    "body": "Cette page n'est pas encore enregistrée sur votre téléphone. Vos missions et les enregistrements en attente d'envoi sont en sécurité.",
+    "open": "Ouvrir mes missions",
+    "retry": "Réessayer"
   }
 }
