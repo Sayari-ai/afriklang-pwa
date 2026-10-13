@@ -79,8 +79,7 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
   600 Auth lookups per minute in total. Sayari's 5xx text and a refused upload key never reach the
   browser (`502 upstream_error`, `500 server_misconfigured`). Code: `src/lib/server/upload-guard.ts`.
   The outbox sends the token, renews it once on a 401, and otherwise holds the take until the
-  speaker signs in again. The old learning-app screen (`/level/*`) sends no token and can no longer
-  upload. The next step (dashboard-signed upload tickets) is in
+  speaker signs in again. The next step (dashboard-signed upload tickets) is in
   `afriklang/docs/CAMPAIGN_PIPELINE_COMPLETION_PLAN.md`, Phase 1.
 
 - The browser **never holds the bridge secret** and **never says who it is**. The Edge Function reads
