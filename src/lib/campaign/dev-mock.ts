@@ -390,6 +390,74 @@ export function installCampaignMock() {
     }
     return real(input, init);
   };
+  // Uploads go through XMLHttpRequest (upload progress): answer them here too, with fake progress.
+  const RealXhr = window.XMLHttpRequest;
+  class MockUploadXhr {
+    private real: XMLHttpRequest | null = null;
+    private url = "";
+    private aborted = false;
+    upload: { onprogress: ((e: { loaded: number; total: number; lengthComputable: boolean }) => void) | null; onload: (() => void) | null } = { onprogress: null, onload: null };
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    onabort: (() => void) | null = null;
+    ontimeout: (() => void) | null = null;
+    status = 0;
+    statusText = "";
+    responseText = "";
+    open(method: string, url: string) {
+      this.url = url;
+      if (!url.endsWith("/api/audio-upload")) {
+        this.real = new RealXhr();
+        this.real.open(method, url);
+      }
+    }
+    setRequestHeader(k: string, v: string) {
+      this.real?.setRequestHeader(k, v);
+    }
+    getResponseHeader(h: string) {
+      return this.real ? this.real.getResponseHeader(h) : null;
+    }
+    abort() {
+      this.aborted = true;
+      this.real?.abort();
+      this.onabort?.();
+    }
+    send(body?: Document | XMLHttpRequestBodyInit | null) {
+      if (this.real) {
+        const r = this.real;
+        r.onload = () => {
+          this.status = r.status;
+          this.statusText = r.statusText;
+          this.responseText = r.responseText;
+          this.onload?.();
+        };
+        r.onerror = () => this.onerror?.();
+        return r.send(body);
+      }
+      if (body instanceof FormData) {
+        const fields: Record<string, string> = {};
+        body.forEach((v, k) => (fields[k] = typeof v === "string" ? v : `<file ${(v as File).name}, ${(v as File).size} bytes>`));
+        (window as unknown as { __afkLastUpload?: unknown }).__afkLastUpload = fields;
+      }
+      const total = 100_000;
+      void (async () => {
+        for (let i = 1; i <= 9; i++) {
+          await delay(100);
+          if (this.aborted) return;
+          if (navigator.onLine === false) return this.onerror?.();
+          this.upload.onprogress?.({ loaded: (total * i) / 10, total, lengthComputable: true });
+        }
+        this.upload.onprogress?.({ loaded: total, total, lengthComputable: true });
+        this.upload.onload?.();
+        this.status = 200;
+        this.statusText = "OK";
+        this.responseText = JSON.stringify({ audio_id: "say-" + Math.random().toString(36).slice(2, 10) });
+        this.onload?.();
+      })();
+    }
+  }
+  (window as unknown as { XMLHttpRequest: unknown }).XMLHttpRequest = MockUploadXhr;
+
   w.__afkMock = {
     reset: () => localStorage.removeItem(KEY),
     signIn: () => localStorage.removeItem("afriklang.mock.signedOut"),

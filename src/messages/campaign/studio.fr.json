@@ -47,6 +47,7 @@
     "play": "Écouter",
     "pause": "Pause",
     "length": "{time} enregistrées",
+    "restored": "Nous avons gardé l'enregistrement fait avant la fermeture de l'application. Écoutez-le, puis envoyez-le ou recommencez.",
     "again": "Recommencer",
     "submit": "Envoyer et continuer",
     "submitLast": "Envoyer",

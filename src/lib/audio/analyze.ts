@@ -66,29 +66,72 @@ const FRAME_S = 0.02;
 const toDb = (x: number) => (x <= 0 ? FLOOR_DB : Math.max(FLOOR_DB, 20 * Math.log10(x)));
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export function analyzeSamples(samples: Float32Array, sampleRate: number): TakeAnalysis {
-  const duration = samples.length / sampleRate;
-  const frame = Math.max(1, Math.round(sampleRate * FRAME_S));
-  const frames = Math.ceil(samples.length / frame);
+/**
+ * Measurements per 20 ms frame, gathered as samples arrive (APP-005): the recorder feeds each block
+ * as it is captured, so a take is measured without ever holding a second copy of it. Memory is
+ * two numbers per frame (100 a second).
+ */
+export type FrameStats = {
+  sampleRate: number;
+  frameLen: number;
+  /** Samples seen in total. */
+  samples: number;
+  /** RMS of each frame (0..1); the last frame may be partial. */
+  rms: number[];
+  /** Largest absolute sample of each frame (0..1). */
+  framePeaks: number[];
+  peak: number;
+};
 
+export function createTakeMeter(sampleRate: number) {
+  const frameLen = Math.max(1, Math.round(sampleRate * FRAME_S));
+  const rms: number[] = [];
+  const framePeaks: number[] = [];
+  let sumSq = 0;
+  let inFrame = 0;
+  let frameMax = 0;
   let peak = 0;
-  const rms: number[] = new Array(frames);
-  for (let f = 0; f < frames; f++) {
-    let sumSq = 0;
-    const start = f * frame;
-    const end = Math.min(samples.length, start + frame);
-    for (let i = start; i < end; i++) {
-      const a = Math.abs(samples[i]);
-      if (a > peak) peak = a;
-      sumSq += samples[i] * samples[i];
-    }
-    rms[f] = Math.sqrt(sumSq / Math.max(1, end - start));
-  }
+  let total = 0;
+  return {
+    /** Add samples; `scale` turns them into -1..1 (1/32768 for PCM16). */
+    push(x: ArrayLike<number>, scale = 1) {
+      for (let i = 0; i < x.length; i++) {
+        const v = x[i] * scale;
+        const a = v < 0 ? -v : v;
+        if (a > frameMax) frameMax = a;
+        sumSq += v * v;
+        if (++inFrame === frameLen) {
+          rms.push(Math.sqrt(sumSq / frameLen));
+          framePeaks.push(frameMax);
+          if (frameMax > peak) peak = frameMax;
+          sumSq = 0;
+          inFrame = 0;
+          frameMax = 0;
+        }
+      }
+      total += x.length;
+    },
+    stats(): FrameStats {
+      const partial = inFrame > 0;
+      return {
+        sampleRate,
+        frameLen,
+        samples: total,
+        rms: partial ? [...rms, Math.sqrt(sumSq / inFrame)] : rms.slice(),
+        framePeaks: partial ? [...framePeaks, frameMax] : framePeaks.slice(),
+        peak: Math.max(peak, frameMax),
+      };
+    },
+  };
+}
 
-  const active = rms.map((r) => toDb(r) > SILENCE_THRESHOLD_DBFS);
+export function analyzeStats(st: FrameStats): TakeAnalysis {
+  const duration = st.samples / st.sampleRate;
+  const frames = st.rms.length;
+  const active = st.rms.map((r) => toDb(r) > SILENCE_THRESHOLD_DBFS);
   const first = active.indexOf(true);
   if (first === -1) {
-    return { duration_s: round2(duration), level_dbfs: FLOOR_DB, peak_dbfs: round2(toDb(peak)), silence_before_s: round2(duration), silence_after_s: round2(duration) };
+    return { duration_s: round2(duration), level_dbfs: FLOOR_DB, peak_dbfs: round2(toDb(st.peak)), silence_before_s: round2(duration), silence_after_s: round2(duration) };
   }
   const last = active.lastIndexOf(true);
 
@@ -96,17 +139,38 @@ export function analyzeSamples(samples: Float32Array, sampleRate: number): TakeA
   let n = 0;
   for (let f = 0; f < frames; f++) {
     if (!active[f]) continue;
-    sumSq += rms[f] * rms[f];
+    sumSq += st.rms[f] * st.rms[f];
     n++;
   }
-  const secondsOfFrame = (count: number) => Math.min(duration, count * (frame / sampleRate));
+  const secondsOfFrame = (count: number) => Math.min(duration, count * (st.frameLen / st.sampleRate));
   return {
     duration_s: round2(duration),
     level_dbfs: round2(toDb(Math.sqrt(sumSq / n))),
-    peak_dbfs: round2(toDb(peak)),
+    peak_dbfs: round2(toDb(st.peak)),
     silence_before_s: round2(secondsOfFrame(first)),
     silence_after_s: round2(Math.max(0, duration - secondsOfFrame(last + 1))),
   };
+}
+
+/** `n` bars for a waveform picture from the frame peaks: the loudest frame of each slice, 0..1. */
+export function peaksFromStats(st: FrameStats, n: number): number[] {
+  const out = new Array<number>(n).fill(0);
+  const fp = st.framePeaks;
+  if (!fp.length || n <= 0) return out;
+  const size = fp.length / n;
+  for (let b = 0; b < n; b++) {
+    let max = 0;
+    const end = Math.min(fp.length, Math.max(Math.floor(b * size) + 1, Math.floor((b + 1) * size)));
+    for (let i = Math.floor(b * size); i < end; i++) if (fp[i] > max) max = fp[i];
+    out[b] = Math.min(1, max);
+  }
+  return out;
+}
+
+export function analyzeSamples(samples: Float32Array, sampleRate: number): TakeAnalysis {
+  const meter = createTakeMeter(sampleRate);
+  meter.push(samples);
+  return analyzeStats(meter.stats());
 }
 
 /** `n` bars for a waveform picture: the loudest sample of each slice, 0..1. */
@@ -126,7 +190,12 @@ export function waveformPeaks(samples: Float32Array, n: number): number[] {
   return out;
 }
 
-export async function analyzeWav(blob: Blob): Promise<TakeAnalysis & { sample_rate: number; channels: number; peaks: number[] }> {
+export type FullAnalysis = TakeAnalysis & { sample_rate: number; channels: number; peaks: number[] };
+
+/** The analysis of a take measured while it was recorded. */
+export const analysisFromStats = (st: FrameStats): FullAnalysis => ({ ...analyzeStats(st), sample_rate: st.sampleRate, channels: 1, peaks: peaksFromStats(st, 64) });
+
+export async function analyzeWav(blob: Blob): Promise<FullAnalysis> {
   const wav = parseWav(await blob.arrayBuffer());
   return { ...analyzeSamples(wav.samples, wav.sampleRate), sample_rate: wav.sampleRate, channels: 1, peaks: waveformPeaks(wav.samples, 64) };
 }

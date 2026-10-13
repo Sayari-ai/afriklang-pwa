@@ -243,7 +243,12 @@ runtime. Check those by hand (section 4).
 - Two-device capture (one channel per speaker) is not supported; conversations are one phone, mono.
 - Recording status after upload (pre-annotated, accepted, rejected) is set by the dashboard; the app
   only shows it.
-- A take recorded but not yet submitted (still on the review screen) is lost if the speaker leaves;
-  the app asks first. Once submitted it is safe on the phone.
+- A take recorded but not yet submitted (still on the review screen) is saved on the phone the moment
+  recording stops, and the studio offers it again if the app closed (`src/lib/campaign/drafts.ts`);
+  leaving on purpose asks first and drops it. A recording cut short by a crash *while* recording is
+  lost.
+- Capture keeps only 16 kHz PCM16 in memory (about 32 KB a second), downsampled with an anti-alias
+  filter as it is recorded and measured on the way; every take stops by itself (timed types at their
+  maximum, a read sentence 1 s past it, nothing past 10 minutes).
 - Takes waiting on the phone are sent while the app is open (no background sync when it is closed).
 - The french copy of the invitation and reminder emails (dashboard side) is not reviewed by a native speaker.

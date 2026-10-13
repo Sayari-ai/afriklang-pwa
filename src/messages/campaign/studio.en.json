@@ -47,6 +47,7 @@
     "play": "Play",
     "pause": "Pause",
     "length": "{time} recorded",
+    "restored": "We kept the take you recorded before the app closed. Listen to it, then submit it or record again.",
     "again": "Record again",
     "submit": "Submit & next",
     "submitLast": "Submit",
