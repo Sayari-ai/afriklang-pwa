@@ -36,6 +36,15 @@ describe("single-file build", () => {
     expect(JSON.parse(init.body)).toEqual({ user_id: USER, email: "awa@gmail.com", email_verified: true, token: "T".repeat(43) });
   });
 
+  it("has the upload_ticket action", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ ticket: "a.b", expires_at: "2026-10-13T12:30:00Z" }), { status: 200 }));
+    const res = await post({ action: "upload_ticket", mission_id: "22222222-2222-4222-8222-222222222222", source_sha256: "d".repeat(64), duration_s: 4 });
+    expect(res.status).toBe(200);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://dash.example.com/api/pwa/campaigns/missions/upload-ticket");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ user_id: USER, mission_id: "22222222-2222-4222-8222-222222222222", source_sha256: "d".repeat(64), duration_s: 4 });
+    expect((await post({ action: "upload_ticket", mission_id: "x", source_sha256: "d".repeat(64), duration_s: 4 })).status).toBe(400);
+  });
+
   it("refuses without a session and for unknown actions", async () => {
     expect((await post({ action: "campaigns" }, {})).status).toBe(401);
     expect((await post({ action: "drop_tables" })).status).toBe(400);

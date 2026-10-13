@@ -68,6 +68,8 @@ type Field =
   | { kind: "text"; label: string; max: number; required?: boolean; pattern?: RegExp; patternHint?: string; oneOf?: readonly string[]; upper?: boolean }
   | { kind: "uuid"; label: string; required?: boolean }
   | { kind: "uuids"; label: string; max: number; required?: boolean }
+  | { kind: "sha256"; label: string; required?: boolean }
+  | { kind: "number"; label: string; min: number; max: number; minExclusive?: boolean; required?: boolean }
   | { kind: "recording"; label: string; required?: boolean };
 type Spec = { path: string; fields: Record<string, Field>; sendEmail?: boolean; check?: (body: Record<string, unknown>, errors: FieldErrors) => void };
 type FieldErrors = Record<string, string>;
@@ -125,6 +127,16 @@ const ACTIONS: Record<string, Spec> = {
   },
   withdraw: { path: "consent/withdraw", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
   missions: { path: "missions", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
+  // A signed upload ticket for ONE file of one mission (docs/contracts/README.md §1). The app never
+  // reads the ticket: it hands it to the upload proxy, which hands it to Sayari.
+  upload_ticket: {
+    path: "missions/upload-ticket",
+    fields: {
+      mission_id: { kind: "uuid", label: "mission_id", required: true },
+      source_sha256: { kind: "sha256", label: "source_sha256", required: true },
+      duration_s: { kind: "number", label: "duration_s", min: 0, minExclusive: true, max: 3_600, required: true },
+    },
+  },
   submit: { path: "missions/submit", fields: { mission_id: { kind: "uuid", label: "mission_id", required: true }, recording: { kind: "recording", label: "recording", required: true } } },
   // Pool campaigns only: draw a leased batch, or give open missions back (at most 200 per call).
   draw: { path: "missions/draw", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
@@ -174,6 +186,14 @@ function buildForward(action: unknown, clientBody: unknown, who: Identity): Buil
     } else if (f.kind === "uuid") {
       if (typeof v !== "string" || !UUID_RE.test(v.trim())) errors[name] = `${f.label} must be a uuid`;
       else body[name] = v.trim().toLowerCase();
+    } else if (f.kind === "sha256") {
+      const h = typeof v === "string" ? v.trim().toLowerCase() : "";
+      if (!/^[0-9a-f]{64}$/.test(h)) errors[name] = `${f.label} must be the sha-256 of the file (64 hex characters)`;
+      else body[name] = h;
+    } else if (f.kind === "number") {
+      const low = f.minExclusive ? (n: number) => n > f.min : (n: number) => n >= f.min;
+      if (!isNum(v) || !low(v) || v > f.max) errors[name] = `${f.label} must be a number ${f.minExclusive ? "above" : "of at least"} ${f.min} and at most ${f.max}`;
+      else body[name] = v;
     } else if (f.kind === "uuids") {
       if (!Array.isArray(v)) errors[name] = `${f.label} must be a list of uuids`;
       else if (v.length === 0) {

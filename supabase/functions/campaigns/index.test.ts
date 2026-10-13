@@ -43,6 +43,34 @@ describe("campaigns Edge Function", () => {
     expect(auth.getUser).toHaveBeenCalledWith("good.token");
   });
 
+  it("upload_ticket forwards to missions/upload-ticket with the verified user and relays { ticket, expires_at } untouched", async () => {
+    const answer = { ticket: "eyJ2IjoxfQ.c2ln", expires_at: "2026-10-13T12:30:00.000Z" };
+    fetchMock.mockResolvedValue(new Response(JSON.stringify(answer), { status: 200 }));
+    const res = await call({ action: "upload_ticket", mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9, user_id: "99999999-9999-4999-8999-999999999999" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(answer);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://dash.example.com/api/pwa/campaigns/missions/upload-ticket");
+    expect(init.headers.Authorization).toBe(`Bearer ${"s".repeat(32)}`);
+    expect(JSON.parse(init.body)).toEqual({ user_id: USER, mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9 });
+  });
+
+  it("upload_ticket relays a refusal (403 not_assigned) and an old dashboard's 404 as they are", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "Not yours.", code: "not_assigned" }), { status: 403 }));
+    const refused = await call({ action: "upload_ticket", mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9 });
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({ error: "Not yours.", code: "not_assigned" });
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "Not found" }), { status: 404 }));
+    expect((await call({ action: "upload_ticket", mission_id: CID, source_sha256: "c".repeat(64), duration_s: 9 })).status).toBe(404);
+  });
+
+  it("upload_ticket with a bad field is a 400 naming it, and never reaches the dashboard", async () => {
+    const res = await call({ action: "upload_ticket", mission_id: CID, source_sha256: "nope", duration_s: 0 });
+    expect(res.status).toBe(400);
+    expect((await res.json()).fieldErrors).toEqual({ source_sha256: expect.stringContaining("64 hex"), duration_s: expect.stringContaining("above 0") });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("the list action goes to the bare /campaigns route", async () => {
     fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
     await call({ action: "campaigns" });

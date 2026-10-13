@@ -26,6 +26,7 @@ describe("buildForward", () => {
       withdraw: { campaign_id: CID },
       missions: { campaign_id: CID },
       submit: { mission_id: CID, recording: RECORDING },
+      upload_ticket: { mission_id: CID, source_sha256: "a".repeat(64), duration_s: 8.2 },
       draw: { campaign_id: CID },
       return: { campaign_id: CID, mission_ids: [DEVICE] },
     };
@@ -78,6 +79,35 @@ describe("buildForward", () => {
     expect(buildForward("submit", { mission_id: CID, recording: { ...RECORDING, peak_dbfs: 0.4 } }, WHO).ok).toBe(true);
   });
 
+  it("upload_ticket: mission uuid, 64-hex sha-256, duration in (0, 3600]; user from the session only", () => {
+    const sha = "AB".repeat(32);
+    expect(buildForward("upload_ticket", { mission_id: ` ${CID.toUpperCase()} `, source_sha256: ` ${sha} `, duration_s: 12.5, user_id: DEVICE, ticket: "x", campaign_id: CID }, WHO)).toEqual({
+      ok: true,
+      path: "missions/upload-ticket",
+      body: { user_id: WHO.userId, mission_id: CID, source_sha256: sha.toLowerCase(), duration_s: 12.5 },
+    });
+    expect(buildForward("upload_ticket", { duration_s: 3_600, mission_id: CID, source_sha256: "0".repeat(64) }, WHO).ok).toBe(true);
+    const missing = buildForward("upload_ticket", {}, WHO);
+    expect(!missing.ok && missing.fieldErrors).toEqual({ mission_id: "mission_id is required", source_sha256: "source_sha256 is required", duration_s: "duration_s is required" });
+    for (const [field, value] of [
+      ["mission_id", "M7"],
+      ["mission_id", 5],
+      ["source_sha256", "a".repeat(63)],
+      ["source_sha256", "g".repeat(64)],
+      ["source_sha256", 123],
+      ["duration_s", 0],
+      ["duration_s", -1],
+      ["duration_s", 3_600.5],
+      ["duration_s", "8"],
+      ["duration_s", Number.NaN],
+      ["duration_s", Number.POSITIVE_INFINITY],
+    ] as const) {
+      const r = buildForward("upload_ticket", { mission_id: CID, source_sha256: "a".repeat(64), duration_s: 8, [field]: value }, WHO);
+      expect(r.ok, `${field}=${String(value)}`).toBe(false);
+      expect(!r.ok && Object.keys(r.fieldErrors ?? {})).toEqual([field]);
+    }
+  });
+
   it("the campaigns list needs no fields and tolerates a junk body", () => {
     expect(buildForward("campaigns", null, WHO)).toEqual({ ok: true, path: "", body: { user_id: WHO.userId } });
     expect(buildForward("campaigns", [1, 2], WHO)).toMatchObject({ ok: true });
@@ -100,7 +130,7 @@ describe("buildForward", () => {
   });
 
   it("every action maps to a real dashboard route", () => {
-    expect(Object.values(ACTIONS).map((a) => a.path).sort()).toEqual(["", "claim", "consent", "consent/withdraw", "missions", "missions/draw", "missions/return", "missions/submit", "profile"]);
+    expect(Object.values(ACTIONS).map((a) => a.path).sort()).toEqual(["", "claim", "consent", "consent/withdraw", "missions", "missions/draw", "missions/return", "missions/submit", "missions/upload-ticket", "profile"]);
   });
 });
 
