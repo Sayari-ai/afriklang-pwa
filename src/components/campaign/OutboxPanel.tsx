@@ -34,6 +34,9 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
 
   // The percentage is kept out of the live region: a screen reader would read every step.
   const headline = sending ? t("sending") : pending.length ? t("waiting", { n: pending.length }) : held.length ? t("held", { n: held.length }) : t("failed", { n: failed.length });
+  // While sending: how much is left (audio not uploaded yet), so a long send on a slow link does not look stuck (APP-016).
+  const leftBytes = items.filter((i) => i.state !== "failed" && !i.uploaded).reduce((n, i) => n + (i.bytes ?? 0), 0) - (sending && box.progress ? box.progress.sent : 0);
+  const leftMb = Math.max(0.1, Math.round(leftBytes / 104_857.6) / 10);
   const sub = !online ? t("offline") : failed.length && !pending.length && !held.length ? null : t("retrying");
   const tone = failed.length && !pending.length ? "border-red-200 bg-red-50 text-red-900" : !online ? "border-amber-200 bg-amber-50 text-amber-900" : "border-primary/20 bg-white text-slate-900";
   const Icon = sending ? Loader2 : !online ? CloudOff : failed.length && !pending.length ? AlertTriangle : UploadCloud;
@@ -50,6 +53,12 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
             {sending && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
           </p>
           {sub ? <p className="text-xs opacity-80">{sub}</p> : null}
+          {/* Kept out of the live region: it changes as the upload moves. */}
+          {sending && leftBytes > 0 ? (
+            <p aria-hidden className="text-xs font-semibold opacity-80">
+              {t("remaining", { mb: leftMb })}
+            </p>
+          ) : null}
         </div>
         {online && (pending.length || held.length) && !sending ? (
           <button type="button" onClick={() => void outbox.retryNow(userId)} className="flex min-h-10 items-center gap-1 rounded-full bg-primary px-3 text-xs font-bold text-white">

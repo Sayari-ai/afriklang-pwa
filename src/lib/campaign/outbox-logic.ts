@@ -49,8 +49,8 @@ export type OutboxItem = {
   lastCode: string | null;
 };
 
-/** What the UI sees of an item (no audio). */
-export type OutboxSummary = Omit<OutboxItem, "blob">;
+/** What the UI sees of an item (no audio): `bytes` is the audio's size. */
+export type OutboxSummary = Omit<OutboxItem, "blob"> & { bytes: number };
 
 export type UploadOutcome = { status: number; isNetwork: boolean };
 

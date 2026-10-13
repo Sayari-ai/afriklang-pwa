@@ -60,8 +60,7 @@ const stopsRun = (d: Decision) => d.kind === "retry" && STOP_RUN_CODES.has(d.cod
 
 const summary = (item: OutboxItem): OutboxSummary => {
   const { blob, ...rest } = item;
-  void blob;
-  return rest;
+  return { ...rest, bytes: blob?.size ?? 0 };
 };
 
 export function createOutbox(deps: OutboxDeps) {

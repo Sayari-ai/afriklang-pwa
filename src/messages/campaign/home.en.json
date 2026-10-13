@@ -60,6 +60,7 @@
     "waiting": "{n, plural, one {# recording waiting to send} other {# recordings waiting to send}}",
     "offline": "You are offline. They will be sent as soon as you reconnect.",
     "retrying": "We will keep trying automatically.",
+    "remaining": "{mb, number} MB left to send. Keep the app open until it is done.",
     "unsafe": "These recordings exist only on this phone, and the browser may delete them when it needs space. Install the app to keep them safe.",
     "install": "Install the app",
     "installIos": "On iPhone: tap Share, then “Add to Home Screen”.",
