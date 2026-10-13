@@ -35,6 +35,8 @@ describe("speaker view facts", () => {
   it("explains outbox codes briefly", () => {
     expect(outboxReasonKey("campaign_paused")).toBe("paused");
     expect(outboxReasonKey("refused")).toBe("file");
+    expect(outboxReasonKey("not_assigned")).toBe("unassigned");
+    expect(outboxReasonKey("campaign_closed")).toBe("closed");
     expect(outboxReasonKey("offline")).toBe("network");
     expect(outboxReasonKey(null)).toBe("generic");
   });

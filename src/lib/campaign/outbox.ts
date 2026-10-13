@@ -3,10 +3,15 @@
  *
  * A take is saved here the moment the contributor taps "Submit", so they can move on at once and
  * nothing is lost when the network drops, the tab closes or the phone sleeps. A runner sends each
- * take in two steps, remembering which one is done so neither repeats needlessly:
+ * take in three steps, remembering which one is done so none repeats needlessly:
  *
- *   1. the audio to Sayari (through /api/audio-upload)
- *   2. the metadata to the dashboard (`submit`; safe to repeat: the same file answers duplicate: true)
+ *   1. a ticket from the dashboard (`upload_ticket`): its signed permission for this one file.
+ *      Kept on the take and reused while it has more than 2 minutes left. A refusal that cannot
+ *      clear (campaign closed, mission no longer theirs) fails the take for good; one that may
+ *      clear holds it, as a submit would. A dashboard without tickets (404) means: upload
+ *      without one, as before.
+ *   2. the audio to Sayari (through /api/audio-upload, the ticket in X-Campaign-Ticket)
+ *   3. the metadata to the dashboard (`submit`; safe to repeat: the same file answers duplicate: true)
  *
  * The audio leaves the phone's storage once the dashboard has the recording, or when the
  * contributor discards it.
@@ -16,7 +21,22 @@
  * field, and the dashboard stores the recording once.
  */
 
-import { applyDecision, decideSubmit, decideUploadFailure, dueItems, expiredDeadTakes, nextWake, STOP_RUN_CODES, type Decision, type OutboxItem, type OutboxSummary } from "./outbox-logic";
+import {
+  applyDecision,
+  decideSubmit,
+  decideTicket,
+  decideUploadFailure,
+  dueItems,
+  expiredDeadTakes,
+  nextWake,
+  reusableTicket,
+  STOP_RUN_CODES,
+  storedTicketFrom,
+  uploadBackoffMs,
+  type Decision,
+  type OutboxItem,
+  type OutboxSummary,
+} from "./outbox-logic";
 
 const MINUTE = 60_000;
 import type { CampaignResult, RecordingMetadata } from "./types";
@@ -38,8 +58,12 @@ export type OutboxEvent =
 
 export type OutboxDeps = {
   store: OutboxStore;
-  /** Send the audio. `onProgress` reports bytes sent so far; `signal` aborts it. */
-  upload: (item: OutboxItem, onProgress: (sent: number, total: number) => void, signal: AbortSignal) => Promise<{ recordingId: string | null }>;
+  /** Send the audio, with the ticket when there is one. `onProgress` reports bytes sent so far; `signal` aborts it. */
+  upload: (item: OutboxItem, onProgress: (sent: number, total: number) => void, signal: AbortSignal, ticket: string | null) => Promise<{ recordingId: string | null }>;
+  /** Ask the dashboard for an upload ticket for this take. Without it, takes upload without tickets. */
+  requestTicket?: (item: OutboxItem) => Promise<CampaignResult<{ ticket: string; expires_at: string }>>;
+  /** Where the one "no tickets yet" note goes (console.info by default). */
+  log?: (msg: string) => void;
   submit: (missionId: string, metadata: RecordingMetadata) => Promise<CampaignResult<{ duplicate: boolean }>>;
   online: () => boolean;
   /** What the saved campaign card says before an upload: a submit code to hold or drop the take, or null (precheckFromCard). */
@@ -76,6 +100,8 @@ export function createOutbox(deps: OutboxDeps) {
   let inflight: { id: string; campaignId: string; ctrl: AbortController } | null = null;
   /** Campaigns whose takes must not be sent (a consent withdrawal in progress). */
   const blocked = new Set<string>();
+  /** "The dashboard issues no tickets" is said once per app start, not once per take. */
+  let saidNoTickets = false;
   const listeners = new Set<() => void>();
   const eventListeners = new Set<(e: OutboxEvent) => void>();
   let snapshot: { items: OutboxSummary[]; activeId: string | null; loaded: boolean; progress: OutboxProgress | null } = { items, activeId, loaded, progress };
@@ -142,14 +168,49 @@ export function createOutbox(deps: OutboxDeps) {
         await settle(current, { kind: "hold", code: pre, delayMs: 10 * MINUTE });
         return true;
       }
+      let ticket: string | null = null;
+      if (deps.requestTicket) {
+        ticket = reusableTicket(current, now());
+        if (!ticket) {
+          let res: CampaignResult<{ ticket: string; expires_at: string }>;
+          try {
+            res = await deps.requestTicket(current);
+          } catch {
+            res = { ok: false, status: 0, code: "network", message: "" };
+          }
+          // Deleted or withdrawn meanwhile: do not write it back.
+          if (!(await stillWanted(current))) return true;
+          if (res.ok) {
+            const stored = storedTicketFrom(res.data, now());
+            if (!stored) {
+              // An answer without a usable ticket: the dashboard's fault, try again later.
+              await settle(current, { kind: "retry", code: "bridge_error", delayMs: uploadBackoffMs(current.attempts) });
+              return true;
+            }
+            current = { ...current, ticket: stored };
+            await deps.store.put(current);
+            ticket = stored.value;
+          } else {
+            const d = decideTicket(res, current.attempts);
+            if (d.kind === "without") {
+              if (!saidNoTickets) (deps.log ?? console.info)("[outbox] the dashboard does not issue upload tickets yet: uploading without one");
+              saidNoTickets = true;
+            } else {
+              if (d.kind === "retry" && d.code === "offline") return false;
+              await settle(current, d);
+              return !stopsRun(d);
+            }
+          }
+        }
+      }
       const ctrl = new AbortController();
       inflight = { id: current.id, campaignId: current.campaignId, ctrl };
       try {
-        const res = await deps.upload(current, onProgress(current.id), ctrl.signal);
+        const res = await deps.upload(current, onProgress(current.id), ctrl.signal, ticket);
         inflight = null;
         // Deleted or withdrawn while it was going: do not write it back.
         if (!(await stillWanted(current))) return true;
-        current = { ...current, uploaded: true, sayariId: res.recordingId, metadata: { ...current.metadata, ...(res.recordingId ? { sayari_recording_id: res.recordingId } : {}) } };
+        current = { ...current, uploaded: true, ticket: null, sayariId: res.recordingId, metadata: { ...current.metadata, ...(res.recordingId ? { sayari_recording_id: res.recordingId } : {}) } };
         await deps.store.put(current);
       } catch (e) {
         inflight = null;
@@ -158,6 +219,8 @@ export function createOutbox(deps: OutboxDeps) {
         // nothing written) and stop; the runner wakes when the network is back (APP-006).
         if (!deps.online()) return false;
         const err = (e ?? {}) as UploadErrorLike;
+        // Sayari refused the ticket (expired on the way, or already used): the next try asks for a new one.
+        if (err.status === 409 && current.ticket) current = { ...current, ticket: null };
         const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork), retryAfterS: err.retryAfterS ?? null }, current.attempts, deps.online());
         await settle(current, d);
         return !stopsRun(d);

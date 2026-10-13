@@ -89,6 +89,7 @@
       "signin": "reconnectez-vous pour l'envoyer",
       "partner": "le consentement de votre partenaire manque",
       "closed": "la campagne est terminée",
+      "unassigned": "cette mission ne vous est plus attribuée",
       "file": "le fichier a été refusé ; enregistrez-le à nouveau",
       "server": "le service rencontre un problème",
       "network": "la connexion a échoué",

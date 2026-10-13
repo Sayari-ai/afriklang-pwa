@@ -10,7 +10,7 @@ import { createStore, del, get, set, values, type UseStore } from "idb-keyval";
 import { useEffect, useSyncExternalStore } from "react";
 import { AudioUploadError, uploadAudio } from "@/lib/api/audio";
 import { logActivity } from "./activity";
-import { submitRecording, withdrawConsent } from "./api";
+import { requestUploadTicket, submitRecording, withdrawConsent } from "./api";
 import { campaignAccessToken, storedCampaignUser } from "./auth-client";
 import { createOutbox, type OutboxEvent } from "./outbox";
 import { MIN_WAKE_MS, precheckFromCard, type OutboxItem } from "./outbox-logic";
@@ -24,7 +24,7 @@ import type { CampaignList } from "./api";
  * the client still thought valid gets one renewal and one more try; a second 401 goes back to
  * the outbox, which holds the take until the speaker is signed in again.
  */
-async function uploadSignedIn(item: OutboxItem, onProgress: (sent: number, total: number) => void, signal: AbortSignal) {
+async function uploadSignedIn(item: OutboxItem, onProgress: (sent: number, total: number) => void, signal: AbortSignal, ticket: string | null) {
   const send = (accessToken: string) =>
     uploadAudio({
       file: item.blob,
@@ -34,7 +34,10 @@ async function uploadSignedIn(item: OutboxItem, onProgress: (sent: number, total
       ...(item.upload.dialect ? { dialect: item.upload.dialect } : {}),
       englishDescription: item.upload.englishDescription,
       speakerId: item.upload.speakerId,
+      // Sayari reads the campaign fields from the ticket when there is one; the form fields above
+      // still go, for Sayari until REQUIRE_CAMPAIGN_TICKET is on (docs/SAYARI_UPLOAD_PAYLOAD.json).
       extraFields: item.upload.extraFields,
+      ...(ticket ? { ticket } : {}),
       accessToken,
       onProgress,
       signal,
@@ -70,7 +73,8 @@ export const outbox = createOutbox({
     put: (item) => set(item.id, item, db()),
     remove: (id) => del(id, db()),
   },
-  upload: (item, onProgress, signal) => uploadSignedIn(item, onProgress, signal),
+  upload: (item, onProgress, signal, ticket) => uploadSignedIn(item, onProgress, signal, ticket),
+  requestTicket: (item) => requestUploadTicket(item.missionId, item.metadata.source_sha256, item.metadata.duration_s),
   precheck: (item) => {
     const list = campaignCache.read<CampaignList>(cacheId(item.userId, CAMPAIGNS)).data;
     const card = list?.campaigns?.find((c) => c.campaign_id === item.campaignId);

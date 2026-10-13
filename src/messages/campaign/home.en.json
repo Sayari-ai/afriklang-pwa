@@ -89,6 +89,7 @@
       "signin": "sign in again to send it",
       "partner": "your partner's consent is missing",
       "closed": "the campaign has ended",
+      "unassigned": "this mission is no longer yours",
       "file": "the file was refused; please record it again",
       "server": "the service is having trouble",
       "network": "the connection failed",

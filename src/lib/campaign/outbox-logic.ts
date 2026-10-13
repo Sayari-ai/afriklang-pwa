@@ -2,9 +2,12 @@
  * Pure decisions of the recording outbox: what happens to a queued take after an upload or a
  * submit attempt, and when to try again. Kept apart from IndexedDB and fetch so it can be tested.
  *
- * The life of a take:   pending ──upload──► uploaded ──submit──► (removed, mission "submitted")
- *                          │                      │
+ * The life of a take:   pending ──ticket──► ──upload──► uploaded ──submit──► (removed, mission "submitted")
+ *                          │         │                         │
  *                          └── retry later / held / failed (the contributor decides)
+ *
+ * The ticket is the dashboard's signed permission to upload this one file (docs/contracts). It is
+ * kept on the item and reused while it has more than TICKET_REUSE_MIN_MS left.
  */
 
 import { isRetryable } from "./errors";
@@ -47,7 +50,15 @@ export type OutboxItem = {
   nextAttemptAt: number;
   /** Why it is held or failed: a campaign error code, or an upload failure key. */
   lastCode: string | null;
+  /**
+   * The upload ticket for this file, kept so a retry or an app restart reuses it. Never read by
+   * the app (it is passed through as is). Absent on items saved before tickets existed.
+   */
+  ticket?: StoredTicket | null;
 };
+
+/** A ticket as the outbox keeps it: the opaque value and when it stops being reused (ms, phone clock). */
+export type StoredTicket = { value: string; expiresAt: number };
 
 /** What the UI sees of an item (no audio): `bytes` is the audio's size. */
 export type OutboxSummary = Omit<OutboxItem, "blob"> & { bytes: number };
@@ -106,6 +117,46 @@ export function decideUploadFailure(e: UploadOutcome, attempts: number, online: 
   // the CDN or a deploy in progress: try again later.
   if (FINAL_UPLOAD_STATUSES.has(e.status)) return { kind: "fail", code: "refused" };
   return { kind: "retry", code: e.status >= 400 ? "server" : "other", delayMs: backoffMs(attempts, random) };
+}
+
+/** A ticket is reused only while it has more than this left (an upload on a slow link takes a while). */
+export const TICKET_REUSE_MIN_MS = 2 * MINUTE;
+/** Tickets live about 30 minutes: an `expires_at` further out (a phone clock behind) is not trusted. */
+export const TICKET_MAX_LIFETIME_MS = 30 * MINUTE;
+/** The shape the contract gives a ticket: base64url segments (2, or 3 for a JWS), at most 4 KB. */
+const TICKET_RE = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+){1,2}$/;
+
+/** The item's saved ticket when it can be reused now, else null. */
+export function reusableTicket(item: Pick<OutboxItem, "ticket">, now: number): string | null {
+  const t = item.ticket;
+  return t && typeof t.value === "string" && t.expiresAt - now > TICKET_REUSE_MIN_MS ? t.value : null;
+}
+
+/**
+ * The dashboard's `{ ticket, expires_at }` as the outbox keeps it, or null when it is not usable.
+ * `expires_at`: an ISO 8601 time (unix seconds also accepted). Only the shape is checked: the app
+ * cannot and does not verify a ticket.
+ */
+export function storedTicketFrom(data: unknown, now: number): StoredTicket | null {
+  if (!data || typeof data !== "object") return null;
+  const { ticket, expires_at } = data as Record<string, unknown>;
+  if (typeof ticket !== "string" || ticket.length > 4096 || !TICKET_RE.test(ticket)) return null;
+  const at = typeof expires_at === "number" && Number.isFinite(expires_at) ? expires_at * 1000 : typeof expires_at === "string" ? Date.parse(expires_at) : NaN;
+  if (!Number.isFinite(at)) return null;
+  return { value: ticket, expiresAt: Math.min(at, now + TICKET_MAX_LIFETIME_MS) };
+}
+
+/** After a ticket request failed: as a submit would, except where noted. */
+export type TicketDecision = Decision | { kind: "without" };
+export function decideTicket(res: Pick<CampaignFailure, "ok" | "code" | "reason" | "retryAfterS">, attempts: number, random?: () => number): TicketDecision {
+  // An older dashboard or Edge Function: upload without a ticket, as before tickets existed.
+  if (res.code === "unsupported") return { kind: "without" };
+  // Can never clear for this take (campaign closed, mission no longer theirs...): final, never looped.
+  if (DEAD_CODES.has(res.code)) return { kind: "fail", code: res.code };
+  const d = decideSubmit(res, attempts, random);
+  // A ticket call is small, but it is not retried faster than the upload it leads to.
+  if (d.kind === "retry" && d.code !== "offline") return { ...d, delayMs: Math.max(d.delayMs, uploadBackoffMs(attempts, random)) };
+  return d;
 }
 
 /** Codes that may clear by themselves: keep the take and try again later. */
