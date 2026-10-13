@@ -13,7 +13,7 @@ import { logActivity } from "./activity";
 import { submitRecording, withdrawConsent } from "./api";
 import { campaignAccessToken, storedCampaignUser } from "./auth-client";
 import { createOutbox, type OutboxEvent } from "./outbox";
-import { precheckFromCard, type OutboxItem } from "./outbox-logic";
+import { MIN_WAKE_MS, precheckFromCard, type OutboxItem } from "./outbox-logic";
 import { CAMPAIGNS, markSubmitted, refreshCampaign } from "./queries";
 import { cacheId, campaignCache } from "./cache";
 import type { CampaignList } from "./api";
@@ -110,10 +110,11 @@ export function useOutboxRunner(userId: string | null) {
     const schedule = () => {
       if (timer) clearTimeout(timer);
       timer = null;
+      // Takes waiting for the network wake on "online", not on a timer (APP-006).
+      if (navigator.onLine === false) return;
       const at = outbox.nextWake(userId);
       if (at == null) return;
-      // Takes waiting for the network wake on "online", not on a timer.
-      timer = setTimeout(kick, Math.max(1000, at - Date.now()));
+      timer = setTimeout(kick, Math.max(MIN_WAKE_MS, at - Date.now()));
     };
     const onVisible = () => document.visibilityState === "visible" && kick();
     const offEvent = outbox.onEvent((e: OutboxEvent) => onOutboxEvent(userId, e));

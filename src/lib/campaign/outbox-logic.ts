@@ -123,7 +123,8 @@ export function decideSubmit(
   if (res.code === "already_submitted") return { kind: "superseded" };
   if (res.code === "offline") return { kind: "retry", code: "offline", delayMs: 0 };
   if (DROP_CODES.has(res.code)) return { kind: "drop", code: res.code };
-  if (HOLD_CODES.has(res.code)) return { kind: "hold", code: res.code, delayMs: res.code === "unauthorized" ? 0 : 10 * MINUTE };
+  // Signed out: a minute (signing in again restarts the runner at once anyway). Never 0: a due-now hold would loop.
+  if (HOLD_CODES.has(res.code)) return { kind: "hold", code: res.code, delayMs: res.code === "unauthorized" ? MINUTE : 10 * MINUTE };
   if (DEAD_CODES.has(res.code)) return { kind: "fail", code: res.code };
   if (res.code === "rate_limited") {
     const wait = res.retryAfterS && res.retryAfterS > 0 ? res.retryAfterS * SECOND : 30 * SECOND;
@@ -164,6 +165,9 @@ export function dueItems<T extends Pick<OutboxItem, "state" | "nextAttemptAt" | 
     .filter((i) => i.userId === userId && i.state !== "failed" && i.nextAttemptAt <= now)
     .sort((a, b) => cost(a) - cost(b) || a.createdAt - b.createdAt);
 }
+
+/** The runner never sleeps less than this between passes (a due-now take must not make it spin). */
+export const MIN_WAKE_MS = 5 * SECOND;
 
 /** When the runner should wake up next for this user (ms), or null when nothing is waiting on a timer. */
 export function nextWake(items: readonly Pick<OutboxItem, "state" | "nextAttemptAt" | "userId">[], userId: string): number | null {

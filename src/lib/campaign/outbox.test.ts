@@ -155,6 +155,57 @@ describe("outbox runner", () => {
   });
 });
 
+describe("offline and concurrent edits (APP-006, APP-019)", () => {
+  it("offline, an uploaded take is left exactly as it was (no attempt counted, nothing written, no 'sending' flash)", async () => {
+    const before = item({ uploaded: true, attempts: 2, nextAttemptAt: 0 });
+    const store = memStore([before]);
+    const put = vi.spyOn(store, "put");
+    const submit = vi.fn();
+    const ob = createOutbox({ store, upload: vi.fn(), submit, online: () => false });
+    const active: (string | null)[] = [];
+    ob.subscribe(() => active.push(ob.snapshot().activeId));
+    await ob.drain("u1");
+    expect(submit).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+    expect(store.m.get("sha1")).toEqual(before);
+    expect(active.every((a) => a === null)).toBe(true);
+  });
+
+  it("a network lost during the upload leaves the take untouched", async () => {
+    let online = true;
+    const store = memStore([item()]);
+    const ob = createOutbox({
+      store,
+      upload: async () => {
+        online = false;
+        throw { status: 0, isNetwork: true };
+      },
+      submit: vi.fn(),
+      online: () => online,
+    });
+    await ob.drain("u1");
+    expect(store.m.get("sha1")).toMatchObject({ attempts: 0, nextAttemptAt: 0, lastCode: null });
+  });
+
+  it("'send now' never brings back a take that was sent meanwhile", async () => {
+    const store = memStore([item({ state: "held", nextAttemptAt: 10 ** 12 })]);
+    const realAll = store.all;
+    // The list is read, then the take is sent and removed by another run before the write.
+    store.all = async () => {
+      const list = await realAll();
+      store.m.delete("sha1");
+      return list;
+    };
+    const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true });
+    await ob.retryNow("u1");
+    expect(store.m.size).toBe(0);
+  });
+
+  it("a signed-out hold is never due at once", () => {
+    expect(decideSubmit({ ok: false, code: "unauthorized" }, 0)).toEqual({ kind: "hold", code: "unauthorized", delayMs: 60_000 });
+  });
+});
+
 describe("consent withdrawal (APP-004)", () => {
   it("a submit refused for the campaign consent deletes the take", async () => {
     const store = memStore([item({ uploaded: true })]);

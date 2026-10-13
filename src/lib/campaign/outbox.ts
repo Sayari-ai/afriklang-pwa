@@ -155,12 +155,17 @@ export function createOutbox(deps: OutboxDeps) {
       } catch (e) {
         inflight = null;
         if (ctrl.signal.aborted) return true;
+        // The network went away during the upload: leave the take as it was (no attempt counted,
+        // nothing written) and stop; the runner wakes when the network is back (APP-006).
+        if (!deps.online()) return false;
         const err = (e ?? {}) as UploadErrorLike;
         const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork) }, current.attempts, deps.online());
         await settle(current, d);
         return !stopsRun(d);
       }
     }
+    // Offline: the submit cannot go either. Untouched, as above.
+    if (!deps.online()) return false;
     let res: CampaignResult<{ duplicate: boolean }>;
     try {
       res = await deps.submit(current.missionId, current.metadata);
@@ -168,11 +173,14 @@ export function createOutbox(deps: OutboxDeps) {
       res = { ok: false, status: 0, code: "network", message: "" };
     }
     const d = decideSubmit(res.ok ? { ok: true, duplicate: res.data.duplicate } : res, current.attempts);
+    if (d.kind === "retry" && d.code === "offline") return false;
     await settle(current, d);
     return !stopsRun(d);
   }
 
   async function runOnce(userId: string) {
+    // Offline: nothing can go, so do not even look (no "Sending…" flash, no storage traffic).
+    if (!deps.online()) return;
     let all: OutboxItem[];
     try {
       all = await deps.store.all();
@@ -224,6 +232,8 @@ export function createOutbox(deps: OutboxDeps) {
     },
     /** Drop a take (the contributor discards it, or records the mission again). Stops its upload if it is going. */
     async discard(id: string) {
+      // No lock needed: the runner re-reads a take before sending it and never writes back one
+      // that disappeared during its upload.
       if (inflight?.id === id) inflight.ctrl.abort();
       await deps.store.remove(id);
       await refresh();
@@ -259,10 +269,21 @@ export function createOutbox(deps: OutboxDeps) {
         await refresh();
       }
     },
-    /** Make held and failed-by-network takes due now (a manual "send now"). */
+    /**
+     * Make held and waiting takes due now (a manual "send now"). Runs under the cross-tab lock and
+     * re-reads each take before writing it, so a take another run just uploaded or sent is never
+     * reset or brought back (APP-019).
+     */
     async retryNow(userId: string) {
-      const all = await deps.store.all();
-      await Promise.all(all.filter((i) => i.userId === userId && i.state !== "failed").map((i) => deps.store.put({ ...i, nextAttemptAt: 0, state: "pending" })));
+      const lock = deps.withLock ?? ((run) => run());
+      await lock(async () => {
+        const all = await deps.store.all();
+        for (const listed of all) {
+          if (listed.userId !== userId || listed.state === "failed") continue;
+          const i = await deps.store.get(listed.id);
+          if (i && i.state !== "failed") await deps.store.put({ ...i, nextAttemptAt: 0, state: "pending" });
+        }
+      });
       await refresh();
       return drain(userId);
     },
