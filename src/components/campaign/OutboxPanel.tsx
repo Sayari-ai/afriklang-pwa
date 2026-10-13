@@ -10,7 +10,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCampaignSession } from "@/lib/campaign/hooks";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
+import { usePersistentStorage } from "@/lib/campaign/storage-safety";
 import { outboxReasonKey } from "@/lib/campaign/view";
+import { useInstallPrompt } from "@/stores/install-prompt";
 import { useOnline } from "./CampaignShell";
 
 export function OutboxPanel({ compact = false }: { compact?: boolean }) {
@@ -18,6 +20,8 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
   const session = useCampaignSession();
   const box = useOutbox();
   const online = useOnline();
+  const persisted = usePersistentStorage();
+  const install = useInstallPrompt();
   const userId = session.status === "signedIn" ? session.userId : null;
   const items = box.items.filter((i) => i.userId === userId).sort((a, b) => a.createdAt - b.createdAt);
   if (!userId || items.length === 0) return null;
@@ -53,6 +57,18 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
           </button>
         ) : null}
       </div>
+      {persisted === false && !install.isStandalone && (pending.length || held.length) ? (
+        <div className="mt-3 space-y-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
+          <p>{t("unsafe")}</p>
+          {install.deferredEvent ? (
+            <button type="button" onClick={() => void install.promptNative()} className="min-h-9 rounded-full bg-amber-900 px-3 font-bold text-white">
+              {t("install")}
+            </button>
+          ) : install.isIos ? (
+            <p className="font-semibold">{t("installIos")}</p>
+          ) : null}
+        </div>
+      ) : null}
       {compact ? null : (
         <ul className="mt-3 space-y-2">
           {items.map((i) => {

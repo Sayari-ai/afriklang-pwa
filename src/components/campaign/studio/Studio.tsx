@@ -21,6 +21,7 @@ import { checkTake, sha256Hex, type FullAnalysis, type TakeProblem } from "@/lib
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
 import { buildAudioMetadata, parseDevice } from "@/lib/campaign/audio-metadata";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/campaign/drafts";
+import { LOW_SPACE_BYTES, freeSpaceBytes } from "@/lib/campaign/storage-safety";
 import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
@@ -467,6 +468,10 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         return;
       }
       void clearDraft(userId, campaignId);
+      // Saved. A nearly full phone may lose it before it is sent: say so (APP-007).
+      void freeSpaceBytes().then((free) => {
+        if (free != null && free < LOW_SPACE_BYTES) setMicError(t("saved.lowSpace"));
+      });
       const n = sessionCount + 1;
       setSessionCount(n);
       setFlash(navigator.onLine === false ? "offline" : "online");

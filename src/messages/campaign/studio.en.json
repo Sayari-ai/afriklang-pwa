@@ -66,7 +66,8 @@
   },
   "saved": {
     "flash": "Saved! It will be sent automatically.",
-    "flashOffline": "Saved on your phone. It will be sent when you are back online."
+    "flashOffline": "Saved on your phone. It will be sent when you are back online.",
+    "lowSpace": "Your phone is almost full. Free some space (photos, videos, apps) so your recordings can be kept until they are sent."
   },
   "skip": "Skip for now",
   "mic": {

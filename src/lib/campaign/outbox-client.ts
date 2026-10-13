@@ -14,6 +14,7 @@ import { submitRecording, withdrawConsent } from "./api";
 import { campaignAccessToken, storedCampaignUser } from "./auth-client";
 import { createOutbox, type OutboxEvent } from "./outbox";
 import { MIN_WAKE_MS, precheckFromCard, type OutboxItem } from "./outbox-logic";
+import { askPersistentStorage } from "./storage-safety";
 import { CAMPAIGNS, markSubmitted, refreshCampaign } from "./queries";
 import { cacheId, campaignCache } from "./cache";
 import type { CampaignList } from "./api";
@@ -83,17 +84,10 @@ export const outbox = createOutbox({
       : run(),
 });
 
-/** Ask the browser not to evict takes under storage pressure (best effort, once). */
-let askedPersist = false;
-export function keepTakesSafe() {
-  if (askedPersist) return;
-  askedPersist = true;
-  void navigator.storage?.persist?.().catch(() => false);
-}
-
 /** Save a take and start sending it. */
 export async function enqueueTake(item: OutboxItem) {
-  keepTakesSafe();
+  // Ask the browser not to evict takes under storage pressure (once per app start; APP-007).
+  void askPersistentStorage();
   await outbox.add(item);
   void outbox.drain(item.userId);
 }

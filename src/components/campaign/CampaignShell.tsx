@@ -19,6 +19,7 @@ import { signOutHere } from "@/lib/campaign/sign-out";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
 import { measureClockSkew } from "@/lib/campaign/clock";
 import { saveOfflinePages } from "@/lib/campaign/offline-pages";
+import { askPersistentStorage } from "@/lib/campaign/storage-safety";
 import { useOutbox, useOutboxRunner } from "@/lib/campaign/outbox-client";
 
 const subscribeOnline = (fn: () => void) => {
@@ -37,6 +38,10 @@ export function CampaignShell({ children }: { children: ReactNode }) {
   const userId = session.status === "signedIn" ? session.userId : null;
   useOutboxRunner(userId);
   useOfflinePages();
+  // Signed in: ask for storage the browser will not clear by itself (APP-007).
+  useEffect(() => {
+    if (userId) void askPersistentStorage();
+  }, [userId]);
 
   // The studio is a full-screen, focused space.
   if (/^\/campaign\/[^/]+\/studio/.test(pathname)) return <>{children}</>;

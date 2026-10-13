@@ -66,7 +66,8 @@
   },
   "saved": {
     "flash": "Enregistrée ! Elle sera envoyée automatiquement.",
-    "flashOffline": "Gardée sur votre téléphone. Elle sera envoyée dès votre retour en ligne."
+    "flashOffline": "Gardée sur votre téléphone. Elle sera envoyée dès votre retour en ligne.",
+    "lowSpace": "Votre téléphone est presque plein. Libérez de la place (photos, vidéos, applications) pour que vos enregistrements soient gardés jusqu'à leur envoi."
   },
   "skip": "Passer pour l'instant",
   "mic": {
