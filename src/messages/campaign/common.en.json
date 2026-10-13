@@ -48,6 +48,7 @@
     "getMore": "Get more missions",
     "batchDone": "Nothing left to record in your batch. Get more missions to keep going.",
     "drawFailed": "We could not get new missions. Check your connection and try again.",
+    "clockWrong": "Your phone's date or time looks wrong, so new missions seem to expire at once. Set the date and time to automatic in your phone's settings, then try again.",
     "leaseUntil": "Record these by {date}. Missions not sent by then go to other speakers.",
     "leaseSoon": "{n, plural, one {# hour} other {# hours}} left to record these. Missions not sent in time go to other speakers.",
     "leaseRow": "{n, plural, one {# hour left} other {# hours left}}",
@@ -80,5 +81,21 @@
     "accepted": "Accepted audio",
     "pending": "In review",
     "help": "You are paid for each hour of accepted audio."
+  },
+  "offlinePage": {
+    "title": "You are offline",
+    "body": "This page is not saved on your phone yet. Your missions and the recordings waiting to be sent are safe.",
+    "open": "Open my missions",
+    "retry": "Try again"
+  },
+  "rejection": {
+    "level": "Too quiet or too noisy. Find a quiet place and hold the phone 20 cm away.",
+    "duration": "Too short or too long for this prompt.",
+    "silence": "The silence was not right: wait for “Speak now”, read without long pauses, and stay silent a moment at the end.",
+    "variety": "This recording did not match the campaign's language variety. The team will contact you.",
+    "banned_topic": "This recording touches a topic the campaign does not allow.",
+    "reading_gap": "The recording does not match the sentence. Read it exactly as written.",
+    "speaker_balance": "One voice took almost all of the conversation. Both of you should speak about as much.",
+    "other": "The reviewer could not accept this take."
   }
 }

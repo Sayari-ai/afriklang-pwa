@@ -146,7 +146,13 @@ export type CampaignErrorCode =
   | "misconfigured"
   | "conflict"
   | "rate_limited"
+  /** The backend has no such call yet (an Edge Function or a dashboard older than the app). */
+  | "unsupported"
   | "unknown";
+
+/** The dashboard's rejection reasons (REJECTION_REASONS there). */
+export const REJECTION_REASONS = ["level", "duration", "silence", "variety", "banned_topic", "reading_gap", "speaker_balance", "other"] as const;
+export type RejectionReason = (typeof REJECTION_REASONS)[number];
 
 export type CampaignFailure = {
   ok: false;
@@ -154,7 +160,7 @@ export type CampaignFailure = {
   code: CampaignErrorCode;
   message: string;
   nextStep?: NextStep;
-  reason?: "duration" | "level" | "silence" | "other";
+  reason?: RejectionReason;
   retryAfterS?: number;
   /** Per-field problems of a 400 (Edge Function or dashboard), keyed by the body field name, e.g. "variety" or "recording.duration_s". */
   fieldErrors?: Record<string, string>;

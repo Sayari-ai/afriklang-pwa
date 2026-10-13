@@ -37,7 +37,7 @@
     "cancel": "Cancel"
   },
   "hint": {
-    "tooEarly": "Keep going: at least {min} seconds.",
+    "tooEarly": "Keep going: at least {min, plural, one {# second} other {# seconds}}.",
     "quiet": "We can barely hear you. Come a little closer or speak up.",
     "good": "Sounds good",
     "space": "Tip: press Space to record and stop, Enter to submit."
@@ -47,6 +47,7 @@
     "play": "Play",
     "pause": "Pause",
     "length": "{time} recorded",
+    "restored": "We kept the take you recorded before the app closed. Listen to it, then submit it or record again.",
     "again": "Record again",
     "submit": "Submit & next",
     "submitLast": "Submit",
@@ -55,16 +56,18 @@
   "problem": {
     "title": "Let's try that again",
     "silent": "No sound reached the app. Check the microphone is not covered or muted, then speak clearly.",
-    "too_short": "Too short: please speak for at least {min} seconds.",
-    "too_long": "Too long: please keep it under {max} seconds.",
+    "too_short": "Too short: please speak for at least {min, plural, one {# second} other {# seconds}}.",
+    "too_long": "Too long: please keep it under {max, plural, one {# second} other {# seconds}}.",
     "too_quiet": "A bit too quiet. Hold the phone closer to your mouth and speak up.",
     "clipped": "Too loud, the sound is distorted. Hold the phone a little further away.",
     "silence": "Leave a short silence before and after you speak: wait for “Speak now”, and stay silent a moment after you finish.",
+    "noisy": "Too much background noise: your voice does not stand out. Move away from the noise (TV, fan, street) or hold the phone a little closer.",
     "again": "Record again"
   },
   "saved": {
     "flash": "Saved! It will be sent automatically.",
-    "flashOffline": "Saved on your phone. It will be sent when you are back online."
+    "flashOffline": "Saved on your phone. It will be sent when you are back online.",
+    "lowSpace": "Your phone is almost full. Free some space (photos, videos, apps) so your recordings can be kept until they are sent."
   },
   "skip": "Skip for now",
   "mic": {
@@ -73,11 +76,12 @@
     "unsupported": "This browser cannot record audio. Open the app in a recent Chrome or Safari.",
     "internal": "Recording could not start. Close other apps that use the microphone, then try again.",
     "stopFailed": "The take could not be finished: no sound reached the app. Check the microphone, then record again.",
-    "prepare": "Your take could not be prepared on this device. Try again, or update your browser."
+    "prepare": "Your take could not be prepared on this device. Try again, or update your browser.",
+    "interrupted": "The recording was interrupted (a call, another app, or the microphone was disconnected), so it was not kept. Please record it again."
   },
   "goal": {
     "title": "Session goal reached!",
-    "body": "{n} takes recorded. Take a short break, drink some water, then carry on if you like.",
+    "body": "{n, plural, one {# take recorded.} other {# takes recorded.}} Take a short break, drink some water, then carry on if you like.",
     "keepGoing": "Keep going",
     "finish": "Finish for now"
   },

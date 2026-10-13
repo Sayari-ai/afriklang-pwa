@@ -85,3 +85,28 @@ export const useAppLocale = create<AppLocaleState>((set) => ({
 
   setEffective: (locale) => set({ effective: locale }),
 }));
+
+// ── The invitation's language (APP-029) ─────────────────────────────────
+
+/** "1": the language was taken from the invitation; "chosen": the speaker picked one in the app (System included). */
+const FROM_INVITATION_KEY = "afriklang.app_locale.v1.from_invitation";
+
+/** The speaker picked a language in the app: never replace it with the invitation's. */
+export function forgetInvitationLocale(): void {
+  safeStorage.setItem(FROM_INVITATION_KEY, "chosen");
+}
+
+/**
+ * Use the language the speaker was invited (and consented) in, unless they chose one in the app.
+ * Returns true when the language changed (the caller refreshes the page's messages).
+ */
+export function applyInvitationLocale(locale: Locale, current: string): boolean {
+  const { override, setOverride } = useAppLocale.getState();
+  const mark = safeStorage.getItem(FROM_INVITATION_KEY);
+  if (mark === "chosen") return false;
+  if (override !== null && mark !== "1") return false; // a choice made before this existed
+  if (current === locale && override === locale) return false;
+  safeStorage.setItem(FROM_INVITATION_KEY, "1");
+  setOverride(locale);
+  return current !== locale;
+}

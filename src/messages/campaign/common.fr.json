@@ -48,6 +48,7 @@
     "getMore": "Obtenir d'autres missions",
     "batchDone": "Plus rien à enregistrer dans votre lot. Obtenez d'autres missions pour continuer.",
     "drawFailed": "Impossible d'obtenir de nouvelles missions. Vérifiez votre connexion et réessayez.",
+    "clockWrong": "La date ou l'heure de votre téléphone semble fausse : les nouvelles missions paraissent expirer tout de suite. Réglez la date et l'heure en automatique dans les paramètres du téléphone, puis réessayez.",
     "leaseUntil": "À enregistrer avant le {date}. Les missions non envoyées à temps passent à d'autres locuteurs.",
     "leaseSoon": "Plus que {n, plural, one {# heure} other {# heures}} pour enregistrer ces missions. Celles non envoyées à temps passent à d'autres locuteurs.",
     "leaseRow": "{n, plural, one {# heure restante} other {# heures restantes}}",
@@ -80,5 +81,21 @@
     "accepted": "Audio accepté",
     "pending": "En vérification",
     "help": "Vous êtes payé pour chaque heure d'audio acceptée."
+  },
+  "offlinePage": {
+    "title": "Vous êtes hors ligne",
+    "body": "Cette page n'est pas encore enregistrée sur votre téléphone. Vos missions et les enregistrements en attente d'envoi sont en sécurité.",
+    "open": "Ouvrir mes missions",
+    "retry": "Réessayer"
+  },
+  "rejection": {
+    "level": "Trop faible ou trop bruyant. Mettez-vous dans un endroit calme et tenez le téléphone à 20 cm.",
+    "duration": "Trop court ou trop long pour cette consigne.",
+    "silence": "Le silence n’était pas bon : attendez « Parlez », lisez sans longues pauses et restez silencieux un instant à la fin.",
+    "variety": "Cet enregistrement ne correspond pas à la variété de langue de la campagne. L'équipe vous contactera.",
+    "banned_topic": "Cet enregistrement aborde un sujet que la campagne n'autorise pas.",
+    "reading_gap": "L'enregistrement ne correspond pas à la phrase. Lisez-la exactement comme elle est écrite.",
+    "speaker_balance": "Une seule voix a occupé presque toute la conversation. Parlez chacun à peu près autant.",
+    "other": "La personne qui a vérifié l'enregistrement n'a pas pu l'accepter."
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AUDIO_SCHEMA_VERSION, buildAudioMetadata, parseDevice } from "./audio-metadata";
+import { AUDIO_SCHEMA_VERSION, buildAudioMetadata, parseDevice, varietyFor } from "./audio-metadata";
 import type { CampaignCard, ContributorView, Mission } from "./types";
 
 const card = {
@@ -48,5 +48,18 @@ describe("audio metadata document", () => {
   });
   it("reads OS and browser coarsely", () => {
     expect(parseDevice("Mozilla/5.0 (Linux; Android 14) AppleWebKit Chrome/129 Mobile Safari")).toEqual({ os: "Android", browser: "Chrome" });
+  });
+});
+
+describe("variety per campaign (APP-015)", () => {
+  const card = (code: string, varieties: string[]) => ({ language: { code, name: code, varieties } });
+  const who = (nativeLanguage: string | null, variety: string | null) => ({ profile: { values: { nativeLanguage, variety } } }) as unknown as Parameters<typeof varietyFor>[1];
+  it("labels the audio only with a variety of the campaign's language", () => {
+    expect(varietyFor(card("wol", ["Dakar", "Saloum"]), who("wol", "Dakar"))).toBe("Dakar");
+    // Profile last saved from a Pulaar campaign: not a Wolof variety.
+    expect(varietyFor(card("wol", ["Dakar", "Saloum"]), who("fuc", "Fuuta Tooro"))).toBeNull();
+    expect(varietyFor(card("wol", []), who("wol", "Dakar"))).toBe("Dakar");
+    expect(varietyFor(card("wol", []), who("fuc", "Fuuta Tooro"))).toBeNull();
+    expect(varietyFor(card("wol", ["Dakar"]), who("wol", null))).toBeNull();
   });
 });

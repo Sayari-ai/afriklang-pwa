@@ -10,19 +10,17 @@
  *   uncompressed WAV PCM16 16 kHz mono same shape Flutter produces.
  *   We have to capture raw frames ourselves through an AudioWorklet.
  *
- * Pipeline:
+ * Pipeline (memory bounded: APP-005):
  *
  *     getUserMedia ──► MediaStreamAudioSourceNode
  *                  ──► AudioWorkletNode('pcm-recorder')
- *                       │ on each render quantum (128 frames)
+ *                       │ blocks of ~50 ms at the context's rate
  *                       └─► port.onmessage(Float32Array)
- *                              │ collected into `_chunks`
+ *                              │ downsampled to 16 kHz with an anti-alias filter (as it arrives)
+ *                              │ → PCM16, kept in 1 s blocks (32 KB a second, nothing else)
+ *                              │ → measured as it goes (level, peak, silence: analyze.ts)
  *                              ▼
- *                       on stop():
- *                           concat → resample to 16k if needed
- *                                  → floatToPCM16
- *                                  → encodeWav
- *                                  → Blob('audio/wav')
+ *                       on stop(): Blob('audio/wav') made of the blocks, plus the analysis
  *
  * Browser quirks handled:
  *   - iOS Safari ignores the `sampleRate` AudioContext option (clamps
@@ -39,13 +37,11 @@
  * `start()` twice is a no-op; `stop()` is safe to call from cleanup.
  */
 
-import {
-  concatFloat32,
-  encodeWav,
-  floatToPCM16,
-  resampleLinear,
-  WAV_TARGET_SAMPLE_RATE,
-} from "./wav-encoder";
+import { analysisFromStats, createTakeMeter, type FullAnalysis } from "./analyze";
+import { createDownsampler, wavBlobFromChunks, WAV_TARGET_SAMPLE_RATE, type Downsampler } from "./wav-encoder";
+
+/** PCM16 samples kept per block while recording (one second at 16 kHz). */
+const BLOCK_SAMPLES = WAV_TARGET_SAMPLE_RATE;
 
 const WORKLET_URL = "/audio/pcm-recorder.worklet.js";
 const WORKLET_NAME = "pcm-recorder";
@@ -84,6 +80,8 @@ export interface RecordingResult {
   blob: Blob;
   /** Total recorded duration in seconds (post-resample). */
   durationSec: number;
+  /** Measured while recording: no second pass over the audio is needed. */
+  analysis: FullAnalysis;
   /** Rate the microphone delivered before the resample to 16 kHz (often 48000 on phones). */
   inputSampleRate: number;
   /** What the browser applied to the microphone (from the track's settings), when it says. */
@@ -180,9 +178,21 @@ export class WavRecorder {
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private node: AudioWorkletNode | null = null;
-  private chunks: Float32Array[] = [];
+  /** Finished one-second PCM16 blocks at 16 kHz. */
+  private blocks: Int16Array[] = [];
+  private block = new Int16Array(BLOCK_SAMPLES);
+  private fill = 0;
+  private outSamples = 0;
+  private downsampler: Downsampler | null = null;
+  private meter = createTakeMeter(WAV_TARGET_SAMPLE_RATE);
   private starting: Promise<void> | null = null;
   private isRecording = false;
+  /**
+   * Called when capture is cut by the system while recording (APP-032): the microphone track
+   * ended (a Bluetooth headset disconnected, another app took the mic) or the audio context was
+   * interrupted or suspended (a phone call, Siri). The take would have a gap: the caller drops it.
+   */
+  onInterrupted: ((cause: "mic-ended" | "interrupted") => void) | null = null;
   /** Smoothed RMS of the latest audio (0..1), for a live level meter. */
   private rms = 0;
   private frames = 0;
@@ -255,14 +265,13 @@ export class WavRecorder {
       channelInterpretation: "speakers",
     });
 
-    this.chunks = [];
+    this.resetBuffers(ctx.sampleRate);
     this.rms = 0;
     this.frames = 0;
     node.port.onmessage = (e: MessageEvent<Float32Array>) => {
-      // Worklet posts a fresh Float32Array each quantum; just keep them.
       if (!(e.data instanceof Float32Array)) return;
-      this.chunks.push(e.data);
       this.frames += e.data.length;
+      this.append(this.downsampler!.push(e.data));
       let sum = 0;
       for (let i = 0; i < e.data.length; i++) sum += e.data[i] * e.data[i];
       const now = Math.sqrt(sum / Math.max(1, e.data.length));
@@ -295,13 +304,54 @@ export class WavRecorder {
     this.source = source;
     this.node = node;
     this.isRecording = true;
+
+    const track = stream.getAudioTracks()[0];
+    if (track) track.onended = () => this.isRecording && this.onInterrupted?.("mic-ended");
+    // iOS reports "interrupted" during a call; others suspend the context.
+    ctx.onstatechange = () => {
+      const state = ctx.state as AudioContextState | "interrupted";
+      if (this.isRecording && this.ctx === ctx && (state === "interrupted" || state === "suspended")) this.onInterrupted?.("interrupted");
+    };
+  }
+
+  private resetBuffers(inputRate: number) {
+    this.blocks = [];
+    this.block = new Int16Array(BLOCK_SAMPLES);
+    this.fill = 0;
+    this.outSamples = 0;
+    this.downsampler = createDownsampler(inputRate, WAV_TARGET_SAMPLE_RATE);
+    this.meter = createTakeMeter(WAV_TARGET_SAMPLE_RATE);
+  }
+
+  /** 16 kHz float samples → PCM16 into the current block, measured on the way. */
+  private append(samples: Float32Array) {
+    if (!samples.length) return;
+    const pcm = new Int16Array(samples.length);
+    for (let i = 0; i < samples.length; i++) {
+      const s = samples[i] < -1 ? -1 : samples[i] > 1 ? 1 : samples[i];
+      pcm[i] = s < 0 ? Math.round(s * 0x8000) : Math.round(s * 0x7fff);
+    }
+    this.meter.push(pcm, 1 / 32768);
+    this.outSamples += pcm.length;
+    let from = 0;
+    while (from < pcm.length) {
+      const n = Math.min(pcm.length - from, BLOCK_SAMPLES - this.fill);
+      this.block.set(pcm.subarray(from, from + n), this.fill);
+      this.fill += n;
+      from += n;
+      if (this.fill === BLOCK_SAMPLES) {
+        this.blocks.push(this.block);
+        this.block = new Int16Array(BLOCK_SAMPLES);
+        this.fill = 0;
+      }
+    }
   }
 
   /**
    * Stops the pipeline and returns the encoded WAV. Always cleans up
    * the mic stream and AudioContext before resolving, even on error.
    */
-  async stop(): Promise<RecordingResult> {
+  async stop(opts: { leadS?: number } = {}): Promise<RecordingResult> {
     if (!this.isRecording) {
       throw new RecorderError("stop() called before start().", "internal");
     }
@@ -312,14 +362,12 @@ export class WavRecorder {
     const node = this.node;
     const source = this.source;
     const stream = this.stream;
-    const chunks = this.chunks;
 
     this.isRecording = false;
     this.ctx = null;
     this.node = null;
     this.source = null;
     this.stream = null;
-    this.chunks = [];
 
     try {
       if (node) {
@@ -333,26 +381,24 @@ export class WavRecorder {
       // Best-effort cleanup; swallow.
     }
 
-    if (chunks.length === 0) {
+    if (this.frames === 0 || !this.downsampler) {
       throw new RecorderError("No audio captured.", "internal");
     }
 
-    // Concat → optional resample → PCM16 → WAV.
-    const raw = concatFloat32(chunks);
     const inputRate = ctx?.sampleRate ?? WAV_TARGET_SAMPLE_RATE;
-    const downsampled =
-      inputRate === WAV_TARGET_SAMPLE_RATE
-        ? raw
-        : resampleLinear(raw, inputRate, WAV_TARGET_SAMPLE_RATE);
-
-    const pcm = floatToPCM16(downsampled);
-    const blob = encodeWav(pcm, WAV_TARGET_SAMPLE_RATE);
-    const durationSec = downsampled.length / WAV_TARGET_SAMPLE_RATE;
+    this.append(this.downsampler.flush());
+    const blocks = this.fill > 0 ? [...this.blocks, this.block.slice(0, this.fill)] : this.blocks;
+    const blob = wavBlobFromChunks(blocks, WAV_TARGET_SAMPLE_RATE);
+    const durationSec = this.outSamples / WAV_TARGET_SAMPLE_RATE;
+    const analysis = analysisFromStats(this.meter.stats(), opts);
+    this.resetBuffers(WAV_TARGET_SAMPLE_RATE);
+    this.downsampler = null;
 
     const flag = (v: unknown) => (typeof v === "boolean" ? v : undefined);
     return {
       blob,
       durationSec,
+      analysis,
       inputSampleRate: inputRate,
       processing: { echoCancellation: flag(settings.echoCancellation), noiseSuppression: flag(settings.noiseSuppression), autoGainControl: flag(settings.autoGainControl) },
     };
@@ -379,7 +425,10 @@ export class WavRecorder {
     this.node = null;
     this.source = null;
     this.stream = null;
-    this.chunks = [];
+    this.blocks = [];
+    this.block = new Int16Array(0);
+    this.fill = 0;
+    this.downsampler = null;
   }
 
   get recording(): boolean {

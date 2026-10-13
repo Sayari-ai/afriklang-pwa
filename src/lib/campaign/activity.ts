@@ -57,6 +57,17 @@ export function logActivity(userId: string, a: Omit<Activity, "at"> & { at?: num
   for (const l of [...listeners]) l();
 }
 
+/** Forget a person's activity log on this phone (sign-out). */
+export function clearActivity(userId: string, s: Pick<Storage, "removeItem"> | null = storage() as Storage | null) {
+  memo.delete(userId);
+  try {
+    s?.removeItem(PREFIX + userId);
+  } catch {
+    // ignore
+  }
+  for (const l of [...listeners]) l();
+}
+
 export function subscribeActivity(fn: () => void) {
   listeners.add(fn);
   return () => listeners.delete(fn);

@@ -12,7 +12,8 @@
 
 import { drawMissions, getMissions, listCampaigns, returnMissions, type CampaignList, type DrawResult, type MissionList, type ReturnResult } from "./api";
 import { cacheId, campaignCache } from "./cache";
-import { addDrawn, mergeDrawn, removeReturned, type LastDraw } from "./pool";
+import { measureClockSkew, serverNow } from "./clock";
+import { addDrawn, leaseOver, mergeDrawn, removeReturned, type LastDraw } from "./pool";
 import type { CampaignCard, CampaignResult, Mission, PoolView } from "./types";
 
 export const CAMPAIGNS = "campaigns";
@@ -127,7 +128,11 @@ export function drawForCampaign(userId: string, campaignId: string): Promise<Cam
         }));
       }
       const pool = res.data.pool && typeof res.data.pool === "object" ? res.data.pool : null;
-      campaignCache.put<PoolMemo>(memoId, { last: { at, status: pool?.status ?? "ok", added }, pool });
+      // Fresh missions that already look expired: the phone's clock is wrong even after correcting
+      // it (APP-011). Do not draw again every minute; say so, and measure the clock again.
+      const clockWrong = drawn.length > 0 && drawn.every((m) => leaseOver(m, serverNow()));
+      if (clockWrong) void measureClockSkew(true);
+      campaignCache.put<PoolMemo>(memoId, { last: { at, status: clockWrong ? "clock" : (pool?.status ?? "ok"), added }, pool });
       // The server's own list and counts (its order, the leases) replace the local merge. Also when
       // nothing was added but the server says the speaker holds open missions: the saved list is old.
       if (added > 0 || (pool?.status === "ok" && (pool.open ?? 0) > 0)) refreshCampaign(userId, campaignId);

@@ -7,9 +7,16 @@
     "speakerIdHelp": "Seul cet identifiant accompagne vos enregistrements, jamais votre nom.",
     "signedInAs": "Connecté avec {email}",
     "language": "Langue de l'application",
+    "languages": {
+      "system": "Langue du système",
+      "english": "English",
+      "french": "Français"
+    },
     "signOut": "Se déconnecter",
     "signOutPending": "{n, plural, one {# enregistrement attend} other {# enregistrements attendent}} encore sur ce téléphone. Ils restent ici et seront envoyés à votre prochaine connexion avec ce compte. Se déconnecter quand même ?",
     "offline": "Hors ligne : vos données enregistrées s'affichent",
+    "update": "Une nouvelle version de l'application est prête.",
+    "updateRestart": "Redémarrer",
     "close": "Fermer"
   },
   "home": {
@@ -51,15 +58,25 @@
   },
   "outbox": {
     "sending": "Envoi de vos enregistrements…",
+    "percent": "{pct} %",
     "waiting": "{n, plural, one {# enregistrement en attente d'envoi} other {# enregistrements en attente d'envoi}}",
     "offline": "Vous êtes hors ligne. Ils seront envoyés dès votre reconnexion.",
     "retrying": "Nous réessaierons automatiquement.",
+    "remaining": "Encore {mb, number} Mo à envoyer. Gardez l'application ouverte jusqu'à la fin.",
+    "unsafe": "Ces enregistrements n'existent que sur ce téléphone, et le navigateur peut les effacer s'il manque de place. Installez l'application pour les protéger.",
+    "install": "Installer l'application",
+    "installIos": "Sur iPhone : touchez Partager, puis « Sur l'écran d'accueil ».",
     "held": "{n, plural, one {# enregistrement en attente} other {# enregistrements en attente}}",
     "failed": "{n, plural, one {# enregistrement n'a pas pu être envoyé} other {# enregistrements n'ont pas pu être envoyés}}",
     "sendNow": "Envoyer maintenant",
     "discard": "Supprimer",
     "discardConfirm": "Supprimer cet enregistrement de votre téléphone ? Vous pourrez refaire la mission.",
+    "others": "{n, plural, one {# enregistrement d'un autre compte est sur ce téléphone.} other {# enregistrements d'un autre compte sont sur ce téléphone.}} Ils ne seront envoyés que si ce compte se connecte ici.",
+    "othersDelete": "Les supprimer",
+    "othersConfirm": "Supprimer de ce téléphone les enregistrements de l'autre compte ? Ils n'ont jamais été envoyés et ne pourront pas être récupérés.",
+    "expiresNote": "Les enregistrements qui ne pourront jamais être envoyés sont supprimés du téléphone après 30 jours.",
     "recordAgain": "Recommencer",
+    "tryAgain": "Réessayer",
     "state": {
       "pending": "En attente d'envoi",
       "sending": "Envoi…",
@@ -72,6 +89,7 @@
       "signin": "reconnectez-vous pour l'envoyer",
       "partner": "le consentement de votre partenaire manque",
       "closed": "la campagne est terminée",
+      "unassigned": "cette mission ne vous est plus attribuée",
       "file": "le fichier a été refusé ; enregistrez-le à nouveau",
       "server": "le service rencontre un problème",
       "network": "la connexion a échoué",
@@ -148,6 +166,10 @@
       "duration": "durée",
       "level": "volume",
       "silence": "silence",
+      "variety": "variété de langue",
+      "banned_topic": "sujet non autorisé",
+      "reading_gap": "texte non respecté",
+      "speaker_balance": "équilibre des voix",
       "other": "autre"
     },
     "status": {

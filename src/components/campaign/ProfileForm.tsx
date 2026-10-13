@@ -17,7 +17,6 @@ import {
   OTHER_VARIETY,
   countryOptions,
   initialValues,
-  languageOptions,
   profileErrorsFromServer,
   validateProfile,
   type FieldError,
@@ -68,7 +67,6 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     }
     return countryOptions((c) => names?.of(c) ?? c, locale);
   }, [locale]);
-  const languages = useMemo(() => languageOptions(), []);
   // The "other" option is UI only: it blocks submit and explains, it is never sent.
   const otherVariety = values.variety === OTHER_VARIETY;
 
@@ -228,13 +226,8 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
       </div>
 
       {field(
-        "native_language",
-        t("nativeLanguage"),
-        select("native_language", languages),
-      )}
-      {field(
         "variety",
-        t("variety"),
+        t("variety", { language: card.language.name }),
         select(
           "variety",
           card.language.varieties.map((v) => ({ value: v, label: v })),

@@ -11,9 +11,9 @@ describe("validateProfile", () => {
     expect(r.input?.region).toBe("Thiès");
   });
   it("flags empty and unknown values per field", () => {
-    const r = validateProfile({ ...ok, variety: "Other", country: "", region: "  ", gender: "x", age_band: "10-17", native_language: "zzz" }, varieties);
+    const r = validateProfile({ ...ok, variety: "Other", country: "", region: "  ", gender: "undisclosed", age_band: "10-17" }, varieties);
     expect(r.input).toBeNull();
-    expect(r.errors).toEqual({ variety: "invalid", country: "required", region: "required", gender: "invalid", age_band: "invalid", native_language: "invalid" });
+    expect(r.errors).toEqual({ variety: "invalid", country: "required", region: "required", gender: "invalid", age_band: "invalid" });
   });
   it("limits free text", () => {
     expect(validateProfile({ ...ok, device: "x".repeat(81) }, varieties).errors.device).toBe("tooLong");
@@ -30,6 +30,8 @@ describe("free text and server answers", () => {
   it("marks the fields a 400 named, in either naming style, and ignores the rest", () => {
     expect(profileErrorsFromServer({ variety: "unknown", ageBand: "bad", "recording.duration_s": "x", user_id: "x" })).toEqual({ variety: "server", age_band: "server" });
     expect(profileErrorsFromServer(undefined)).toEqual({});
+    // The native language has no field on the form: its error shows on the variety.
+    expect(profileErrorsFromServer({ nativeLanguage: "unknown" })).toEqual({ variety: "server" });
   });
 });
 
@@ -49,13 +51,20 @@ describe("defaults", () => {
     expect(guessDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 17)")).toBe("iPhone");
     expect(guessDevice("")).toBe("");
   });
-  it("prefers stored values, else the campaign language", () => {
+  it("prefers stored values, but the native language is always the campaign's", () => {
     const card = { language: { code: "wol", name: "Wolof", varieties } };
     const none = initialValues(card, { profile: { complete: false, missing: [], values: null } }, "Android");
     expect(none.native_language).toBe("wol");
     expect(none.device).toBe("Android");
     const stored = initialValues(card, { profile: { complete: false, missing: [], values: { nativeLanguage: "fra", variety: null, country: "SN", region: null, gender: null, ageBand: null, device: "Tecno" } } }, "Android");
-    expect(stored.native_language).toBe("fra");
+    expect(stored.native_language).toBe("wol");
     expect(stored.device).toBe("Tecno");
+  });
+  it("asks the sex again when the stored value is not Female or Male", () => {
+    const card = { language: { code: "wol", name: "Wolof", varieties } };
+    const withGender = (gender: string) => initialValues(card, { profile: { complete: true, missing: [], values: { nativeLanguage: "wol", variety: null, country: null, region: null, gender, ageBand: null, device: null } } }, "");
+    expect(withGender("male").gender).toBe("male");
+    expect(withGender("undisclosed").gender).toBe("");
+    expect(withGender("other").gender).toBe("");
   });
 });

@@ -8,13 +8,15 @@
 import { ArrowLeft, Check, Ear, Hand, Mic, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { logActivity } from "@/lib/campaign/activity";
 import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView } from "@/lib/campaign/types";
-import { daysLeft, hasMissions, openCount, setupStep } from "@/lib/campaign/view";
+import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
+import { useOutbox } from "@/lib/campaign/outbox-client";
+import { daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
 import { LanguageBadge, ProgressRing } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
 import { ConsentStep } from "./ConsentStep";
@@ -69,6 +71,8 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
   const session = useCampaignSession();
   const userId = session.status === "signedIn" ? session.userId : null;
   const [correcting, setCorrecting] = useState(false);
+  /** After a withdrawal: how many takes of the campaign were deleted from the phone. */
+  const [withdrawn, setWithdrawn] = useState<number | null>(null);
   const step = setupStep(card.next_step);
   const done = card.progress.submitted + card.progress.accepted;
   const days = daysLeft(card.deadline);
@@ -77,7 +81,10 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
   const missionRes = useCampaignMissions(card.campaign_id, card.next_step === "ready");
   const live = useLiveMissions(missionRes.state === "ready" ? missionRes.data.missions : null);
   const pool = usePool(card, card.next_step === "ready" ? live : null, true);
-  const open = pool.pool && pool.open != null ? pool.open : openCount(card);
+  const box = useOutbox();
+  const onPhone = useMemo(() => missionsInOutbox(box.items.filter((i) => i.userId === userId && i.campaignId === card.campaign_id)), [box.items, userId, card.campaign_id]);
+  // The same count as the mission tabs: the list minus the takes waiting on the phone (MAN-004).
+  const open = live ? toRecordCount(live, onPhone) : openCountOnPhone(card, [...onPhone.values()].filter((s) => s !== "failed").length);
 
   const after = useCallback(
     (type: "profile" | "consent" | "withdrawn") => () => {
@@ -111,6 +118,14 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
           </span>
         </div>
       </header>
+
+      {withdrawn !== null ? (
+        <div role="status">
+          <Notice title={tf("hub.withdrawnTitle")}>
+            <p>{tf("hub.withdrawnDeleted", { n: withdrawn })}</p>
+          </Notice>
+        </div>
+      ) : null}
 
       {step ? <Stepper current={step} /> : null}
 
@@ -178,7 +193,13 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
           <details className="group rounded-2xl bg-white p-4 ring-1 ring-slate-200">
             <summary className="cursor-pointer list-none text-sm font-bold text-slate-700">{t("hub.more")}</summary>
             <div className="mt-3 space-y-3">
-              <Instructions card={card} onWithdrawn={after("withdrawn")} />
+              <Instructions
+                card={card}
+                onWithdrawn={(deleted) => {
+                  setWithdrawn(deleted);
+                  after("withdrawn")();
+                }}
+              />
               <GiveBack state={pool} />
             </div>
           </details>

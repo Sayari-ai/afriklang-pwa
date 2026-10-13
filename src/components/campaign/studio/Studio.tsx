@@ -17,29 +17,34 @@ import { Check, ChevronRight, CloudOff, RotateCcw, SkipForward, X } from "lucide
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { analyzeWav, checkTake, sha256Hex, type TakeAnalysis, type TakeProblem } from "@/lib/audio/analyze";
+import { checkTake, sha256Hex, type FullAnalysis, type TakeProblem } from "@/lib/audio/analyze";
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
-import { buildAudioMetadata, parseDevice } from "@/lib/campaign/audio-metadata";
+import { buildAudioMetadata, parseDevice, varietyFor } from "@/lib/campaign/audio-metadata";
+import { clearDraft, loadDraft, saveDraft } from "@/lib/campaign/drafts";
+import { LOW_SPACE_BYTES, freeSpaceBytes } from "@/lib/campaign/storage-safety";
 import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import { buildMetadata, buildSayariCampaignFields, deviceLabel, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
-import { QUIET_HINT_AFTER_S, TEXT_SIZES, canRecordNow, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
+import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
 import { isRefusal } from "@/lib/campaign/pool";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
+import { toRecordCount } from "@/lib/campaign/view";
 import { PoolRefusal } from "../PoolParts";
 import { Confetti, PromptCard, RecordButton, SessionBar, TakePlayer } from "./StudioParts";
 
 type Phase = "idle" | "countdown" | "lead" | "speaking" | "tail" | "analyzing" | "problem" | "review" | "saving" | "goal" | "done";
 type Take = {
   blob: Blob;
-  analysis: TakeAnalysis & { sample_rate: number; channels: number; peaks: number[] };
+  analysis: FullAnalysis;
   recordedAt: Date;
   inputSampleRate: number;
   processing: { echoCancellation?: boolean; noiseSuppression?: boolean; autoGainControl?: boolean };
   quietHintShown: boolean;
   takeNumber: number;
+  /** Brought back from the phone's storage after the app closed (drafts.ts). */
+  restored?: boolean;
 };
 
 const COUNTDOWN_S = 3;
@@ -58,7 +63,8 @@ type Props = {
 };
 
 export function Studio({ campaignId, card, missions, userId, speakerId, contributor, startId, pool = null }: Props) {
-  const dialect = contributor.profile.values?.variety ?? null;
+  // Only a variety of this campaign's language labels its audio (APP-015).
+  const dialect = varietyFor(card, contributor);
   const locale = useLocale();
   // One id per studio visit: groups the takes of a sitting in the dataset.
   const [sessionId] = useState(() => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `s-${Date.now().toString(36)}`));
@@ -120,6 +126,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const timed = mission ? isTimed(mission.type) : false;
   const minS = mission ? (mission.duration_s.min ?? rules?.durationMinS ?? 0) : 0;
   const maxS = mission && timed ? (mission.duration_s.max ?? rules?.durationMaxS ?? null) : null;
+  // Every take stops by itself, read ones included (APP-005: a forgotten recording must not grow until the phone runs out of memory).
+  const stopAtS = mission && rules ? autoStopAtS(timed, mission.duration_s.max ?? rules.durationMaxS, pad) : autoStopAtS(false, 0, pad);
 
   const recorderRef = useRef<WavRecorder | null>(null);
   const currentIdRef = useRef<string | null>(currentId);
@@ -128,6 +136,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const levelRef = useRef(-100);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const busy = useRef(false);
+  const phaseRef = useRef<Phase>(phase);
   const statusRef = useRef<HTMLParagraphElement>(null);
 
   const clearTimers = () => {
@@ -151,6 +160,27 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     return teardown;
   }, [teardown]);
 
+  // A take cut by a call, a lost microphone or the app going to the background is dropped, with a
+  // clear message, instead of being kept with a gap (APP-032).
+  const interrupt = () => {
+    if (!recorderRef.current) return;
+    teardown();
+    setElapsed(0);
+    setQuiet(false);
+    setMicError(t("mic.interrupted"));
+    setPhase("idle");
+    vibrate([40, 60, 40]);
+  };
+  const interruptRef = useRef(interrupt);
+  useEffect(() => {
+    const onHide = () => {
+      const p = phaseRef.current;
+      if (document.visibilityState === "hidden" && (p === "lead" || p === "speaking" || p === "tail")) interruptRef.current();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, []);
+
   // Keep the screen on while the studio is open.
   useEffect(() => {
     let lock: WakeLockSentinel | null = null;
@@ -165,6 +195,26 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       void lock?.release().catch(() => {});
     };
   }, []);
+
+  // A take recorded before the app closed (crash, call, closed tab) comes back on the review screen.
+  useEffect(() => {
+    let cancelled = false;
+    void loadDraft(userId, campaignId).then((d) => {
+      if (cancelled || !d) return;
+      const m = byIdRef.current.get(d.missionId);
+      if (!m || !canRecordNow(m, onPhoneRef.current)) return void clearDraft(userId, campaignId);
+      if (phaseRef.current !== "idle" && phaseRef.current !== "done") return;
+      takesRef.current.set(d.missionId, d.takeNumber);
+      setQueue((q) => (q.includes(d.missionId) ? q : [d.missionId, ...q]));
+      setCurrentId(d.missionId);
+      setProblem(null);
+      setTake({ blob: d.blob, analysis: d.analysis, recordedAt: new Date(d.recordedAt), inputSampleRate: d.inputSampleRate, processing: d.processing, quietHintShown: d.quietHintShown, takeNumber: d.takeNumber, restored: true });
+      setPhase("review");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, campaignId]);
 
   // The address shows the current mission, so a reload comes back to it.
   useEffect(() => {
@@ -214,16 +264,22 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     clearTimers();
     setPhase("analyzing");
     try {
-      const { blob, inputSampleRate, processing } = await rec.stop();
+      // The recorder measured the take while it was recorded: no second pass over the audio.
+      // The lead (recorded before "Speak now") is known silence: it gives the background level.
+      const { blob, analysis, inputSampleRate, processing } = await rec.stop({ leadS: pad });
       const recordedAt = new Date();
       recorderRef.current = null;
-      const analysis = await analyzeWav(blob);
       if (attempt !== attemptRef.current) return;
-      const p = checkTake(analysis, rules);
       const mid = currentIdRef.current ?? "";
       const takeNumber = (takesRef.current.get(mid) ?? 0) + 1;
       takesRef.current.set(mid, takeNumber);
-      setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown: quietShownRef.current, takeNumber });
+      const quietHintShown = quietShownRef.current;
+      // Saved on the phone before anything else, so a crash from here on cannot lose it.
+      await saveDraft({ v: 1, userId, campaignId, missionId: mid, blob, analysis, recordedAt: recordedAt.getTime(), inputSampleRate, processing, quietHintShown, takeNumber });
+      if (attempt !== attemptRef.current) return;
+      const p = checkTake(analysis, rules);
+      if (p) void clearDraft(userId, campaignId);
+      setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown, takeNumber });
       setProblem(p);
       setPhase(p ? "problem" : "review");
       vibrate(p ? [40, 60, 40] : 30);
@@ -233,7 +289,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       setMicError(t("mic.stopFailed"));
       setPhase("idle");
     }
-  }, [rules, t]);
+  }, [rules, t, userId, campaignId, pad]);
 
   const beginTail = useCallback(() => {
     clearTimers();
@@ -254,6 +310,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       }
       const rec = new WavRecorder();
       recorderRef.current = rec;
+      // Cut by the system (call, mic gone): the take would have a gap, drop it and say so (APP-032).
+      rec.onInterrupted = () => interruptRef.current();
       await rec.start(stream ?? undefined);
       if (attempt !== attemptRef.current) return void rec.dispose();
       const startedAt = Date.now();
@@ -281,12 +339,12 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         last = now;
         if (quietFor >= QUIET_HINT_AFTER_S) quietShownRef.current = true;
         setQuiet(quietFor >= QUIET_HINT_AFTER_S);
-        if (maxS != null && s >= maxS - pad) return beginTailRef.current();
+        if (s >= stopAtS) return beginTailRef.current();
         timers.current.push(setTimeout(tick, 100));
       };
       timers.current.push(setTimeout(tick, 100));
     },
-    [maxS, pad, rules?.minLevelDbfs],
+    [stopAtS, pad, rules?.minLevelDbfs],
   );
 
   useEffect(() => {
@@ -312,6 +370,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     setMicError(null);
     setProblem(null);
     setTake(null);
+    // Recording again replaces the take kept on the phone.
+    void clearDraft(userId, campaignId);
     const p = acquireMicStream();
     streamRef.current = p;
     p.catch((e) => {
@@ -431,6 +491,11 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         setPhase("review");
         return;
       }
+      void clearDraft(userId, campaignId);
+      // Saved. A nearly full phone may lose it before it is sent: say so (APP-007).
+      void freeSpaceBytes().then((free) => {
+        if (free != null && free < LOW_SPACE_BYTES) setMicError(t("saved.lowSpace"));
+      });
       const n = sessionCount + 1;
       setSessionCount(n);
       setFlash(navigator.onLine === false ? "offline" : "online");
@@ -455,6 +520,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   // Timers and key handlers read the latest values through refs, updated after each render.
   useLayoutEffect(() => {
     onPhoneRef.current = onPhone;
+    phaseRef.current = phase;
+    interruptRef.current = interrupt;
     currentIdRef.current = currentId;
     byIdRef.current = byId;
     beginTailRef.current = beginTail;
@@ -491,12 +558,16 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   function leave(e: React.MouseEvent) {
     if (unsaved && !window.confirm(t("closeConfirm"))) e.preventDefault();
-    else teardown();
+    else {
+      teardown();
+      void clearDraft(userId, campaignId);
+    }
   }
 
   // ── Render ──────────────────────────────────────────────────────────────
 
-  const open = missions.filter((m) => m.status === "todo" || m.status === "rejected").length;
+  // Takes waiting on the phone are done as far as the speaker is concerned (MAN-004, APP-026).
+  const open = toRecordCount(missions, onPhone);
   const shell = (children: React.ReactNode, footer?: React.ReactNode) => (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_80%_at_50%_0%,#0a5bb0_0%,#00396f_45%,#001b36_100%)] text-white">
       <p ref={statusRef} className="sr-only" role="status" aria-live="polite">
@@ -623,6 +694,11 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     phase === "review" || phase === "saving" ? (
       take ? (
         <div className="afk-pop flex flex-col gap-3">
+          {take.restored ? (
+            <p role="status" className="rounded-2xl bg-white/10 px-4 py-3 text-sm text-white/90">
+              {t("review.restored")}
+            </p>
+          ) : null}
           <p className="text-center text-sm font-semibold text-white/80">{t("review.length", { time: formatClock(take.analysis.duration_s) })}</p>
           <TakePlayer blob={take.blob} peaks={take.analysis.peaks} durationS={take.analysis.duration_s} />
           <div className="grid grid-cols-[auto_1fr] gap-3">
@@ -647,8 +723,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
             {maxS ? <span className="text-lg font-semibold text-white/60"> / {formatClock(maxS)}</span> : null}
           </p>
         ) : null}
-        <RecordButton mode={buttonMode} count={count} onPress={press} disabled={phase === "speaking" && !canStop} levelRef={levelRef} minLevelDbfs={rules.minLevelDbfs} progress={progress} label={buttonLabel} />
-        <p className="min-h-5 text-center text-sm text-white/75">
+        <RecordButton mode={buttonMode} count={count} onPress={press} disabled={phase === "speaking" && !canStop} describedBy="rec-hint" levelRef={levelRef} minLevelDbfs={rules.minLevelDbfs} progress={progress} label={buttonLabel} />
+        <p id="rec-hint" className="min-h-5 text-center text-sm text-white/75">
           {phase === "speaking" && quiet ? <span className="font-semibold text-amber-200">{t("hint.quiet")}</span> : phase === "speaking" && !canStop ? t("hint.tooEarly", { min: minS }) : null}
         </p>
         {phase === "idle" || phase === "problem" ? (

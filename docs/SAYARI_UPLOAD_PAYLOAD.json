@@ -1,16 +1,60 @@
 {
   "title": "Audio upload from the Afriklang app to Sayari (campaign recordings)",
-  "version": "2026-10-12",
+  "version": "2026-10-13",
   "request": {
     "method": "POST",
     "path": "/api/audio/upload",
     "content_type": "multipart/form-data",
-    "auth": "X-Upload-Key header, added by the app's server-side proxy (/api/audio-upload). The browser never holds it.",
+    "auth": "X-Upload-Key header, added by the app's server-side proxy (/api/audio-upload). The browser never holds it. Campaign takes also carry X-Campaign-Ticket (see 'ticket').",
     "notes": [
       "All fields are multipart text parts; the audio is the 'files' part. Numbers are sent as decimal strings (for example \"8.2\").",
       "Absent values are left out, never sent empty.",
-      "Fields marked campaign_only are sent for campaign recordings only; the older learning-app upload sends the first six fields and nothing else.",
-      "No name, email, phone number or account id is ever sent. The speaker_id is the only identity."
+      "No name, email, phone number or account id is ever sent. The speaker_id is the only identity.",
+      "Fields marked campaign_only are sent for campaign recordings only.",
+      "Fields marked ignored_with_ticket are still sent, but Sayari reads those values from the ticket on the ticket path. Once REQUIRE_CAMPAIGN_TICKET is on, they are informational only."
+    ]
+  },
+  "ticket": {
+    "header": "X-Campaign-Ticket",
+    "since": "2026-10-13",
+    "format": "base64url(payload_json) \".\" base64url(HMAC-SHA256(SAYARI_TICKET_SECRET, base64url(payload_json))), no padding. Contract: docs/contracts/README.md §1, payload schema docs/contracts/upload-ticket.schema.json, test vectors docs/contracts/test-vectors.json.",
+    "issued_by": "The dashboard (POST /api/pwa/campaigns/missions/upload-ticket), for ONE file of one mission, through the app's Edge Function action upload_ticket. About 30 minutes valid.",
+    "app_behaviour": [
+      "The app and its proxy never verify, decode or hold the secret of a ticket: the proxy checks only its shape (base64url segments, at most 4 KB) and forwards it. It is the only browser header forwarded besides content-type.",
+      "The app reuses a ticket for the same file while it has more than 2 minutes left (retries, app restarts), and asks for a new one otherwise.",
+      "Sayari's 401 invalid_ticket reaches the app as 409 { error: invalid_ticket } (a 401 would mean 'signed out'); 409 ticket_used passes through. Both make the app fetch a new ticket. 422 sha_mismatch is final for that take.",
+      "No ticket is sent while the dashboard does not issue them (an older dashboard or Edge Function): the upload then goes exactly as before, form fields only."
+    ],
+    "sayari_takes_from_ticket": [
+      "campaign_id",
+      "campaign_code",
+      "mission_id",
+      "mission_code",
+      "mission_type",
+      "prompt_id",
+      "language",
+      "variety (instead of the dialect field)",
+      "domain",
+      "speaker_ids (instead of speaker_id and partner_speaker_id)",
+      "source_sha256",
+      "duration_max_s"
+    ],
+    "still_from_the_form": [
+      "files",
+      "english_description (the prompt text is not in the ticket)",
+      "consent_recorded",
+      "sub_domain",
+      "prompt_category",
+      "format",
+      "sample_rate",
+      "channels",
+      "duration_s",
+      "level_dbfs",
+      "peak_dbfs",
+      "silence_before_s",
+      "silence_after_s",
+      "device",
+      "metadata"
     ]
   },
   "fields": {
@@ -26,7 +70,8 @@
       "required": true,
       "type": "string",
       "example": "wol",
-      "description": "ISO 639-3 code of the campaign's language."
+      "description": "ISO 639-3 code of the campaign's language.",
+      "ignored_with_ticket": true
     },
     "consent_recorded": {
       "required": true,
@@ -42,7 +87,8 @@
       "required": false,
       "type": "string",
       "example": "Baol-Baol",
-      "description": "The variety the contributor declared in their profile."
+      "description": "The variety the contributor declared in their profile.",
+      "ignored_with_ticket": true
     },
     "english_description": {
       "required": false,
@@ -55,7 +101,8 @@
       "type": "string",
       "pattern": "^SPK-[A-Z0-9]{8}$",
       "example": "SPK-7Q2M9X4D",
-      "description": "Pseudonymous speaker ID, created on the contributor's first profile save and never changed. Always present for campaign recordings."
+      "description": "Pseudonymous speaker ID, created on the contributor's first profile save and never changed. Always present for campaign recordings.",
+      "ignored_with_ticket": true
     },
     "campaign_id": {
       "campaign_only": true,
@@ -63,21 +110,24 @@
       "type": "string",
       "format": "uuid",
       "example": "3f1d2c4e-8a7b-4c59-9e0a-1b2c3d4e5f60",
-      "description": "Dashboard's campaign id."
+      "description": "Dashboard's campaign id.",
+      "ignored_with_ticket": true
     },
     "campaign_code": {
       "campaign_only": true,
       "required": true,
       "type": "string",
       "example": "WOL_FIN_PILOT_01",
-      "description": "Human-readable campaign code. Use it to look up the campaign's pre-annotation settings and delivery rules."
+      "description": "Human-readable campaign code. Use it to look up the campaign's pre-annotation settings and delivery rules.",
+      "ignored_with_ticket": true
     },
     "domain": {
       "campaign_only": true,
       "required": true,
       "type": "string",
       "example": "Banking and Fintech",
-      "description": "Campaign topic domain."
+      "description": "Campaign topic domain.",
+      "ignored_with_ticket": true
     },
     "sub_domain": {
       "campaign_only": true,
@@ -92,14 +142,16 @@
       "type": "string",
       "format": "uuid",
       "example": "a8c0e6d2-5b41-4f7e-9d13-2c6f0b7a9e11",
-      "description": "Dashboard's mission id (one mission = one prompt for one contributor)."
+      "description": "Dashboard's mission id (one mission = one prompt for one contributor).",
+      "ignored_with_ticket": true
     },
     "mission_code": {
       "campaign_only": true,
       "required": true,
       "type": "string",
       "example": "WOL_FIN_PILOT_01_M0007",
-      "description": "Human-readable mission code."
+      "description": "Human-readable mission code.",
+      "ignored_with_ticket": true
     },
     "mission_type": {
       "campaign_only": true,
@@ -111,14 +163,16 @@
         "conversational"
       ],
       "example": "read",
-      "description": "Speech type. Drives the transcription type and, for conversations, how the channels are read."
+      "description": "Speech type. Drives the transcription type and, for conversations, how the channels are read.",
+      "ignored_with_ticket": true
     },
     "prompt_id": {
       "campaign_only": true,
       "required": true,
       "type": "string",
       "example": "WOL_FIN_PILOT_01_P007",
-      "description": "The prompt the mission was generated from."
+      "description": "The prompt the mission was generated from.",
+      "ignored_with_ticket": true
     },
     "prompt_category": {
       "campaign_only": true,
@@ -133,7 +187,8 @@
       "type": "string",
       "pattern": "^SPK-[A-Z0-9]{8}$",
       "example": "SPK-K3N8T5WA",
-      "description": "Conversational missions only: the other speaker. One device records both, so both speaker IDs belong to this one file."
+      "description": "Conversational missions only: the other speaker. One device records both, so both speaker IDs belong to this one file.",
+      "ignored_with_ticket": true
     },
     "source_sha256": {
       "campaign_only": true,
@@ -141,7 +196,8 @@
       "type": "string",
       "pattern": "^[0-9a-f]{64}$",
       "example": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-      "description": "SHA-256 of the uploaded file. The dashboard uses it to recognise a retried upload; Sayari can use it to refuse a duplicate."
+      "description": "SHA-256 of the uploaded file. The dashboard uses it to recognise a retried upload; Sayari can use it to refuse a duplicate. On the ticket path Sayari compares the sha-256 of the bytes it received with the ticket's source_sha256 (422 sha_mismatch).",
+      "ignored_with_ticket": true
     },
     "format": {
       "campaign_only": true,
@@ -246,12 +302,14 @@
   "response_expected": {
     "status": 200,
     "body": {
-      "audio_id": "string, Sayari's id for the recording"
+      "audio_id": "string, Sayari's id for the recording",
+      "duplicate": "boolean, ticket path: true when (mission_id, source_sha256) already existed"
     },
     "notes": [
       "The app accepts audio_id, id or recording_id (also inside files/results/items/data/uploaded) and forwards it to the dashboard as sayari_recording_id. A missing id is tolerated.",
       "The app never retries an upload by itself; an error shows a message and the contributor taps again. The dashboard answers a repeated source_sha256 with duplicate: true, so Sayari should accept or refuse a repeated source_sha256 consistently.",
-      "Error statuses the app understands: 413 too large, 429 rate limited, 5xx server, 4xx refused."
+      "Error statuses the app understands: 413 too large, 429 rate limited, 5xx server, 400/415/422 refused (final), 409 ticket refused or used (new ticket, try again), other 4xx retried later.",
+      "Ticket path: an upload of a file Sayari already holds for that mission answers 200 with duplicate: true and the existing id, even with a new ticket."
     ]
   },
   "not_sent_by_the_app_decide_with_dashboard_team": {

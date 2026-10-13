@@ -1,0 +1,62 @@
+{
+  "description": "Shared test vectors. Every implementation (TypeScript in the dashboard and the app, Python in Sayari) must reproduce these exactly. Keys are test-only values, never used anywhere else.",
+  "upload_ticket": [
+    {
+      "key": "test-ticket-secret-0123456789abcdef",
+      "payload": {
+        "v": 1,
+        "jti": "9b2e6c1a-3f4d-4e5a-8b7c-1d2e3f4a5b6c",
+        "exp": 1760360000,
+        "campaign_id": "3f1d2c4e-8a7b-4c59-9e0a-1b2c3d4e5f60",
+        "campaign_code": "WOL_FIN_PILOT_01",
+        "mission_id": "a8c0e6d2-5b41-4f7e-9d13-2c6f0b7a9e11",
+        "mission_code": "WOL_FIN_PILOT_01_M0007",
+        "mission_type": "read",
+        "prompt_id": "WOL_FIN_PILOT_01_P007",
+        "language": "wol",
+        "variety": "Baol-Baol",
+        "domain": "FIN",
+        "speaker_ids": [
+          "SPK-7Q2M9X4D"
+        ],
+        "source_sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        "duration_max_s": 15
+      },
+      "payload_json": "{\"v\":1,\"jti\":\"9b2e6c1a-3f4d-4e5a-8b7c-1d2e3f4a5b6c\",\"exp\":1760360000,\"campaign_id\":\"3f1d2c4e-8a7b-4c59-9e0a-1b2c3d4e5f60\",\"campaign_code\":\"WOL_FIN_PILOT_01\",\"mission_id\":\"a8c0e6d2-5b41-4f7e-9d13-2c6f0b7a9e11\",\"mission_code\":\"WOL_FIN_PILOT_01_M0007\",\"mission_type\":\"read\",\"prompt_id\":\"WOL_FIN_PILOT_01_P007\",\"language\":\"wol\",\"variety\":\"Baol-Baol\",\"domain\":\"FIN\",\"speaker_ids\":[\"SPK-7Q2M9X4D\"],\"source_sha256\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\"duration_max_s\":15}",
+      "ticket": "eyJ2IjoxLCJqdGkiOiI5YjJlNmMxYS0zZjRkLTRlNWEtOGI3Yy0xZDJlM2Y0YTViNmMiLCJleHAiOjE3NjAzNjAwMDAsImNhbXBhaWduX2lkIjoiM2YxZDJjNGUtOGE3Yi00YzU5LTllMGEtMWIyYzNkNGU1ZjYwIiwiY2FtcGFpZ25fY29kZSI6IldPTF9GSU5fUElMT1RfMDEiLCJtaXNzaW9uX2lkIjoiYThjMGU2ZDItNWI0MS00ZjdlLTlkMTMtMmM2ZjBiN2E5ZTExIiwibWlzc2lvbl9jb2RlIjoiV09MX0ZJTl9QSUxPVF8wMV9NMDAwNyIsIm1pc3Npb25fdHlwZSI6InJlYWQiLCJwcm9tcHRfaWQiOiJXT0xfRklOX1BJTE9UXzAxX1AwMDciLCJsYW5ndWFnZSI6IndvbCIsInZhcmlldHkiOiJCYW9sLUJhb2wiLCJkb21haW4iOiJGSU4iLCJzcGVha2VyX2lkcyI6WyJTUEstN1EyTTlYNEQiXSwic291cmNlX3NoYTI1NiI6IjlmODZkMDgxODg0YzdkNjU5YTJmZWFhMGM1NWFkMDE1YTNiZjRmMWIyYjBiODIyY2QxNWQ2YzE1YjBmMDBhMDgiLCJkdXJhdGlvbl9tYXhfcyI6MTV9.euXA_YikTsRJgR1N9_AGgt8iwrpOQ1S3wtNQVeEsGQI"
+    },
+    {
+      "key": "test-ticket-secret-0123456789abcdef",
+      "payload": {
+        "v": 1,
+        "jti": "0c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
+        "exp": 1760363600,
+        "campaign_id": "3f1d2c4e-8a7b-4c59-9e0a-1b2c3d4e5f60",
+        "campaign_code": "WOL_FIN_PILOT_01",
+        "mission_id": "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e",
+        "mission_code": "WOL_FIN_PILOT_01_M0012",
+        "mission_type": "conversational",
+        "prompt_id": "WOL_FIN_PILOT_01_C001",
+        "language": "wol",
+        "variety": "Saloum-Saloum",
+        "domain": "FIN",
+        "speaker_ids": [
+          "SPK-7Q2M9X4D",
+          "SPK-K3N8T5WA"
+        ],
+        "source_sha256": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+        "duration_max_s": 60
+      },
+      "payload_json": "{\"v\":1,\"jti\":\"0c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"exp\":1760363600,\"campaign_id\":\"3f1d2c4e-8a7b-4c59-9e0a-1b2c3d4e5f60\",\"campaign_code\":\"WOL_FIN_PILOT_01\",\"mission_id\":\"b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d5e\",\"mission_code\":\"WOL_FIN_PILOT_01_M0012\",\"mission_type\":\"conversational\",\"prompt_id\":\"WOL_FIN_PILOT_01_C001\",\"language\":\"wol\",\"variety\":\"Saloum-Saloum\",\"domain\":\"FIN\",\"speaker_ids\":[\"SPK-7Q2M9X4D\",\"SPK-K3N8T5WA\"],\"source_sha256\":\"2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae\",\"duration_max_s\":60}",
+      "ticket": "eyJ2IjoxLCJqdGkiOiIwYzFkMmUzZi00YTViLTRjNmQtOGU3Zi05YTBiMWMyZDNlNGYiLCJleHAiOjE3NjAzNjM2MDAsImNhbXBhaWduX2lkIjoiM2YxZDJjNGUtOGE3Yi00YzU5LTllMGEtMWIyYzNkNGU1ZjYwIiwiY2FtcGFpZ25fY29kZSI6IldPTF9GSU5fUElMT1RfMDEiLCJtaXNzaW9uX2lkIjoiYjFjMmQzZTQtZjVhNi00YjdjLThkOWUtMGYxYTJiM2M0ZDVlIiwibWlzc2lvbl9jb2RlIjoiV09MX0ZJTl9QSUxPVF8wMV9NMDAxMiIsIm1pc3Npb25fdHlwZSI6ImNvbnZlcnNhdGlvbmFsIiwicHJvbXB0X2lkIjoiV09MX0ZJTl9QSUxPVF8wMV9DMDAxIiwibGFuZ3VhZ2UiOiJ3b2wiLCJ2YXJpZXR5IjoiU2Fsb3VtLVNhbG91bSIsImRvbWFpbiI6IkZJTiIsInNwZWFrZXJfaWRzIjpbIlNQSy03UTJNOVg0RCIsIlNQSy1LM044VDVXQSJdLCJzb3VyY2Vfc2hhMjU2IjoiMmMyNmI0NmI2OGZmYzY4ZmY5OWI0NTNjMWQzMDQxMzQxMzQyMmQ3MDY0ODNiZmEwZjk4YTVlODg2MjY2ZTdhZSIsImR1cmF0aW9uX21heF9zIjo2MH0.xIuhTBsEDg8n8vVgj_NAFyMLPxdc7Dh2fOX69mttB28"
+    }
+  ],
+  "verdict_signature": [
+    {
+      "key": "test-verdict-secret-fedcba9876543210",
+      "timestamp": "1760349600",
+      "raw_body": "{\"events\":[{\"event_id\":\"5d0c8f3e-2b1a-4c9d-8e7f-6a5b4c3d2e1f\",\"sayari_recording_id\":\"48211\",\"mission_id\":\"a8c0e6d2-5b41-4f7e-9d13-2c6f0b7a9e11\",\"source_sha256\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\"status\":\"accepted\",\"reason\":null,\"original_duration_s\":8.21,\"occurred_at\":\"2026-10-13T10:00:00Z\"}]}",
+      "header": "v1=19344b1932c56af1b2cbd20d4a68e46956afe27a06fa6407badce0780fb082cc"
+    }
+  ]
+}

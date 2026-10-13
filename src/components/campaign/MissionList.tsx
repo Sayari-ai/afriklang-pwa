@@ -17,7 +17,7 @@ import { canRecordNow } from "@/lib/campaign/studio-flow";
 import type { Mission, SpeechType } from "@/lib/campaign/types";
 import { useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions } from "@/lib/campaign/pool-client";
-import { useFailureText } from "./CampaignHubParts";
+import { useFailureText, useRejectionText } from "./CampaignHubParts";
 import { LeaseLeft } from "./PoolParts";
 
 type Tab = "todo" | "redo" | "sent" | "accepted";
@@ -104,6 +104,7 @@ export function MissionList({ campaignId, readOnly }: Props) {
 function MissionRow({ campaignId, mission: m, local, active, readOnly }: { campaignId: string; mission: Mission; local: OutboxState | undefined; active: boolean; readOnly: boolean }) {
   const t = useTranslations("campaign.home");
   const tm = useTranslations("campaign.flow.missions");
+  const why = useRejectionText()(m.rejection_reason);
   const Icon = TYPE_ICON[m.type];
   const recordable = !readOnly && canRecordNow(m, local ? new Map([[m.mission_id, local]]) : new Map());
   const partnerWait = m.type === "conversational" && !m.partner_ready && (m.status === "todo" || m.status === "rejected");
@@ -126,7 +127,7 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly }: { campa
           {m.duration_s.min != null && m.duration_s.max != null && m.type !== "read" ? <span>{tm("duration", { min: m.duration_s.min, max: m.duration_s.max })}</span> : null}
         </span>
         <span className="block text-sm font-semibold text-slate-900">{truncate(m.prompt.text_or_topic, 110)}</span>
-        {m.status === "rejected" && !local ? <span className="mt-1 block text-xs font-semibold text-amber-800">{m.rejection_reason ? tm("reason", { reason: m.rejection_reason }) : tm("noReason")}</span> : null}
+        {m.status === "rejected" && !local ? <span className="mt-1 block text-xs font-semibold text-amber-800">{why ? tm("reason", { reason: why }) : tm("noReason")}</span> : null}
         {!local ? <LeaseLeft mission={m} /> : null}
         {partnerWait ? (
           <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-800">

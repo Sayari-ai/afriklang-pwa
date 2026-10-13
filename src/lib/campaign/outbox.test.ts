@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createOutbox, type OutboxEvent } from "./outbox";
-import { backoffMs, decideSubmit, decideUploadFailure, dueItems, type OutboxItem } from "./outbox-logic";
+import { backoffMs, decideSubmit, decideUploadFailure, dueItems, uploadBackoffMs, type OutboxItem } from "./outbox-logic";
 import { shiftProgress } from "./queries";
 import { byDay, streakDays } from "./activity";
 
@@ -28,7 +28,7 @@ const item = (over: Partial<OutboxItem> = {}): OutboxItem => ({
 
 function memStore(initial: OutboxItem[] = []) {
   const m = new Map(initial.map((i) => [i.id, i]));
-  return { m, all: async () => [...m.values()], put: async (i: OutboxItem) => void m.set(i.id, i), remove: async (id: string) => void m.delete(id) };
+  return { m, all: async () => [...m.values()], get: async (id: string) => m.get(id), put: async (i: OutboxItem) => void m.set(i.id, i), remove: async (id: string) => void m.delete(id) };
 }
 
 describe("outbox decisions", () => {
@@ -37,7 +37,13 @@ describe("outbox decisions", () => {
   });
   it("gives up on a refused or too-large file", () => {
     expect(decideUploadFailure({ status: 413, isNetwork: false }, 0, true).kind).toBe("fail");
+    expect(decideUploadFailure({ status: 401, isNetwork: false }, 0, true)).toEqual({ kind: "hold", code: "unauthorized", delayMs: 60_000 });
     expect(decideUploadFailure({ status: 400, isNetwork: false }, 0, true).kind).toBe("fail");
+    expect(decideUploadFailure({ status: 422, isNetwork: false }, 0, true).kind).toBe("fail");
+    // A proxy, the CDN or a deploy in progress: not the file's fault (APP-018).
+    for (const status of [404, 408, 409, 411, 425]) expect(decideUploadFailure({ status, isNetwork: false }, 0, true).kind).toBe("retry");
+    // The proxy's Retry-After is honoured.
+    expect(decideUploadFailure({ status: 429, isNetwork: false, retryAfterS: 600 }, 0, true, () => 0.5)).toEqual({ kind: "retry", code: "rateLimited", delayMs: 600_000 });
     expect(decideUploadFailure({ status: 503, isNetwork: false }, 0, true).kind).toBe("retry");
   });
   it("maps submit answers", () => {
@@ -45,6 +51,8 @@ describe("outbox decisions", () => {
     expect(decideSubmit({ ok: false, code: "recording_rejected", reason: "level" }, 0)).toEqual({ kind: "rejected", reason: "level" });
     expect(decideSubmit({ ok: false, code: "already_submitted" }, 0).kind).toBe("superseded");
     expect(decideSubmit({ ok: false, code: "campaign_paused" }, 0).kind).toBe("hold");
+    expect(decideSubmit({ ok: false, code: "campaign_consent" }, 0)).toEqual({ kind: "drop", code: "campaign_consent" });
+    expect(decideSubmit({ ok: false, code: "consent_version_changed" }, 0).kind).toBe("hold");
     expect(decideSubmit({ ok: false, code: "campaign_closed" }, 0).kind).toBe("fail");
     expect(decideSubmit({ ok: false, code: "server_error" }, 0).kind).toBe("retry");
     expect(decideSubmit({ ok: false, code: "invalid_input" }, 0).kind).toBe("fail");
@@ -53,6 +61,15 @@ describe("outbox decisions", () => {
   it("backs off, capped at five minutes", () => {
     expect(backoffMs(0, () => 0.5)).toBe(5000);
     expect(backoffMs(20, () => 0.5)).toBe(300000);
+  });
+  it("waits longer after an upload lost on the network (each retry resends the file)", () => {
+    expect(uploadBackoffMs(0, () => 0.5)).toBe(15_000);
+    expect(uploadBackoffMs(30, () => 0.5)).toBe(15 * 60_000);
+    expect(decideUploadFailure({ status: 0, isNetwork: true }, 0, true, () => 0.5)).toEqual({ kind: "retry", code: "network", delayMs: 15_000 });
+  });
+  it("sends what is cheapest first: uploaded takes, then the smallest files", () => {
+    const list = [item({ id: "big", blob: new Blob(["x".repeat(100)]), createdAt: 1 }), item({ id: "small", blob: new Blob(["x"]), createdAt: 2 }), item({ id: "up", uploaded: true, blob: new Blob(["x".repeat(500)]), createdAt: 3 })];
+    expect(dueItems(list, "u1", 10).map((i) => i.id)).toEqual(["up", "small", "big"]);
   });
   it("sends only this user's due takes, oldest first, never failed ones", () => {
     const list = [item({ id: "b", createdAt: 2 }), item({ id: "a", createdAt: 1 }), item({ id: "f", state: "failed" }), item({ id: "o", userId: "u2" }), item({ id: "later", nextAttemptAt: 99 })];
@@ -99,6 +116,39 @@ describe("outbox runner", () => {
     expect(store.m.get("sha1")!.attempts).toBe(0);
   });
 
+  it("stops the run after a network failure instead of trying every take on a dead link", async () => {
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 })]);
+    const upload = vi.fn(async () => {
+      throw { status: 0, isNetwork: true };
+    });
+    const ob = createOutbox({ store, upload, submit: vi.fn(), online: () => true, now: () => 100 });
+    await ob.drain("u1");
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(store.m.get("sha1")!.lastCode).toBe("network");
+    expect(store.m.get("sha2")!.attempts).toBe(0);
+  });
+
+  it("reports upload progress for the take being sent, then clears it", async () => {
+    const store = memStore([item()]);
+    const seen: (number | null)[] = [];
+    const ob = createOutbox({
+      store,
+      upload: async (_i, onProgress) => {
+        onProgress(10, 100);
+        onProgress(11, 100);
+        onProgress(11, 100);
+        onProgress(100, 100);
+        return { recordingId: null };
+      },
+      submit: async () => ({ ok: true as const, data: { duplicate: false } }),
+      online: () => true,
+    });
+    ob.subscribe(() => seen.push(ob.snapshot().progress?.sent ?? null));
+    await ob.drain("u1");
+    expect(seen.filter((v) => v !== null)).toEqual([10, 11, 100]);
+    expect(ob.snapshot().progress).toBeNull();
+  });
+
   it("a refused take is dropped and reported so the mission is recorded again", async () => {
     const store = memStore([item({ uploaded: true })]);
     const ob = createOutbox({ store, upload: vi.fn(), submit: async () => ({ ok: false, status: 422, code: "recording_rejected", reason: "silence", message: "" }), online: () => true });
@@ -107,6 +157,139 @@ describe("outbox runner", () => {
     await ob.drain("u1");
     expect(store.m.size).toBe(0);
     expect(events[0]).toMatchObject({ type: "rejected", reason: "silence" });
+  });
+});
+
+describe("offline and concurrent edits (APP-006, APP-019)", () => {
+  it("offline, an uploaded take is left exactly as it was (no attempt counted, nothing written, no 'sending' flash)", async () => {
+    const before = item({ uploaded: true, attempts: 2, nextAttemptAt: 0 });
+    const store = memStore([before]);
+    const put = vi.spyOn(store, "put");
+    const submit = vi.fn();
+    const ob = createOutbox({ store, upload: vi.fn(), submit, online: () => false });
+    const active: (string | null)[] = [];
+    ob.subscribe(() => active.push(ob.snapshot().activeId));
+    await ob.drain("u1");
+    expect(submit).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+    expect(store.m.get("sha1")).toEqual(before);
+    expect(active.every((a) => a === null)).toBe(true);
+  });
+
+  it("a network lost during the upload leaves the take untouched", async () => {
+    let online = true;
+    const store = memStore([item()]);
+    const ob = createOutbox({
+      store,
+      upload: async () => {
+        online = false;
+        throw { status: 0, isNetwork: true };
+      },
+      submit: vi.fn(),
+      online: () => online,
+    });
+    await ob.drain("u1");
+    expect(store.m.get("sha1")).toMatchObject({ attempts: 0, nextAttemptAt: 0, lastCode: null });
+  });
+
+  it("'send now' never brings back a take that was sent meanwhile", async () => {
+    const store = memStore([item({ state: "held", nextAttemptAt: 10 ** 12 })]);
+    const realAll = store.all;
+    // The list is read, then the take is sent and removed by another run before the write.
+    store.all = async () => {
+      const list = await realAll();
+      store.m.delete("sha1");
+      return list;
+    };
+    const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true });
+    await ob.retryNow("u1");
+    expect(store.m.size).toBe(0);
+  });
+
+  it("a signed-out hold is never due at once", () => {
+    expect(decideSubmit({ ok: false, code: "unauthorized" }, 0)).toEqual({ kind: "hold", code: "unauthorized", delayMs: 60_000 });
+  });
+});
+
+describe("takes that stay on the phone (APP-024)", () => {
+  it("deletes takes that can never be sent once they are a month old, nothing else", async () => {
+    const day = 86_400_000;
+    const now = 100 * day;
+    const store = memStore([
+      item({ id: "dead-old", state: "failed", lastCode: "campaign_closed", createdAt: now - 31 * day }),
+      item({ id: "dead-new", state: "failed", lastCode: "campaign_closed", createdAt: now - 2 * day }),
+      item({ id: "refused-old", state: "failed", lastCode: "refused", createdAt: now - 60 * day }),
+      item({ id: "pending-old", createdAt: now - 60 * day }),
+    ]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true, now: () => now });
+    expect(await ob.purgeExpired()).toBe(1);
+    expect([...store.m.keys()].sort()).toEqual(["dead-new", "pending-old", "refused-old"]);
+  });
+  it("deletes another account's takes on request", async () => {
+    const store = memStore([item({ id: "mine" }), item({ id: "theirs", userId: "u2" })]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true });
+    expect(await ob.discardOthers("u1")).toBe(1);
+    expect([...store.m.keys()]).toEqual(["mine"]);
+  });
+});
+
+describe("consent withdrawal (APP-004)", () => {
+  it("a submit refused for the campaign consent deletes the take", async () => {
+    const store = memStore([item({ uploaded: true })]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: async () => ({ ok: false, status: 403, code: "campaign_consent", message: "" }), online: () => true });
+    const events: OutboxEvent[] = [];
+    ob.onEvent((e) => events.push(e));
+    await ob.drain("u1");
+    expect(store.m.size).toBe(0);
+    expect(events[0]).toMatchObject({ type: "dropped", code: "campaign_consent" });
+  });
+
+  it("never uploads a take whose saved card says the consent is missing", async () => {
+    const store = memStore([item()]);
+    const upload = vi.fn();
+    const ob = createOutbox({ store, upload, submit: vi.fn(), online: () => true, precheck: () => "campaign_consent", now: () => 5 });
+    await ob.drain("u1");
+    expect(upload).not.toHaveBeenCalled();
+    expect(store.m.get("sha1")).toMatchObject({ state: "held", lastCode: "campaign_consent" });
+  });
+
+  it("discardCampaign aborts the upload going on, deletes the campaign's takes, and nothing comes back", async () => {
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 }), item({ id: "other", campaignId: "c2", createdAt: 3 })]);
+    let started!: () => void;
+    const startedP = new Promise<void>((r) => (started = r));
+    const upload = vi.fn(
+      (_i: OutboxItem, _p: unknown, signal: AbortSignal) =>
+        new Promise<{ recordingId: string | null }>((resolve, reject) => {
+          if (_i.campaignId === "c2") return resolve({ recordingId: null });
+          started();
+          signal.addEventListener("abort", () => reject(new Error("aborted")));
+        }),
+    );
+    const submit = vi.fn(async () => ({ ok: true as const, data: { duplicate: false } }));
+    const ob = createOutbox({ store, upload, submit, online: () => true });
+    const run = ob.drain("u1");
+    await startedP;
+    expect(await ob.discardCampaign("u1", "c1")).toBe(2);
+    await run;
+    expect([...store.m.keys()]).toEqual([]);
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledWith("m1", expect.anything());
+    expect(upload.mock.calls.filter((c) => c[0].campaignId === "c1")).toHaveLength(1);
+  });
+
+  it("a take deleted while its upload finishes is not written back", async () => {
+    const store = memStore([item()]);
+    const ob = createOutbox({
+      store,
+      upload: async () => {
+        store.m.delete("sha1");
+        return { recordingId: "x" };
+      },
+      submit: vi.fn(),
+      online: () => true,
+    });
+    await ob.drain("u1");
+    expect(store.m.size).toBe(0);
   });
 });
 

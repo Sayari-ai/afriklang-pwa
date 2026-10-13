@@ -30,7 +30,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
-import { useAppLocale, type LocaleOverride } from "@/stores/app-locale";
+import { forgetInvitationLocale, useAppLocale, type LocaleOverride } from "@/stores/app-locale";
 
 export function useSetAppLocale(): (override: LocaleOverride) => void {
   const router = useRouter();
@@ -38,6 +38,8 @@ export function useSetAppLocale(): (override: LocaleOverride) => void {
 
   return useCallback(
     (override: LocaleOverride) => {
+      // The speaker chose: the invitation's language no longer applies (useInvitationLocale).
+      forgetInvitationLocale();
       setOverride(override);
       // Re-runs Server Components in this route → next-intl picks up
       // the new cookie value → fresh `messages` are pushed through

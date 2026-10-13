@@ -69,7 +69,8 @@ export const hoursLeft = (end: number, now: number) => Math.max(1, Math.ceil((en
  * "error": the call failed; "returned": the speaker just gave missions back (do not hand them
  * new ones straight away).
  */
-export type LastDraw = { at: number; status: PoolStatus | "error" | "returned"; added: number };
+/** "clock": the draw worked but its missions looked expired at once (the phone's date is wrong, APP-011). */
+export type LastDraw = { at: number; status: PoolStatus | "error" | "returned" | "clock"; added: number };
 
 /** No automatic draw sooner than this after the previous one (the batch is full or just drawn). */
 export const DRAW_PAUSE_MS = 60_000;
