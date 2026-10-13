@@ -12,7 +12,8 @@
 
 import type { CampaignFailure, CampaignResult } from "./types";
 
-export const FRESH_MS = 20_000;
+/** At most one refresh per key a minute when the app returns to the foreground (plan §8, APP-034). */
+export const FRESH_MS = 60_000;
 const PERSIST_PREFIX = "afriklang.campaign.cache.v1:";
 
 export type Entry<T = unknown> = {

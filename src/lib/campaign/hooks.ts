@@ -17,7 +17,7 @@
  * is then the saved copy).
  */
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import type { CampaignList, MissionList } from "./api";
 import { getCampaignAuth, isCampaignAuthConfigured, storedCampaignUser } from "./auth-client";
 import { cacheId, campaignCache, type Entry } from "./cache";
@@ -32,8 +32,6 @@ import type { CampaignFailure } from "./types";
  */
 export type SessionState = { status: "waiting" } | { status: "signedOut" } | { status: "signedIn"; email: string | null; userId: string; verified: boolean };
 
-let lastSession: SessionState | null = null;
-
 /** The session state for what getSession / onAuthStateChange gave. Pure apart from reading the saved session. */
 export function sessionStateFor(s: { user: { id: string; email?: string | null } } | null, signedOutEvent = false): SessionState {
   if (s) return { status: "signedIn", email: s.user.email ?? null, userId: s.user.id, verified: true };
@@ -44,27 +42,38 @@ export function sessionStateFor(s: { user: { id: string; email?: string | null }
   return known ? { status: "signedIn", email: known.email, userId: known.id, verified: false } : { status: "signedOut" };
 }
 
+// One session store for the whole app (APP-034): one getSession() and one auth subscription, however
+// many components ask (each getSession() takes the auth lock).
+const INITIAL: SessionState = isCampaignAuthConfigured ? { status: "waiting" } : { status: "signedOut" };
+let current: SessionState = INITIAL;
+let started = false;
+const sessionListeners = new Set<() => void>();
+
+function applySession(next: SessionState) {
+  if (sameSession(current, next)) return;
+  current = next;
+  for (const l of [...sessionListeners]) l();
+}
+
+function startSession() {
+  if (started || !isCampaignAuthConfigured || typeof window === "undefined") return;
+  started = true;
+  const auth = getCampaignAuth().auth;
+  const check = () => void auth.getSession().then(({ data }) => applySession(sessionStateFor(data.session)), () => applySession(sessionStateFor(null)));
+  check();
+  auth.onAuthStateChange((event, session) => applySession(sessionStateFor(session, event === "SIGNED_OUT")));
+  // Back online: renew a session that could not be renewed offline.
+  window.addEventListener("online", () => current.status === "signedIn" && !current.verified && check());
+}
+
+const subscribeSession = (fn: () => void) => {
+  sessionListeners.add(fn);
+  return () => sessionListeners.delete(fn);
+};
+
 export function useCampaignSession(): SessionState {
-  const [state, setState] = useState<SessionState>(() => lastSession ?? (isCampaignAuthConfigured ? { status: "waiting" } : { status: "signedOut" }));
-  useEffect(() => {
-    if (!isCampaignAuthConfigured) return;
-    const auth = getCampaignAuth().auth;
-    const apply = (next: SessionState) => {
-      lastSession = next;
-      setState((prev) => (sameSession(prev, next) ? prev : next));
-    };
-    const check = () => void auth.getSession().then(({ data }) => apply(sessionStateFor(data.session)), () => apply(sessionStateFor(null)));
-    check();
-    const { data } = auth.onAuthStateChange((event, session) => apply(sessionStateFor(session, event === "SIGNED_OUT")));
-    // Back online: renew a session that could not be renewed offline.
-    const onOnline = () => lastSession?.status === "signedIn" && !lastSession.verified && check();
-    window.addEventListener("online", onOnline);
-    return () => {
-      data.subscription.unsubscribe();
-      window.removeEventListener("online", onOnline);
-    };
-  }, []);
-  return state;
+  useEffect(startSession, []);
+  return useSyncExternalStore(subscribeSession, () => current, () => INITIAL);
 }
 
 const sameSession = (a: SessionState, b: SessionState) =>
