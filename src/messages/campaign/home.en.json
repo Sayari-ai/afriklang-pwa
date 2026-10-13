@@ -71,6 +71,10 @@
     "sendNow": "Send now",
     "discard": "Delete",
     "discardConfirm": "Delete this recording from your phone? You can record the mission again.",
+    "others": "{n, plural, one {# recording of another account is on this phone.} other {# recordings of another account are on this phone.}} They are sent only when that account signs in here.",
+    "othersDelete": "Delete them",
+    "othersConfirm": "Delete the recordings of the other account from this phone? They were never sent and cannot be recovered.",
+    "expiresNote": "Recordings that can never be sent are deleted from the phone after 30 days.",
     "recordAgain": "Record again",
     "tryAgain": "Try again",
     "state": {

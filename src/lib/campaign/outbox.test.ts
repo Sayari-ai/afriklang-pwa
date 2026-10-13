@@ -211,6 +211,28 @@ describe("offline and concurrent edits (APP-006, APP-019)", () => {
   });
 });
 
+describe("takes that stay on the phone (APP-024)", () => {
+  it("deletes takes that can never be sent once they are a month old, nothing else", async () => {
+    const day = 86_400_000;
+    const now = 100 * day;
+    const store = memStore([
+      item({ id: "dead-old", state: "failed", lastCode: "campaign_closed", createdAt: now - 31 * day }),
+      item({ id: "dead-new", state: "failed", lastCode: "campaign_closed", createdAt: now - 2 * day }),
+      item({ id: "refused-old", state: "failed", lastCode: "refused", createdAt: now - 60 * day }),
+      item({ id: "pending-old", createdAt: now - 60 * day }),
+    ]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true, now: () => now });
+    expect(await ob.purgeExpired()).toBe(1);
+    expect([...store.m.keys()].sort()).toEqual(["dead-new", "pending-old", "refused-old"]);
+  });
+  it("deletes another account's takes on request", async () => {
+    const store = memStore([item({ id: "mine" }), item({ id: "theirs", userId: "u2" })]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true });
+    expect(await ob.discardOthers("u1")).toBe(1);
+    expect([...store.m.keys()]).toEqual(["mine"]);
+  });
+});
+
 describe("consent withdrawal (APP-004)", () => {
   it("a submit refused for the campaign consent deletes the take", async () => {
     const store = memStore([item({ uploaded: true })]);

@@ -113,7 +113,7 @@ export function useOutboxRunner(userId: string | null) {
     const onVisible = () => document.visibilityState === "visible" && kick();
     const offEvent = outbox.onEvent((e: OutboxEvent) => onOutboxEvent(userId, e));
 
-    void outbox.refresh().then(kick);
+    void outbox.purgeExpired().then(() => outbox.refresh()).then(kick);
     window.addEventListener("online", kick);
     document.addEventListener("visibilitychange", onVisible);
     return () => {

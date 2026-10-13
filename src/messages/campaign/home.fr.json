@@ -71,6 +71,10 @@
     "sendNow": "Envoyer maintenant",
     "discard": "Supprimer",
     "discardConfirm": "Supprimer cet enregistrement de votre téléphone ? Vous pourrez refaire la mission.",
+    "others": "{n, plural, one {# enregistrement d'un autre compte est sur ce téléphone.} other {# enregistrements d'un autre compte sont sur ce téléphone.}} Ils ne seront envoyés que si ce compte se connecte ici.",
+    "othersDelete": "Les supprimer",
+    "othersConfirm": "Supprimer de ce téléphone les enregistrements de l'autre compte ? Ils n'ont jamais été envoyés et ne pourront pas être récupérés.",
+    "expiresNote": "Les enregistrements qui ne pourront jamais être envoyés sont supprimés du téléphone après 30 jours.",
     "recordAgain": "Recommencer",
     "tryAgain": "Réessayer",
     "state": {

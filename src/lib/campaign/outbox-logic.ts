@@ -117,7 +117,7 @@ const HOLD_CODES = new Set(["campaign_paused", "partner_consent", "unauthorized"
  */
 const DROP_CODES = new Set(["campaign_consent"]);
 /** Codes after which the take can never be saved for this mission. */
-const DEAD_CODES = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "blocked", "not_linked"]);
+export const DEAD_CODES: ReadonlySet<string> = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "blocked", "not_linked"]);
 
 /** After the metadata submit answered (or failed). */
 export function decideSubmit(
@@ -206,4 +206,12 @@ export function precheckFromCard(nextStep: string | null | undefined): string | 
     default:
       return null;
   }
+}
+
+/** A take that can never be sent stays this long (for the speaker to see why), then goes (APP-024). */
+export const DEAD_TAKE_KEEP_MS = 30 * 24 * 60 * MINUTE;
+
+/** Failed takes that can never be sent (campaign closed, mission no longer theirs) and are older than DEAD_TAKE_KEEP_MS. */
+export function expiredDeadTakes<T extends Pick<OutboxItem, "state" | "lastCode" | "createdAt">>(items: readonly T[], now: number): T[] {
+  return items.filter((i) => i.state === "failed" && i.lastCode != null && DEAD_CODES.has(i.lastCode) && now - i.createdAt > DEAD_TAKE_KEEP_MS);
 }

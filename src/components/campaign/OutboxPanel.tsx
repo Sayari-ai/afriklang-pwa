@@ -24,7 +24,18 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
   const install = useInstallPrompt();
   const userId = session.status === "signedIn" ? session.userId : null;
   const items = box.items.filter((i) => i.userId === userId).sort((a, b) => a.createdAt - b.createdAt);
-  if (!userId || items.length === 0) return null;
+  // Takes another account left on a shared phone (APP-024): said in History, with a way to delete them.
+  const others = userId ? box.items.filter((i) => i.userId !== userId).length : 0;
+  const othersNote =
+    !compact && others > 0 && userId ? (
+      <section className="rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-800">
+        <p>{t("others", { n: others })}</p>
+        <button type="button" onClick={() => window.confirm(t("othersConfirm")) && void outbox.discardOthers(userId)} className="mt-2 min-h-9 rounded-full border border-red-300 px-3 text-xs font-bold text-red-800">
+          {t("othersDelete")}
+        </button>
+      </section>
+    ) : null;
+  if (!userId || items.length === 0) return othersNote;
 
   const pending = items.filter((i) => i.state === "pending");
   const held = items.filter((i) => i.state === "held");
@@ -42,82 +53,86 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
   const Icon = sending ? Loader2 : !online ? CloudOff : failed.length && !pending.length ? AlertTriangle : UploadCloud;
 
   return (
-    <section aria-live="polite" className={`rounded-2xl border p-3 shadow-sm ${tone}`}>
-      <div className="flex items-center gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-          <Icon size={20} className={sending ? "animate-spin" : ""} aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-bold">
-            {headline}
-            {sending && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
-          </p>
-          {sub ? <p className="text-xs opacity-80">{sub}</p> : null}
-          {/* Kept out of the live region: it changes as the upload moves. */}
-          {sending && leftBytes > 0 ? (
-            <p aria-hidden className="text-xs font-semibold opacity-80">
-              {t("remaining", { mb: leftMb })}
+    <>
+      {othersNote}
+      <section aria-live="polite" className={`rounded-2xl border p-3 shadow-sm ${tone}`}>
+        <div className="flex items-center gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+            <Icon size={20} className={sending ? "animate-spin" : ""} aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold">
+              {headline}
+              {sending && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
             </p>
-          ) : null}
-        </div>
-        {online && (pending.length || held.length) && !sending ? (
-          <button type="button" onClick={() => void outbox.retryNow(userId)} className="flex min-h-10 items-center gap-1 rounded-full bg-primary px-3 text-xs font-bold text-white">
-            <Send size={14} aria-hidden /> {t("sendNow")}
-          </button>
-        ) : null}
-      </div>
-      {persisted === false && !install.isStandalone && (pending.length || held.length) ? (
-        <div className="mt-3 space-y-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
-          <p>{t("unsafe")}</p>
-          {install.deferredEvent ? (
-            <button type="button" onClick={() => void install.promptNative()} className="min-h-9 rounded-full bg-amber-900 px-3 font-bold text-white">
-              {t("install")}
+            {sub ? <p className="text-xs opacity-80">{sub}</p> : null}
+            {/* Kept out of the live region: it changes as the upload moves. */}
+            {sending && leftBytes > 0 ? (
+              <p aria-hidden className="text-xs font-semibold opacity-80">
+                {t("remaining", { mb: leftMb })}
+              </p>
+            ) : null}
+          </div>
+          {online && (pending.length || held.length) && !sending ? (
+            <button type="button" onClick={() => void outbox.retryNow(userId)} className="flex min-h-10 items-center gap-1 rounded-full bg-primary px-3 text-xs font-bold text-white">
+              <Send size={14} aria-hidden /> {t("sendNow")}
             </button>
-          ) : install.isIos ? (
-            <p className="font-semibold">{t("installIos")}</p>
           ) : null}
         </div>
-      ) : null}
-      {compact ? null : (
-        <ul className="mt-3 space-y-2">
-          {items.map((i) => {
-            const state = box.activeId === i.id ? "sending" : i.state;
-            return (
-              <li key={i.id} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-800">
-                {state === "held" ? <PauseCircle size={16} className="shrink-0 text-amber-600" aria-hidden /> : state === "failed" ? <AlertTriangle size={16} className="shrink-0 text-red-600" aria-hidden /> : <UploadCloud size={16} className="shrink-0 text-primary" aria-hidden />}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-mono text-xs font-semibold">{i.missionCode}</p>
-                  <p className="text-xs text-slate-600">
-                    {t(`state.${state}`)}
-                    {state === "sending" && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
-                    {(state === "held" || state === "failed") && i.lastCode ? ` · ${t(`reason.${outboxReasonKey(i.lastCode)}`)}` : ""}
-                  </p>
-                </div>
-                {state === "failed" ? (
-                  <>
-                    {online && i.lastCode !== "tooLarge" ? (
-                      <button type="button" onClick={() => void outbox.retryFailed(i.id, userId)} className="min-h-9 rounded-full border border-primary/40 px-3 py-2 text-xs font-bold text-primary">
-                        {t("tryAgain")}
+        {persisted === false && !install.isStandalone && (pending.length || held.length) ? (
+          <div className="mt-3 space-y-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
+            <p>{t("unsafe")}</p>
+            {install.deferredEvent ? (
+              <button type="button" onClick={() => void install.promptNative()} className="min-h-9 rounded-full bg-amber-900 px-3 font-bold text-white">
+                {t("install")}
+              </button>
+            ) : install.isIos ? (
+              <p className="font-semibold">{t("installIos")}</p>
+            ) : null}
+          </div>
+        ) : null}
+        {compact ? null : (
+          <ul className="mt-3 space-y-2">
+            {items.map((i) => {
+              const state = box.activeId === i.id ? "sending" : i.state;
+              return (
+                <li key={i.id} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-800">
+                  {state === "held" ? <PauseCircle size={16} className="shrink-0 text-amber-600" aria-hidden /> : state === "failed" ? <AlertTriangle size={16} className="shrink-0 text-red-600" aria-hidden /> : <UploadCloud size={16} className="shrink-0 text-primary" aria-hidden />}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-mono text-xs font-semibold">{i.missionCode}</p>
+                    <p className="text-xs text-slate-600">
+                      {t(`state.${state}`)}
+                      {state === "sending" && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
+                      {(state === "held" || state === "failed") && i.lastCode ? ` · ${t(`reason.${outboxReasonKey(i.lastCode)}`)}` : ""}
+                    </p>
+                  </div>
+                  {state === "failed" ? (
+                    <>
+                      {online && i.lastCode !== "tooLarge" ? (
+                        <button type="button" onClick={() => void outbox.retryFailed(i.id, userId)} className="min-h-9 rounded-full border border-primary/40 px-3 py-2 text-xs font-bold text-primary">
+                          {t("tryAgain")}
+                        </button>
+                      ) : null}
+                      <Link href={`/campaign/${i.campaignId}/studio?m=${encodeURIComponent(i.missionId)}`} className="min-h-9 rounded-full bg-primary px-3 py-2 text-xs font-bold text-white">
+                        {t("recordAgain")}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => window.confirm(t("discardConfirm")) && void outbox.discard(i.id)}
+                        aria-label={t("discard")}
+                        className="grid size-9 place-items-center rounded-full text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 size={16} aria-hidden />
                       </button>
-                    ) : null}
-                    <Link href={`/campaign/${i.campaignId}/studio?m=${encodeURIComponent(i.missionId)}`} className="min-h-9 rounded-full bg-primary px-3 py-2 text-xs font-bold text-white">
-                      {t("recordAgain")}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => window.confirm(t("discardConfirm")) && void outbox.discard(i.id)}
-                      aria-label={t("discard")}
-                      className="grid size-9 place-items-center rounded-full text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 size={16} aria-hidden />
-                    </button>
-                  </>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
+                    </>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {!compact && failed.length ? <p className="mt-2 text-xs opacity-70">{t("expiresNote")}</p> : null}
+      </section>
+    </>
   );
 }

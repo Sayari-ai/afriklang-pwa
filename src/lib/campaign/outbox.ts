@@ -16,7 +16,7 @@
  * field, and the dashboard stores the recording once.
  */
 
-import { applyDecision, decideSubmit, decideUploadFailure, dueItems, nextWake, STOP_RUN_CODES, type Decision, type OutboxItem, type OutboxSummary } from "./outbox-logic";
+import { applyDecision, decideSubmit, decideUploadFailure, dueItems, expiredDeadTakes, nextWake, STOP_RUN_CODES, type Decision, type OutboxItem, type OutboxSummary } from "./outbox-logic";
 
 const MINUTE = 60_000;
 import type { CampaignResult, RecordingMetadata } from "./types";
@@ -244,6 +244,22 @@ export function createOutbox(deps: OutboxDeps) {
     },
     unblock(campaignId: string) {
       blocked.delete(campaignId);
+    },
+    /** Delete takes that can never be sent and were kept a month (APP-024). Returns how many. */
+    async purgeExpired() {
+      const all = await deps.store.all().catch(() => [] as OutboxItem[]);
+      const doomed = expiredDeadTakes(all, now());
+      for (const i of doomed) await deps.store.remove(i.id).catch(() => undefined);
+      if (doomed.length) await refresh();
+      return doomed.length;
+    },
+    /** Delete the takes of every other account on this phone (a shared phone, APP-024). Returns how many. */
+    async discardOthers(userId: string) {
+      const all = await deps.store.all().catch(() => [] as OutboxItem[]);
+      const doomed = all.filter((i) => i.userId !== userId);
+      for (const i of doomed) await deps.store.remove(i.id).catch(() => undefined);
+      await refresh();
+      return doomed.length;
     },
     /** Send a failed take again (the speaker's "Try again", APP-018). */
     async retryFailed(id: string, userId: string) {
