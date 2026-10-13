@@ -66,8 +66,9 @@ browser /campaign  ──►  Edge Function `campaigns`  ──►  dashboard /a
                          holds BRIDGE_SECRET             (PWA_BRIDGE_SECRET on the dashboard)
 
 browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio itself)
- Bearer <session>   checks the session with Supabase Auth,   checks X-Upload-Key
-                    size (≤ 25 MB) and rate; adds the key
+ Bearer <session>   checks the session with Supabase Auth,   checks X-Upload-Key and
+ X-Campaign-Ticket  size (≤ 25 MB) and rate; adds the key;   verifies X-Campaign-Ticket
+                    forwards the ticket untouched
 ```
 
 - **The upload proxy only forwards for a signed-in contributor** (since 2026-10-13): it reads
@@ -79,15 +80,36 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
   600 Auth lookups per minute in total. Sayari's 5xx text and a refused upload key never reach the
   browser (`502 upstream_error`, `500 server_misconfigured`). Code: `src/lib/server/upload-guard.ts`.
   The outbox sends the token, renews it once on a 401, and otherwise holds the take until the
-  speaker signs in again. The next step (dashboard-signed upload tickets) is in
-  `afriklang/docs/CAMPAIGN_PIPELINE_COMPLETION_PLAN.md`, Phase 1.
+  speaker signs in again.
+
+- **Upload tickets** (since 2026-10-13; contract in `docs/contracts/`, copied from
+  `afriklang/docs/contracts`). Before uploading a take the outbox asks the dashboard, through the
+  Edge Function action `upload_ticket` `{ mission_id, source_sha256, duration_s }`, for a ticket
+  signed for that one file (`POST /api/pwa/campaigns/missions/upload-ticket` → `{ ticket, expires_at }`).
+  The app never reads or checks it and holds no ticket secret: it saves it on the take and sends it in
+  `X-Campaign-Ticket`; the proxy forwards that header (shape-checked: base64url segments, ≤ 4 KB) and
+  no other browser header; Sayari verifies it and takes the campaign fields from it.
+  * A saved ticket is reused while it has more than 2 minutes left, also after an app restart
+    (`expires_at` is capped at 30 minutes of the phone's clock).
+  * Refusals that cannot clear (`campaign_closed`, `not_assigned`, `campaign_not_open`, `blocked`,
+    `not_linked`) fail the take for good: the audio stays, History shows "Not sent · <reason>" with the
+    delete button and no "Try again"; it goes after 30 days like other dead takes. Codes that may clear
+    (`campaign_paused`, the consent codes, `profile_incomplete`, `unauthorized`) hold it as a submit
+    would; `campaign_consent` deletes it as a submit would. Ticket calls back off like uploads.
+  * Sayari refusing the ticket (`401 invalid_ticket`, relayed by the proxy as `409 invalid_ticket`, or
+    `409 ticket_used`) drops it; the next try asks for a new one. `422 sha_mismatch` is final.
+  * **Older dashboard:** a 404 that names no code (the route does not exist) is answered by the Edge
+    Function as `404 route_not_found`; an older Edge Function answers `400 unknown_action`. Both mean
+    "upload without a ticket, exactly as before" (noted once per app start in the console), so the
+    app can ship before the dashboard. The campaign form fields are sent in both cases: Sayari uses
+    them until `REQUIRE_CAMPAIGN_TICKET` is on.
 
 - The browser **never holds the bridge secret** and **never says who it is**. The Edge Function reads
   the user id and the verified Google email from the signed-in session
   (`supabase/functions/_shared/campaigns.ts`) and drops any `user_id` / `email` the browser sends.
 - Only the actions and fields listed in `ACTIONS` are forwarded: `claim`, `campaigns`, `profile`,
-  `consent`, `withdraw`, `missions`, `submit`, and for pool campaigns `draw` and `return` (1 to 200
-  mission ids). Each field is checked first (type, length, allowed
+  `consent`, `withdraw`, `missions`, `submit`, `upload_ticket` (mission uuid, 64-hex sha-256,
+  duration in (0, 3600] s), and for pool campaigns `draw` and `return` (1 to 200 mission ids). Each field is checked first (type, length, allowed
   values, formats, recording metadata ranges, with the dashboard's limits); a bad request gets a 400
   `{ error, code: "invalid_input", fieldErrors: { <field>: <problem> } }` naming every bad field,
   and the profile form marks those fields.
@@ -113,8 +135,8 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
   reloaded when the network comes back (that would end a take being recorded). Other origins
   (Supabase, the bridge) are never cached by the service worker.
 - **Takes go through an outbox** (`src/lib/campaign/outbox*.ts`, IndexedDB `afriklang.campaign.outbox`):
-  saved the moment the speaker submits, then sent in the background, audio first, metadata second,
-  each step remembered so neither is repeated without need. The upload has no fixed time limit: it is
+  saved the moment the speaker submits, then sent in the background: upload ticket, audio, then
+  metadata, each step remembered so none is repeated without need. The upload has no fixed time limit: it is
   aborted only when no bytes have moved for 30 s (or the server has not answered 90 s after the last
   byte), and the speaker sees its progress. A network failure stops the run (the next take would fail
   the same way and cost data); uploaded takes and the smallest files go first. Retries back off (5 s to
@@ -185,6 +207,8 @@ Do this with staff accounts before inviting anyone:
 | App shows "The service is not reachable" | `DASHBOARD_URL` wrong, dashboard down, or the function cannot reach it |
 | 500 `server_misconfigured` from the function | `BRIDGE_SECRET` (min. 16 characters) or `DASHBOARD_URL` (https origin) not set |
 | 401 from the dashboard through the function | `BRIDGE_SECRET` here ≠ `PWA_BRIDGE_SECRET` there |
+| Console: "the dashboard does not issue upload tickets yet" | Dashboard without the upload-ticket route, or the Edge Function not redeployed: uploads go without tickets (fine until Sayari requires them) |
+| Takes stay "Waiting to send" after Sayari turned on `REQUIRE_CAMPAIGN_TICKET` | Same as above: tickets are not issued, so Sayari refuses the bare upload |
 | "Sign in with the Google account for a***@…" | The signed-in Google email differs from the contributor's email, or is not verified |
 | Link says expired / not valid | Older than 14 days, replaced by a resend, or the contributor was removed: send a new invitation |
 
@@ -221,6 +245,10 @@ locally. In the browser console:
 - `__afkMock.poolStatus("cell_full")` refuses the next draws with that status (`"ok"` lifts it; pass
   `true` as a second argument to list another campaign in `elsewhere`)
 - `__afkMock.leaseSoon()` / `__afkMock.expire()` end the pool batch's leases in 5 hours / now
+- `__afkMock.tickets("old_dashboard")` answers upload tickets as a dashboard without the route (the
+  app then uploads without one); `"campaign_closed"`, `"campaign_paused"`… refuse them with that code;
+  `"ok"` (default) issues them. Tickets are in the contract's exact format (signed with a made-up key).
+  `window.__afkLastUpload` shows the last upload's fields and its `X-Campaign-Ticket`.
 - `__afkMock.reset()` starts over
 
 Never active in a production build. The mock's answers must follow the bridge contract exactly.

@@ -17,6 +17,8 @@
  *       + campaign fields   (optional, campaign recordings only; docs/SAYARI_UPLOAD_PAYLOAD.json)
  *     files:
  *       files               (required)  binary, content-type audio/wav
+ *     headers:
+ *       X-Campaign-Ticket   (campaign takes, when the dashboard issues tickets) passed through
  *
  * The schema field name is `files` (plural array) the backend
  * accepts an array of binaries even when we only ever send one. Don't
