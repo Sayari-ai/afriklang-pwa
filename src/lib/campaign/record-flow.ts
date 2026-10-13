@@ -1,42 +1,9 @@
-/** Pure decisions of the recording screen (kept out of the component so they can be tested). */
+/** Pure helpers of the recording studio: the take's rules, its metadata, and the fields sent to Sayari. */
 
-import type { TakeAnalysis, TakeProblem, TakeRules } from "@/lib/audio/analyze";
-import { isRetryable } from "./errors";
-import type { CampaignCard, CampaignFailure, Mission, RecordingMetadata, SpeechType } from "./types";
-
-export type GuardReason = "missing" | "profile" | "blocked" | "consent" | "paused" | "closed" | "done" | "partner";
-
-/** Why this mission cannot be recorded right now, or null when it can. */
-export function guardMission(card: CampaignCard, mission: Mission | undefined): GuardReason | null {
-  if (!mission) return "missing";
-  switch (card.next_step) {
-    case "ready":
-      break;
-    case "paused":
-      return "paused";
-    case "closed":
-      return "closed";
-    case "blocked":
-      return "blocked";
-    case "profile":
-      return "profile";
-    default:
-      return "consent";
-  }
-  if (mission.status === "accepted" || mission.status === "submitted") return "done";
-  if (mission.type === "conversational" && !mission.partner_ready) return "partner";
-  return null;
-}
+import type { TakeAnalysis, TakeRules } from "@/lib/audio/analyze";
+import type { CampaignCard, Mission, RecordingMetadata, SpeechType } from "./types";
 
 export const isTimed = (type: SpeechType) => type !== "read";
-
-/** Stop is allowed once a timed take reached its minimum; a read sentence can stop any time. */
-export function canStop(type: SpeechType, elapsedS: number, minS: number | null): boolean {
-  if (!isTimed(type)) return true;
-  return elapsedS >= (minS ?? 0);
-}
-
-export const problemMessageKey = (p: TakeProblem): `problem.${TakeProblem}` => `problem.${p}`;
 
 export function takeRules(card: CampaignCard, mission: Mission): TakeRules {
   const entry = card.instructions?.speech_types?.find((s) => s.type === mission.type);
@@ -48,56 +15,6 @@ export function takeRules(card: CampaignCard, mission: Mission): TakeRules {
     minLevelDbfs: num(rec?.min_level_dbfs) ?? -35,
     silenceMarginS: num(rec?.silence_margin_s) ?? 1,
   };
-}
-
-/** The longest a take may run before auto-stop (null for a read sentence without a limit). */
-export const autoStopS = (mission: Mission, rules: TakeRules): number | null => (isTimed(mission.type) ? (mission.duration_s.max ?? rules.durationMaxS) : null);
-
-export type SubmitAction =
-  | { kind: "rerecord"; reason: NonNullable<CampaignFailure["reason"]> }
-  | { kind: "already" }
-  | { kind: "hub" }
-  | { kind: "signin" }
-  | { kind: "retry"; reupload: boolean };
-
-const HUB_CODES = ["conflict", "partner_consent", "campaign_paused", "campaign_not_open", "account_consent", "campaign_consent", "blocked", "not_assigned", "campaign_closed", "profile_incomplete"];
-
-/** What to do after a failed upload/submit. `uploaded`: the audio already reached Sayari, so a retry must not upload it again. */
-export function submitFailureAction(failure: Pick<CampaignFailure, "code" | "reason">, ctx: { uploaded: boolean }): SubmitAction {
-  if (failure.code === "recording_rejected") return { kind: "rerecord", reason: failure.reason ?? "other" };
-  if (failure.code === "already_submitted") return { kind: "already" };
-  if (failure.code === "unauthorized") return { kind: "signin" };
-  if (HUB_CODES.includes(failure.code)) return { kind: "hub" };
-  // Not the take's fault: keep it so it can be sent once the service is fixed.
-  if (failure.code === "misconfigured") return { kind: "retry", reupload: !ctx.uploaded };
-  if (isRetryable(failure.code)) return { kind: "retry", reupload: !ctx.uploaded };
-  // invalid_input and the like: the take cannot be saved as is
-  return { kind: "rerecord", reason: "other" };
-}
-
-export type UploadFailureKey = "offline" | "network" | "tooLarge" | "refused" | "rateLimited" | "server" | "other";
-
-/**
- * Which message to show when the audio upload failed, from the error's HTTP status (0 when no
- * answer came back) and whether the device reports a network. Each one says what to do next.
- */
-export function uploadFailureKey(e: { status: number; isNetwork: boolean }, online: boolean): UploadFailureKey {
-  if (!online) return "offline";
-  if (e.isNetwork || e.status === 0) return "network";
-  if (e.status === 413) return "tooLarge";
-  if (e.status === 429) return "rateLimited";
-  if (e.status >= 500) return "server";
-  if (e.status >= 400) return "refused";
-  return "other";
-}
-
-/** Next mission to record after `currentId` (todo or rejected), in position order. Null when none. */
-export function nextTodo(missions: Mission[], currentId: string): Mission | null {
-  const sorted = [...missions].sort((a, b) => a.position - b.position);
-  const idx = sorted.findIndex((m) => m.mission_id === currentId);
-  const open = (m: Mission) => m.mission_id !== currentId && (m.status === "todo" || m.status === "rejected");
-  const after = sorted.slice(idx + 1).find(open);
-  return after ?? null;
 }
 
 /** Short device label from the user agent, e.g. "Android Chrome". */

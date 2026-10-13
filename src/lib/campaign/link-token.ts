@@ -75,8 +75,3 @@ export function takeLinkFromLocation(): { token: string | null; malformed: boole
   }
   return { token: malformed ? null : savedToken(), malformed };
 }
-
-/** The token to use now (from the URL, else from storage), or null. */
-export function takeTokenFromLocation(): string | null {
-  return takeLinkFromLocation().token;
-}
