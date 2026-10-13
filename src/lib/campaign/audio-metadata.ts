@@ -116,7 +116,8 @@ export function buildAudioMetadata(args: {
     speaker: {
       speaker_id: contributor.speaker_id,
       native_language: nn(p?.nativeLanguage),
-      variety: nn(p?.variety),
+      // The declared variety only when it is one of THIS campaign's language (APP-015).
+      variety: varietyFor(card, contributor),
       country: nn(p?.country),
       region: nn(p?.region),
       gender: nn(p?.gender),
@@ -150,4 +151,17 @@ export function parseDevice(ua: string): { os: string | null; browser: string | 
   const os = /iPhone|iPad|iPod/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS X/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : null;
   const browser = /EdgA?\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /SamsungBrowser/.test(ua) ? "Samsung" : /Firefox|FxiOS/.test(ua) ? "Firefox" : /Chrome|CriOS/.test(ua) ? "Chrome" : /Safari/.test(ua) ? "Safari" : null;
   return { os, browser };
+}
+
+/**
+ * The speaker's declared variety, only when it belongs to the campaign's language (APP-015). The
+ * profile is one per speaker: saved from a campaign in another language, its variety is that
+ * language's, and must not label this campaign's audio. Null otherwise.
+ */
+export function varietyFor(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile">): string | null {
+  const v = contributor.profile.values?.variety ?? null;
+  const native = contributor.profile.values?.nativeLanguage ?? null;
+  if (!v) return null;
+  if (card.language.varieties.includes(v)) return v;
+  return native && native === card.language.code && card.language.varieties.length === 0 ? v : null;
 }

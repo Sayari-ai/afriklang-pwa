@@ -19,7 +19,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useLocale, useTranslations } from "next-intl";
 import { checkTake, sha256Hex, type FullAnalysis, type TakeProblem } from "@/lib/audio/analyze";
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
-import { buildAudioMetadata, parseDevice } from "@/lib/campaign/audio-metadata";
+import { buildAudioMetadata, parseDevice, varietyFor } from "@/lib/campaign/audio-metadata";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/campaign/drafts";
 import { LOW_SPACE_BYTES, freeSpaceBytes } from "@/lib/campaign/storage-safety";
 import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
@@ -63,7 +63,8 @@ type Props = {
 };
 
 export function Studio({ campaignId, card, missions, userId, speakerId, contributor, startId, pool = null }: Props) {
-  const dialect = contributor.profile.values?.variety ?? null;
+  // Only a variety of this campaign's language labels its audio (APP-015).
+  const dialect = varietyFor(card, contributor);
   const locale = useLocale();
   // One id per studio visit: groups the takes of a sitting in the dataset.
   const [sessionId] = useState(() => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `s-${Date.now().toString(36)}`));
