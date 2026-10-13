@@ -228,8 +228,10 @@ Never active in a production build. The mock's answers must follow the bridge co
 ## 8. Tests
 
 ```bash
-npx vitest run --config vitest.campaign.config.ts
+npm test        # = vitest run --config vitest.campaign.config.ts
 ```
+
+CI (`.github/workflows/ci.yml`) runs `npm run typecheck`, `npm run lint` and `npm test`.
 
 Covers the Edge Function handler (Deno and Supabase faked), identity and field rules, link-token handling,
 audio measurements, error mapping, the screens' decision logic, and English/French key parity.
