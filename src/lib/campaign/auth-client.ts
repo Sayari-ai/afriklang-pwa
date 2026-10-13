@@ -37,6 +37,23 @@ export function getCampaignAuth(): SupabaseClient {
   return client;
 }
 
+/**
+ * The current access token, or undefined when signed out. `renew` asks Auth for a fresh one
+ * (after a server answered 401 to a token the client still thought valid).
+ */
+export async function campaignAccessToken(renew = false): Promise<string | undefined> {
+  try {
+    const auth = getCampaignAuth().auth;
+    if (renew) {
+      const { data, error } = await auth.refreshSession();
+      return error ? undefined : data.session?.access_token;
+    }
+    return (await auth.getSession()).data.session?.access_token;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Start Google sign-in and come back to `returnPath` (same origin). */
 export async function signInWithGoogle(returnPath = "/campaign"): Promise<void> {
   const target = returnPath.startsWith("/") && !returnPath.startsWith("//") ? returnPath : "/campaign";

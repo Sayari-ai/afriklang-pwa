@@ -8,12 +8,43 @@
 
 import { createStore, del, set, values, type UseStore } from "idb-keyval";
 import { useEffect, useSyncExternalStore } from "react";
-import { uploadAudio } from "@/lib/api/audio";
+import { AudioUploadError, uploadAudio } from "@/lib/api/audio";
 import { logActivity } from "./activity";
 import { submitRecording } from "./api";
+import { campaignAccessToken } from "./auth-client";
 import { createOutbox, type OutboxEvent } from "./outbox";
 import type { OutboxItem } from "./outbox-logic";
 import { markSubmitted, refreshCampaign } from "./queries";
+
+/**
+ * Upload with the contributor's session (the proxy refuses anonymous uploads). A 401 on a token
+ * the client still thought valid gets one renewal and one more try; a second 401 goes back to
+ * the outbox, which holds the take until the speaker is signed in again.
+ */
+async function uploadSignedIn(item: OutboxItem) {
+  const send = (accessToken: string) =>
+    uploadAudio({
+      file: item.blob,
+      filename: item.filename,
+      languageIso: item.upload.languageIso,
+      consentRecorded: true,
+      ...(item.upload.dialect ? { dialect: item.upload.dialect } : {}),
+      englishDescription: item.upload.englishDescription,
+      speakerId: item.upload.speakerId,
+      extraFields: item.upload.extraFields,
+      accessToken,
+    });
+  const token = await campaignAccessToken();
+  if (!token) throw new AudioUploadError("Sign in to send your recordings.", 401, false);
+  try {
+    return await send(token);
+  } catch (e) {
+    if (!(e instanceof AudioUploadError) || e.status !== 401) throw e;
+    const fresh = await campaignAccessToken(true);
+    if (!fresh) throw e;
+    return send(fresh);
+  }
+}
 
 // Its own database: idb-keyval opens one store per database (see storage/progress-queue.ts).
 let idb: UseStore | null = null;
@@ -25,17 +56,7 @@ export const outbox = createOutbox({
     put: (item) => set(item.id, item, db()),
     remove: (id) => del(id, db()),
   },
-  upload: (item) =>
-    uploadAudio({
-      file: item.blob,
-      filename: item.filename,
-      languageIso: item.upload.languageIso,
-      consentRecorded: true,
-      ...(item.upload.dialect ? { dialect: item.upload.dialect } : {}),
-      englishDescription: item.upload.englishDescription,
-      speakerId: item.upload.speakerId,
-      extraFields: item.upload.extraFields,
-    }),
+  upload: (item) => uploadSignedIn(item),
   submit: (missionId, metadata) => submitRecording(missionId, metadata),
   online: () => typeof navigator === "undefined" || navigator.onLine !== false,
   withLock: (run) =>

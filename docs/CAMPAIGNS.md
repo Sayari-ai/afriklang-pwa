@@ -65,8 +65,21 @@ browser /campaign  ──►  Edge Function `campaigns`  ──►  dashboard /a
  Google session          verifies the session,           checks Authorization: Bearer <secret>
                          holds BRIDGE_SECRET             (PWA_BRIDGE_SECRET on the dashboard)
 
-browser  ──►  /api/audio-upload (existing proxy)  ──►  Sayari      (the audio itself)
+browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio itself)
+ Bearer <session>   checks the session with Supabase Auth,   checks X-Upload-Key
+                    size (≤ 25 MB) and rate; adds the key
 ```
+
+- **The upload proxy only forwards for a signed-in contributor** (since 2026-10-13): it reads
+  `Authorization: Bearer <Supabase access token>`, checks it with Supabase Auth (cached 60 s), and
+  refuses a body over 25 MB or without `Content-Length`. Limits, in each server instance's memory:
+  120 uploads per person per 10 minutes, 20 failed sign-in checks per address per 10 minutes, 600
+  Auth lookups per minute in total. Sayari's 5xx text and a refused upload key never reach the
+  browser (`502 upstream_error`, `500 server_misconfigured`). Code: `src/lib/server/upload-guard.ts`.
+  The outbox sends the token, renews it once on a 401, and otherwise holds the take until the
+  speaker signs in again. The old learning-app screen (`/level/*`) sends no token and can no longer
+  upload. The next step (dashboard-signed upload tickets) is in
+  `afriklang/docs/CAMPAIGN_PIPELINE_COMPLETION_PLAN.md`, Phase 1.
 
 - The browser **never holds the bridge secret** and **never says who it is**. The Edge Function reads
   the user id and the verified Google email from the signed-in session

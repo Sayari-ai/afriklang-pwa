@@ -37,6 +37,7 @@ describe("outbox decisions", () => {
   });
   it("gives up on a refused or too-large file", () => {
     expect(decideUploadFailure({ status: 413, isNetwork: false }, 0, true).kind).toBe("fail");
+    expect(decideUploadFailure({ status: 401, isNetwork: false }, 0, true)).toEqual({ kind: "hold", code: "unauthorized", delayMs: 60_000 });
     expect(decideUploadFailure({ status: 400, isNetwork: false }, 0, true).kind).toBe("fail");
     expect(decideUploadFailure({ status: 503, isNetwork: false }, 0, true).kind).toBe("retry");
   });
