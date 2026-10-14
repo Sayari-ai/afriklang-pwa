@@ -81,7 +81,13 @@ export default function StudioPage() {
 
   const card = list.data.campaigns.find((c) => c.campaign_id === id) ?? missions.data.campaign;
   const speakerId = list.data.contributor.speaker_id;
-  const guard = card.next_step === "paused" ? "paused" : card.next_step === "closed" ? "closed" : card.next_step !== "ready" || !speakerId ? "notReady" : null;
+  const guard =
+    card.next_step === "paused" ? "paused"
+    : card.next_step === "closed" ? "closed"
+    : card.next_step !== "ready" || !speakerId ? "notReady"
+    // A qualification test takes recordings only while it is recording (then it is being reviewed).
+    : card.kind === "qualification" && card.qualification && card.qualification.stage !== "recording" ? "testClosed"
+    : null;
   if (guard) {
     return (
       <div className={dark} role="alert">

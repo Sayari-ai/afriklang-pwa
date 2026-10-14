@@ -120,7 +120,8 @@
       "todo": "À enregistrer",
       "redo": "À refaire",
       "sent": "En vérification",
-      "accepted": "Acceptées"
+      "accepted": "Acceptées",
+      "notAccepted": "Non acceptés"
     },
     "empty": {
       "todo": "Plus rien à enregistrer ici.",
@@ -179,5 +180,19 @@
     },
     "loadError": "Impossible de charger les enregistrements de cette campagne.",
     "paid": "Audio accepté : {accepted} · En vérification : {pending}"
+  },
+  "qualification": {
+    "title": "Test de qualification",
+    "attempt": "Tentative {n}",
+    "recording": "{done} sur {total} enregistrés",
+    "start": "Commencer le test",
+    "continue": "Continuer · {n} restants",
+    "setup": "Terminez l'inscription pour commencer",
+    "inReview": "Tout est envoyé. Un locuteur natif écoute vos enregistrements ; vous recevrez le résultat par e-mail.",
+    "eligible": "Réussi : {accepted, plural, one {# enregistrement accepté} other {# enregistrements acceptés}} sur {total}. L'équipe vous contactera.",
+    "retry": "Pas encore réussi. Un nouveau test, avec de nouvelles consignes, vous attend.",
+    "notEligible": "Pas réussi cette fois. Vous pourrez repasser le test à partir du {date}.",
+    "cancelled": "Ce test a été annulé.",
+    "intro": "Dites chaque consigne en {language}, comme vous la diriez naturellement. Un locuteur natif écoute chaque enregistrement."
   }
 }

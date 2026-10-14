@@ -46,6 +46,10 @@ export function MissionList({ campaignId, readOnly }: Props) {
   const [picked, setPicked] = useState<Tab | null>(null);
   // Pool missions whose lease ended are back in the pool: not listed, even from a saved copy.
   const live = useLiveMissions(res.state === "ready" ? res.data.missions : null);
+  // A qualification test's sentences are shown in English or French and said in the speaker's language.
+  const qualifying = res.state === "ready" && res.data.campaign?.kind === "qualification";
+  // Once a test is sent, a rejection is a result, not a request to record again.
+  const testClosed = qualifying && res.state === "ready" && res.data.campaign?.qualification?.stage !== "recording";
 
   const groups = useMemo(() => {
     const g: Record<Tab, Mission[]> = { todo: [], redo: [], sent: [], accepted: [] };
@@ -87,21 +91,21 @@ export function MissionList({ campaignId, readOnly }: Props) {
             className={`flex min-h-12 flex-col items-center justify-center rounded-xl px-1 text-[11px] leading-tight font-bold ${tab === k ? "bg-white text-primary shadow-sm" : "text-slate-600"}`}
           >
             <span className="text-base font-black tabular-nums">{groups[k].length}</span>
-            {t(`tabs.${k}`)}
+            {testClosed && k === "redo" ? t("tabs.notAccepted") : t(`tabs.${k}`)}
           </button>
         ))}
       </div>
       <ul id="mission-panel" role="tabpanel" className="space-y-2">
         {list.length === 0 ? <li className="rounded-2xl bg-white p-5 text-center text-sm text-slate-600">{t(`empty.${tab}`)}</li> : null}
         {list.map((m) => (
-          <MissionRow key={m.mission_id} campaignId={campaignId} mission={m} local={onPhone.get(m.mission_id)} active={box.activeId != null && box.items.some((i) => i.id === box.activeId && i.missionId === m.mission_id)} readOnly={readOnly} />
+          <MissionRow key={m.mission_id} campaignId={campaignId} mission={m} local={onPhone.get(m.mission_id)} active={box.activeId != null && box.items.some((i) => i.id === box.activeId && i.missionId === m.mission_id)} readOnly={readOnly || testClosed} qualifying={qualifying} testClosed={testClosed} />
         ))}
       </ul>
     </section>
   );
 }
 
-function MissionRow({ campaignId, mission: m, local, active, readOnly }: { campaignId: string; mission: Mission; local: OutboxState | undefined; active: boolean; readOnly: boolean }) {
+function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifying = false, testClosed = false }: { campaignId: string; mission: Mission; local: OutboxState | undefined; active: boolean; readOnly: boolean; qualifying?: boolean; testClosed?: boolean }) {
   const t = useTranslations("campaign.home");
   const tm = useTranslations("campaign.flow.missions");
   const why = useRejectionText()(m.rejection_reason);
@@ -123,11 +127,11 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly }: { campa
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2 text-xs text-slate-500">
           <span className="font-mono font-semibold">#{m.position}</span>
-          <span>{tm(`types.${m.type}`)}</span>
+          <span>{qualifying && m.type === "read" ? tm("types.say") : tm(`types.${m.type}`)}</span>
           {m.duration_s.min != null && m.duration_s.max != null && m.type !== "read" ? <span>{tm("duration", { min: m.duration_s.min, max: m.duration_s.max })}</span> : null}
         </span>
         <span className="block text-sm font-semibold text-slate-900">{truncate(m.prompt.text_or_topic, 110)}</span>
-        {m.status === "rejected" && !local ? <span className="mt-1 block text-xs font-semibold text-amber-800">{why ? tm("reason", { reason: why }) : tm("noReason")}</span> : null}
+        {m.status === "rejected" && !local ? <span className="mt-1 block text-xs font-semibold text-amber-800">{testClosed ? tm("notAccepted", { reason: why ?? "" }) : why ? tm("reason", { reason: why }) : tm("noReason")}</span> : null}
         {!local ? <LeaseLeft mission={m} /> : null}
         {partnerWait ? (
           <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-800">

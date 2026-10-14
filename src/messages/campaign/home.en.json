@@ -120,7 +120,8 @@
       "todo": "To record",
       "redo": "To redo",
       "sent": "In review",
-      "accepted": "Accepted"
+      "accepted": "Accepted",
+      "notAccepted": "Not accepted"
     },
     "empty": {
       "todo": "Nothing left to record here.",
@@ -179,5 +180,19 @@
     },
     "loadError": "We could not load the recordings of this campaign.",
     "paid": "Accepted audio: {accepted} · In review: {pending}"
+  },
+  "qualification": {
+    "title": "Qualification test",
+    "attempt": "Attempt {n}",
+    "recording": "{done} of {total} recorded",
+    "start": "Start the test",
+    "continue": "Continue · {n} left",
+    "setup": "Finish setup to start",
+    "inReview": "All sent. A native speaker is listening to your recordings; you will get the result by email.",
+    "eligible": "Passed: {accepted, plural, one {# recording} other {# recordings}} accepted out of {total}. The team will be in touch.",
+    "retry": "Not passed yet. A new test with new prompts is ready.",
+    "notEligible": "Not passed this time. You may take the test again from {date}.",
+    "cancelled": "This test was cancelled.",
+    "intro": "Say each prompt in {language}, the way you would naturally say it. A native speaker listens to every recording."
   }
 }
