@@ -93,7 +93,9 @@
       "file": "the file was refused; please record it again",
       "server": "the service is having trouble",
       "network": "the connection failed",
-      "generic": "it could not be saved"
+      "generic": "it could not be saved",
+      "testClosed": "the test is closed, nothing to send",
+      "duplicate": "already sent for another prompt: record it again"
     }
   },
   "hub": {

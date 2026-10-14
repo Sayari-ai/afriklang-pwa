@@ -49,7 +49,8 @@ export function MissionList({ campaignId, readOnly }: Props) {
   // A qualification test's sentences are shown in English or French and said in the speaker's language.
   const qualifying = res.state === "ready" && res.data.campaign?.kind === "qualification";
   // Once a test is sent, a rejection is a result, not a request to record again.
-  const testClosed = qualifying && res.state === "ready" && res.data.campaign?.qualification?.stage !== "recording";
+  const stage = res.state === "ready" ? res.data.campaign?.qualification?.stage : undefined;
+  const testClosed = qualifying && stage != null && stage !== "recording";
 
   const groups = useMemo(() => {
     const g: Record<Tab, Mission[]> = { todo: [], redo: [], sent: [], accepted: [] };
