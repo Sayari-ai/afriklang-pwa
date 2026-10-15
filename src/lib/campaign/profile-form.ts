@@ -9,8 +9,8 @@ export const AGE_BANDS = ["18-29", "30-44", "45-59", "60+"] as const;
 
 // The dashboard stores region and device in 80 characters; stay under that so a save never truncates.
 export const MAX_TEXT = 80;
-/** Value of the "none of these" option in the variety select. It is never sent. */
-export const OTHER_VARIETY = "__other__";
+/** Suggestions shown under the variety field at most. */
+export const MAX_SUGGESTIONS = 8;
 
 export const AFRICAN_COUNTRIES = [
   "DZ", "AO", "BJ", "BW", "BF", "BI", "CV", "CM", "CF", "TD", "KM", "CG", "CD", "CI", "DJ", "EG", "GQ", "ER", "SZ", "ET", "GA", "GM", "GH", "GN", "GW",
@@ -49,7 +49,64 @@ export const PROFILE_FIELDS: readonly (keyof ProfileInput)[] = ["native_language
 const HAS_WORD = /[\p{L}\p{N}]/u;
 const CONTROL = /[\u0000-\u001f\u007f]/;
 
-export function validateProfile(v: ProfileValues, varieties: readonly string[]): { input: ProfileInput | null; errors: ProfileErrors } {
+// ── Variety ──────────────────────────────────────────────────────────────
+// The speaker types their variety. The form suggests the ones the dashboard knows; a name it
+// does not know is added by the dashboard on save (so nobody is stuck when an admin has not
+// listed their variety yet).
+
+/** One space between words and none at the ends (the dashboard tidies the same way). */
+export const tidyVariety = (s: string) => s.trim().replace(/\s+/g, " ");
+
+/** Comparison key: no case, no accents, spaces / hyphens / apostrophes alike ("Baol-Baol" ~ "baol baol"). */
+export function varietyKey(s: string): string {
+  return s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[\s\-'’‘_.]+/g, " ").trim();
+}
+
+/** What the form suggests: the campaign's varieties first, then the language's others, no duplicates. */
+export function varietyChoices(card: Pick<CampaignCard, "language">): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const name of [...card.language.varieties, ...(card.language.known_varieties ?? [])]) {
+    const k = varietyKey(name);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(name);
+  }
+  return out;
+}
+
+/** The known name the typed value stands for, or null. */
+export function matchVariety(value: string, choices: readonly string[]): string | null {
+  const k = varietyKey(value);
+  return (k && choices.find((c) => varietyKey(c) === k)) || null;
+}
+
+/**
+ * Names for what the speaker typed: those starting with it, then those with a later word starting with it,
+ * in the order of `choices`. Nothing typed: the first ones. An exact match hides the list.
+ */
+export function suggestVarieties(value: string, choices: readonly string[], max = MAX_SUGGESTIONS): string[] {
+  const k = varietyKey(value);
+  if (!k) return choices.slice(0, max);
+  if (matchVariety(value, choices)) return [];
+  const starts = choices.filter((c) => varietyKey(c).startsWith(k));
+  const contains = choices.filter((c) => !starts.includes(c) && ` ${varietyKey(c)}`.includes(` ${k}`));
+  return [...starts, ...contains].slice(0, max);
+}
+
+/**
+ * The campaign's varieties when `variety` is not one of them, else null. A qualification test
+ * and a campaign with no target varieties take any variety. Saving anyway is allowed: the
+ * dashboard pauses that campaign for the speaker and tells the team.
+ */
+export function outsideTargets(variety: string, card: Pick<CampaignCard, "language" | "kind">): string[] | null {
+  const targets = card.language.varieties;
+  if (card.kind === "qualification" || targets.length === 0 || !varietyKey(variety)) return null;
+  return matchVariety(variety, targets) ? null : targets;
+}
+
+/** `choices`: the known varieties (varietyChoices); a known name is sent under its list spelling. */
+export function validateProfile(v: ProfileValues, choices: readonly string[]): { input: ProfileInput | null; errors: ProfileErrors } {
   const t = (s: string) => s.trim();
   const errors: ProfileErrors = {};
   const need = (k: keyof ProfileInput, ok: (s: string) => boolean) => {
@@ -66,7 +123,11 @@ export function validateProfile(v: ProfileValues, varieties: readonly string[]):
   };
   // Not asked: it is the campaign's language (see initialValues). The server checks it again.
   need("native_language", () => true);
-  need("variety", (s) => varieties.includes(s));
+  const variety = tidyVariety(v.variety);
+  if (!variety) errors.variety = "required";
+  else if (variety.length > MAX_TEXT) errors.variety = "tooLong";
+  else if (CONTROL.test(variety)) errors.variety = "control";
+  else if (!/\p{L}/u.test(variety)) errors.variety = "noLetters";
   need("country", (s) => ALL_COUNTRIES.has(s));
   text("region");
   need("gender", (s) => (GENDERS as readonly string[]).includes(s));
@@ -76,7 +137,7 @@ export function validateProfile(v: ProfileValues, varieties: readonly string[]):
   return {
     errors,
     input: {
-      native_language: t(v.native_language), variety: t(v.variety), country: t(v.country), region: t(v.region),
+      native_language: t(v.native_language), variety: matchVariety(variety, choices) ?? variety, country: t(v.country), region: t(v.region),
       gender: t(v.gender), age_band: t(v.age_band), device: t(v.device),
     },
   };
