@@ -203,6 +203,13 @@ const CONSENTS = (s: State, campaign: boolean) => ({
   campaign: { required_version: "v1", signed: campaign, signed_version: campaign ? "v1" : null, text_url: "https://example.com/consent/campaign" },
 });
 
+/** The dashboard's list of Wolof varieties; a variety the speaker typed is added on save, like the dashboard does. */
+const BASE_VARIETIES = ["Baol-Baol", "Dakar urban", "Lebou", "Saloum-Saloum"];
+function knownVarieties(s: State): string[] {
+  const known = s.variety && !BASE_VARIETIES.some((v) => v.toLowerCase() === s.variety!.toLowerCase()) ? [...BASE_VARIETIES, s.variety] : BASE_VARIETIES;
+  return [...known].sort((a, b) => a.localeCompare(b));
+}
+
 function plannedCard(s: State): CampaignCard {
   return {
     assignment_id: "00000000-0000-4000-8000-0000000000a1",
@@ -210,7 +217,7 @@ function plannedCard(s: State): CampaignCard {
     code: "WOL_FIN_PILOT_01",
     title: "Wolof mobile money pilot",
     status: "launched",
-    language: { code: "wol", name: "Wolof", varieties: ["Baol-Baol", "Saloum-Saloum", "Dakar urban"] },
+    language: { code: "wol", name: "Wolof", varieties: ["Baol-Baol", "Saloum-Saloum", "Dakar urban"], known_varieties: knownVarieties(s) },
     topic: { domain: "Banking and Fintech", sub_domain: "Mobile money" },
     deadline: new Date(Date.now() + 12 * 86_400_000).toISOString().slice(0, 10),
     dispatch: "planned",
@@ -240,7 +247,7 @@ function poolCard(s: State): CampaignCard {
     code: "WOL_GEN_1000H",
     title: "Wolof everyday speech (1,000 hours)",
     status: "launched",
-    language: { code: "wol", name: "Wolof", varieties: ["Baol-Baol", "Saloum-Saloum", "Dakar urban"] },
+    language: { code: "wol", name: "Wolof", varieties: ["Baol-Baol", "Saloum-Saloum", "Dakar urban"], known_varieties: knownVarieties(s) },
     topic: { domain: "General", sub_domain: "Everyday life" },
     deadline: new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10),
     dispatch: "pool",
@@ -267,7 +274,7 @@ function qualCard(s: State): CampaignCard {
     code: "WOL_GEN_QUALIF_01",
     title: "Wolof qualification test",
     status: "launched",
-    language: { code: "wol", name: "Wolof", varieties: ["Baol-Baol", "Saloum-Saloum", "Dakar urban"] },
+    language: { code: "wol", name: "Wolof", varieties: knownVarieties(s), known_varieties: knownVarieties(s) },
     topic: { domain: "General conversation", sub_domain: null },
     deadline: null,
     dispatch: "planned",

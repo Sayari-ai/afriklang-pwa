@@ -19,10 +19,11 @@
     "privacy": "Your name never travels with your audio: only a pseudonymous speaker ID does.",
     "correctTitle": "Correct my profile",
     "variety": "Which variety of {language} do you speak?",
-    "varietyPlaceholder": "Choose your variety",
-    "varietyOther": "None of these / another variety",
-    "varietyOtherTitle": "This campaign is for a different variety",
-    "varietyOtherBody": "This campaign is for speakers of the varieties listed. If you speak another variety, please contact the Afriklang team. They can tell you about other campaigns that may suit you.",
+    "varietyHint": "Type the name of your variety, or tap one of the suggestions. If it is not listed, type it in full: it will be added.",
+    "varietySuggestions": "Suggested varieties",
+    "varietyNew": "“{name}” is not in our list yet. It will be added as a variety of {language} when you save.",
+    "varietyOutsideTitle": "This campaign is for other varieties",
+    "varietyOutsideBody": "This campaign is for speakers of {varieties}. You can still save your variety: your missions in this campaign will wait until the Afriklang team has looked at it.",
     "country": "Country you live in",
     "countryPlaceholder": "Choose your country",
     "region": "Region or city",
@@ -40,7 +41,7 @@
     },
     "errors": {
       "required": {
-        "variety": "Choose the variety of the language you speak.",
+        "variety": "Type or choose the variety of the language you speak.",
         "country": "Choose the country you live in.",
         "region": "Enter your region or city.",
         "gender": "Choose Female or Male.",
@@ -52,7 +53,7 @@
       "noLetters": "Use letters or numbers, not only symbols or spaces.",
       "control": "Remove the line breaks or special characters.",
       "server": {
-        "variety": "This variety was not accepted for this language. Choose one from the list.",
+        "variety": "This variety was not accepted. Choose one from the suggestions, or contact the Afriklang team.",
         "country": "This country was not accepted. Choose one from the list.",
         "region": "This region was not accepted. Enter a region or city name, 80 characters at most.",
         "gender": "This answer was not accepted. Choose one of the options.",
@@ -60,8 +61,6 @@
         "device": "This device name was not accepted. Enter a short name, 80 characters at most."
       }
     },
-    "noVarietiesTitle": "No variety to choose from yet",
-    "noVarietiesBody": "This campaign does not list its language varieties yet, so the profile cannot be completed. Please contact the Afriklang team.",
     "save": "Save and continue",
     "saving": "Saving…",
     "formError": "Please check the highlighted fields."

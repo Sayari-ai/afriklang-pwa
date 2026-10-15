@@ -19,10 +19,11 @@
     "privacy": "Votre nom ne voyage jamais avec votre audio : seul un identifiant de locuteur pseudonyme l'accompagne.",
     "correctTitle": "Corriger mon profil",
     "variety": "Quelle variété de {language} parlez-vous ?",
-    "varietyPlaceholder": "Choisissez votre variété",
-    "varietyOther": "Aucune de celles-ci / une autre variété",
-    "varietyOtherTitle": "Cette campagne concerne une autre variété",
-    "varietyOtherBody": "Cette campagne s'adresse aux locuteurs des variétés listées. Si vous parlez une autre variété, contactez l'équipe Afriklang : elle pourra vous parler d'autres campagnes qui vous conviennent peut-être.",
+    "varietyHint": "Saisissez le nom de votre variété ou touchez l'une des suggestions. Si elle n'est pas proposée, écrivez-la en entier : elle sera ajoutée.",
+    "varietySuggestions": "Variétés suggérées",
+    "varietyNew": "« {name} » n'est pas encore dans notre liste. Elle sera ajoutée à la liste des variétés de la langue {language} lors de l'enregistrement.",
+    "varietyOutsideTitle": "Cette campagne concerne d'autres variétés",
+    "varietyOutsideBody": "Cette campagne s'adresse aux locuteurs de : {varieties}. Vous pouvez quand même enregistrer votre variété : vos missions de cette campagne attendront que l'équipe Afriklang l'ait examinée.",
     "country": "Pays où vous vivez",
     "countryPlaceholder": "Choisissez votre pays",
     "region": "Région ou ville",
@@ -40,7 +41,7 @@
     },
     "errors": {
       "required": {
-        "variety": "Choisissez la variété de la langue que vous parlez.",
+        "variety": "Saisissez ou choisissez la variété de la langue que vous parlez.",
         "country": "Choisissez le pays où vous vivez.",
         "region": "Indiquez votre région ou votre ville.",
         "gender": "Choisissez Femme ou Homme.",
@@ -52,7 +53,7 @@
       "noLetters": "Utilisez des lettres ou des chiffres, pas seulement des symboles ou des espaces.",
       "control": "Supprimez les retours à la ligne ou les caractères spéciaux.",
       "server": {
-        "variety": "Cette variété n'a pas été acceptée pour cette langue. Choisissez-en une dans la liste.",
+        "variety": "Cette variété n'a pas été acceptée. Choisissez-en une parmi les suggestions, ou contactez l'équipe Afriklang.",
         "country": "Ce pays n'a pas été accepté. Choisissez-en un dans la liste.",
         "region": "Cette région n'a pas été acceptée. Indiquez un nom de région ou de ville, 80 caractères au maximum.",
         "gender": "Cette réponse n'a pas été acceptée. Choisissez l'une des options.",
@@ -60,8 +61,6 @@
         "device": "Ce nom d'appareil n'a pas été accepté. Indiquez un nom court, 80 caractères au maximum."
       }
     },
-    "noVarietiesTitle": "Aucune variété proposée pour l'instant",
-    "noVarietiesBody": "Cette campagne n'indique pas encore les variétés de sa langue : le profil ne peut donc pas être complété. Contactez l'équipe Afriklang.",
     "save": "Enregistrer et continuer",
     "saving": "Enregistrement…",
     "formError": "Vérifiez les champs signalés."
