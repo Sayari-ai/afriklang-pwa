@@ -74,8 +74,10 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   const choices = useMemo(() => varietyChoices(card), [card]);
   const suggestions = suggestVarieties(values.variety, choices);
   const typedVariety = tidyVariety(values.variety);
-  const isNewVariety = typedVariety !== "" && /\p{L}/u.test(typedVariety) && !matchVariety(typedVariety, choices);
-  const outside = outsideTargets(typedVariety, card);
+  // While suggestions still match, the speaker is probably mid-word: say nothing about the value yet.
+  const settled = suggestions.length === 0;
+  const isNewVariety = settled && typedVariety !== "" && /\p{L}/u.test(typedVariety) && !matchVariety(typedVariety, choices);
+  const outside = settled ? outsideTargets(typedVariety, card) : null;
 
   const set = (k: keyof ProfileInput) => (v: string) => {
     setValues((s) => ({ ...s, [k]: v }));
