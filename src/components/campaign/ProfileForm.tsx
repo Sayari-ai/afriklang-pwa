@@ -14,11 +14,15 @@ import {
   AGE_BANDS,
   GENDERS,
   MAX_TEXT,
-  OTHER_VARIETY,
   countryOptions,
   initialValues,
+  matchVariety,
+  outsideTargets,
   profileErrorsFromServer,
+  suggestVarieties,
+  tidyVariety,
   validateProfile,
+  varietyChoices,
   type FieldError,
   type ProfileErrors,
   type ProfileValues,
@@ -67,8 +71,11 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     }
     return countryOptions((c) => names?.of(c) ?? c, locale);
   }, [locale]);
-  // The "other" option is UI only: it blocks submit and explains, it is never sent.
-  const otherVariety = values.variety === OTHER_VARIETY;
+  const choices = useMemo(() => varietyChoices(card), [card]);
+  const suggestions = suggestVarieties(values.variety, choices);
+  const typedVariety = tidyVariety(values.variety);
+  const isNewVariety = typedVariety !== "" && /\p{L}/u.test(typedVariety) && !matchVariety(typedVariety, choices);
+  const outside = outsideTargets(typedVariety, card);
 
   const set = (k: keyof ProfileInput) => (v: string) => {
     setValues((s) => ({ ...s, [k]: v }));
@@ -82,11 +89,8 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (sending.current || otherVariety) return;
-    const { input, errors: found } = validateProfile(
-      values,
-      card.language.varieties,
-    );
+    if (sending.current) return;
+    const { input, errors: found } = validateProfile(values, choices);
     setErrors(found);
     if (!input) {
       setFailure(null);
@@ -166,7 +170,6 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   const select = (
     k: keyof ProfileInput,
     options: { value: string; label: string }[],
-    extra?: { value: string; label: string },
   ) =>
     function selectControl(p: {
       id: string;
@@ -189,11 +192,10 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
               {o.label}
             </option>
           ))}
-          {extra ? <option value={extra.value}>{extra.label}</option> : null}
         </select>
       );
     };
-  const text = (k: "region" | "device", autoComplete: string) =>
+  const text = (k: "variety" | "region" | "device", autoComplete: string) =>
     function textControl(p: {
       id: string;
       describedBy?: string;
@@ -228,20 +230,31 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
       {field(
         "variety",
         t("variety", { language: card.language.name }),
-        select(
-          "variety",
-          card.language.varieties.map((v) => ({ value: v, label: v })),
-          { value: OTHER_VARIETY, label: t("varietyOther") },
-        ),
+        text("variety", "off"),
+        t("varietyHint"),
       )}
-      {card.language.varieties.length === 0 ? (
-        <Notice title={t("noVarietiesTitle")} tone="warn">
-          <p>{t("noVarietiesBody")}</p>
-        </Notice>
+      {suggestions.length ? (
+        <div role="group" aria-label={t("varietySuggestions")} className="-mt-2 flex flex-wrap gap-2">
+          {suggestions.map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => set("variety")(name)}
+              className="min-h-10 rounded-full border border-slate-300 bg-white px-3 text-sm text-slate-800 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              {name}
+            </button>
+          ))}
+        </div>
       ) : null}
-      {otherVariety ? (
-        <Notice title={t("varietyOtherTitle")} tone="warn">
-          <p>{t("varietyOtherBody")}</p>
+      {isNewVariety && !errors.variety ? (
+        <p className="-mt-2 text-sm text-slate-600" aria-live="polite">
+          {t("varietyNew", { name: typedVariety, language: card.language.name })}
+        </p>
+      ) : null}
+      {outside ? (
+        <Notice title={t("varietyOutsideTitle")} tone="warn">
+          <p>{t("varietyOutsideBody", { varieties: outside.join(", ") })}</p>
         </Notice>
       ) : null}
       {field("country", t("country"), select("country", countries))}
@@ -277,7 +290,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
       {failure ? <FailureMessage failure={failure} /> : null}
       <button
         type="submit"
-        disabled={busy || otherVariety}
+        disabled={busy}
         className={buttonPrimary}
       >
         {busy ? t("saving") : t("save")}

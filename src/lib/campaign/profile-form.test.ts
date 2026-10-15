@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AFRICAN_COUNTRIES, ALL_COUNTRIES, countryOptions, guessDevice, initialValues, profileErrorsFromServer, validateProfile, type ProfileValues } from "./profile-form";
+import { AFRICAN_COUNTRIES, ALL_COUNTRIES, countryOptions, guessDevice, initialValues, matchVariety, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
 
 const ok: ProfileValues = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: " Thiès ", gender: "female", age_band: "30-44", device: "Android" };
 const varieties = ["Baol-Baol", "Saloum-Saloum"];
@@ -11,13 +11,58 @@ describe("validateProfile", () => {
     expect(r.input?.region).toBe("Thiès");
   });
   it("flags empty and unknown values per field", () => {
-    const r = validateProfile({ ...ok, variety: "Other", country: "", region: "  ", gender: "undisclosed", age_band: "10-17" }, varieties);
+    const r = validateProfile({ ...ok, variety: "  ", country: "", region: "  ", gender: "undisclosed", age_band: "10-17" }, varieties);
     expect(r.input).toBeNull();
-    expect(r.errors).toEqual({ variety: "invalid", country: "required", region: "required", gender: "invalid", age_band: "invalid" });
+    expect(r.errors).toEqual({ variety: "required", country: "required", region: "required", gender: "invalid", age_band: "invalid" });
   });
   it("limits free text", () => {
     expect(validateProfile({ ...ok, device: "x".repeat(81) }, varieties).errors.device).toBe("tooLong");
     expect(validateProfile({ ...ok, device: "x".repeat(80) }, varieties).errors.device).toBeUndefined();
+  });
+});
+
+describe("variety", () => {
+  it("accepts a variety no list has yet, tidied", () => {
+    const r = validateProfile({ ...ok, variety: "  Ndiambour   Wolof " }, varieties);
+    expect(r.errors).toEqual({});
+    expect(r.input?.variety).toBe("Ndiambour Wolof");
+  });
+  it("sends a known variety under the list's spelling", () => {
+    expect(validateProfile({ ...ok, variety: "baol baol" }, varieties).input?.variety).toBe("Baol-Baol");
+    expect(validateProfile({ ...ok, variety: "SALOUM-saloum" }, varieties).input?.variety).toBe("Saloum-Saloum");
+  });
+  it("wants letters, one line and at most 80 characters", () => {
+    expect(validateProfile({ ...ok, variety: "123" }, varieties).errors.variety).toBe("noLetters");
+    expect(validateProfile({ ...ok, variety: "Baol\nBaol" }, varieties).errors.variety).toBeUndefined(); // newline is whitespace: tidied to one space
+    expect(validateProfile({ ...ok, variety: "Baol\u0007" }, varieties).errors.variety).toBe("control");
+    expect(validateProfile({ ...ok, variety: "x".repeat(81) }, varieties).errors.variety).toBe("tooLong");
+  });
+  it("compares without case, accents or punctuation between words", () => {
+    expect(varietyKey("  Baol-Baol ")).toBe("baol baol");
+    expect(varietyKey("Lébou")).toBe(varietyKey("lebou"));
+    expect(matchVariety("lebou", ["Lébou"])).toBe("Lébou");
+    expect(matchVariety("Lebu", ["Lébou"])).toBeNull();
+  });
+  it("suggests the campaign's varieties first, then the language's others, once each", () => {
+    const card = { language: { code: "wol", name: "Wolof", varieties: ["Saloum-Saloum"], known_varieties: ["Baol-Baol", "saloum saloum", "Lebou"] } };
+    expect(varietyChoices(card)).toEqual(["Saloum-Saloum", "Baol-Baol", "Lebou"]);
+    expect(varietyChoices({ language: { code: "wol", name: "Wolof", varieties } })).toEqual(varieties);
+  });
+  it("suggests names starting with the text first, hides the list on an exact match", () => {
+    const choices = ["Dakar urban", "Baol-Baol", "Lebou", "Bao"];
+    expect(suggestVarieties("", choices, 2)).toEqual(["Dakar urban", "Baol-Baol"]);
+    expect(suggestVarieties("ba", choices)).toEqual(["Baol-Baol", "Bao"]);
+    expect(suggestVarieties("urb", choices)).toEqual(["Dakar urban"]);
+    expect(suggestVarieties("lebou", choices)).toEqual([]);
+    expect(suggestVarieties("zz", choices)).toEqual([]);
+  });
+  it("warns when a collection campaign targets other varieties, never for a qualification test", () => {
+    const card = { language: { code: "wol", name: "Wolof", varieties }, kind: "collection" as const };
+    expect(outsideTargets("Lebou", card)).toEqual(varieties);
+    expect(outsideTargets("baol baol", card)).toBeNull();
+    expect(outsideTargets("", card)).toBeNull();
+    expect(outsideTargets("Lebou", { ...card, kind: "qualification" })).toBeNull();
+    expect(outsideTargets("Lebou", { ...card, language: { ...card.language, varieties: [] } })).toBeNull();
   });
 });
 
