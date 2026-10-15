@@ -18,16 +18,19 @@
  *   __afkMock.tickets("old_dashboard")  upload tickets: "ok" (default), "old_dashboard" (404 without a
  *                                      code, as a dashboard without the route), or a refusal code
  *                                      such as "campaign_closed" or "campaign_paused"
+ *   __afkMock.qualify("eligible")      decides the qualification test once it is in review
+ *                                      ("eligible", "retry": a new attempt, "not_eligible")
  *
  * The answers mirror afriklang-landing-page/docs/CAMPAIGN_BRIDGE_CONTRACT.md: keep them in step.
  */
 
-import type { CampaignCard, Mission, NextStep, PoolStatus } from "./types";
+import type { CampaignCard, Mission, NextStep, PoolStatus, QualificationView } from "./types";
 
 const KEY = "afriklang.mock.v2";
 const USER = { id: "00000000-0000-4000-8000-00000000a11c", email: "awa.diop@example.com" };
 const PLANNED_ID = "00000000-0000-4000-8000-0000000000c1";
 const POOL_ID = "00000000-0000-4000-8000-0000000000c2";
+const QUAL_ID = "00000000-0000-4000-8000-0000000000c3";
 /** Pool settings: a batch of 6, draw again under 3, 72 h leases. */
 const BATCH = 6;
 const REFILL_BELOW = 3;
@@ -46,7 +49,41 @@ type State = {
   seconds: Record<string, number>;
   /** How `upload_ticket` answers: "ok", "old_dashboard", or a refusal code. */
   tickets?: string;
+  /** The qualification test (absent from states saved before it existed). */
+  qual?: { consent: boolean; attempt: number; stage: QualificationView["stage"]; decision: QualificationView["decision"]; missions: Mission[] };
 };
+
+/** A qualification draw: one sentence per category and 5 topics, shown in the speaker's working language. */
+const QUAL_SCRIPTS: [Mission["type"], string, string][] = [
+  ["read", "everyday", "I am going to the market this morning."],
+  ["read", "numbers", "I paid 2,500 francs for two loaves of bread."],
+  ["read", "names", "Aminata took the bus from Thiès to Saint-Louis."],
+  ["read", "mixed", "My phone needs a new SIM card from Orange."],
+  ["read", "questions", "Where is the nearest pharmacy?"],
+  ["spontaneous", "topic", "Describe what you usually eat for breakfast."],
+  ["spontaneous", "topic", "Tell us about the town or village where you grew up."],
+  ["spontaneous", "topic", "What do you do on a day off?"],
+  ["spontaneous", "topic", "How do you get to work or school?"],
+  ["spontaneous", "topic", "Talk about a celebration you enjoy."],
+];
+
+function qualMissions(attempt: number): Mission[] {
+  return QUAL_SCRIPTS.map(([type, category, text], i) => ({
+    mission_id: uuid(attempt * 100 + i + 1, "e"),
+    code: `WOL_GEN_QUALIF_01_M${String((attempt - 1) * 10 + i + 1).padStart(4, "0")}`,
+    type,
+    position: i + 1,
+    status: "todo",
+    rejection_reason: null,
+    prompt: { id: `WOL_GEN_QUALIF_01_PQ${attempt}${i}`, text_or_topic: attempt > 1 ? `${text} (2)` : text, category },
+    duration_s: type === "read" ? { min: 3, max: 15 } : { min: 15, max: 30 },
+    partner_speaker_id: null,
+    partner_ready: false,
+    recording: null,
+    lease_until: null,
+  }));
+}
+const initialQual = (): NonNullable<State["qual"]> => ({ consent: false, attempt: 1, stage: "recording", decision: null, missions: qualMissions(1) });
 
 const PROMPTS: [Mission["type"], string][] = [
   ["read", "Dama bëgg yónnee xaalis ci sama doom bu nekk Dakar."],
@@ -122,12 +159,14 @@ function initial(): State {
 }
 
 const load = (): State => {
+  let s: State;
   try {
-    const s = JSON.parse(localStorage.getItem(KEY) ?? "null") as State | null;
-    return s ?? initial();
+    s = (JSON.parse(localStorage.getItem(KEY) ?? "null") as State | null) ?? initial();
   } catch {
-    return initial();
+    s = initial();
   }
+  s.qual ??= initialQual();
+  return s;
 };
 const save = (s: State) => localStorage.setItem(KEY, JSON.stringify(s));
 
@@ -216,6 +255,38 @@ function poolCard(s: State): CampaignCard {
       speech_types: [{ type: "read", duration_min_s: 3, duration_max_s: READ_MAX_S, missions_per_session: { min: 3, max: BATCH } }],
     },
     partner: null,
+  };
+}
+
+function qualCard(s: State): CampaignCard {
+  const q = s.qual!;
+  const accepted = q.missions.filter((m) => m.status === "accepted").length;
+  return {
+    assignment_id: "00000000-0000-4000-8000-0000000000a3",
+    campaign_id: QUAL_ID,
+    code: "WOL_GEN_QUALIF_01",
+    title: "Wolof qualification test",
+    status: "launched",
+    language: { code: "wol", name: "Wolof", varieties: ["Baol-Baol", "Saloum-Saloum", "Dakar urban"] },
+    topic: { domain: "General conversation", sub_domain: null },
+    deadline: null,
+    dispatch: "planned",
+    refill_below: null,
+    progress: progress(q.missions),
+    rewards: { accepted: 0, accepted_s: 0, pending_s: 0 },
+    next_step: step(s, q.consent),
+    blocked_reason: null,
+    consents: CONSENTS(s, q.consent),
+    instructions: {
+      recording: { min_level_dbfs: -35, silence_margin_s: 1, background: "Quiet room, no music", mic_distance_cm: { min: 20, max: 30 } },
+      speech_types: [
+        { type: "read", duration_min_s: 3, duration_max_s: 15, missions_per_session: { min: 20, max: 50 } },
+        { type: "spontaneous", duration_min_s: 15, duration_max_s: 30, missions_per_session: { min: 10, max: 20 } },
+      ],
+    },
+    partner: null,
+    kind: "qualification",
+    qualification: { attempt_no: q.attempt, stage: q.stage, decision: q.decision, accepted: q.stage === "decided" ? accepted : null, total: 10, retry_after: q.decision === "not_eligible" ? new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10) : null },
   };
 }
 
@@ -322,11 +393,13 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
   if (mode !== "ok") return json({ error: "Refused (mock).", code: mode }, TICKET_REFUSALS[mode] ?? 403);
   const planned = s.planned.missions.find((x) => x.mission_id === body.mission_id);
   const pooled = s.pool.missions.find((x) => x.mission_id === body.mission_id);
-  const m = planned ?? pooled;
+  const qual = s.qual!.missions.find((x) => x.mission_id === body.mission_id);
+  const m = planned ?? pooled ?? qual;
   if (!m) return notAssigned();
-  const refused = gate(s, planned ? s.planned.consent : s.pool.consent);
+  const refused = gate(s, planned ? s.planned.consent : pooled ? s.pool.consent : s.qual!.consent);
   if (refused) return refused;
-  const card = planned ? plannedCard(s) : poolCard(s);
+  if (qual && s.qual!.stage !== "recording") return json({ error: "This test is closed: your recordings are being reviewed.", code: "test_closed" }, 403);
+  const card = planned ? plannedCard(s) : pooled ? poolCard(s) : qualCard(s);
   const exp = Math.floor(Date.now() / 1000) + 30 * 60;
   const payload = {
     v: 1,
@@ -344,6 +417,7 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
     speaker_ids: m.type === "conversational" && m.partner_speaker_id ? [s.speakerId ?? "SPK-7Q2M9X4D", m.partner_speaker_id] : [s.speakerId ?? "SPK-7Q2M9X4D"],
     source_sha256: String(body.source_sha256),
     duration_max_s: m.duration_s.max ?? 3600,
+    ...(qual ? { purpose: "qualification" } : {}),
   };
   return json({ ticket: await signMockTicket(JSON.stringify(payload)), expires_at: new Date(exp * 1000).toISOString() });
 }
@@ -351,7 +425,7 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
 async function bridge(body: Record<string, unknown>): Promise<Response> {
   await delay(250);
   const s = load();
-  const cards = () => [plannedCard(s), poolCard(s)];
+  const cards = () => [plannedCard(s), poolCard(s), qualCard(s)];
   const campaignId = body.campaign_id;
   switch (body.action) {
     case "claim":
@@ -369,10 +443,16 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
     case "consent":
       if (body.type === "account") s.account = true;
       else if (campaignId === POOL_ID) s.pool.consent = true;
+      else if (campaignId === QUAL_ID) s.qual!.consent = true;
       else s.planned.consent = true;
       save(s);
       return json({ signed_version: String(body.version), already: false });
     case "missions": {
+      if (campaignId === QUAL_ID) {
+        const refused = gate(s, s.qual!.consent);
+        if (refused) return refused;
+        return json({ campaign: qualCard(s), missions: s.qual!.missions, rewards: { accepted: 0, accepted_s: 0, pending_s: 0 } });
+      }
       if (campaignId === POOL_ID) {
         const refused = gate(s, s.pool.consent);
         if (refused) return refused;
@@ -409,7 +489,10 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       return json({ returned, pool: { open: s.pool.missions.filter((m) => !m.cancelled && isOpen(m)).length, refill_below: REFILL_BELOW } });
     }
     case "submit": {
-      const m: PoolMission | undefined = s.planned.missions.find((x) => x.mission_id === body.mission_id) ?? s.pool.missions.find((x) => x.mission_id === body.mission_id);
+      const q = s.qual!;
+      const qm = q.missions.find((x) => x.mission_id === body.mission_id);
+      if (qm && q.stage !== "recording") return json({ error: "This test is closed: your recordings are being reviewed.", code: "test_closed" }, 403);
+      const m: PoolMission | undefined = s.planned.missions.find((x) => x.mission_id === body.mission_id) ?? s.pool.missions.find((x) => x.mission_id === body.mission_id) ?? qm;
       if (!m) return notAssigned();
       if (m.status === "submitted" || m.status === "accepted") return json({ recording_id: "r-" + m.code, mission_status: m.status, duplicate: true });
       // A late take (lease ended, mission cancelled) is always kept: the mission comes back as submitted.
@@ -419,6 +502,8 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       m.recording = { status: "uploaded", rejection_reason: null };
       const rec = body.recording as { duration_s?: unknown } | undefined;
       s.seconds[m.mission_id] = typeof rec?.duration_s === "number" ? rec.duration_s : 0;
+      // The dashboard moves a test to review once all its takes passed the automatic checks.
+      if (qm && q.missions.every((x) => x.status === "submitted")) q.stage = "in_review";
       save(s);
       return json({ recording_id: "r-" + m.code, mission_status: "submitted", duplicate: false });
     }
@@ -570,6 +655,20 @@ export function installCampaignMock() {
     tickets: (mode = "ok") => {
       const s = load();
       s.tickets = mode;
+      save(s);
+    },
+    /** The qualification test's review: 8 accepted (eligible), 6 (retry: a new attempt), or 3 (not eligible). */
+    qualify: (decision: "eligible" | "retry" | "not_eligible" = "eligible") => {
+      const s = load();
+      const q = s.qual!;
+      const accept = decision === "eligible" ? 8 : decision === "retry" ? 6 : 3;
+      q.missions.forEach((m, i) => {
+        m.status = i < accept ? "accepted" : "rejected";
+        m.rejection_reason = i < accept ? null : "variety";
+        m.recording = { status: m.status, rejection_reason: m.rejection_reason };
+      });
+      if (decision === "retry") s.qual = { ...q, attempt: q.attempt + 1, stage: "recording", decision: null, missions: qualMissions(q.attempt + 1) };
+      else Object.assign(q, { stage: "decided", decision });
       save(s);
     },
     /** The pool batch's leases have ended. */

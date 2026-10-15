@@ -11,15 +11,20 @@ import { useRejectionText } from "../CampaignHubParts";
 
 // ── Prompt ───────────────────────────────────────────────────────────────
 
-export function PromptCard({ mission, lang, size, onSize }: { mission: Mission; lang: string; size: number; onSize: (n: number) => void }) {
+/**
+ * `sayIn` (qualification test): the prompt is shown in the speaker's working language (English or
+ * French) and said in theirs, so the label names that language and the text is not in `lang`.
+ */
+export function PromptCard({ mission, lang, size, onSize, sayIn }: { mission: Mission; lang: string; size: number; onSize: (n: number) => void; sayIn?: { language: string; uiLocale: string } }) {
   const t = useTranslations("campaign.studio");
+  const label = sayIn && mission.type !== "conversational" ? t(mission.type === "read" ? "prompt.sayIn" : "prompt.talkIn", { language: sayIn.language }) : t(`prompt.${mission.type}`);
   const why = useRejectionText()(mission.rejection_reason);
   const { min, max } = mission.duration_s;
   const text = TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, Math.max(0, size))];
   return (
-    <section aria-label={t(`prompt.${mission.type}`)} className="relative rounded-3xl bg-white p-5 text-slate-900 shadow-[0_12px_40px_rgba(0,20,60,0.35)]">
+    <section aria-label={label} className="relative rounded-3xl bg-white p-5 text-slate-900 shadow-[0_12px_40px_rgba(0,20,60,0.35)]">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-primary">{t(`prompt.${mission.type}`)}</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-primary">{label}</p>
         <div className="flex items-center gap-1" role="group" aria-label={t("textSize")}>
           <button type="button" onClick={() => onSize(size - 1)} disabled={size <= 0} aria-label={t("textSmaller")} className="grid size-11 place-items-center rounded-full bg-slate-100 text-slate-700 disabled:opacity-40">
             <Minus size={16} aria-hidden />
@@ -34,7 +39,7 @@ export function PromptCard({ mission, lang, size, onSize }: { mission: Mission; 
           {why ? t("prompt.redoReason", { reason: why }) : t("prompt.redo")}
         </p>
       ) : null}
-      <p lang={lang} className={`${text} font-semibold leading-snug ${mission.type === "read" ? "" : "text-slate-800"}`}>
+      <p lang={sayIn ? sayIn.uiLocale : lang} className={`${text} font-semibold leading-snug ${mission.type === "read" ? "" : "text-slate-800"}`}>
         {mission.prompt.text_or_topic}
       </p>
       {mission.type === "conversational" ? (

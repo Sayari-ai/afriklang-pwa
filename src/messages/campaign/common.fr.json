@@ -36,7 +36,9 @@
     "timeout": "Le serveur a mis trop de temps à répondre. Vérifiez votre connexion et réessayez.",
     "misconfigured": "Le service des campagnes n'est pas correctement configuré. Merci de prévenir l'équipe Afriklang.",
     "conflict": "Ces informations ont changé entre-temps. Rechargez la page, puis réessayez.",
-    "rateLimitedWait": "Trop de requêtes. Patientez {s, plural, one {# seconde} other {# secondes}}, puis réessayez."
+    "rateLimitedWait": "Trop de requêtes. Patientez {s, plural, one {# seconde} other {# secondes}}, puis réessayez.",
+    "duplicateAudio": "Cet enregistrement a déjà été envoyé pour une autre consigne ; il n'a pas été gardé. Enregistrez de nouveau cette consigne.",
+    "testClosed": "Ce test est clos : vos enregistrements sont en cours d'écoute, ou le test est terminé."
   },
   "time": {
     "hm": "{h} h {m} min",

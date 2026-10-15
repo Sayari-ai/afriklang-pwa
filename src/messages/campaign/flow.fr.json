@@ -101,9 +101,18 @@
     "duration": "{min} à {max} secondes",
     "perSession": "Environ {min} à {max} missions par séance.",
     "types": {
-      "read": { "name": "Lecture à voix haute", "help": "Lisez la phrase affichée à voix haute, naturellement, comme vous la diriez à quelqu'un." },
-      "spontaneous": { "name": "Parole libre", "help": "Parlez du thème ou de la question affichés, avec vos propres mots, tant que le minuteur le permet." },
-      "conversational": { "name": "Conversation", "help": "Parlez avec votre partenaire du scénario affiché. L'un de vous lance l'enregistrement sur un seul téléphone, et vous êtes tous deux crédités." }
+      "read": {
+        "name": "Lecture à voix haute",
+        "help": "Lisez la phrase affichée à voix haute, naturellement, comme vous la diriez à quelqu'un."
+      },
+      "spontaneous": {
+        "name": "Parole libre",
+        "help": "Parlez du thème ou de la question affichés, avec vos propres mots, tant que le minuteur le permet."
+      },
+      "conversational": {
+        "name": "Conversation",
+        "help": "Parlez avec votre partenaire du scénario affiché. L'un de vous lance l'enregistrement sur un seul téléphone, et vous êtes tous deux crédités."
+      }
     },
     "withdraw": "Me retirer de cette campagne",
     "withdrawTitle": "Vous retirer de cette campagne ?",
@@ -138,9 +147,11 @@
     "types": {
       "read": "Lecture",
       "spontaneous": "Parole libre",
-      "conversational": "Conversation"
+      "conversational": "Conversation",
+      "say": "À dire dans votre langue"
     },
     "loadError": "Impossible de charger vos missions.",
-    "readOnly": "Lecture seule"
+    "readOnly": "Lecture seule",
+    "notAccepted": "Non accepté : {reason}"
   }
 }

@@ -168,7 +168,7 @@ const HOLD_CODES = new Set(["campaign_paused", "partner_consent", "unauthorized"
  */
 const DROP_CODES = new Set(["campaign_consent"]);
 /** Codes after which the take can never be saved for this mission. */
-export const DEAD_CODES: ReadonlySet<string> = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "blocked", "not_linked"]);
+export const DEAD_CODES: ReadonlySet<string> = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "blocked", "not_linked", "test_closed"]);
 
 /** After the metadata submit answered (or failed). */
 export function decideSubmit(

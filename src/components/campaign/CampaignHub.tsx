@@ -13,11 +13,11 @@ import { logActivity } from "@/lib/campaign/activity";
 import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
-import type { CampaignCard, ContributorView } from "@/lib/campaign/types";
+import { isQualification, type CampaignCard, type ContributorView } from "@/lib/campaign/types";
 import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
 import { useOutbox } from "@/lib/campaign/outbox-client";
 import { daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
-import { LanguageBadge, ProgressRing } from "./CampaignCardView";
+import { LanguageBadge, ProgressRing, useQualificationText } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
 import { ConsentStep } from "./ConsentStep";
 import { Instructions } from "./Instructions";
@@ -74,6 +74,9 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
   /** After a withdrawal: how many takes of the campaign were deleted from the phone. */
   const [withdrawn, setWithdrawn] = useState<number | null>(null);
   const step = setupStep(card.next_step);
+  const qualifying = isQualification(card);
+  // A qualification test that is being reviewed or decided takes no recording: a sentence says where it stands.
+  const testStatus = useQualificationText()(card);
   const done = card.progress.submitted + card.progress.accepted;
   const days = daysLeft(card.deadline);
   // Pool campaigns: the batch (lapsed leases dropped) decides what is left, and a low batch is
@@ -105,11 +108,15 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
         <LanguageBadge code={card.language.code} />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">{card.language.name}</p>
-          <h1 className="text-xl leading-tight font-black">{card.title}</h1>
-          <p className="text-sm text-slate-600">
-            {[card.topic.domain, card.topic.sub_domain].filter(Boolean).join(" · ")}
-            {days != null ? ` · ${days < 0 ? t("card.ended") : t("card.daysLeft", { n: days })}` : ""}
-          </p>
+          <h1 className="text-xl leading-tight font-black">{qualifying ? t("qualification.title") : card.title}</h1>
+          {qualifying ? (
+            card.qualification && card.qualification.attempt_no > 1 ? <p className="text-sm text-slate-600">{t("qualification.attempt", { n: card.qualification.attempt_no })}</p> : null
+          ) : (
+            <p className="text-sm text-slate-600">
+              {[card.topic.domain, card.topic.sub_domain].filter(Boolean).join(" · ")}
+              {days != null ? ` · ${days < 0 ? t("card.ended") : t("card.daysLeft", { n: days })}` : ""}
+            </p>
+          )}
         </div>
         <div className="relative shrink-0 text-submit">
           <ProgressRing value={done} total={card.progress.total} size={56} />
@@ -129,7 +136,8 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
 
       {step ? <Stepper current={step} /> : null}
 
-      {!step && card.next_step !== "blocked" ? <PaidTime card={card} /> : null}
+      {!step && card.next_step !== "blocked" && !qualifying ? <PaidTime card={card} /> : null}
+      {qualifying && !testStatus && card.next_step === "ready" ? <p className="rounded-2xl bg-primary/5 p-4 text-sm font-medium text-slate-800">{t("qualification.intro", { language: card.language.name })}</p> : null}
 
       {card.next_step === "profile" || (card.next_step === "blocked" && correcting) ? (
         <Panel>
@@ -167,7 +175,14 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
         </>
       ) : null}
 
-      {card.next_step === "ready" ? (
+      {card.next_step === "ready" && testStatus ? (
+        <>
+          <p role="status" className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-800 ring-1 ring-slate-200">{testStatus}</p>
+          <MissionList campaignId={card.campaign_id} readOnly />
+        </>
+      ) : null}
+
+      {card.next_step === "ready" && !testStatus ? (
         <>
           {pool.pool ? <PoolPanel card={card} missions={live ?? []} state={pool} /> : null}
           {open > 0 ? (
