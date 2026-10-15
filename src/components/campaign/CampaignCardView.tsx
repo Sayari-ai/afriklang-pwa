@@ -5,12 +5,12 @@
  * straight into the studio when they can record, or to the setup step that is missing.
  */
 
-import { AlertTriangle, CalendarClock, ChevronRight, Coins, Mic, PauseCircle, UploadCloud } from "lucide-react";
+import { AlertTriangle, CalendarClock, ChevronRight, Coins, GraduationCap, Mic, PauseCircle, UploadCloud } from "lucide-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { isPool, isRefusal, paidTime } from "@/lib/campaign/pool";
 import { usePoolMemo } from "@/lib/campaign/pool-client";
-import type { CampaignCard } from "@/lib/campaign/types";
+import { isQualification, type CampaignCard } from "@/lib/campaign/types";
 import { daysLeft, openCountOnPhone, setupStep } from "@/lib/campaign/view";
 import { useTimeText } from "./PoolParts";
 
@@ -30,8 +30,77 @@ export function LanguageBadge({ code, className = "" }: { code: string; classNam
   return <span className={`grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-sm font-black uppercase tracking-wide text-white ${className}`}>{code.slice(0, 3)}</span>;
 }
 
+/**
+ * Where a qualification test stands, in one sentence (null while recording: the counts say it).
+ * Shared by the home card and the campaign page.
+ */
+export function useQualificationText() {
+  const t = useTranslations("campaign.home.qualification");
+  const format = useFormatter();
+  return (card: CampaignCard): string | null => {
+    const q = card.qualification;
+    if (!q || q.stage === "recording") return null;
+    if (q.stage === "in_review") return t("inReview");
+    if (q.stage === "cancelled") return t("cancelled");
+    if (q.decision === "eligible") return t("eligible", { accepted: q.accepted ?? 0, total: q.total });
+    if (q.decision === "retry") return t("retry");
+    const date = q.retry_after ? format.dateTime(new Date(`${q.retry_after}T00:00:00Z`), { dateStyle: "long", timeZone: "UTC" }) : "";
+    return t("notEligible", { date });
+  };
+}
+
+/** The qualification test on the home screen: not paid, no deadline, one sentence once everything is sent. */
+function QualificationCardView({ card, waitingOk }: { card: CampaignCard; waitingOk: number }) {
+  const t = useTranslations("campaign.home.qualification");
+  const status = useQualificationText()(card);
+  const { progress } = card;
+  const done = progress.submitted + progress.accepted;
+  const open = openCountOnPhone(card, waitingOk);
+  const hub = `/campaign/${card.campaign_id}`;
+  const recording = !card.qualification || card.qualification.stage === "recording";
+  const cta =
+    recording && card.next_step === "ready" && open > 0
+      ? { href: `${hub}/studio`, label: done > 0 ? t("continue", { n: open }) : t("start"), go: true }
+      : recording && setupStep(card.next_step)
+        ? { href: hub, label: t("setup"), go: false }
+        : null;
+  return (
+    <article className="overflow-hidden rounded-3xl bg-white shadow-sm ring-2 ring-primary/30">
+      <Link href={hub} className="flex items-start gap-3 p-4 pb-3">
+        <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary text-white">
+          <GraduationCap size={24} aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">{card.language.name}</p>
+          <h2 className="text-lg leading-tight font-black text-slate-900">{t("title")}</h2>
+          {card.qualification && card.qualification.attempt_no > 1 ? <p className="text-sm text-slate-600">{t("attempt", { n: card.qualification.attempt_no })}</p> : null}
+        </div>
+        <ChevronRight size={20} className="mt-1 shrink-0 text-slate-400" aria-hidden />
+      </Link>
+      <div className="px-4 pb-4">
+        {status ? (
+          <p role="status" className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-800">{status}</p>
+        ) : (
+          <p className="mb-3 text-sm font-bold text-slate-900">{t("recording", { done, total: progress.total })}</p>
+        )}
+        {cta ? (
+          <Link href={cta.href} className={`mt-3 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-black transition ${cta.go ? "bg-submit text-white shadow-[0_6px_0_var(--color-primary-deep)] active:translate-y-0.5 active:shadow-[0_3px_0_var(--color-primary-deep)]" : "bg-primary text-white"}`}>
+            {cta.go ? <Mic size={20} aria-hidden /> : null}
+            {cta.label}
+          </Link>
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
 /** `waiting`: takes of the campaign on the phone; `waitingOk`: those not failed (they no longer count as to record). */
 export function CampaignCardView({ card, waiting, waitingOk = 0 }: { card: CampaignCard; waiting: number; waitingOk?: number }) {
+  if (isQualification(card)) return <QualificationCardView card={card} waitingOk={waitingOk} />;
+  return <CollectionCardView card={card} waiting={waiting} waitingOk={waitingOk} />;
+}
+
+function CollectionCardView({ card, waiting, waitingOk }: { card: CampaignCard; waiting: number; waitingOk: number }) {
   const t = useTranslations("campaign.home.card");
   const { progress } = card;
   const done = progress.submitted + progress.accepted;

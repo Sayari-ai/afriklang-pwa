@@ -20,6 +20,7 @@ import { CampaignCardView } from "./CampaignCardView";
 import { useFailureText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { OutboxPanel } from "./OutboxPanel";
+import { isQualification } from "@/lib/campaign/types";
 import { useTimeText } from "./PoolParts";
 
 export function ClaimCampaignList() {
@@ -53,17 +54,19 @@ function Home({ data }: { data: CampaignList }) {
   const box = useOutbox();
   const activity = useActivity(userId);
   const withMissions = data.campaigns.filter(hasMissions);
-  const sum = totals(data.campaigns);
+  // The qualification test is not paid work: the stats count collection campaigns only.
+  const collection = data.campaigns.filter((c) => !isQualification(c));
+  const sum = totals(collection);
   // Speakers are paid per hour of accepted audio: show time when the dashboard sends it, counts otherwise.
-  const paid = totalPaidTime(data.campaigns);
+  const paid = totalPaidTime(collection);
   const time = useTimeText();
   const streak = streakDays(activity);
   const waitingFor = (campaignId: string) => box.items.filter((i) => i.campaignId === campaignId && i.userId === userId).length;
   const waitingOkFor = (campaignId: string) => box.items.filter((i) => i.campaignId === campaignId && i.userId === userId && i.state !== "failed").length;
 
-  // Campaigns that need the speaker first: ready to record, then setup, then the rest.
-  const rank = (s: string) => (s === "ready" ? 0 : s === "paused" || s === "closed" ? 2 : 1);
-  const ordered = [...withMissions].sort((a, b) => rank(a.next_step) - rank(b.next_step));
+  // The qualification test first, then campaigns that need the speaker: ready to record, then setup, then the rest.
+  const rank = (c: (typeof withMissions)[number]) => (isQualification(c) ? -1 : c.next_step === "ready" ? 0 : c.next_step === "paused" || c.next_step === "closed" ? 2 : 1);
+  const ordered = [...withMissions].sort((a, b) => rank(a) - rank(b));
 
   return (
     <>

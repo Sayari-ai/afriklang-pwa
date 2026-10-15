@@ -25,6 +25,8 @@ export const ERROR_KEY: Record<CampaignErrorCode, string> = {
   partner_consent: "partnerConsent",
   campaign_paused: "campaignPaused",
   campaign_not_open: "campaignNotOpen",
+  duplicate_audio: "duplicateAudio",
+  test_closed: "testClosed",
   server_error: "serverError",
   unauthorized: "unauthorized",
   bridge_unreachable: "unreachable",

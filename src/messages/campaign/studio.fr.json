@@ -11,7 +11,8 @@
   "type": {
     "read": "Lecture à voix haute",
     "spontaneous": "Parole libre",
-    "conversational": "Conversation"
+    "conversational": "Conversation",
+    "say": "À dire dans votre langue"
   },
   "prompt": {
     "read": "Lisez cette phrase à voix haute",
@@ -21,7 +22,9 @@
     "onePhone": "Un seul téléphone enregistre, et vous êtes crédités tous les deux. Placez-le là où l'on entend bien vos deux voix.",
     "length": "De {min} à {max} secondes",
     "redo": "À refaire",
-    "redoReason": "Pourquoi elle revient : {reason}"
+    "redoReason": "Pourquoi elle revient : {reason}",
+    "sayIn": "Dites ceci en {language}",
+    "talkIn": "Parlez de ce sujet en {language}, avec vos mots"
   },
   "phase": {
     "idle": "Appuyez sur le bouton et attendez « Parlez »",
@@ -109,7 +112,11 @@
       "title": "En attente de votre partenaire",
       "body": "Votre partenaire de conversation n'a pas encore terminé son consentement."
     },
-    "back": "Retour à ma campagne"
+    "back": "Retour à ma campagne",
+    "testClosed": {
+      "title": "Votre test est terminé",
+      "body": "Tout est envoyé. Le résultat arrive par e-mail et s'affiche sur la page du test."
+    }
   },
   "status": {
     "idle": "Prêt à enregistrer",

@@ -101,9 +101,18 @@
     "duration": "{min} to {max} seconds",
     "perSession": "About {min} to {max} missions per sitting.",
     "types": {
-      "read": { "name": "Read aloud", "help": "Read the sentence on screen out loud, naturally, as you would say it to someone." },
-      "spontaneous": { "name": "Speak freely", "help": "Talk about the topic or question shown, in your own words, until the timer allows." },
-      "conversational": { "name": "Conversation", "help": "Talk with your partner about the scenario shown. One of you presses record on one phone, and both of you are credited." }
+      "read": {
+        "name": "Read aloud",
+        "help": "Read the sentence on screen out loud, naturally, as you would say it to someone."
+      },
+      "spontaneous": {
+        "name": "Speak freely",
+        "help": "Talk about the topic or question shown, in your own words, until the timer allows."
+      },
+      "conversational": {
+        "name": "Conversation",
+        "help": "Talk with your partner about the scenario shown. One of you presses record on one phone, and both of you are credited."
+      }
     },
     "withdraw": "Withdraw from this campaign",
     "withdrawTitle": "Withdraw from this campaign?",
@@ -138,9 +147,11 @@
     "types": {
       "read": "Read",
       "spontaneous": "Speak",
-      "conversational": "Conversation"
+      "conversational": "Conversation",
+      "say": "Say in your language"
     },
     "loadError": "We could not load your missions.",
-    "readOnly": "Read only"
+    "readOnly": "Read only",
+    "notAccepted": "Not accepted: {reason}"
   }
 }

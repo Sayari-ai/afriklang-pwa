@@ -11,7 +11,8 @@
   "type": {
     "read": "Read aloud",
     "spontaneous": "Speak freely",
-    "conversational": "Conversation"
+    "conversational": "Conversation",
+    "say": "Say in your language"
   },
   "prompt": {
     "read": "Read this sentence aloud",
@@ -21,7 +22,9 @@
     "onePhone": "One phone records, both of you are credited. Put it where both voices are heard.",
     "length": "{min} to {max} seconds",
     "redo": "Asked again",
-    "redoReason": "Why it came back: {reason}"
+    "redoReason": "Why it came back: {reason}",
+    "sayIn": "Say this in {language}",
+    "talkIn": "Talk about this in {language}, in your own words"
   },
   "phase": {
     "idle": "Tap the button and wait for “Speak now”",
@@ -109,7 +112,11 @@
       "title": "Waiting for your partner",
       "body": "Your conversation partner has not finished their consent yet."
     },
-    "back": "Back to my campaign"
+    "back": "Back to my campaign",
+    "testClosed": {
+      "title": "Your test is complete",
+      "body": "Everything was sent. The result arrives by email and shows on the test's page."
+    }
   },
   "status": {
     "idle": "Ready to record",

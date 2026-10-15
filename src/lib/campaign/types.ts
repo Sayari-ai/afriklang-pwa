@@ -58,7 +58,27 @@ export type CampaignCard = {
     speech_types: { type: SpeechType; duration_min_s: number; duration_max_s: number; missions_per_session?: { min: number; max: number } | null }[];
   };
   partner: { speaker_id: string | null; ready: boolean } | null;
+  /** "qualification": the speaker's qualification test in this language (not paid; no redo once sent). Absent from older dashboards: a collection campaign. */
+  kind?: "collection" | "qualification";
+  /** Qualification campaigns only: the current attempt. */
+  qualification?: QualificationView | null;
 };
+
+/**
+ * A qualification test attempt. `stage`: recording (record the prompts; a take refused by the
+ * automatic checks comes back to record again), in_review (everything sent, being listened to),
+ * decided, cancelled. `retry_after` (YYYY-MM-DD) after "not_eligible".
+ */
+export type QualificationView = {
+  attempt_no: number;
+  stage: "recording" | "in_review" | "decided" | "cancelled";
+  decision: "eligible" | "retry" | "not_eligible" | null;
+  accepted: number | null;
+  total: number;
+  retry_after: string | null;
+};
+
+export const isQualification = (c: Pick<CampaignCard, "kind">) => c.kind === "qualification";
 
 export type Mission = {
   mission_id: string;
@@ -135,6 +155,10 @@ export type CampaignErrorCode =
   | "partner_consent"
   | "campaign_paused"
   | "campaign_not_open"
+  /** The same file was already sent for another prompt: record this one again. */
+  | "duplicate_audio"
+  /** A qualification test no longer takes recordings (being reviewed, decided or cancelled). */
+  | "test_closed"
   | "server_error"
   // from the Edge Function / network
   | "unauthorized"
