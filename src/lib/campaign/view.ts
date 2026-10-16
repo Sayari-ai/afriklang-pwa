@@ -54,7 +54,7 @@ export function daysLeft(deadline: string | null, now = new Date()): number | nu
 }
 
 /** The short reason shown for a take held or failed on the phone (key under campaign.home.outbox.reason). */
-export function outboxReasonKey(code: string | null): "paused" | "consent" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" {
+export function outboxReasonKey(code: string | null): "paused" | "consent" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" {
   switch (code) {
     case "test_closed":
       return "testClosed";
@@ -78,6 +78,8 @@ export function outboxReasonKey(code: string | null): "paused" | "consent" | "si
     case "blocked":
     case "not_linked":
       return "closed";
+    case "language_unsupported":
+      return "language";
     case "tooLarge":
     case "refused":
     case "invalid_input":
