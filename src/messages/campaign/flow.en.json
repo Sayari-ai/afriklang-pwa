@@ -20,6 +20,7 @@
     "correctTitle": "Correct my profile",
     "variety": "Which variety of {language} do you speak?",
     "varietyHint": "Type the name of your variety, or tap one of the suggestions. If it is not listed, type it in full: it will be added.",
+    "varietyHintPick": "Type the name of your variety and tap it in the suggestions.",
     "varietySuggestions": "Suggested varieties",
     "varietyNew": "“{name}” is not in our list yet. It will be added as a variety of {language} when you save.",
     "varietyOutsideTitle": "This campaign is for other varieties",
@@ -52,6 +53,8 @@
       "invalid": "Choose one of the options in the list.",
       "noLetters": "Use letters or numbers, not only symbols or spaces.",
       "control": "Remove the line breaks or special characters.",
+      "oneVariety": "Enter one variety only: the one you speak best. Remove the commas or slashes.",
+      "notListed": "This variety is not in the list yet. Choose one from the suggestions, or contact the Afriklang team.",
       "server": {
         "variety": "This variety was not accepted. Choose one from the suggestions, or contact the Afriklang team.",
         "country": "This country was not accepted. Choose one from the list.",

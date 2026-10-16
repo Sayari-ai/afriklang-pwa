@@ -41,7 +41,7 @@ export type ProfileValues = { [K in keyof ProfileInput]: string };
  * What is wrong with one field. "server": the field was refused by the server (a 400 with
  * `fieldErrors`) although it passed the checks here; the screen shows that field's own hint.
  */
-export type FieldError = "required" | "tooLong" | "invalid" | "noLetters" | "control" | "server";
+export type FieldError = "required" | "tooLong" | "invalid" | "noLetters" | "control" | "server" | "oneVariety" | "notListed";
 export type ProfileErrors = Partial<Record<keyof ProfileInput, FieldError>>;
 
 export const PROFILE_FIELDS: readonly (keyof ProfileInput)[] = ["native_language", "variety", "country", "region", "gender", "age_band", "device"];
@@ -53,6 +53,15 @@ const CONTROL = /[\u0000-\u001f\u007f]/;
 // The speaker types their variety. The form suggests the ones the dashboard knows; a name it
 // does not know is added by the dashboard on save (so nobody is stuck when an admin has not
 // listed their variety yet).
+
+/** Several varieties typed at once ("Zezuru, Ndau / Manyika"): the profile holds one. */
+export const VARIETY_SEPARATOR = /[,;/|+&]/;
+
+/**
+ * Whether the dashboard adds a variety it does not know. An older dashboard sends no
+ * `known_varieties` and refuses unknown names, so the form must not promise to add one.
+ */
+export const canAddVarieties = (card: Pick<CampaignCard, "language">) => card.language.known_varieties !== undefined;
 
 /** One space between words and none at the ends (the dashboard tidies the same way). */
 export const tidyVariety = (s: string) => s.trim().replace(/\s+/g, " ");
@@ -105,8 +114,11 @@ export function outsideTargets(variety: string, card: Pick<CampaignCard, "langua
   return matchVariety(variety, targets) ? null : targets;
 }
 
-/** `choices`: the known varieties (varietyChoices); a known name is sent under its list spelling. */
-export function validateProfile(v: ProfileValues, choices: readonly string[]): { input: ProfileInput | null; errors: ProfileErrors } {
+/**
+ * `choices`: the known varieties (varietyChoices); a known name is sent under its list spelling.
+ * `canAdd`: whether a name outside `choices` may be sent (canAddVarieties).
+ */
+export function validateProfile(v: ProfileValues, choices: readonly string[], canAdd = true): { input: ProfileInput | null; errors: ProfileErrors } {
   const t = (s: string) => s.trim();
   const errors: ProfileErrors = {};
   const need = (k: keyof ProfileInput, ok: (s: string) => boolean) => {
@@ -128,6 +140,8 @@ export function validateProfile(v: ProfileValues, choices: readonly string[]): {
   else if (variety.length > MAX_TEXT) errors.variety = "tooLong";
   else if (CONTROL.test(variety)) errors.variety = "control";
   else if (!/\p{L}/u.test(variety)) errors.variety = "noLetters";
+  else if (VARIETY_SEPARATOR.test(variety)) errors.variety = "oneVariety";
+  else if (!canAdd && !matchVariety(variety, choices)) errors.variety = "notListed";
   need("country", (s) => ALL_COUNTRIES.has(s));
   text("region");
   need("gender", (s) => (GENDERS as readonly string[]).includes(s));
