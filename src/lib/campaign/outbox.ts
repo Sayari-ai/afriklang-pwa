@@ -74,7 +74,7 @@ export type OutboxDeps = {
 };
 
 /** An error from `upload` that carries an HTTP status (AudioUploadError has this shape). */
-type UploadErrorLike = { status?: number; isNetwork?: boolean; retryAfterS?: number | null };
+type UploadErrorLike = { status?: number; isNetwork?: boolean; retryAfterS?: number | null; message?: string };
 
 /** How far the take being sent has gone (bytes of the request body). */
 export type OutboxProgress = { id: string; sent: number; total: number };
@@ -221,7 +221,7 @@ export function createOutbox(deps: OutboxDeps) {
         const err = (e ?? {}) as UploadErrorLike;
         // Sayari refused the ticket (expired on the way, or already used): the next try asks for a new one.
         if (err.status === 409 && current.ticket) current = { ...current, ticket: null };
-        const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork), retryAfterS: err.retryAfterS ?? null }, current.attempts, deps.online());
+        const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork), retryAfterS: err.retryAfterS ?? null, detail: typeof err.message === "string" ? err.message : "" }, current.attempts, deps.online());
         await settle(current, d);
         return !stopsRun(d);
       }

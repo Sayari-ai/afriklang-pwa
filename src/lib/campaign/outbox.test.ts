@@ -46,6 +46,11 @@ describe("outbox decisions", () => {
     expect(decideUploadFailure({ status: 429, isNetwork: false, retryAfterS: 600 }, 0, true, () => 0.5)).toEqual({ kind: "retry", code: "rateLimited", delayMs: 600_000 });
     expect(decideUploadFailure({ status: 503, isNetwork: false }, 0, true).kind).toBe("retry");
   });
+  it("keeps a take Sayari refuses for its language, and retries it hourly", () => {
+    const detail = 'Upload failed (400): {"detail":"Unsupported language. Supported: [\'ee\', \'wo\']"}';
+    expect(decideUploadFailure({ status: 400, isNetwork: false, detail }, 2, true)).toEqual({ kind: "hold", code: "language_unsupported", delayMs: 3_600_000 });
+    expect(decideUploadFailure({ status: 400, isNetwork: false, detail: 'Upload failed (400): {"detail":"invalid_wav"}' }, 0, true).kind).toBe("fail");
+  });
   it("maps submit answers", () => {
     expect(decideSubmit({ ok: true, duplicate: true }, 0)).toEqual({ kind: "done", duplicate: true });
     expect(decideSubmit({ ok: false, code: "recording_rejected", reason: "level" }, 0)).toEqual({ kind: "rejected", reason: "level" });

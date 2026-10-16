@@ -95,7 +95,8 @@
       "network": "la connexion a échoué",
       "generic": "il n'a pas pu être enregistré",
       "testClosed": "test terminé, rien à envoyer",
-      "duplicate": "déjà envoyé pour une autre consigne : enregistrez de nouveau"
+      "duplicate": "déjà envoyé pour une autre consigne : enregistrez de nouveau",
+      "language": "cette langue ne peut pas encore être reçue. L'enregistrement est gardé et partira tout seul : inutile de le refaire"
     }
   },
   "hub": {
