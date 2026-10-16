@@ -63,7 +63,8 @@ export type StoredTicket = { value: string; expiresAt: number };
 /** What the UI sees of an item (no audio): `bytes` is the audio's size. */
 export type OutboxSummary = Omit<OutboxItem, "blob"> & { bytes: number };
 
-export type UploadOutcome = { status: number; isNetwork: boolean; retryAfterS?: number | null };
+/** `detail`: the error text (the upload proxy passes Sayari's answer through). */
+export type UploadOutcome = { status: number; isNetwork: boolean; retryAfterS?: number | null; detail?: string };
 
 export type Decision =
   | { kind: "done"; duplicate?: boolean }
@@ -113,6 +114,9 @@ export function decideUploadFailure(e: UploadOutcome, attempts: number, online: 
   const asked = e.retryAfterS && e.retryAfterS > 0 ? Math.min(3600, e.retryAfterS) * SECOND : 0;
   if (e.status === 429) return { kind: "retry", code: "rateLimited", delayMs: Math.max(asked, 30 * SECOND, backoffMs(attempts, random)) };
   if (e.status >= 500) return { kind: "retry", code: "server", delayMs: Math.max(asked, backoffMs(attempts, random)) };
+  // Sayari does not take this language yet: nothing is wrong with the take and recording it again
+  // cannot help. Keep it and try again every hour; it goes once Sayari accepts the language.
+  if (e.status === 400 && /unsupported language/i.test(e.detail ?? "")) return { kind: "hold", code: "language_unsupported", delayMs: 60 * MINUTE };
   // Only a refusal of the file itself is final (APP-018). 404, 408, 409, 411, 425… come from a proxy,
   // the CDN or a deploy in progress: try again later.
   if (FINAL_UPLOAD_STATUSES.has(e.status)) return { kind: "fail", code: "refused" };

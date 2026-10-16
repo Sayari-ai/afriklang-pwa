@@ -95,7 +95,8 @@
       "network": "the connection failed",
       "generic": "it could not be saved",
       "testClosed": "the test is closed, nothing to send",
-      "duplicate": "already sent for another prompt: record it again"
+      "duplicate": "already sent for another prompt: record it again",
+      "language": "this language cannot be received yet. It is kept and will be sent by itself: no need to record again"
     }
   },
   "hub": {
