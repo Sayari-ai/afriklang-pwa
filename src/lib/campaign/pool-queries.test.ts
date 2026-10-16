@@ -9,6 +9,8 @@ import type { CampaignList, MissionList } from "./api";
 import type { CampaignCard, Mission } from "./types";
 
 const USER = "u1";
+// A lease still running whenever the test runs (a fixed date failed every run after it: L-22).
+const LEASE_UNTIL = new Date(Date.now() + 7 * 86_400_000).toISOString();
 const CID = "c1";
 const mission = (id: string, status: Mission["status"] = "todo"): Mission => ({
   mission_id: id,
@@ -22,10 +24,10 @@ const mission = (id: string, status: Mission["status"] = "todo"): Mission => ({
   partner_speaker_id: null,
   partner_ready: false,
   recording: null,
-  lease_until: "2026-10-15T10:00:00Z",
+  lease_until: LEASE_UNTIL,
 });
 const card = (progress: CampaignCard["progress"]) => ({ campaign_id: CID, dispatch: "pool", refill_below: 5, progress }) as unknown as CampaignCard;
-const POOL = { status: "ok", open: 3, refill_below: 5, lease_until: "2026-10-15T10:00:00Z", elsewhere: [] };
+const POOL = { status: "ok", open: 3, refill_below: 5, lease_until: LEASE_UNTIL, elsewhere: [] };
 
 const missionsId = cacheId(USER, missionsKey(CID));
 const listId = cacheId(USER, CAMPAIGNS);
