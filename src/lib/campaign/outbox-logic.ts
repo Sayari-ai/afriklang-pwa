@@ -174,6 +174,15 @@ const DROP_CODES = new Set(["campaign_consent"]);
 /** Codes after which the take can never be saved for this mission. */
 export const DEAD_CODES: ReadonlySet<string> = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "blocked", "not_linked", "test_closed"]);
 
+/**
+ * Whether a failed take is worth a "Try again" (the same file, sent again). Not when it can never
+ * go (too large, a DEAD code), nor when the server already has this very file for another prompt:
+ * only recording again helps there.
+ */
+export function canRetryFailed(code: string | null | undefined): boolean {
+  return code !== "tooLarge" && code !== "duplicate_audio" && !(code && DEAD_CODES.has(code));
+}
+
 /** After the metadata submit answered (or failed). */
 export function decideSubmit(
   res: { ok: true; duplicate?: boolean } | Pick<CampaignFailure, "ok" | "code" | "reason" | "retryAfterS">,
