@@ -32,9 +32,13 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function req(opts: { token?: string; length?: string | null; ip?: string; extra?: Record<string, string> } = {}): NextRequest {
+const TICKET = `${b64({ v: 1, mission_id: "m" })}.${"A".repeat(43)}`;
+
+/** An upload as the app sends it: with a ticket, unless `ticket: null`. */
+function req(opts: { token?: string; length?: string | null; ip?: string; ticket?: string | null; extra?: Record<string, string> } = {}): NextRequest {
   const body = "--b\r\nContent-Disposition: form-data; name=\"language\"\r\n\r\nwol\r\n--b--\r\n";
   const headers = new Headers({ "content-type": "multipart/form-data; boundary=b", "x-forwarded-for": opts.ip ?? "9.9.9.9" });
+  if (opts.ticket !== null) headers.set("x-campaign-ticket", opts.ticket ?? TICKET);
   if (opts.length !== null) headers.set("content-length", opts.length ?? String(Buffer.byteLength(body)));
   if (opts.token) headers.set("authorization", `Bearer ${opts.token}`);
   for (const [k, v] of Object.entries(opts.extra ?? {})) headers.set(k, v);
@@ -89,8 +93,6 @@ describe("POST /api/audio-upload", () => {
     expect(res.headers.get("retry-after")).toBeTruthy();
   });
 
-  const TICKET = `${b64({ v: 1, mission_id: "m" })}.${"A".repeat(43)}`;
-
   it("forwards the upload ticket, and no other browser header (cookies, auth, made-up x- headers)", async () => {
     const res = await POST(req({ token: tokenFor("user-t"), extra: { "x-campaign-ticket": TICKET, cookie: "sb=secret", "x-upload-key": "forged", "x-sayari-anything": "1", origin: "https://evil.example" } }));
     expect(res.status).toBe(200);
@@ -99,9 +101,30 @@ describe("POST /api/audio-upload", () => {
     expect(Object.keys(upstream[0].headers).sort()).toEqual(["content-length", "content-type", "x-campaign-ticket", "x-upload-key"]);
   });
 
-  it("without a ticket uploads exactly as before (an app or dashboard without tickets)", async () => {
-    await POST(req({ token: tokenFor("user-t") }));
-    expect(Object.keys(upstream[0].headers).sort()).toEqual(["content-length", "content-type", "x-upload-key"]);
+  it("refuses an upload without a ticket, without reaching Sayari (C-2)", async () => {
+    const res = await POST(req({ token: tokenFor("user-t"), ticket: null }));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "ticket_required" });
+    expect(upstream).toHaveLength(0);
+    // Anyone not signed in is still told that first.
+    expect((await POST(req({ ticket: null }))).status).toBe(401);
+  });
+
+  it("SAYARI_UPLOAD_REQUIRE_TICKET=false lets a bare upload through, as before tickets (an old dashboard)", async () => {
+    process.env.SAYARI_UPLOAD_REQUIRE_TICKET = "false";
+    try {
+      expect((await POST(req({ token: tokenFor("user-t"), ticket: null }))).status).toBe(200);
+      expect(Object.keys(upstream[0].headers).sort()).toEqual(["content-length", "content-type", "x-upload-key"]);
+    } finally {
+      delete process.env.SAYARI_UPLOAD_REQUIRE_TICKET;
+    }
+    // Any other value keeps it required.
+    process.env.SAYARI_UPLOAD_REQUIRE_TICKET = "no";
+    try {
+      expect((await POST(req({ token: tokenFor("user-t"), ticket: null }))).status).toBe(409);
+    } finally {
+      delete process.env.SAYARI_UPLOAD_REQUIRE_TICKET;
+    }
   });
 
   it("refuses a header that does not look like a ticket, without reaching Sayari", async () => {
