@@ -152,12 +152,12 @@ export function storedTicketFrom(data: unknown, now: number): StoredTicket | nul
 
 /** After a ticket request failed: as a submit would, except where noted. */
 export type TicketDecision = Decision | { kind: "without" };
-export function decideTicket(res: Pick<CampaignFailure, "ok" | "code" | "reason" | "retryAfterS">, attempts: number, random?: () => number): TicketDecision {
+export function decideTicket(res: Pick<CampaignFailure, "ok" | "code" | "reason" | "retryAfterS">, attempts: number, random?: () => number, ctx: SubmitContext = {}): TicketDecision {
   // An older dashboard or Edge Function: upload without a ticket, as before tickets existed.
   if (res.code === "unsupported") return { kind: "without" };
   // Can never clear for this take (campaign closed, mission no longer theirs...): final, never looped.
   if (DEAD_CODES.has(res.code)) return { kind: "fail", code: res.code };
-  const d = decideSubmit(res, attempts, random);
+  const d = decideSubmit(res, attempts, random, ctx);
   // A ticket call is small, but it is not retried faster than the upload it leads to.
   if (d.kind === "retry" && d.code !== "offline") return { ...d, delayMs: Math.max(d.delayMs, uploadBackoffMs(attempts, random)) };
   return d;
@@ -166,11 +166,15 @@ export function decideTicket(res: Pick<CampaignFailure, "ok" | "code" | "reason"
 /** Codes that may clear by themselves: keep the take and try again later. */
 const HOLD_CODES = new Set(["campaign_paused", "partner_consent", "unauthorized", "account_consent", "profile_incomplete", "consent_version_changed"]);
 /**
- * Codes after which the audio must not stay on the phone: the take was recorded with the campaign
- * consent (the studio requires it), so "no campaign consent" now means it was withdrawn (APP-004).
- * A new consent version answers consent_version_changed, which only holds the take.
+ * "No campaign consent": the audio must not stay on the phone when the speaker withdrew it from
+ * this app (APP-004). Otherwise it may be a withdrawal elsewhere, or a dashboard that answers it
+ * for a new consent version (before consent_version_changed existed there): the take is only held
+ * until the consent is signed again, never deleted (H-1).
  */
-const DROP_CODES = new Set(["campaign_consent"]);
+const DROP_IF_WITHDRAWN_HERE = "campaign_consent";
+
+/** What the outbox knows about the take beyond the answer. */
+export type SubmitContext = { withdrawnHere?: boolean };
 /** Codes after which the take can never be saved for this mission. */
 export const DEAD_CODES: ReadonlySet<string> = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "blocked", "not_linked", "test_closed"]);
 
@@ -179,12 +183,13 @@ export function decideSubmit(
   res: { ok: true; duplicate?: boolean } | Pick<CampaignFailure, "ok" | "code" | "reason" | "retryAfterS">,
   attempts: number,
   random?: () => number,
+  ctx: SubmitContext = {},
 ): Decision {
   if (res.ok) return { kind: "done", duplicate: Boolean(res.duplicate) };
   if (res.code === "recording_rejected") return { kind: "rejected", reason: res.reason ?? "other" };
   if (res.code === "already_submitted") return { kind: "superseded" };
   if (res.code === "offline") return { kind: "retry", code: "offline", delayMs: 0 };
-  if (DROP_CODES.has(res.code)) return { kind: "drop", code: res.code };
+  if (res.code === DROP_IF_WITHDRAWN_HERE) return ctx.withdrawnHere ? { kind: "drop", code: res.code } : { kind: "hold", code: res.code, delayMs: 10 * MINUTE };
   // Signed out: a minute (signing in again restarts the runner at once anyway). Never 0: a due-now hold would loop.
   if (HOLD_CODES.has(res.code)) return { kind: "hold", code: res.code, delayMs: res.code === "unauthorized" ? MINUTE : 10 * MINUTE };
   if (DEAD_CODES.has(res.code)) return { kind: "fail", code: res.code };

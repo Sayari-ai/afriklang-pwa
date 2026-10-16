@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useId, useRef, useState } from "react";
 import { signConsent } from "@/lib/campaign/api";
+import { clearWithdrawn } from "@/lib/campaign/withdrawals";
 import type { CampaignCard, CampaignFailure } from "@/lib/campaign/types";
 import { safeExternalUrl } from "@/lib/security/safe-url";
 import { FailureMessage, Notice, buttonPrimary } from "./CampaignHubParts";
@@ -32,7 +33,11 @@ export function ConsentStep({ type, card, onSigned }: Props) {
     setFailure(null);
     try {
       const res = await signConsent({ type, campaignId: type === "campaign" ? card.campaign_id : undefined, version, locale });
-      if (res.ok) return onSigned();
+      if (res.ok) {
+        // Takes held since a withdrawal from this app may go again.
+        if (type === "campaign") clearWithdrawn(card.campaign_id);
+        return onSigned();
+      }
       if (res.code === "consent_version_changed") {
         setChanged(true);
         setAgreed(false);

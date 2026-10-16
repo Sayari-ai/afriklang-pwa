@@ -14,6 +14,7 @@ import { requestUploadTicket, submitRecording, withdrawConsent } from "./api";
 import { campaignAccessToken, storedCampaignUser } from "./auth-client";
 import { createOutbox, type OutboxEvent } from "./outbox";
 import { MIN_WAKE_MS, precheckFromCard, type OutboxItem } from "./outbox-logic";
+import { markWithdrawn, withdrawnHere } from "./withdrawals";
 import { askPersistentStorage } from "./storage-safety";
 import { CAMPAIGNS, markSubmitted, refreshCampaign } from "./queries";
 import { cacheId, campaignCache } from "./cache";
@@ -75,6 +76,7 @@ export const outbox = createOutbox({
   },
   upload: (item, onProgress, signal, ticket) => uploadSignedIn(item, onProgress, signal, ticket),
   requestTicket: (item) => requestUploadTicket(item.missionId, item.metadata.source_sha256, item.metadata.duration_s),
+  withdrawnHere: (item) => withdrawnHere(item.userId, item.campaignId),
   precheck: (item) => {
     const list = campaignCache.read<CampaignList>(cacheId(item.userId, CAMPAIGNS)).data;
     const card = list?.campaigns?.find((c) => c.campaign_id === item.campaignId);
@@ -165,6 +167,8 @@ export async function withdrawFromCampaign(userId: string, campaignId: string) {
   try {
     const res = await withdrawConsent(campaignId);
     if (!res.ok) return { ok: false as const, failure: res };
+    // Before the delete: a take it misses is deleted when the dashboard refuses it.
+    markWithdrawn(userId, campaignId);
     const deleted = await outbox.discardCampaign(userId, campaignId);
     return { ok: true as const, deleted };
   } finally {
