@@ -31,7 +31,8 @@ const TIMEOUT_MS = 30_000;
 const KNOWN: ReadonlySet<string> = new Set<CampaignErrorCode>([
   "invalid_input", "not_linked", "not_assigned", "invalid_link", "link_expired", "campaign_closed", "email_unverified", "email_mismatch",
   "account_conflict", "consent_version_changed", "already_submitted", "recording_rejected", "profile_incomplete", "blocked", "account_consent",
-  "campaign_consent", "partner_consent", "campaign_paused", "campaign_not_open", "server_error", "unauthorized", "bridge_unreachable", "bridge_error",
+  "campaign_consent", "partner_consent", "campaign_paused", "campaign_not_open", "duplicate_audio", "test_closed", "server_error", "unauthorized",
+  "bridge_unreachable", "bridge_error",
 ]);
 
 /** The Edge Function's own codes (sent in `error`), as the app's codes. */
