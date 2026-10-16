@@ -40,6 +40,13 @@ import { checkLength, clientIp, RateLimiter, readBearer, verifySession } from "@
  * `409 { error: "invalid_ticket" }`: the app then asks for a new ticket. A 401 without that
  * code is still the upload key being refused (server_misconfigured).
  *
+ * Without a ticket, Sayari would trust the form's speaker, campaign and mission ids, so any
+ * signed-in Google account could file audio under someone else's mission (C-2, 2026-10-16). An
+ * upload without `X-Campaign-Ticket` is therefore refused (`409 ticket_required`: the app asks
+ * for a ticket again on its next try) unless SAYARI_UPLOAD_REQUIRE_TICKET=false, which is only
+ * for an app running against a dashboard that issues no tickets yet. Sayari enforces the same
+ * with REQUIRE_CAMPAIGN_TICKET=true; this proxy is the first line.
+ *
  * Streaming + memory
  * ------------------
  * The recorder produces ~1–2 MB WAVs (16 kHz mono PCM16, ~30 s). We forward
@@ -99,6 +106,9 @@ const authLookups = new RateLimiter(600, 60_000);
 const TICKET_RE = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+){1,2}$/;
 const MAX_TICKET_CHARS = 4096;
 
+/** Tickets are required unless SAYARI_UPLOAD_REQUIRE_TICKET is "false" (read per request). */
+const ticketRequired = () => (process.env.SAYARI_UPLOAD_REQUIRE_TICKET ?? "").trim().toLowerCase() !== "false";
+
 const refuse = (status: number, error: string, extra: Record<string, string> = {}) =>
   NextResponse.json({ error }, { status, headers: { "cache-control": "no-store", ...extra } });
 
@@ -149,9 +159,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // The ticket, when the app has one (an app or a dashboard without tickets sends none).
+  // The dashboard's ticket for this one file. Without one, Sayari would trust the form's ids.
   const ticket = request.headers.get("x-campaign-ticket");
   if (ticket !== null && (ticket.length > MAX_TICKET_CHARS || !TICKET_RE.test(ticket))) return refuse(400, "invalid_ticket");
+  if (ticket === null && ticketRequired()) return refuse(409, "ticket_required");
 
   if (!UPLOAD_KEY) {
     // Fail fast with a clear server error rather than letting the upstream

@@ -100,9 +100,11 @@ browser  ──►  /api/audio-upload (proxy)  ──►  Sayari      (the audio
     `409 ticket_used`) drops it; the next try asks for a new one. `422 sha_mismatch` is final.
   * **Older dashboard:** a 404 that names no code (the route does not exist) is answered by the Edge
     Function as `404 route_not_found`; an older Edge Function answers `400 unknown_action`. Both mean
-    "upload without a ticket, exactly as before" (noted once per app start in the console), so the
-    app can ship before the dashboard. The campaign form fields are sent in both cases: Sayari uses
-    them until `REQUIRE_CAMPAIGN_TICKET` is on.
+    "upload without a ticket" (noted once per app start in the console). The proxy refuses such an
+    upload (`409 ticket_required`, retried later with a new ticket request) unless
+    `SAYARI_UPLOAD_REQUIRE_TICKET=false`, which is only for testing against an old dashboard: without a
+    ticket Sayari trusts the form's speaker, campaign and mission ids (C-2, 2026-10-16 audit).
+    Production Sayari must also run with `REQUIRE_CAMPAIGN_TICKET=true`.
 
 - The browser **never holds the bridge secret** and **never says who it is**. The Edge Function reads
   the user id and the verified Google email from the signed-in session
@@ -207,7 +209,7 @@ Do this with staff accounts before inviting anyone:
 | App shows "The service is not reachable" | `DASHBOARD_URL` wrong, dashboard down, or the function cannot reach it |
 | 500 `server_misconfigured` from the function | `BRIDGE_SECRET` (min. 16 characters) or `DASHBOARD_URL` (https origin) not set |
 | 401 from the dashboard through the function | `BRIDGE_SECRET` here ≠ `PWA_BRIDGE_SECRET` there |
-| Console: "the dashboard does not issue upload tickets yet" | Dashboard without the upload-ticket route, or the Edge Function not redeployed: uploads go without tickets (fine until Sayari requires them) |
+| Console: "the dashboard does not issue upload tickets yet" | Dashboard without the upload-ticket route, or the Edge Function not redeployed: the proxy refuses the bare upload (`409 ticket_required`) and the take waits |
 | Takes stay "Waiting to send" after Sayari turned on `REQUIRE_CAMPAIGN_TICKET` | Same as above: tickets are not issued, so Sayari refuses the bare upload |
 | "Sign in with the Google account for a***@…" | The signed-in Google email differs from the contributor's email, or is not verified |
 | Link says expired / not valid | Older than 14 days, replaced by a resend, or the contributor was removed: send a new invitation |
