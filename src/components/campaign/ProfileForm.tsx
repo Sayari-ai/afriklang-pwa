@@ -13,6 +13,8 @@ import { saveProfile } from "@/lib/campaign/api";
 import {
   AGE_BANDS,
   GENDERS,
+  VARIETY_SEPARATOR,
+  canAddVarieties,
   MAX_TEXT,
   countryOptions,
   initialValues,
@@ -76,7 +78,9 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   const typedVariety = tidyVariety(values.variety);
   // While suggestions still match, the speaker is probably mid-word: say nothing about the value yet.
   const settled = suggestions.length === 0;
-  const isNewVariety = settled && typedVariety !== "" && /\p{L}/u.test(typedVariety) && !matchVariety(typedVariety, choices);
+  const canAdd = canAddVarieties(card);
+  const isNewVariety =
+    canAdd && settled && typedVariety !== "" && /\p{L}/u.test(typedVariety) && !VARIETY_SEPARATOR.test(typedVariety) && !matchVariety(typedVariety, choices);
   const outside = settled ? outsideTargets(typedVariety, card) : null;
 
   const set = (k: keyof ProfileInput) => (v: string) => {
@@ -92,7 +96,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (sending.current) return;
-    const { input, errors: found } = validateProfile(values, choices);
+    const { input, errors: found } = validateProfile(values, choices, canAdd);
     setErrors(found);
     if (!input) {
       setFailure(null);
@@ -233,7 +237,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
         "variety",
         t("variety", { language: card.language.name }),
         text("variety", "off"),
-        t("varietyHint"),
+        t(canAdd ? "varietyHint" : "varietyHintPick"),
       )}
       {suggestions.length ? (
         <div role="group" aria-label={t("varietySuggestions")} className="-mt-2 flex flex-wrap gap-2">

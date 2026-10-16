@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AFRICAN_COUNTRIES, ALL_COUNTRIES, countryOptions, guessDevice, initialValues, matchVariety, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
+import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, guessDevice, initialValues, matchVariety, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
 
 const ok: ProfileValues = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: " Thiès ", gender: "female", age_band: "30-44", device: "Android" };
 const varieties = ["Baol-Baol", "Saloum-Saloum"];
@@ -36,6 +36,17 @@ describe("variety", () => {
     expect(validateProfile({ ...ok, variety: "Baol\nBaol" }, varieties).errors.variety).toBeUndefined(); // newline is whitespace: tidied to one space
     expect(validateProfile({ ...ok, variety: "Baol\u0007" }, varieties).errors.variety).toBe("control");
     expect(validateProfile({ ...ok, variety: "x".repeat(81) }, varieties).errors.variety).toBe("tooLong");
+  });
+  it("asks for one variety when several are typed at once", () => {
+    expect(validateProfile({ ...ok, variety: "Zezuru ,Ndau ,Manyika Karanga" }, varieties).errors.variety).toBe("oneVariety");
+    expect(validateProfile({ ...ok, variety: "Baol-Baol / Lebou" }, varieties).errors.variety).toBe("oneVariety");
+    expect(validateProfile({ ...ok, variety: "Manyika Karanga" }, varieties).errors.variety).toBeUndefined();
+  });
+  it("against a dashboard that cannot add varieties, only a listed one is sent", () => {
+    expect(canAddVarieties({ language: { code: "sna", name: "Shona", varieties: [] } })).toBe(false);
+    expect(canAddVarieties({ language: { code: "sna", name: "Shona", varieties: [], known_varieties: [] } })).toBe(true);
+    expect(validateProfile({ ...ok, variety: "Zezuru" }, varieties, false).errors.variety).toBe("notListed");
+    expect(validateProfile({ ...ok, variety: "baol baol" }, varieties, false).input?.variety).toBe("Baol-Baol");
   });
   it("compares without case, accents or punctuation between words", () => {
     expect(varietyKey("  Baol-Baol ")).toBe("baol baol");

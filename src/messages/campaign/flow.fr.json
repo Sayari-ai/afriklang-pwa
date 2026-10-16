@@ -20,6 +20,7 @@
     "correctTitle": "Corriger mon profil",
     "variety": "Quelle variété de {language} parlez-vous ?",
     "varietyHint": "Saisissez le nom de votre variété ou touchez l'une des suggestions. Si elle n'est pas proposée, écrivez-la en entier : elle sera ajoutée.",
+    "varietyHintPick": "Saisissez le nom de votre variété et touchez-la dans les suggestions.",
     "varietySuggestions": "Variétés suggérées",
     "varietyNew": "« {name} » n'est pas encore dans notre liste. Elle sera ajoutée à la liste des variétés de la langue {language} lors de l'enregistrement.",
     "varietyOutsideTitle": "Cette campagne concerne d'autres variétés",
@@ -52,6 +53,8 @@
       "invalid": "Choisissez l'une des options de la liste.",
       "noLetters": "Utilisez des lettres ou des chiffres, pas seulement des symboles ou des espaces.",
       "control": "Supprimez les retours à la ligne ou les caractères spéciaux.",
+      "oneVariety": "Indiquez une seule variété : celle que vous parlez le mieux. Retirez les virgules ou les barres obliques.",
+      "notListed": "Cette variété n'est pas encore dans la liste. Choisissez-en une parmi les suggestions, ou contactez l'équipe Afriklang.",
       "server": {
         "variety": "Cette variété n'a pas été acceptée. Choisissez-en une parmi les suggestions, ou contactez l'équipe Afriklang.",
         "country": "Ce pays n'a pas été accepté. Choisissez-en un dans la liste.",
