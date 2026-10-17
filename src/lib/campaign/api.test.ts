@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { toResult } from "./api";
 import { ERROR_KEY, isRetryable, needsSignIn } from "./errors";
+import { canRetryFailed, decideSubmit, decideTicket } from "./outbox-logic";
 import type { CampaignErrorCode } from "./types";
 
 describe("toResult", () => {
@@ -60,6 +61,34 @@ describe("toResult: precise failures", () => {
   it("a success that is not a JSON object is a bad answer, not data", () => {
     expect(toResult(200, null)).toMatchObject({ ok: false, code: "bridge_error" });
     expect(toResult(200, [1])).toMatchObject({ ok: false, code: "bridge_error" });
+  });
+});
+
+describe("toResult: codes with their own handling (H-8)", () => {
+  it("a closed test (403 test_closed) is final for the take, never retried", () => {
+    const r = toResult(403, { error: "This test is closed: your recordings are being reviewed.", code: "test_closed" });
+    expect(r).toMatchObject({ ok: false, code: "test_closed", message: "This test is closed: your recordings are being reviewed." });
+    if (r.ok) return;
+    expect(isRetryable(r.code)).toBe(false);
+    expect(decideSubmit(r, 0)).toEqual({ kind: "fail", code: "test_closed" });
+    expect(decideTicket(r, 0)).toEqual({ kind: "fail", code: "test_closed" });
+    expect(canRetryFailed(r.code)).toBe(false);
+    expect(ERROR_KEY[r.code]).toBe("testClosed");
+  });
+
+  it("a file already sent for another prompt (409 duplicate_audio) offers no useless retry", () => {
+    const r = toResult(409, { error: "This recording was already sent for another prompt.", code: "duplicate_audio" });
+    expect(r).toMatchObject({ ok: false, code: "duplicate_audio" });
+    if (r.ok) return;
+    expect(isRetryable(r.code)).toBe(false);
+    expect(decideSubmit(r, 0)).toEqual({ kind: "fail", code: "duplicate_audio" });
+    expect(canRetryFailed(r.code)).toBe(false);
+    expect(ERROR_KEY[r.code]).toBe("duplicateAudio");
+  });
+
+  it("other failed takes keep their Try again", () => {
+    for (const code of ["invalid_input", "server_error", "conflict", null]) expect(canRetryFailed(code)).toBe(true);
+    for (const code of ["tooLarge", "campaign_closed", "not_assigned", "blocked"]) expect(canRetryFailed(code)).toBe(false);
   });
 });
 

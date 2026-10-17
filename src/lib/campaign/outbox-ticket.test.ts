@@ -128,13 +128,23 @@ describe("outbox with upload tickets", () => {
     }
   });
 
-  it("a withdrawn campaign consent deletes the take, as a submit would (its audio must not reach Sayari)", async () => {
+  it("a campaign consent withdrawn from this app deletes the take, as a submit would (its audio must not reach Sayari)", async () => {
     const store = memStore([item()]);
-    const { ob, upload, events } = setup(store, vi.fn(async () => refused("campaign_consent")));
+    const { ob, upload, events } = setup(store, vi.fn(async () => refused("campaign_consent")), { withdrawnHere: () => true });
     await ob.drain("u1");
     expect(upload).not.toHaveBeenCalled();
     expect(store.m.size).toBe(0);
     expect(events.map((e) => e.type)).toEqual(["dropped"]);
+  });
+
+  it("any other missing campaign consent (a new version, a withdrawal elsewhere) holds the take without uploading it (H-1)", async () => {
+    const store = memStore([item()]);
+    const { ob, upload, events } = setup(store, vi.fn(async () => refused("campaign_consent")));
+    await ob.drain("u1");
+    expect(upload).not.toHaveBeenCalled();
+    expect(store.m.get("sha1")).toMatchObject({ state: "held", lastCode: "campaign_consent", uploaded: false });
+    expect(store.m.get("sha1")!.blob.size).toBe(1);
+    expect(events.map((e) => e.type)).toEqual(["held"]);
   });
 
   it("an older dashboard (no ticket route) uploads without a ticket, exactly as before, and says so once", async () => {

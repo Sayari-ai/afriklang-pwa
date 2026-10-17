@@ -56,7 +56,8 @@ describe("outbox decisions", () => {
     expect(decideSubmit({ ok: false, code: "recording_rejected", reason: "level" }, 0)).toEqual({ kind: "rejected", reason: "level" });
     expect(decideSubmit({ ok: false, code: "already_submitted" }, 0).kind).toBe("superseded");
     expect(decideSubmit({ ok: false, code: "campaign_paused" }, 0).kind).toBe("hold");
-    expect(decideSubmit({ ok: false, code: "campaign_consent" }, 0)).toEqual({ kind: "drop", code: "campaign_consent" });
+    expect(decideSubmit({ ok: false, code: "campaign_consent" }, 0, undefined, { withdrawnHere: true })).toEqual({ kind: "drop", code: "campaign_consent" });
+    expect(decideSubmit({ ok: false, code: "campaign_consent" }, 0)).toEqual({ kind: "hold", code: "campaign_consent", delayMs: 600_000 });
     expect(decideSubmit({ ok: false, code: "consent_version_changed" }, 0).kind).toBe("hold");
     expect(decideSubmit({ ok: false, code: "campaign_closed" }, 0).kind).toBe("fail");
     expect(decideSubmit({ ok: false, code: "server_error" }, 0).kind).toBe("retry");
@@ -239,14 +240,34 @@ describe("takes that stay on the phone (APP-024)", () => {
 });
 
 describe("consent withdrawal (APP-004)", () => {
-  it("a submit refused for the campaign consent deletes the take", async () => {
+  it("a submit refused for the campaign consent deletes the take when the speaker withdrew from this app", async () => {
     const store = memStore([item({ uploaded: true })]);
-    const ob = createOutbox({ store, upload: vi.fn(), submit: async () => ({ ok: false, status: 403, code: "campaign_consent", message: "" }), online: () => true });
+    const withdrawnHere = vi.fn(() => true);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: async () => ({ ok: false, status: 403, code: "campaign_consent", message: "" }), online: () => true, withdrawnHere });
     const events: OutboxEvent[] = [];
     ob.onEvent((e) => events.push(e));
     await ob.drain("u1");
+    expect(withdrawnHere).toHaveBeenCalledWith(expect.objectContaining({ userId: "u1", campaignId: "c1" }));
     expect(store.m.size).toBe(0);
     expect(events[0]).toMatchObject({ type: "dropped", code: "campaign_consent" });
+  });
+
+  it("otherwise (a new consent version on an older dashboard, a withdrawal elsewhere) the take is held, then goes once signed again (H-1)", async () => {
+    const store = memStore([item({ uploaded: true })]);
+    let signed = false;
+    const submit = vi.fn(async () => (signed ? { ok: true as const, data: { duplicate: false } } : { ok: false as const, status: 403, code: "campaign_consent" as const, message: "" }));
+    let t = 5;
+    const ob = createOutbox({ store, upload: vi.fn(), submit, online: () => true, withdrawnHere: () => false, now: () => t });
+    const events: OutboxEvent[] = [];
+    ob.onEvent((e) => events.push(e));
+    await ob.drain("u1");
+    expect(store.m.get("sha1")).toMatchObject({ state: "held", lastCode: "campaign_consent" });
+    expect(events[0]).toMatchObject({ type: "held", code: "campaign_consent" });
+    signed = true;
+    t += 11 * 60_000;
+    await ob.drain("u1");
+    expect(store.m.size).toBe(0);
+    expect(events[1]).toMatchObject({ type: "sent" });
   });
 
   it("never uploads a take whose saved card says the consent is missing", async () => {

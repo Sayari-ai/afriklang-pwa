@@ -36,6 +36,7 @@ import {
   type Decision,
   type OutboxItem,
   type OutboxSummary,
+  type SubmitContext,
 } from "./outbox-logic";
 
 const MINUTE = 60_000;
@@ -66,6 +67,8 @@ export type OutboxDeps = {
   log?: (msg: string) => void;
   submit: (missionId: string, metadata: RecordingMetadata) => Promise<CampaignResult<{ duplicate: boolean }>>;
   online: () => boolean;
+  /** The speaker withdrew this take's campaign consent from this app: a campaign_consent refusal deletes it (withdrawals.ts). */
+  withdrawnHere?: (item: OutboxItem) => boolean;
   /** What the saved campaign card says before an upload: a submit code to hold or drop the take, or null (precheckFromCard). */
   precheck?: (item: OutboxItem) => string | null;
   now?: () => number;
@@ -144,6 +147,8 @@ export function createOutbox(deps: OutboxDeps) {
     else if (d.kind === "drop") emit({ type: "dropped", item: s, code: d.code });
   }
 
+  const context = (item: OutboxItem): SubmitContext => ({ withdrawnHere: deps.withdrawnHere?.(item) ?? false });
+
   /** The item is still to be sent: not deleted meanwhile, its campaign not blocked. */
   async function stillWanted(item: OutboxItem): Promise<boolean> {
     if (blocked.has(item.campaignId)) return false;
@@ -191,7 +196,7 @@ export function createOutbox(deps: OutboxDeps) {
             await deps.store.put(current);
             ticket = stored.value;
           } else {
-            const d = decideTicket(res, current.attempts);
+            const d = decideTicket(res, current.attempts, undefined, context(current));
             if (d.kind === "without") {
               if (!saidNoTickets) (deps.log ?? console.info)("[outbox] the dashboard does not issue upload tickets yet: uploading without one");
               saidNoTickets = true;
@@ -234,7 +239,7 @@ export function createOutbox(deps: OutboxDeps) {
     } catch {
       res = { ok: false, status: 0, code: "network", message: "" };
     }
-    const d = decideSubmit(res.ok ? { ok: true, duplicate: res.data.duplicate } : res, current.attempts);
+    const d = decideSubmit(res.ok ? { ok: true, duplicate: res.data.duplicate } : res, current.attempts, undefined, context(current));
     if (d.kind === "retry" && d.code === "offline") return false;
     await settle(current, d);
     return !stopsRun(d);

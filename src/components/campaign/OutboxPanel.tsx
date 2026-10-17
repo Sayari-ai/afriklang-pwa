@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCampaignSession } from "@/lib/campaign/hooks";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
-import { DEAD_CODES } from "@/lib/campaign/outbox-logic";
+import { canRetryFailed } from "@/lib/campaign/outbox-logic";
 import { usePersistentStorage } from "@/lib/campaign/storage-safety";
 import { outboxReasonKey } from "@/lib/campaign/view";
 import { useInstallPrompt } from "@/stores/install-prompt";
@@ -109,8 +109,8 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                   </div>
                   {state === "failed" ? (
                     <>
-                      {/* Nothing to try again when it can never go (too large, campaign closed, mission no longer theirs). */}
-                      {online && i.lastCode !== "tooLarge" && !(i.lastCode && DEAD_CODES.has(i.lastCode)) ? (
+                      {/* Nothing to try again when it can never go (too large, campaign closed, mission no longer theirs, a file already sent). */}
+                      {online && canRetryFailed(i.lastCode) ? (
                         <button type="button" onClick={() => void outbox.retryFailed(i.id, userId)} className="min-h-9 rounded-full border border-primary/40 px-3 py-2 text-xs font-bold text-primary">
                           {t("tryAgain")}
                         </button>
