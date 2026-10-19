@@ -54,7 +54,8 @@
     "again": "Recommencer",
     "submit": "Envoyer et continuer",
     "submitLast": "Envoyer",
-    "preparing": "Enregistrement…"
+    "preparing": "Enregistrement…",
+    "sendAnyway": "Envoyer quand même"
   },
   "problem": {
     "title": "Essayons encore une fois",
@@ -66,6 +67,12 @@
     "silence": "Laissez un court silence avant et après avoir parlé : attendez « Parlez », et restez silencieux un instant à la fin.",
     "noisy": "Trop de bruit de fond : votre voix ne ressort pas assez. Éloignez-vous du bruit (télévision, ventilateur, rue) ou rapprochez un peu le téléphone.",
     "again": "Recommencer"
+  },
+  "advice": {
+    "title": "Écoutez avant d'envoyer",
+    "too_quiet": "Votre voix est un peu faible. Réécoutez : si chaque mot est clair, vous pouvez l'envoyer. Sinon, rapprochez le téléphone et recommencez.",
+    "noisy": "Il y a du bruit de fond. Réécoutez : si votre voix s'entend bien par-dessus, vous pouvez l'envoyer. Sinon, éloignez-vous du bruit et recommencez.",
+    "silence": "Vous avez commencé ou fini de parler tout au bord de l'enregistrement. Réécoutez : si aucun mot n'est coupé, vous pouvez l'envoyer. Sinon, attendez « Parlez » et restez silencieux un instant à la fin."
   },
   "saved": {
     "flash": "Enregistrée ! Elle sera envoyée automatiquement.",

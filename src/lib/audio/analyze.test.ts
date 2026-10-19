@@ -40,18 +40,27 @@ describe("checkTake", () => {
   const rules = { durationMinS: 3, durationMaxS: 15, minLevelDbfs: -35, silenceMarginS: 1 };
   const good = { duration_s: 8, level_dbfs: -22, peak_dbfs: -3, silence_before_s: 1.1, silence_after_s: 1 };
 
+  const block = (problem: string) => ({ problem, blocking: true });
+  const advise = (problem: string) => ({ problem, blocking: false });
+
   it("accepts a good take and names the first problem otherwise", () => {
     expect(checkTake(good, rules)).toBeNull();
-    expect(checkTake({ ...good, duration_s: 2 }, rules)).toBe("too_short");
+    expect(checkTake({ ...good, duration_s: 2 }, rules)).toEqual(block("too_short"));
     expect(checkTake({ ...good, duration_s: 2.6 }, rules)).toBeNull(); // within the 0.5 s tolerance
-    expect(checkTake({ ...good, duration_s: 16 }, rules)).toBe("too_long");
-    expect(checkTake({ ...good, level_dbfs: -50 }, rules)).toBe("too_quiet");
-    expect(checkTake({ ...good, peak_dbfs: 0 }, rules)).toBe("clipped");
-    expect(checkTake({ ...good, silence_before_s: 0.2 }, rules)).toBe("silence");
-    expect(checkTake({ ...good, silence_after_s: 0.4 }, rules)).toBe("silence");
+    expect(checkTake({ ...good, duration_s: 16 }, rules)).toEqual(block("too_long"));
+    expect(checkTake({ ...good, peak_dbfs: 0 }, rules)).toEqual(block("clipped"));
     // nothing above the silence threshold: said as "silent", before any length problem
-    expect(checkTake(analyzeSamples(new Float32Array(16000 * 2), 16000), rules)).toBe("silent");
+    expect(checkTake(analyzeSamples(new Float32Array(16000 * 2), 16000), rules)).toEqual(block("silent"));
     expect(checkTake({ ...good, silence_before_s: 0.5 }, rules)).toBeNull(); // half the margin is enough
+  });
+
+  it("a quiet voice or a short pause is advice: the speaker may send anyway", () => {
+    expect(checkTake({ ...good, level_dbfs: -50 }, rules)).toEqual(advise("too_quiet"));
+    expect(checkTake({ ...good, silence_before_s: 0.2 }, rules)).toEqual(advise("silence"));
+    expect(checkTake({ ...good, silence_after_s: 0.4 }, rules)).toEqual(advise("silence"));
+    // A blocking problem wins over advice: quiet AND clipped is refused.
+    expect(checkTake({ ...good, level_dbfs: -50, peak_dbfs: 0 }, rules)).toEqual(block("clipped"));
+    expect(checkTake({ ...good, level_dbfs: -50, duration_s: 2 }, rules)).toEqual(block("too_short"));
   });
 });
 
@@ -107,9 +116,9 @@ describe("background noise (APP-012)", () => {
   it("names the noise, not the pause, when the voice does not stand out", () => {
     const take = mix(join(silence(1.2), tone(3, 0.02), silence(1.2)), noise(5.4, -38));
     const a = analyzeStats(meter(take), { leadS: 1.2 });
-    expect(checkTake({ ...a, level_dbfs: Math.max(a.level_dbfs, -34) }, rules)).toBe("noisy");
-    expect(checkTake({ duration_s: 8, level_dbfs: -20, peak_dbfs: -3, silence_before_s: 0, silence_after_s: 1, noise_floor_dbfs: -40 }, rules)).toBe("noisy");
-    expect(checkTake({ duration_s: 8, level_dbfs: -20, peak_dbfs: -3, silence_before_s: 0, silence_after_s: 1, noise_floor_dbfs: -70 }, rules)).toBe("silence");
+    expect(checkTake({ ...a, level_dbfs: Math.max(a.level_dbfs, -34) }, rules)).toEqual({ problem: "noisy", blocking: false });
+    expect(checkTake({ duration_s: 8, level_dbfs: -20, peak_dbfs: -3, silence_before_s: 0, silence_after_s: 1, noise_floor_dbfs: -40 }, rules)).toEqual({ problem: "noisy", blocking: false });
+    expect(checkTake({ duration_s: 8, level_dbfs: -20, peak_dbfs: -3, silence_before_s: 0, silence_after_s: 1, noise_floor_dbfs: -70 }, rules)).toEqual({ problem: "silence", blocking: false });
   });
 
   it("keeps the -50 dBFS rule in a quiet room (the dashboard's numbers do not move)", () => {

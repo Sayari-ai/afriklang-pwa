@@ -243,7 +243,7 @@ export async function sha256Hex(blob: Blob): Promise<string> {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ── Capture checks (the same rules the dashboard applies) ────────────────
+// ── Capture checks (the dashboard refuses the same blocking problems) ────
 
 export type TakeProblem = "silent" | "too_short" | "too_long" | "too_quiet" | "clipped" | "silence" | "noisy";
 
@@ -257,20 +257,30 @@ export type TakeRules = {
 const DURATION_TOLERANCE_S = 0.5;
 const SILENCE_SLACK = 0.5;
 
+/**
+ * What is wrong with a take. `blocking`: it cannot be sent, record again. Otherwise it is advice
+ * (2026-10-19, speakers found these too strict): a quiet voice, background noise or a short pause
+ * is shown on the review screen and the speaker may send anyway; Sayari's QC and the annotator
+ * judge. Blocking problems are checked first, so a take that is both quiet and clipped is refused.
+ */
+export type TakeCheck = { problem: TakeProblem; blocking: boolean };
+
 /** The first thing wrong with a take, or null when it is fine. */
-export function checkTake(a: TakeAnalysis, rules: TakeRules): TakeProblem | null {
+export function checkTake(a: TakeAnalysis, rules: TakeRules): TakeCheck | null {
   const noisyRoom = a.noise_floor_dbfs != null && a.noise_floor_dbfs > NOISY_FLOOR_DBFS;
+  const block = (problem: TakeProblem): TakeCheck => ({ problem, blocking: true });
+  const advise = (problem: TakeProblem): TakeCheck => ({ problem, blocking: false });
   // Not one frame above the speech threshold: the microphone heard nothing (muted, covered or not
   // working), or nothing rose above a loud background.
-  if (a.level_dbfs <= FLOOR_DB) return noisyRoom ? "noisy" : "silent";
-  if (a.duration_s < rules.durationMinS - DURATION_TOLERANCE_S) return "too_short";
-  if (a.duration_s > rules.durationMaxS + DURATION_TOLERANCE_S) return "too_long";
-  if (a.level_dbfs < rules.minLevelDbfs) return "too_quiet";
-  if (a.peak_dbfs >= 0) return "clipped";
+  if (a.level_dbfs <= FLOOR_DB) return block(noisyRoom ? "noisy" : "silent");
+  if (a.duration_s < rules.durationMinS - DURATION_TOLERANCE_S) return block("too_short");
+  if (a.duration_s > rules.durationMaxS + DURATION_TOLERANCE_S) return block("too_long");
+  if (a.peak_dbfs >= 0) return block("clipped");
+  if (a.level_dbfs < rules.minLevelDbfs) return advise("too_quiet");
   // The voice barely stands out from the background (APP-012).
-  if (a.noise_floor_dbfs != null && a.level_dbfs - a.noise_floor_dbfs < MIN_SNR_DB) return "noisy";
+  if (a.noise_floor_dbfs != null && a.level_dbfs - a.noise_floor_dbfs < MIN_SNR_DB) return advise("noisy");
   const needed = rules.silenceMarginS * SILENCE_SLACK;
   // In a loud place the pause was there but drowned: say what is wrong (the noise), not "leave a pause".
-  if (a.silence_before_s < needed || a.silence_after_s < needed) return noisyRoom ? "noisy" : "silence";
+  if (a.silence_before_s < needed || a.silence_after_s < needed) return advise(noisyRoom ? "noisy" : "silence");
   return null;
 }

@@ -54,7 +54,8 @@
     "again": "Record again",
     "submit": "Submit & next",
     "submitLast": "Submit",
-    "preparing": "Saving…"
+    "preparing": "Saving…",
+    "sendAnyway": "Send anyway"
   },
   "problem": {
     "title": "Let's try that again",
@@ -66,6 +67,12 @@
     "silence": "Leave a short silence before and after you speak: wait for “Speak now”, and stay silent a moment after you finish.",
     "noisy": "Too much background noise: your voice does not stand out. Move away from the noise (TV, fan, street) or hold the phone a little closer.",
     "again": "Record again"
+  },
+  "advice": {
+    "title": "Listen before you send",
+    "too_quiet": "Your voice is a bit quiet. Listen back: if every word is clear, you can send it. If not, hold the phone closer and record again.",
+    "noisy": "There is some background noise. Listen back: if your voice is clear over it, you can send it. If not, move away from the noise and record again.",
+    "silence": "You started or stopped speaking right at the edge of the recording. Listen back: if no word is cut off, you can send it. If not, wait for “Speak now” and stay silent a moment after you finish."
   },
   "saved": {
     "flash": "Saved! It will be sent automatically.",
