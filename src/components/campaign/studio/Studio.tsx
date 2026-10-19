@@ -6,6 +6,7 @@
  *   idle ─tap─► countdown ─► lead (silent) ─► speaking ─stop─► tail (silent) ─► analyzing
  *                                                                         ├─► problem ─► idle
  *                                                                         └─► review ─submit─► next mission
+ *                                                                   (with advice: quiet, noisy, short pause)
  *
  * The studio adds the silence the campaign asks for around the voice by itself (it records a
  * moment before saying "Speak now" and keeps recording a moment after Stop), shows a live level
@@ -277,7 +278,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       // Saved on the phone before anything else, so a crash from here on cannot lose it.
       await saveDraft({ v: 1, userId, campaignId, missionId: mid, blob, analysis, recordedAt: recordedAt.getTime(), inputSampleRate, processing, quietHintShown, takeNumber });
       if (attempt !== attemptRef.current) return;
-      const p = checkTake(analysis, rules);
+      // Only a blocking problem sends the speaker back to record; advice is shown on the review screen.
+      const check = checkTake(analysis, rules);
+      const p = check?.blocking ? check.problem : null;
       if (p) void clearDraft(userId, campaignId);
       setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown, takeNumber });
       setProblem(p);
@@ -667,6 +670,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     );
   }
 
+  // Advice about the take on the review screen (quiet, noisy, short pause): the speaker may send anyway.
+  const check = take ? checkTake(take.analysis, rules) : null;
+  const advice = check && !check.blocking ? (check.problem as "too_quiet" | "noisy" | "silence") : null;
   const position = Math.max(1, missions.length - open + 1);
   const progress = recording && maxS ? elapsed / maxS : null;
   const buttonMode = phase === "countdown" ? "countdown" : recording ? "recording" : phase === "analyzing" || phase === "saving" ? "busy" : "record";
@@ -699,6 +705,12 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
               {t("review.restored")}
             </p>
           ) : null}
+          {advice ? (
+            <div role="status" className="rounded-2xl bg-amber-400/15 px-4 py-3 ring-1 ring-amber-300/40">
+              <p className="font-bold text-amber-100">{t("advice.title")}</p>
+              <p className="text-sm text-amber-50">{t(`advice.${advice}`)}</p>
+            </div>
+          ) : null}
           <p className="text-center text-sm font-semibold text-white/80">{t("review.length", { time: formatClock(take.analysis.duration_s) })}</p>
           <TakePlayer blob={take.blob} peaks={take.analysis.peaks} durationS={take.analysis.duration_s} />
           <div className="grid grid-cols-[auto_1fr] gap-3">
@@ -706,7 +718,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
               <RotateCcw size={18} aria-hidden /> {t("review.again")}
             </button>
             <button type="button" onClick={() => void submit()} disabled={phase === "saving"} className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white text-lg font-bold text-primary shadow-lg disabled:opacity-70">
-              {phase === "saving" ? t("review.preparing") : open > 1 ? t("review.submit") : t("review.submitLast")}
+              {phase === "saving" ? t("review.preparing") : advice ? t("review.sendAnyway") : open > 1 ? t("review.submit") : t("review.submitLast")}
               {phase !== "saving" ? <ChevronRight size={20} aria-hidden /> : null}
             </button>
           </div>
