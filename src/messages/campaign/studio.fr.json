@@ -70,6 +70,8 @@
   },
   "advice": {
     "title": "Écoutez avant d'envoyer",
+    "silent": "Nous n'avons pas entendu votre voix. Réécoutez : si vous vous entendez, vous pouvez l'envoyer. Sinon, vérifiez que le micro n'est ni couvert ni coupé, et recommencez.",
+    "clipped": "Le son est trop fort et sature : cette prise sera probablement refusée. Éloignez un peu le téléphone et recommencez.",
     "too_quiet": "Votre voix est un peu faible. Réécoutez : si chaque mot est clair, vous pouvez l'envoyer. Sinon, rapprochez le téléphone et recommencez.",
     "noisy": "Il y a du bruit de fond. Réécoutez : si votre voix s'entend bien par-dessus, vous pouvez l'envoyer. Sinon, éloignez-vous du bruit et recommencez.",
     "silence": "Vous avez commencé ou fini de parler tout au bord de l'enregistrement. Réécoutez : si aucun mot n'est coupé, vous pouvez l'envoyer. Sinon, attendez « Parlez » et restez silencieux un instant à la fin."

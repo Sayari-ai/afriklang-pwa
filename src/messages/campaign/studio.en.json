@@ -70,6 +70,8 @@
   },
   "advice": {
     "title": "Listen before you send",
+    "silent": "We could not hear your voice. Listen back: if you can hear yourself, you can send it. If not, check the microphone is not covered or muted, and record again.",
+    "clipped": "The sound is too loud and distorted, so this take will probably be refused. Hold the phone a little further away and record again.",
     "too_quiet": "Your voice is a bit quiet. Listen back: if every word is clear, you can send it. If not, hold the phone closer and record again.",
     "noisy": "There is some background noise. Listen back: if your voice is clear over it, you can send it. If not, move away from the noise and record again.",
     "silence": "You started or stopped speaking right at the edge of the recording. Listen back: if no word is cut off, you can send it. If not, wait for “Speak now” and stay silent a moment after you finish."
