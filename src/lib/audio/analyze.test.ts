@@ -43,23 +43,26 @@ describe("checkTake", () => {
   const block = (problem: string) => ({ problem, blocking: true });
   const advise = (problem: string) => ({ problem, blocking: false });
 
-  it("accepts a good take and names the first problem otherwise", () => {
+  it("accepts a good take; only a wrong length blocks", () => {
     expect(checkTake(good, rules)).toBeNull();
     expect(checkTake({ ...good, duration_s: 2 }, rules)).toEqual(block("too_short"));
     expect(checkTake({ ...good, duration_s: 2.6 }, rules)).toBeNull(); // within the 0.5 s tolerance
     expect(checkTake({ ...good, duration_s: 16 }, rules)).toEqual(block("too_long"));
-    expect(checkTake({ ...good, peak_dbfs: 0 }, rules)).toEqual(block("clipped"));
-    // nothing above the silence threshold: said as "silent", before any length problem
-    expect(checkTake(analyzeSamples(new Float32Array(16000 * 2), 16000), rules)).toEqual(block("silent"));
     expect(checkTake({ ...good, silence_before_s: 0.5 }, rules)).toBeNull(); // half the margin is enough
   });
 
-  it("a quiet voice or a short pause is advice: the speaker may send anyway", () => {
+  it("everything else is advice: the speaker may send anyway", () => {
+    expect(checkTake({ ...good, peak_dbfs: 0 }, rules)).toEqual(advise("clipped"));
+    // nothing above the silence threshold: said as "silent"
+    expect(checkTake(analyzeSamples(new Float32Array(16000 * 4), 16000), rules)).toEqual(advise("silent"));
     expect(checkTake({ ...good, level_dbfs: -50 }, rules)).toEqual(advise("too_quiet"));
     expect(checkTake({ ...good, silence_before_s: 0.2 }, rules)).toEqual(advise("silence"));
     expect(checkTake({ ...good, silence_after_s: 0.4 }, rules)).toEqual(advise("silence"));
-    // A blocking problem wins over advice: quiet AND clipped is refused.
-    expect(checkTake({ ...good, level_dbfs: -50, peak_dbfs: 0 }, rules)).toEqual(block("clipped"));
+  });
+
+  it("the length is checked first: a silent or clipped take of the wrong length is refused", () => {
+    expect(checkTake(analyzeSamples(new Float32Array(16000 * 2), 16000), rules)).toEqual(block("too_short"));
+    expect(checkTake({ ...good, peak_dbfs: 0, duration_s: 16 }, rules)).toEqual(block("too_long"));
     expect(checkTake({ ...good, level_dbfs: -50, duration_s: 2 }, rules)).toEqual(block("too_short"));
   });
 });
