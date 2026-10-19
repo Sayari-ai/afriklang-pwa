@@ -4,14 +4,15 @@
  * The recording studio: the missions of a campaign, recorded one after the other.
  *
  *   idle ─tap─► countdown ─► lead (silent) ─► speaking ─stop─► tail (silent) ─► analyzing
- *                                                                         ├─► problem ─► idle
+ *                                                                         ├─► problem (length) ─► idle
  *                                                                         └─► review ─submit─► next mission
- *                                                                   (with advice: quiet, noisy, short pause)
+ *                                                       (with advice: no sound, clipped, quiet, noisy, short pause)
  *
  * The studio adds the silence the campaign asks for around the voice by itself (it records a
  * moment before saying "Speak now" and keeps recording a moment after Stop), shows a live level
- * ring, and checks each take before it can be submitted. Submitting saves the take on the phone
- * (the outbox sends it in the background) and moves straight to the next mission.
+ * ring, and checks each take: a wrong length must be recorded again, anything else is advice.
+ * Submitting saves the take on the phone (the outbox sends it in the background) and moves
+ * straight to the next mission.
  */
 
 import { Check, ChevronRight, CloudOff, RotateCcw, SkipForward, X } from "lucide-react";
@@ -672,7 +673,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // Advice about the take on the review screen (quiet, noisy, short pause): the speaker may send anyway.
   const check = take ? checkTake(take.analysis, rules) : null;
-  const advice = check && !check.blocking ? (check.problem as "too_quiet" | "noisy" | "silence") : null;
+  const advice = check && !check.blocking ? (check.problem as "silent" | "clipped" | "too_quiet" | "noisy" | "silence") : null;
   const position = Math.max(1, missions.length - open + 1);
   const progress = recording && maxS ? elapsed / maxS : null;
   const buttonMode = phase === "countdown" ? "countdown" : recording ? "recording" : phase === "analyzing" || phase === "saving" ? "busy" : "record";
