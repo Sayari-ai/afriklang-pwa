@@ -45,6 +45,8 @@ export function sessionStateFor(s: { user: { id: string; email?: string | null }
 // One session store for the whole app (APP-034): one getSession() and one auth subscription, however
 // many components ask (each getSession() takes the auth lock).
 const INITIAL: SessionState = isCampaignAuthConfigured ? { status: "waiting" } : { status: "signedOut" };
+/** How long a saved speaker waits for the session check before their saved screens show. */
+export const OPTIMISTIC_SESSION_MS = 2500;
 let current: SessionState = INITIAL;
 let started = false;
 const sessionListeners = new Set<() => void>();
@@ -61,6 +63,17 @@ function startSession() {
   const auth = getCampaignAuth().auth;
   const check = () => void auth.getSession().then(({ data }) => applySession(sessionStateFor(data.session)), () => applySession(sessionStateFor(null)));
   check();
+  // Never keep a known speaker on a spinner while supabase-js retries an expired token on a bad
+  // network (about 25 s, twice): their saved screens show after a short wait (at once when the
+  // phone says it is offline), and the real answer replaces this as soon as it comes.
+  const known = storedCampaignUser();
+  if (known) {
+    const optimistic = () => {
+      if (current.status === "waiting") applySession({ status: "signedIn", email: known.email, userId: known.id, verified: false });
+    };
+    if (navigator.onLine === false) optimistic();
+    else window.setTimeout(optimistic, OPTIMISTIC_SESSION_MS);
+  }
   auth.onAuthStateChange((event, session) => applySession(sessionStateFor(session, event === "SIGNED_OUT")));
   // Back online: renew a session that could not be renewed offline.
   window.addEventListener("online", () => current.status === "signedIn" && !current.verified && check());

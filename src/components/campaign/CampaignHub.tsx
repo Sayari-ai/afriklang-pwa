@@ -17,6 +17,7 @@ import { isQualification, type CampaignCard, type ContributorView } from "@/lib/
 import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
 import { useOutbox } from "@/lib/campaign/outbox-client";
 import { daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
+import { OutboxPanel } from "./OutboxPanel";
 import { LanguageBadge, ProgressRing, useQualificationText } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
 import { ConsentStep } from "./ConsentStep";
@@ -88,6 +89,11 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
   const onPhone = useMemo(() => missionsInOutbox(box.items.filter((i) => i.userId === userId && i.campaignId === card.campaign_id)), [box.items, userId, card.campaign_id]);
   // The same count as the mission tabs: the list minus the takes waiting on the phone (MAN-004).
   const open = live ? toRecordCount(live, onPhone) : openCountOnPhone(card, [...onPhone.values()].filter((s) => s !== "failed").length);
+  // Takes still on this phone: they go only while the app is open and online, so "all recorded"
+  // must not read as "done" while they wait (N-4).
+  const stillOnPhone = [...onPhone.values()].filter((s) => s !== "failed").length;
+  // Conversational missions waiting for the partner's consent: not recordable yet (N-12).
+  const waitingPartner = live ? live.filter((m) => (m.status === "todo" || m.status === "rejected") && m.type === "conversational" && !m.partner_ready && !onPhone.has(m.mission_id)).length : 0;
 
   const after = useCallback(
     (type: "profile" | "consent" | "withdrawn") => () => {
@@ -198,11 +204,20 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
                 <span className="block text-sm font-semibold text-white/90">{t("hub.toRecord", { n: open })}</span>
               </span>
             </Link>
-          ) : pool.pool ? null : (
+          ) : pool.pool ? null : stillOnPhone > 0 ? (
+            <p role="status" className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+              {t("hub.allRecordedOnPhone", { n: stillOnPhone })}
+            </p>
+          ) : waitingPartner > 0 ? (
+            <p role="status" className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-800 ring-1 ring-slate-200">
+              {t("hub.waitingPartner", { n: waitingPartner })}
+            </p>
+          ) : (
             <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
-              <Check size={18} aria-hidden /> {t("hub.allRecorded")}
+              <Check size={18} aria-hidden /> {t(qualifying ? "hub.allRecordedTest" : "hub.allRecorded")}
             </p>
           )}
+          {stillOnPhone > 0 ? <OutboxPanel compact /> : null}
           <Tips card={card} />
           <MissionList campaignId={card.campaign_id} readOnly={false} />
           <details className="group rounded-2xl bg-white p-4 ring-1 ring-slate-200">

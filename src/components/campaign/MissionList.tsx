@@ -129,7 +129,7 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifyin
         <span className="flex items-center gap-2 text-xs text-slate-500">
           <span className="font-mono font-semibold">#{m.position}</span>
           <span>{qualifying && m.type === "read" ? tm("types.say") : tm(`types.${m.type}`)}</span>
-          {m.duration_s.min != null && m.duration_s.max != null && m.type !== "read" ? <span>{tm("duration", { min: m.duration_s.min, max: m.duration_s.max })}</span> : null}
+          {m.duration_s.min != null && m.duration_s.max != null ? <span>{tm("duration", { min: m.duration_s.min, max: m.duration_s.max })}</span> : null}
         </span>
         <span className="block text-sm font-semibold text-slate-900">{truncate(m.prompt.text_or_topic, 110)}</span>
         {m.status === "rejected" && !local ? <span className="mt-1 block text-xs font-semibold text-amber-800">{testClosed ? tm("notAccepted", { reason: why ?? "" }) : why ? tm("reason", { reason: why }) : tm("noReason")}</span> : null}

@@ -30,8 +30,12 @@ export const openCount = (c: Pick<CampaignCard, "progress">) => c.progress.todo 
  * mission list when it is known; from the card's counts otherwise (`waitingOnPhone`: takes of the
  * campaign on the phone, failed ones excluded).
  */
-export function toRecordCount(missions: readonly Pick<Mission, "mission_id" | "status">[], onPhone: ReadonlyMap<string, OutboxState>): number {
-  return missions.filter((m) => (m.status === "todo" || m.status === "rejected") && !(onPhone.has(m.mission_id) && onPhone.get(m.mission_id) !== "failed")).length;
+export function toRecordCount(missions: readonly Pick<Mission, "mission_id" | "status" | "type" | "partner_ready">[], onPhone: ReadonlyMap<string, OutboxState>): number {
+  // Same rule as the studio (canRecordNow): a conversation waits for the partner's consent, so it
+  // is not "to record" yet; counting it sent the speaker to a studio that had nothing to record (N-12).
+  return missions.filter(
+    (m) => (m.status === "todo" || m.status === "rejected") && !(onPhone.has(m.mission_id) && onPhone.get(m.mission_id) !== "failed") && (m.type !== "conversational" || m.partner_ready),
+  ).length;
 }
 export const openCountOnPhone = (c: Pick<CampaignCard, "progress">, waitingOnPhone: number) => Math.max(0, openCount(c) - waitingOnPhone);
 
@@ -54,7 +58,7 @@ export function daysLeft(deadline: string | null, now = new Date()): number | nu
 }
 
 /** The short reason shown for a take held or failed on the phone (key under campaign.home.outbox.reason). */
-export function outboxReasonKey(code: string | null): "paused" | "consent" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" {
+export function outboxReasonKey(code: string | null): "paused" | "consent" | "profile" | "blocked" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" {
   switch (code) {
     case "test_closed":
       return "testClosed";
@@ -65,8 +69,11 @@ export function outboxReasonKey(code: string | null): "paused" | "consent" | "si
     case "account_consent":
     case "campaign_consent":
     case "consent_version_changed":
-    case "profile_incomplete":
       return "consent";
+    case "profile_incomplete":
+      return "profile";
+    case "blocked":
+      return "blocked";
     case "unauthorized":
       return "signin";
     case "partner_consent":
@@ -75,7 +82,6 @@ export function outboxReasonKey(code: string | null): "paused" | "consent" | "si
       return "unassigned";
     case "campaign_closed":
     case "campaign_not_open":
-    case "blocked":
     case "not_linked":
       return "closed";
     case "language_unsupported":

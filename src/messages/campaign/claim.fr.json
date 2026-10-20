@@ -21,7 +21,10 @@
     "useAnother": "Utiliser un autre compte Google",
     "otherAccountHint": "Votre invitation est toujours enregistrée. Connectez-vous avec le bon compte pour continuer.",
     "continue": "Aller à mes campagnes",
-    "contact": "Besoin d'aide ? Contactez l'équipe Afriklang."
+    "contact": "Besoin d'aide ? Contactez l'équipe Afriklang.",
+    "accountFor": "Cette invitation a été envoyée à {email}. Connectez-vous avec le compte Google qui utilise cette adresse.",
+    "noAccountHint": "Pas de compte Google avec cette adresse ? Demandez à l'équipe Afriklang de changer l'adresse e-mail de votre invitation.",
+    "autoRetry": "Nous réessaierons automatiquement dès que la connexion sera revenue."
   },
   "brokenLink": {
     "title": "Ce lien d'invitation est incomplet",

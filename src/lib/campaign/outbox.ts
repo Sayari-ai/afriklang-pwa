@@ -228,7 +228,9 @@ export function createOutbox(deps: OutboxDeps) {
         if (err.status === 409 && current.ticket) current = { ...current, ticket: null };
         const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork), retryAfterS: err.retryAfterS ?? null, detail: typeof err.message === "string" ? err.message : "" }, current.attempts, deps.online());
         await settle(current, d);
-        return !stopsRun(d);
+        // Any upload to retry stops the run: the next take would hit the same server or link
+        // trouble and resend a whole file for nothing (N-6). Holds and failures concern this take only.
+        return d.kind !== "retry";
       }
     }
     // Offline: the submit cannot go either. Untouched, as above.
@@ -241,6 +243,9 @@ export function createOutbox(deps: OutboxDeps) {
     }
     const d = decideSubmit(res.ok ? { ok: true, duplicate: res.data.duplicate } : res, current.attempts, undefined, context(current));
     if (d.kind === "retry" && d.code === "offline") return false;
+    // Deleted meanwhile (recorded again, discarded): never write it back (it would come back and
+    // later replace the new take as "superseded").
+    if (d.kind !== "done" && d.kind !== "superseded" && d.kind !== "rejected" && !(await stillWanted(current))) return true;
     await settle(current, d);
     return !stopsRun(d);
   }

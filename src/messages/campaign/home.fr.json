@@ -96,7 +96,9 @@
       "generic": "il n'a pas pu être enregistré",
       "testClosed": "test terminé, rien à envoyer",
       "duplicate": "déjà envoyé pour une autre consigne : enregistrez de nouveau",
-      "language": "cette langue ne peut pas encore être reçue. L'enregistrement est gardé et partira tout seul : inutile de le refaire"
+      "language": "cette langue ne peut pas encore être reçue. L'enregistrement est gardé et partira tout seul : inutile de le refaire",
+      "profile": "votre profil doit être complété",
+      "blocked": "l'équipe vérifie votre profil ; l'enregistrement est gardé et partira ensuite"
     }
   },
   "hub": {
@@ -133,7 +135,10 @@
       "accepted": "Aucun enregistrement accepté pour l'instant."
     },
     "partnerWait": "En attente du consentement de votre partenaire",
-    "more": "Plus d'options"
+    "more": "Plus d'options",
+    "allRecordedOnPhone": "{n, plural, one {Tout est enregistré, mais # enregistrement est encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à son envoi.} other {Tout est enregistré, mais # enregistrements sont encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à leur envoi.}}",
+    "waitingPartner": "{n, plural, one {# conversation attend le consentement de votre partenaire.} other {# conversations attendent le consentement de votre partenaire.}}",
+    "allRecordedTest": "Tout est enregistré et envoyé. L'équipe examine votre test ; vous recevrez le résultat par e-mail."
   },
   "history": {
     "title": "Mon historique",

@@ -77,7 +77,7 @@
     "silence": "You started or stopped speaking right at the edge of the recording. Listen back: if no word is cut off, you can send it. If not, wait for “Speak now” and stay silent a moment after you finish."
   },
   "saved": {
-    "flash": "Saved! It will be sent automatically.",
+    "flash": "Saved! It is being sent: keep the app open.",
     "flashOffline": "Saved on your phone. It will be sent when you are back online.",
     "lowSpace": "Your phone is almost full. Free some space (photos, videos, apps) so your recordings can be kept until they are sent."
   },
@@ -89,7 +89,8 @@
     "internal": "Recording could not start. Close other apps that use the microphone, then try again.",
     "stopFailed": "The take could not be finished: no sound reached the app. Check the microphone, then record again.",
     "prepare": "Your take could not be prepared on this device. Try again, or update your browser.",
-    "interrupted": "The recording was interrupted (a call, another app, or the microphone was disconnected), so it was not kept. Please record it again."
+    "interrupted": "The recording was interrupted (a call, another app, or the microphone was disconnected), so it was not kept. Please record it again.",
+    "noSpace": "Your phone is full, so this take could not be saved. Free some space (photos, videos, apps), then press Submit again."
   },
   "goal": {
     "title": "Session goal reached!",
@@ -102,7 +103,9 @@
     "body": "You have recorded every mission available right now. Thank you! Your takes are checked by the team; you will see the results in your history.",
     "sessionCount": "{n, plural, one {# take} other {# takes}} this session",
     "back": "Back to my campaign",
-    "batchTitle": "Batch recorded!"
+    "batchTitle": "Batch recorded!",
+    "onPhone": "{n, plural, one {# recording is still on this phone. Keep the app open and connected until it is sent.} other {# recordings are still on this phone. Keep the app open and connected until they are sent.}}",
+    "bodyTest": "You have recorded every prompt of your test. Thank you! The team reviews it and you will get the result by email."
   },
   "guard": {
     "notReady": {
@@ -139,5 +142,6 @@
     "saving": "Saving your take",
     "goal": "Session goal reached",
     "done": "Everything is recorded"
-  }
+  },
+  "skipLast": "This is the last one left: record it, or come back later."
 }

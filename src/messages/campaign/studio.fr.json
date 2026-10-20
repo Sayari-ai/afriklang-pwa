@@ -77,7 +77,7 @@
     "silence": "Vous avez commencé ou fini de parler tout au bord de l'enregistrement. Réécoutez : si aucun mot n'est coupé, vous pouvez l'envoyer. Sinon, attendez « Parlez » et restez silencieux un instant à la fin."
   },
   "saved": {
-    "flash": "Enregistrée ! Elle sera envoyée automatiquement.",
+    "flash": "Enregistrée ! Envoi en cours : gardez l'application ouverte.",
     "flashOffline": "Gardée sur votre téléphone. Elle sera envoyée dès votre retour en ligne.",
     "lowSpace": "Votre téléphone est presque plein. Libérez de la place (photos, vidéos, applications) pour que vos enregistrements soient gardés jusqu'à leur envoi."
   },
@@ -89,7 +89,8 @@
     "internal": "L'enregistrement n'a pas pu démarrer. Fermez les autres applications qui utilisent le micro, puis réessayez.",
     "stopFailed": "La prise n'a pas pu être terminée : aucun son n'est arrivé. Vérifiez le micro, puis recommencez.",
     "prepare": "Votre prise n'a pas pu être préparée sur cet appareil. Réessayez, ou mettez à jour votre navigateur.",
-    "interrupted": "L'enregistrement a été interrompu (un appel, une autre application, ou le micro a été déconnecté) : il n'a pas été gardé. Recommencez, s'il vous plaît."
+    "interrupted": "L'enregistrement a été interrompu (un appel, une autre application, ou le micro a été déconnecté) : il n'a pas été gardé. Recommencez, s'il vous plaît.",
+    "noSpace": "Votre téléphone est plein : cette prise n'a pas pu être gardée. Libérez de la place (photos, vidéos, applications), puis appuyez de nouveau sur Envoyer."
   },
   "goal": {
     "title": "Objectif de la séance atteint !",
@@ -102,7 +103,9 @@
     "body": "Vous avez enregistré toutes les missions disponibles pour l'instant. Merci ! L'équipe vérifie vos prises ; vous verrez les résultats dans votre historique.",
     "sessionCount": "{n, plural, one {# prise} other {# prises}} pendant cette séance",
     "back": "Retour à ma campagne",
-    "batchTitle": "Lot enregistré !"
+    "batchTitle": "Lot enregistré !",
+    "onPhone": "{n, plural, one {# enregistrement est encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à son envoi.} other {# enregistrements sont encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à leur envoi.}}",
+    "bodyTest": "Vous avez enregistré toutes les consignes de votre test. Merci ! L'équipe l'examine et vous recevrez le résultat par e-mail."
   },
   "guard": {
     "notReady": {
@@ -139,5 +142,6 @@
     "saving": "Enregistrement de votre prise",
     "goal": "Objectif de la séance atteint",
     "done": "Tout est enregistré"
-  }
+  },
+  "skipLast": "C'est la dernière qui reste : enregistrez-la, ou revenez plus tard."
 }

@@ -21,7 +21,10 @@
     "useAnother": "Use another Google account",
     "otherAccountHint": "Your invitation is still saved. Sign in with the right account to continue.",
     "continue": "Go to my campaigns",
-    "contact": "Need help? Contact the Afriklang team."
+    "contact": "Need help? Contact the Afriklang team.",
+    "accountFor": "This invitation was sent to {email}. Sign in with the Google account that uses this address.",
+    "noAccountHint": "No Google account with this address? Ask the Afriklang team to change the email address of your invitation.",
+    "autoRetry": "We will try again by ourselves as soon as your connection is back."
   },
   "brokenLink": {
     "title": "This invitation link is incomplete",
