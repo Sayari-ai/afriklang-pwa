@@ -44,7 +44,7 @@ export function ActivityTimeline({ userId, limit }: { userId: string; limit?: nu
     return format.dateTime(date, { weekday: "long", day: "numeric", month: "long" });
   };
   const text = (a: Activity) => {
-    const code = a.missionCode ?? "";
+    const code = a.prompt ? `“${a.prompt}”` : (a.missionCode ?? "");
     if (a.type === "rejected") {
       const reason = rejectionReasonCode(a.detail) ?? "other";
       return t("activity.rejected", { code, reason: t(`reasons.${reason}`) });

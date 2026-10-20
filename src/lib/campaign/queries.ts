@@ -110,7 +110,7 @@ export function drawForCampaign(userId: string, campaignId: string): Promise<Cam
       const at = Date.now();
       const before = campaignCache.read<PoolMemo>(memoId).data;
       if (!res.ok) {
-        campaignCache.put<PoolMemo>(memoId, { last: { at, status: "error", added: 0 }, pool: before?.pool ?? null });
+        campaignCache.put<PoolMemo>(memoId, { last: { at, status: "error", added: 0, code: res.code }, pool: before?.pool ?? null });
         if (CARD_CHANGED.has(res.code)) refreshCampaign(userId, campaignId);
         return res;
       }

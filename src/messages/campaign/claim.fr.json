@@ -7,7 +7,8 @@
     "button": "Continuer avec Google",
     "starting": "Ouverture de Google…",
     "error": "Impossible d'ouvrir la connexion Google. Veuillez réessayer.",
-    "notConfigured": "Note développeur : la connexion n'est pas configurée. Renseignez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    "notConfigured": "Note développeur : la connexion n'est pas configurée. Renseignez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+    "inApp": "Cette page est ouverte dans une autre application (WhatsApp, Facebook, Instagram…), où la connexion Google ne fonctionne pas. Ouvrez-la dans Chrome ou Safari : touchez le menu ⋮ ou ···, puis « Ouvrir dans le navigateur »."
   },
   "claiming": {
     "title": "Vérification de votre invitation…",

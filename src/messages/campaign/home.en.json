@@ -40,7 +40,7 @@
     "ended": "Ended",
     "recorded": "{done} of {total} recorded",
     "start": "Start recording",
-    "continue": "Continue · {n} left",
+    "continue": "{n, plural, other {Continue · # left}}",
     "setup": "Finish setup to start",
     "setupStep": "Step {n} of 3",
     "blocked": "Check your profile",
@@ -187,20 +187,24 @@
       "rejected": "To redo"
     },
     "loadError": "We could not load the recordings of this campaign.",
-    "paid": "Accepted audio: {accepted} · In review: {pending}"
+    "paid": "Accepted audio: {accepted} · In review: {pending}",
+    "statusTest": {
+      "rejected": "Not accepted"
+    }
   },
   "qualification": {
     "title": "Qualification test",
     "attempt": "Attempt {n}",
     "recording": "{done} of {total} recorded",
     "start": "Start the test",
-    "continue": "Continue · {n} left",
+    "continue": "{n, plural, other {Continue · # left}}",
     "setup": "Finish setup to start",
     "inReview": "All sent. A native speaker is listening to your recordings; you will get the result by email.",
     "eligible": "Passed: {accepted, plural, one {# recording} other {# recordings}} accepted out of {total}. The team will be in touch.",
-    "retry": "Not passed yet. A new test with new prompts is ready.",
+    "retry": "Not passed yet. The team will send you a new test with new prompts.",
     "notEligible": "Not passed this time. You may take the test again from {date}.",
     "cancelled": "This test was cancelled.",
-    "intro": "Say each prompt in {language}, the way you would naturally say it. A native speaker listens to every recording."
+    "intro": "Say each prompt in {language}, the way you would naturally say it. A native speaker listens to every recording.",
+    "notEligibleNoDate": "Not passed this time. The team will tell you when you can take the test again."
   }
 }

@@ -4,7 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useId, useRef, useState } from "react";
 import { signConsent } from "@/lib/campaign/api";
 import { clearWithdrawn } from "@/lib/campaign/withdrawals";
-import type { CampaignCard, CampaignFailure } from "@/lib/campaign/types";
+import { isQualification, type CampaignCard, type CampaignFailure } from "@/lib/campaign/types";
 import { safeExternalUrl } from "@/lib/security/safe-url";
 import { FailureMessage, Notice, buttonPrimary } from "./CampaignHubParts";
 
@@ -57,7 +57,13 @@ export function ConsentStep({ type, card, onSigned }: Props) {
         <Notice tone="warn"><p role="alert">{t("notConfigured")}</p></Notice>
       ) : (
         <>
-          <p className="text-base text-slate-700">{type === "account" ? t("accountSummary") : t("campaignSummary", { code: card.code, topic })}</p>
+          <p className="text-base text-slate-700">{type === "account"
+              ? t("accountSummary")
+              : isQualification(card)
+                ? t("testSummary", { language: card.language.name })
+                : topic
+                  ? t("campaignSummary", { code: card.code, topic })
+                  : t("campaignSummaryNoTopic", { code: card.code })}</p>
           {textUrl ? (
             <a
               href={textUrl}

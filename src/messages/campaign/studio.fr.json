@@ -12,7 +12,8 @@
     "read": "Lecture à voix haute",
     "spontaneous": "Parole libre",
     "conversational": "Conversation",
-    "say": "À dire dans votre langue"
+    "say": "À dire dans votre langue",
+    "sayIn": "À dire en {language}"
   },
   "prompt": {
     "read": "Lisez cette phrase à voix haute",

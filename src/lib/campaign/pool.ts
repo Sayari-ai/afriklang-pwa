@@ -9,7 +9,7 @@
  * Contract: afriklang-landing-page/docs/CAMPAIGN_BRIDGE_CONTRACT.md ("Pool dispatch").
  */
 
-import type { CampaignCard, Mission, PoolStatus, PoolView, Rewards } from "./types";
+import type { CampaignCard, Mission, PoolStatus, PoolView, Rewards, CampaignErrorCode } from "./types";
 
 /** A card from a dashboard older than pool dispatch has no `dispatch`: it is planned. */
 export const isPool = (c: Pick<CampaignCard, "dispatch">) => c.dispatch === "pool";
@@ -70,7 +70,8 @@ export const hoursLeft = (end: number, now: number) => Math.max(1, Math.ceil((en
  * new ones straight away).
  */
 /** "clock": the draw worked but its missions looked expired at once (the phone's date is wrong, APP-011). */
-export type LastDraw = { at: number; status: PoolStatus | "error" | "returned" | "clock"; added: number };
+/** `code`: why a draw call failed ("error"), so the screen says it instead of "check your connection" (N-19). */
+export type LastDraw = { at: number; status: PoolStatus | "error" | "returned" | "clock"; added: number; code?: CampaignErrorCode };
 
 /** No automatic draw sooner than this after the previous one (the batch is full or just drawn). */
 export const DRAW_PAUSE_MS = 60_000;

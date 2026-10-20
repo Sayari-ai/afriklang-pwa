@@ -46,6 +46,39 @@ const BLOCK_SAMPLES = WAV_TARGET_SAMPLE_RATE;
 const WORKLET_URL = "/audio/pcm-recorder.worklet.js";
 const WORKLET_NAME = "pcm-recorder";
 
+/**
+ * Source + worklet on `ctx`. Firefox refuses to connect a microphone stream to a context whose
+ * sample rate differs from the device's ("different sample-rate is currently not supported"):
+ * then the pipeline is built again on a context at the device's own rate, and stop() resamples
+ * to 16 kHz as it does on Safari. The first context is closed.
+ */
+async function connectPipeline(ctx: AudioContext, stream: MediaStream): Promise<{ ctx: AudioContext; source: MediaStreamAudioSourceNode; node: AudioWorkletNode }> {
+  const build = (c: AudioContext) => ({
+    source: c.createMediaStreamSource(stream),
+    node: new AudioWorkletNode(c, WORKLET_NAME, {
+      numberOfInputs: 1,
+      numberOfOutputs: 0,
+      channelCount: 1,
+      channelCountMode: "explicit",
+      channelInterpretation: "speakers",
+    }),
+  });
+  try {
+    return { ctx, ...build(ctx) };
+  } catch (first) {
+    void ctx.close().catch(() => undefined);
+    let native: AudioContext | null = null;
+    try {
+      native = new AudioContext();
+      await native.audioWorklet.addModule(WORKLET_URL);
+      return { ctx: native, ...build(native) };
+    } catch {
+      if (native) void native.close().catch(() => undefined);
+      throw first;
+    }
+  }
+}
+
 export class RecorderError extends Error {
   constructor(message: string, public readonly code: RecorderErrorCode) {
     super(message);
@@ -256,14 +289,15 @@ export class WavRecorder {
       );
     }
 
-    const source = ctx.createMediaStreamSource(stream);
-    const node = new AudioWorkletNode(ctx, WORKLET_NAME, {
-      numberOfInputs: 1,
-      numberOfOutputs: 0,
-      channelCount: 1,
-      channelCountMode: "explicit",
-      channelInterpretation: "speakers",
-    });
+    let source: MediaStreamAudioSourceNode;
+    let node: AudioWorkletNode;
+    try {
+      ({ ctx, source, node } = await connectPipeline(ctx, stream));
+    } catch (e) {
+      // Never leave the microphone on after a failed start (the OS indicator stays lit).
+      stream.getTracks().forEach((t) => t.stop());
+      throw new RecorderError(`Audio pipeline setup failed: ${(e as Error).message}`, "internal");
+    }
 
     this.resetBuffers(ctx.sampleRate);
     this.rms = 0;

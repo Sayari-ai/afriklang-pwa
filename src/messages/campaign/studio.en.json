@@ -12,7 +12,8 @@
     "read": "Read aloud",
     "spontaneous": "Speak freely",
     "conversational": "Conversation",
-    "say": "Say in your language"
+    "say": "Say in your language",
+    "sayIn": "Say it in {language}"
   },
   "prompt": {
     "read": "Read this sentence aloud",

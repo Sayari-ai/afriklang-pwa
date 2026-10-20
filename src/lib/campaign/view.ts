@@ -18,8 +18,11 @@ export function rejectionReasonCode(reason: string | null | undefined): Rejectio
  * set up, so its card must show from the first setup step on. A paused or ended pool campaign
  * from which nothing was drawn has nothing to show.
  */
-export const hasMissions = (c: Pick<CampaignCard, "progress" | "dispatch" | "next_step">) =>
-  c.progress.total > 0 || (c.dispatch === "pool" && c.next_step !== "paused" && c.next_step !== "closed");
+export const hasMissions = (c: Pick<CampaignCard, "progress" | "dispatch" | "next_step"> & Partial<Pick<CampaignCard, "kind" | "qualification">>) =>
+  c.progress.total > 0 ||
+  (c.dispatch === "pool" && c.next_step !== "paused" && c.next_step !== "closed") ||
+  // A test cancelled before any take still says so, instead of vanishing (L-23).
+  (c.kind === "qualification" && c.qualification != null);
 
 /** Left to record (to do + to redo), by the server's counts. */
 export const openCount = (c: Pick<CampaignCard, "progress">) => c.progress.todo + c.progress.rejected;

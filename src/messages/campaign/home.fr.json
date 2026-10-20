@@ -40,7 +40,7 @@
     "ended": "Terminée",
     "recorded": "{done} sur {total} enregistrées",
     "start": "Commencer à enregistrer",
-    "continue": "Continuer · {n} restantes",
+    "continue": "{n, plural, one {Continuer · # restante} other {Continuer · # restantes}}",
     "setup": "Terminez la préparation pour commencer",
     "setupStep": "Étape {n} sur 3",
     "blocked": "Vérifiez votre profil",
@@ -187,20 +187,24 @@
       "rejected": "À refaire"
     },
     "loadError": "Impossible de charger les enregistrements de cette campagne.",
-    "paid": "Audio accepté : {accepted} · En vérification : {pending}"
+    "paid": "Audio accepté : {accepted} · En vérification : {pending}",
+    "statusTest": {
+      "rejected": "Non accepté"
+    }
   },
   "qualification": {
     "title": "Test de qualification",
     "attempt": "Tentative {n}",
     "recording": "{done} sur {total} enregistrés",
     "start": "Commencer le test",
-    "continue": "Continuer · {n} restants",
+    "continue": "{n, plural, one {Continuer · # restant} other {Continuer · # restants}}",
     "setup": "Terminez l'inscription pour commencer",
     "inReview": "Tout est envoyé. Un locuteur natif écoute vos enregistrements ; vous recevrez le résultat par e-mail.",
     "eligible": "Réussi : {accepted, plural, one {# enregistrement accepté} other {# enregistrements acceptés}} sur {total}. L'équipe vous contactera.",
-    "retry": "Pas encore réussi. Un nouveau test, avec de nouvelles consignes, vous attend.",
+    "retry": "Pas encore réussi. L'équipe vous enverra un nouveau test, avec de nouvelles consignes.",
     "notEligible": "Pas réussi cette fois. Vous pourrez repasser le test à partir du {date}.",
     "cancelled": "Ce test a été annulé.",
-    "intro": "Dites chaque consigne en {language}, comme vous la diriez naturellement. Un locuteur natif écoute chaque enregistrement."
+    "intro": "Dites chaque consigne en {language}, comme vous la diriez naturellement. Un locuteur natif écoute chaque enregistrement.",
+    "notEligibleNoDate": "Pas réussi cette fois. L'équipe vous dira quand vous pourrez repasser le test."
   }
 }

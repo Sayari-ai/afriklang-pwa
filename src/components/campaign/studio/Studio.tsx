@@ -700,7 +700,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     <div key={mission.mission_id} className="afk-slide-in flex flex-1 flex-col gap-4 pt-2">
       <div className="flex items-center justify-between text-sm font-semibold text-white/75">
         <span>{t("missionOf", { n: Math.min(position, missions.length), total: missions.length })}</span>
-        <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.say") : t(`type.${mission.type}`)}</span>
+        <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.sayIn", { language: card.language.name }) : t(`type.${mission.type}`)}</span>
       </div>
       <PromptCard mission={mission} lang={card.language.code} size={size} onSize={changeSize} sayIn={card.kind === "qualification" ? { language: card.language.name, uiLocale: locale } : undefined} />
       {micError ? (

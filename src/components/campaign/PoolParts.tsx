@@ -12,7 +12,8 @@ import { useState } from "react";
 import { useMinuteClock, type PoolState } from "@/lib/campaign/pool-client";
 import { LEASE_URGENT_MS, earliestLease, elsewhereOf, hoursLeft, isRefusal, paidTime, timeParts } from "@/lib/campaign/pool";
 import type { CampaignCard, Mission, PoolStatus } from "@/lib/campaign/types";
-import { Notice, buttonPrimary, buttonSecondary } from "./CampaignHubParts";
+import { Notice, buttonPrimary, buttonSecondary, useFailureText } from "./CampaignHubParts";
+import { isRetryable } from "@/lib/campaign/errors";
 
 /** Seconds as "1 h 5 min" / "12 min" / "under 1 min", in the speaker's language. */
 export function useTimeText() {
@@ -123,6 +124,8 @@ export function PoolPanel({ card, missions, state }: { card: CampaignCard; missi
   const tc = useTranslations("campaign.common");
   const status = state.memo?.last.status;
   const refused = isRefusal(status) ? status : null;
+  const drawCode = state.memo?.last.code ?? null;
+  const failureText = useFailureText();
   return (
     <div className="space-y-3">
       {state.drawing ? (
@@ -139,10 +142,13 @@ export function PoolPanel({ card, missions, state }: { card: CampaignCard; missi
       ) : null}
       {!state.drawing && state.drawFailed ? (
         <div role="alert" className="space-y-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <p>{t("drawFailed")}</p>
-          <button type="button" onClick={() => void state.drawNow()} className="min-h-11 rounded-xl border border-red-300 px-3 font-semibold">
-            {tc("retry")}
-          </button>
+          {/* A refusal (campaign paused or closed, consent missing…) says so; only a failed call asks to check the connection. */}
+          <p>{drawCode && !isRetryable(drawCode) ? failureText({ code: drawCode, message: "" }) : t("drawFailed")}</p>
+          {!drawCode || isRetryable(drawCode) ? (
+            <button type="button" onClick={() => void state.drawNow()} className="min-h-11 rounded-xl border border-red-300 px-3 font-semibold">
+              {tc("retry")}
+            </button>
+          ) : null}
         </div>
       ) : null}
       {!state.drawing && !state.drawFailed && !refused && state.open === 0 && card.next_step === "ready" ? (

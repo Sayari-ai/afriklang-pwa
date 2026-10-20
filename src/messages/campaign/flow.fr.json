@@ -86,7 +86,9 @@
     "signing": "Enregistrement…",
     "changed": "Le texte du consentement a changé : relisez-le avant d'accepter.",
     "notConfigured": "Le texte du consentement n'est pas encore prêt pour cette campagne. Contactez l'équipe Afriklang.",
-    "noLink": "Le lien vers le texte du consentement est manquant. Contactez l'équipe Afriklang."
+    "noLink": "Le lien vers le texte du consentement est manquant. Contactez l'équipe Afriklang.",
+    "testSummary": "En acceptant, vous passez votre test de qualification en {language}. Vos enregistrements de test servent uniquement à évaluer votre test et à évaluer les outils vocaux d'Afriklang ; ils ne font jamais partie d'un jeu de données. Vous pouvez vous retirer à tout moment.",
+    "campaignSummaryNoTopic": "En acceptant, vous participez à la campagne {code}. Vos enregistrements seront utilisés comme décrit dans le texte. Vous pouvez vous retirer de cette campagne à tout moment."
   },
   "instructions": {
     "title": "Comment enregistrer",
@@ -150,7 +152,8 @@
       "read": "Lecture",
       "spontaneous": "Parole libre",
       "conversational": "Conversation",
-      "say": "À dire dans votre langue"
+      "say": "À dire dans votre langue",
+      "sayIn": "À dire en {language}"
     },
     "loadError": "Impossible de charger vos missions.",
     "readOnly": "Lecture seule",

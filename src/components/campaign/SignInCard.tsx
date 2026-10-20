@@ -1,13 +1,19 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { isCampaignAuthConfigured, signInWithGoogle } from "@/lib/campaign/auth-client";
+import { isInAppBrowser } from "@/lib/campaign/in-app-browser";
 
 export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
   const t = useTranslations("campaign.claim.signIn");
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Read after mounting (the server has no user agent).
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => {
+    void Promise.resolve().then(() => setInApp(isInAppBrowser(navigator.userAgent)));
+  }, []);
 
   async function start() {
     setBusy(true);
@@ -27,6 +33,11 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
       {hasInvitation ? (
         <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
           {t("invitationDetected")}
+        </p>
+      ) : null}
+      {inApp ? (
+        <p role="alert" className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          {t("inApp")}
         </p>
       ) : null}
       <p className="text-base text-slate-800">{t("intro")}</p>
