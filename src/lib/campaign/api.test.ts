@@ -88,7 +88,7 @@ describe("toResult: codes with their own handling (H-8)", () => {
 
   it("other failed takes keep their Try again", () => {
     for (const code of ["invalid_input", "server_error", "conflict", null]) expect(canRetryFailed(code)).toBe(true);
-    for (const code of ["tooLarge", "campaign_closed", "not_assigned", "blocked"]) expect(canRetryFailed(code)).toBe(false);
+    for (const code of ["tooLarge", "campaign_closed", "not_assigned"]) expect(canRetryFailed(code)).toBe(false);
   });
 });
 

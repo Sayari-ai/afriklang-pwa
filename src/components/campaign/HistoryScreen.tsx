@@ -10,9 +10,9 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { truncate } from "@/lib/campaign/mission-list";
-import type { CampaignCard, Mission } from "@/lib/campaign/types";
+import { isQualification, type CampaignCard, type Mission } from "@/lib/campaign/types";
 import { totalPaidTime } from "@/lib/campaign/pool";
-import { totals } from "@/lib/campaign/view";
+import { rejectionReasonCode, totals } from "@/lib/campaign/view";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { LanguageBadge } from "./CampaignCardView";
 import { buttonPrimary, useFailureText, useRejectionText } from "./CampaignHubParts";
@@ -58,8 +58,9 @@ export function HistoryScreen() {
   if (list.state !== "ready" || session.status !== "signedIn") return <ClaimSpinner title={tc("loading")} />;
 
   const cards = list.data.campaigns;
-  const sum = totals(cards);
-  const paid = totalPaidTime(cards);
+  // The counts are about campaign work: a qualification test is listed below, never "to redo" (L-18).
+  const sum = totals(cards.filter((c) => !isQualification(c)));
+  const paid = totalPaidTime(cards.filter((c) => !isQualification(c)));
   // The bridge lists missions only once both consents are signed.
   const readable = cards.filter((c) => c.progress.total > 0 && ["ready", "paused", "closed"].includes(c.next_step) && c.progress.total - c.progress.todo > 0);
 
@@ -123,6 +124,12 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
   if (res.state === "error") return <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-800">{t("loadError")}</p>;
   if (res.state !== "ready") return <MissionSkeleton />;
   const shown = res.data.missions.filter(MATCH[filter]).sort((a, b) => a.position - b.position);
+  // A test take is not redone, and was not read but said in the speaker's language: short reasons only.
+  const test = isQualification(card);
+  const testReason = (r: string | null) => {
+    const code = rejectionReasonCode(r);
+    return code ? t(`reasons.${code}`) : r;
+  };
 
   return (
     <article className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
@@ -149,8 +156,8 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-slate-900">{truncate(m.prompt.text_or_topic, 90)}</p>
                 <p className="text-xs text-slate-500">
-                  <span className="font-mono">#{m.position}</span> · {t(`status.${m.status as "submitted" | "accepted" | "rejected"}`)}
-                  {m.status === "rejected" && rejectionText(m.rejection_reason) ? ` · ${rejectionText(m.rejection_reason)}` : ""}
+                  <span className="font-mono">#{m.position}</span> · {test && m.status === "rejected" ? t("statusTest.rejected") : t(`status.${m.status as "submitted" | "accepted" | "rejected"}`)}
+                  {m.status === "rejected" ? (test ? (testReason(m.rejection_reason) ? ` · ${testReason(m.rejection_reason)}` : "") : rejectionText(m.rejection_reason) ? ` · ${rejectionText(m.rejection_reason)}` : "") : ""}
                 </p>
               </div>
             </li>

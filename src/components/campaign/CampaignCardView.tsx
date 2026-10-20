@@ -44,8 +44,8 @@ export function useQualificationText() {
     if (q.stage === "cancelled") return t("cancelled");
     if (q.decision === "eligible") return t("eligible", { accepted: q.accepted ?? 0, total: q.total });
     if (q.decision === "retry") return t("retry");
-    const date = q.retry_after ? format.dateTime(new Date(`${q.retry_after}T00:00:00Z`), { dateStyle: "long", timeZone: "UTC" }) : "";
-    return t("notEligible", { date });
+    if (!q.retry_after) return t("notEligibleNoDate");
+    return t("notEligible", { date: format.dateTime(new Date(`${q.retry_after}T00:00:00Z`), { dateStyle: "long", timeZone: "UTC" }) });
   };
 }
 

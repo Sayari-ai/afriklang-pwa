@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCampaignSession } from "@/lib/campaign/hooks";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
-import { canRetryFailed } from "@/lib/campaign/outbox-logic";
+import { canRetryFailed, DEAD_CODES } from "@/lib/campaign/outbox-logic";
 import { usePersistentStorage } from "@/lib/campaign/storage-safety";
 import { outboxReasonKey } from "@/lib/campaign/view";
 import { useInstallPrompt } from "@/stores/install-prompt";
@@ -100,7 +100,8 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                 <li key={i.id} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-800">
                   {state === "held" ? <PauseCircle size={16} className="shrink-0 text-amber-600" aria-hidden /> : state === "failed" ? <AlertTriangle size={16} className="shrink-0 text-red-600" aria-hidden /> : <UploadCloud size={16} className="shrink-0 text-primary" aria-hidden />}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-mono text-xs font-semibold">{i.missionCode}</p>
+                    {/* What the speaker recorded, in their words; the code only when there is no prompt text. */}
+                    <p className={`truncate text-xs font-semibold ${i.upload?.englishDescription ? "" : "font-mono"}`}>{i.upload?.englishDescription || i.missionCode}</p>
                     <p className="text-xs text-slate-600">
                       {t(`state.${state}`)}
                       {state === "sending" && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
@@ -115,9 +116,12 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                           {t("tryAgain")}
                         </button>
                       ) : null}
-                      <Link href={`/campaign/${i.campaignId}/studio?m=${encodeURIComponent(i.missionId)}`} className="min-h-9 rounded-full bg-primary px-3 py-2 text-xs font-bold text-white">
-                        {t("recordAgain")}
-                      </Link>
+                      {/* Recording again cannot help when the take can never go (test or campaign closed). */}
+                      {!(i.lastCode && DEAD_CODES.has(i.lastCode)) ? (
+                        <Link href={`/campaign/${i.campaignId}/studio?m=${encodeURIComponent(i.missionId)}`} className="min-h-9 rounded-full bg-primary px-3 py-2 text-xs font-bold text-white">
+                          {t("recordAgain")}
+                        </Link>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => window.confirm(t("discardConfirm")) && void outbox.discard(i.id)}
@@ -127,6 +131,16 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                         <Trash2 size={16} aria-hidden />
                       </button>
                     </>
+                  ) : state === "held" || state === "pending" ? (
+                    // A take that waits (held for its language, a pause…) can still be deleted by the speaker.
+                    <button
+                      type="button"
+                      onClick={() => window.confirm(t("discardConfirm")) && void outbox.discard(i.id)}
+                      aria-label={t("discard")}
+                      className="grid size-9 place-items-center rounded-full text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 size={16} aria-hidden />
+                    </button>
                   ) : null}
                 </li>
               );

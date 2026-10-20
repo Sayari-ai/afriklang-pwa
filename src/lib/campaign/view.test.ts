@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { daysLeft, hasMissions, outboxReasonKey, rejectionReasonCode, setupStep, totals } from "./view";
+import { daysLeft, hasMissions, outboxReasonKey, rejectionReasonCode, setupStep, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -40,6 +40,16 @@ describe("speaker view facts", () => {
     expect(outboxReasonKey("campaign_closed")).toBe("closed");
     expect(outboxReasonKey("offline")).toBe("network");
     expect(outboxReasonKey(null)).toBe("generic");
+    // A missing profile is not a consent, and a block waits for the team, not a closed campaign (N-16).
+    expect(outboxReasonKey("profile_incomplete")).toBe("profile");
+    expect(outboxReasonKey("blocked")).toBe("blocked");
+  });
+  it("does not count a conversation waiting for the partner as to record (N-12)", () => {
+    const mk = (id: string, over: Record<string, unknown> = {}) => ({ mission_id: id, status: "todo" as const, type: "read" as const, partner_ready: false, ...over });
+    const missions = [mk("a"), mk("b", { type: "conversational" }), mk("c", { type: "conversational", partner_ready: true }), mk("d", { status: "accepted" })];
+    expect(toRecordCount(missions as never, new Map())).toBe(2);
+    expect(toRecordCount(missions as never, new Map([["a", "pending" as const]]))).toBe(1);
+    expect(toRecordCount(missions as never, new Map([["a", "failed" as const]]))).toBe(2);
   });
   it("sums progress", () => {
     const p = (n: number) => ({ progress: { total: n, todo: 0, submitted: n, accepted: n, rejected: 0 } });

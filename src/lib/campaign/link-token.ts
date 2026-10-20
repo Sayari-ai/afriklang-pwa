@@ -49,6 +49,41 @@ export function clearToken(s: Store | null = store()): void {
   } catch {
     // ignore
   }
+  clearDismissed(s);
+}
+
+const DISMISSED_KEY = "afriklang.campaign.token.dismissed.v1";
+
+/**
+ * "Go to my campaigns" after this account could not use the saved invitation (wrong Google
+ * account): the app stops claiming it automatically for this account, so the home is reachable.
+ * The token stays saved for another account; tapping the link again tries again.
+ */
+export function dismissTokenFor(token: string, userId: string, s: Store | null = store()): void {
+  try {
+    s?.setItem(DISMISSED_KEY, JSON.stringify({ token, userId }));
+  } catch {
+    // storage blocked: the card shows again on the next visit
+  }
+}
+
+export function isTokenDismissedFor(token: string, userId: string, s: Store | null = store()): boolean {
+  try {
+    const raw = s?.getItem(DISMISSED_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw) as { token?: unknown; userId?: unknown };
+    return d.token === token && d.userId === userId;
+  } catch {
+    return false;
+  }
+}
+
+function clearDismissed(s: Store | null = store()): void {
+  try {
+    s?.removeItem(DISMISSED_KEY);
+  } catch {
+    // ignore
+  }
 }
 
 /** True when the fragment carries a `t` that is not a well-formed token (cut or altered when copied). */
@@ -62,8 +97,8 @@ export function malformedTokenInHash(hash: string): boolean {
  * either way. `token` is the one to use now (from the URL, else from storage); `malformed`
  * says the URL carried a broken one, which the screen explains instead of silently ignoring.
  */
-export function takeLinkFromLocation(): { token: string | null; malformed: boolean } {
-  if (typeof window === "undefined") return { token: null, malformed: false };
+export function takeLinkFromLocation(): { token: string | null; malformed: boolean; fromUrl: boolean } {
+  if (typeof window === "undefined") return { token: null, malformed: false, fromUrl: false };
   const hash = window.location.hash;
   const fromUrl = tokenFromHash(hash);
   const malformed = !fromUrl && malformedTokenInHash(hash);
@@ -71,7 +106,9 @@ export function takeLinkFromLocation(): { token: string | null; malformed: boole
   if (fromUrl || malformed) window.history.replaceState(null, "", window.location.pathname + window.location.search);
   if (fromUrl) {
     saveToken(fromUrl);
-    return { token: fromUrl, malformed: false };
+    // Tapping the link again is asking to try again, even after "Go to my campaigns".
+    clearDismissed();
+    return { token: fromUrl, malformed: false, fromUrl: true };
   }
-  return { token: malformed ? null : savedToken(), malformed };
+  return { token: malformed ? null : savedToken(), malformed, fromUrl: false };
 }

@@ -99,7 +99,7 @@ describe("outbox with upload tickets", () => {
   });
 
   it("a refusal that cannot clear is final: audio kept, shown as failed with its reason, never retried by itself", async () => {
-    for (const [code, status] of [["campaign_closed", 410], ["not_assigned", 404], ["campaign_not_open", 403], ["blocked", 403], ["not_linked", 403]] as const) {
+    for (const [code, status] of [["campaign_closed", 410], ["not_assigned", 404], ["campaign_not_open", 403], ["not_linked", 403]] as const) {
       const store = memStore([item()]);
       const requestTicket = vi.fn(async () => refused(code, status));
       const { ob, upload, events } = setup(store, requestTicket);
@@ -117,7 +117,8 @@ describe("outbox with upload tickets", () => {
   });
 
   it("a refusal that may clear holds the take, as a submit would, and does not upload", async () => {
-    for (const code of ["campaign_paused", "account_consent", "partner_consent", "consent_version_changed", "profile_incomplete", "unauthorized"] as const) {
+    // "blocked" too: a Linguistic Lead may lift it, the take waits (M-17).
+    for (const code of ["campaign_paused", "account_consent", "partner_consent", "consent_version_changed", "profile_incomplete", "unauthorized", "blocked"] as const) {
       const store = memStore([item()]);
       const { ob, upload } = setup(store, vi.fn(async () => refused(code, code === "unauthorized" ? 401 : 403)));
       await ob.drain("u1");

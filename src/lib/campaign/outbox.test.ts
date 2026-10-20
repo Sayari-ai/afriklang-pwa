@@ -46,9 +46,11 @@ describe("outbox decisions", () => {
     expect(decideUploadFailure({ status: 429, isNetwork: false, retryAfterS: 600 }, 0, true, () => 0.5)).toEqual({ kind: "retry", code: "rateLimited", delayMs: 600_000 });
     expect(decideUploadFailure({ status: 503, isNetwork: false }, 0, true).kind).toBe("retry");
   });
-  it("keeps a take Sayari refuses for its language, and retries it hourly", () => {
+  it("keeps a take Sayari refuses for its language, and retries it after 1 h, 2 h, 4 h… then daily (M-15)", () => {
     const detail = 'Upload failed (400): {"detail":"Unsupported language. Supported: [\'ee\', \'wo\']"}';
-    expect(decideUploadFailure({ status: 400, isNetwork: false, detail }, 2, true)).toEqual({ kind: "hold", code: "language_unsupported", delayMs: 3_600_000 });
+    expect(decideUploadFailure({ status: 400, isNetwork: false, detail }, 0, true)).toEqual({ kind: "hold", code: "language_unsupported", delayMs: 3_600_000 });
+    expect(decideUploadFailure({ status: 400, isNetwork: false, detail }, 2, true)).toEqual({ kind: "hold", code: "language_unsupported", delayMs: 4 * 3_600_000 });
+    expect(decideUploadFailure({ status: 400, isNetwork: false, detail }, 9, true)).toEqual({ kind: "hold", code: "language_unsupported", delayMs: 24 * 3_600_000 });
     expect(decideUploadFailure({ status: 400, isNetwork: false, detail: 'Upload failed (400): {"detail":"invalid_wav"}' }, 0, true).kind).toBe("fail");
   });
   it("maps submit answers", () => {
@@ -132,6 +134,43 @@ describe("outbox runner", () => {
     expect(upload).toHaveBeenCalledTimes(1);
     expect(store.m.get("sha1")!.lastCode).toBe("network");
     expect(store.m.get("sha2")!.attempts).toBe(0);
+  });
+
+  it("stops the run after a server failure too: one whole file per pass, not every take (N-6)", async () => {
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 })]);
+    const upload = vi.fn(async () => {
+      throw { status: 503, isNetwork: false };
+    });
+    const ob = createOutbox({ store, upload, submit: vi.fn(), online: () => true, now: () => 100 });
+    await ob.drain("u1");
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(store.m.get("sha1")!).toMatchObject({ lastCode: "server", state: "pending" });
+    // At the upload pace (at least 15 s), never the 5-minute submit pace from 5 s.
+    expect(store.m.get("sha1")!.nextAttemptAt - 100).toBeGreaterThanOrEqual(15_000);
+    expect(store.m.get("sha2")!.attempts).toBe(0);
+  });
+
+  it("a hold for one take (its language) does not stop the others", async () => {
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 })]);
+    const upload = vi.fn(async (i: OutboxItem) => {
+      if (i.id === "sha1") throw { status: 400, isNetwork: false, message: 'Upload failed (400): {"detail":"Unsupported language"}' };
+      return { recordingId: "r2" };
+    });
+    const ob = createOutbox({ store, upload, submit: vi.fn(async () => ({ ok: true as const, data: { duplicate: false } })), online: () => true, now: () => 100 });
+    await ob.drain("u1");
+    expect(store.m.get("sha1")!).toMatchObject({ state: "held", lastCode: "language_unsupported" });
+    expect(store.m.has("sha2")).toBe(false);
+  });
+
+  it("a take deleted while its submit fails is never written back (M-18)", async () => {
+    const store = memStore([item({ uploaded: true, sayariId: "r1" })]);
+    const submit = vi.fn(async () => {
+      store.m.delete("sha1"); // recorded again meanwhile
+      return { ok: false as const, status: 503, code: "server_error" as const, message: "" };
+    });
+    const ob = createOutbox({ store, upload: vi.fn(), submit, online: () => true, now: () => 100 });
+    await ob.drain("u1");
+    expect(store.m.size).toBe(0);
   });
 
   it("reports upload progress for the take being sent, then clears it", async () => {
@@ -230,6 +269,13 @@ describe("takes that stay on the phone (APP-024)", () => {
     const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true, now: () => now });
     expect(await ob.purgeExpired()).toBe(1);
     expect([...store.m.keys()].sort()).toEqual(["dead-new", "pending-old", "refused-old"]);
+  });
+  it("counts the month from when the take failed, not from when it was recorded (N-17)", async () => {
+    const day = 86_400_000;
+    const now = 100 * day;
+    const store = memStore([item({ id: "queued-long", state: "failed", lastCode: "campaign_closed", createdAt: now - 40 * day, failedAt: now - 5 * day })]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true, now: () => now });
+    expect(await ob.purgeExpired()).toBe(0);
   });
   it("deletes another account's takes on request", async () => {
     const store = memStore([item({ id: "mine" }), item({ id: "theirs", userId: "u2" })]);

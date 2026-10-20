@@ -12,6 +12,8 @@ export type Activity = {
   campaignId?: string;
   missionId?: string;
   missionCode?: string;
+  /** The prompt (start of it): what the speaker recognises, unlike the mission code (L-18). */
+  prompt?: string;
   /** A reason or code, when there is one. */
   detail?: string;
 };

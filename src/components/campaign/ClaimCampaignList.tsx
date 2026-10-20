@@ -73,6 +73,8 @@ function Home({ data }: { data: CampaignList }) {
       <section className="rounded-3xl bg-gradient-to-br from-primary to-[#003a70] p-5 text-white shadow-md">
         <h1 className="text-2xl font-black">{t("hello")}</h1>
         <p className="text-sm text-white/85">{t("intro")}</p>
+        {/* A speaker with only a qualification test has no paid work yet: no "0 min" and no streak (L-20). */}
+        {collection.length ? (
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
           {paid ? (
             <>
@@ -87,6 +89,7 @@ function Home({ data }: { data: CampaignList }) {
           )}
           <Stat icon={<Flame size={18} aria-hidden className="text-yellow" />} value={streak} label={t("stats.streak", { n: streak })} />
         </dl>
+        ) : null}
       </section>
 
       <OutboxPanel compact />

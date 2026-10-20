@@ -86,7 +86,9 @@
     "signing": "Saving…",
     "changed": "The consent text has changed, so please read it again before you agree.",
     "notConfigured": "The consent text is not ready yet for this campaign. Please contact the Afriklang team.",
-    "noLink": "The consent text link is missing. Please contact the Afriklang team."
+    "noLink": "The consent text link is missing. Please contact the Afriklang team.",
+    "testSummary": "By agreeing, you take your {language} qualification test. Your test recordings are used only to assess your test and to evaluate Afriklang's speech tools; they are never part of a dataset. You can withdraw at any time.",
+    "campaignSummaryNoTopic": "By agreeing, you take part in the campaign {code}. Your recordings will be used as described in the text. You can withdraw from this campaign at any time."
   },
   "instructions": {
     "title": "How to record",
@@ -150,7 +152,8 @@
       "read": "Read",
       "spontaneous": "Speak",
       "conversational": "Conversation",
-      "say": "Say in your language"
+      "say": "Say in your language",
+      "sayIn": "Say it in {language}"
     },
     "loadError": "We could not load your missions.",
     "readOnly": "Read only",

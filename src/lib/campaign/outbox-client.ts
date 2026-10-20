@@ -132,7 +132,8 @@ export function useOutboxRunner(userId: string | null) {
 }
 
 function onOutboxEvent(userId: string, e: OutboxEvent) {
-  const base = { campaignId: e.item.campaignId, missionId: e.item.missionId, missionCode: e.item.missionCode };
+  const prompt = e.item.upload?.englishDescription?.trim();
+  const base = { campaignId: e.item.campaignId, missionId: e.item.missionId, missionCode: e.item.missionCode, ...(prompt ? { prompt: prompt.length > 60 ? `${prompt.slice(0, 59)}…` : prompt } : {}) };
   switch (e.type) {
     case "sent":
       markSubmitted(userId, e.item.campaignId, e.item.missionId);
