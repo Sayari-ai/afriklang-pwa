@@ -53,8 +53,8 @@ describe("auto-stop (APP-005)", () => {
   it("timed takes stop at their maximum, tail included", () => {
     expect(autoStopAtS(true, 60, 1.2)).toBeCloseTo(58.8);
   });
-  it("a read take stops 1 s past its maximum", () => {
-    expect(autoStopAtS(false, 15, 1.2)).toBe(16);
+  it("a read take also stops at its maximum, so an auto-stopped take is never too long (N-10)", () => {
+    expect(autoStopAtS(false, 15, 1.2)).toBeCloseTo(13.8);
   });
   it("nothing runs past 10 minutes", () => {
     expect(autoStopAtS(true, 3600, 1)).toBe(599);

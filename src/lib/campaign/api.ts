@@ -8,6 +8,7 @@
  * values (with the dashboard's code), never exceptions, so screens can branch on `code`.
  */
 
+import { filledCard } from "./card-fill";
 import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { getCampaignAuth, storedCampaignUser } from "./auth-client";
 import type {
@@ -73,6 +74,17 @@ function fieldErrorsOf(v: unknown): Record<string, string> | undefined {
 }
 
 /** Turn an HTTP answer into a result. Exported for tests. */
+/**
+ * AbortSignal.timeout is missing on iOS 15 Safari (iPhone 6s/7/SE): without it every call failed
+ * as "could not reach the server" (N-21). The same signal, built by hand there.
+ */
+export function timeoutSignal(ms: number): AbortSignal {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") return AbortSignal.timeout(ms);
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
+
 export function toResult<T>(status: number, json: unknown, retryAfter?: string | null): CampaignResult<T> {
   const body = json && typeof json === "object" ? (json as Record<string, unknown>) : {};
   if (status >= 200 && status < 300) {
@@ -153,7 +165,7 @@ async function send<T>(token: string, action: string, fields: Record<string, unk
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, apikey: ANON },
       body: JSON.stringify({ ...fields, action }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: timeoutSignal(TIMEOUT_MS),
     });
     let json: unknown = null;
     try {
@@ -177,13 +189,15 @@ export type DrawResult = { missions: Mission[]; pool: PoolView };
 export type ReturnResult = { returned: number; pool: Pick<PoolView, "open" | "refill_below"> };
 
 /** The invitation link: bind this account to the contributor it was sent to. */
-export const claimLink = (token: string, deviceId?: string) => call<ClaimResult>("claim", { token, ...(deviceId ? { device_id: deviceId } : {}) });
-export const listCampaigns = () => call<CampaignList>("campaigns");
+export const claimLink = (token: string, deviceId?: string) =>
+  call<ClaimResult>("claim", { token, ...(deviceId ? { device_id: deviceId } : {}) }).then((r) => (r.ok ? { ...r, data: { ...r.data, campaign: filledCard(r.data.campaign) } } : r));
+export const listCampaigns = () => call<CampaignList>("campaigns").then((r) => (r.ok ? { ...r, data: { ...r.data, campaigns: r.data.campaigns.map(filledCard) } } : r));
 export const saveProfile = (p: ProfileInput) => call<{ contributor: ContributorView; blocked: unknown[] }>("profile", { ...p });
 export const signConsent = (a: { type: "account" | "campaign"; campaignId?: string; version: string; locale: "en" | "fr" }) =>
   call<{ signed_version: string; already: boolean }>("consent", { type: a.type, campaign_id: a.campaignId, version: a.version, locale: a.locale });
 export const withdrawConsent = (campaignId: string) => call<{ withdrawn: true }>("withdraw", { campaign_id: campaignId });
-export const getMissions = (campaignId: string) => call<MissionList>("missions", { campaign_id: campaignId });
+export const getMissions = (campaignId: string) =>
+  call<MissionList>("missions", { campaign_id: campaignId }).then((r) => (r.ok ? { ...r, data: { ...r.data, campaign: filledCard(r.data.campaign) } } : r));
 export const submitRecording = (missionId: string, recording: RecordingMetadata) =>
   call<{ recording_id: string; mission_status: string; duplicate: boolean }>("submit", { mission_id: missionId, recording });
 /** A signed upload ticket, passed through untouched (docs/contracts/README.md §1). */

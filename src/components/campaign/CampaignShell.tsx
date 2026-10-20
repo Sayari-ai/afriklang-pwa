@@ -15,6 +15,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { LocalePicker } from "@/components/locale-picker";
+import { useSetAppLocale } from "@/hooks/use-set-app-locale";
 import { isSupportedLocale } from "@/i18n/locales";
 import { applyInvitationLocale } from "@/stores/app-locale";
 import { signOutHere } from "@/lib/campaign/sign-out";
@@ -108,7 +109,10 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
           <button type="button" onClick={() => setAccount(true)} aria-label={t("account")} aria-haspopup="dialog" className="grid size-10 place-items-center rounded-full bg-white/15 hover:bg-white/25">
             <UserRound size={20} aria-hidden />
           </button>
-        ) : null}
+        ) : (
+          // Before sign-in the account sheet is not there: the language can still be switched (N-20).
+          <LanguageToggle />
+        )}
       </header>
       {update.ready && online && !box.activeId ? (
         <div role="status" className="flex items-center justify-center gap-3 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
@@ -145,6 +149,18 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
       ) : null}
       {account ? <AccountSheet email={email} onClose={() => setAccount(false)} /> : null}
     </div>
+  );
+}
+
+/** English / Français in one tap, for the screens before sign-in. */
+function LanguageToggle() {
+  const locale = useLocale();
+  const setLocale = useSetAppLocale();
+  const other = locale === "fr" ? "en" : "fr";
+  return (
+    <button type="button" onClick={() => setLocale(other)} lang={other} className="min-h-10 rounded-full bg-white/15 px-4 text-sm font-bold hover:bg-white/25">
+      {other === "fr" ? "Français" : "English"}
+    </button>
   );
 }
 

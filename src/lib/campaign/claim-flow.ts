@@ -28,6 +28,15 @@ export function claimOutcome(failure: Pick<CampaignFailure, "code">): ClaimOutco
   return { clearToken: true, showServerMessage: false, retryable: false, messageKey, offerOtherAccount: false };
 }
 
+/**
+ * The masked address in the dashboard's email_mismatch message ("Sign in with the Google
+ * account for a***@yahoo.fr, …"), so the app can say it in the speaker's language.
+ */
+export function maskedEmailIn(message: string | null | undefined): string | null {
+  const m = /[^\s@*]?\*{3}@[^\s,;]+/.exec(message ?? "");
+  return m ? m[0].replace(/\.+$/, "") : null;
+}
+
 export type ClaimState = { status: "idle" } | { status: "claiming" } | { status: "done" } | { status: "failed"; failure: CampaignFailure };
 
 export type View = "waiting" | "signIn" | "claiming" | "claimFailed" | "claimed" | "home";

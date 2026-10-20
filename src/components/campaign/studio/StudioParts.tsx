@@ -52,7 +52,7 @@ export function PromptCard({ mission, lang, size, onSize, sayIn }: { mission: Mi
           <p>{t("prompt.onePhone")}</p>
         </div>
       ) : null}
-      {mission.type !== "read" && min != null && max != null ? <p className="mt-3 text-sm font-medium text-slate-500">{t("prompt.length", { min, max })}</p> : null}
+      {min != null && max != null ? <p className="mt-3 text-sm font-medium text-slate-500">{t("prompt.length", { min, max })}</p> : null}
     </section>
   );
 }

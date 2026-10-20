@@ -93,7 +93,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const [micError, setMicError] = useState<string | null>(null);
   const [quiet, setQuiet] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
-  const [flash, setFlash] = useState<"online" | "offline" | null>(null);
+  const [flash, setFlash] = useState<"online" | "offline" | "lastOne" | null>(null);
   const [size, setSize] = useState(() => {
     try {
       const n = Number(localStorage.getItem(SIZE_KEY));
@@ -127,7 +127,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const goal = sessionGoal(card);
   const timed = mission ? isTimed(mission.type) : false;
   const minS = mission ? (mission.duration_s.min ?? rules?.durationMinS ?? 0) : 0;
-  const maxS = mission && timed ? (mission.duration_s.max ?? rules?.durationMaxS ?? null) : null;
+  // Shown for every type: a read sentence has a maximum too, and the speaker must see it (N-10).
+  const maxS = mission ? (mission.duration_s.max ?? rules?.durationMaxS ?? null) : null;
   // Every take stops by itself, read ones included (APP-005: a forgotten recording must not grow until the phone runs out of memory).
   const stopAtS = mission && rules ? autoStopAtS(timed, mission.duration_s.max ?? rules.durationMaxS, pad) : autoStopAtS(false, 0, pad);
 
@@ -486,15 +487,18 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         nextAttemptAt: 0,
         lastCode: null,
       };
-      // A failed take of this mission is replaced by the new one.
-      await Promise.all(box.items.filter((i) => i.missionId === mission.mission_id && i.id !== sha).map((i) => outbox.discard(i.id)));
       try {
         await enqueueTake(item);
-      } catch {
-        setMicError(t("mic.prepare"));
+      } catch (e) {
+        // A full phone is the usual cause: say so (N-13). The earlier take is kept: nothing is lost.
+        const full = (e as { name?: string } | null)?.name === "QuotaExceededError";
+        setMicError(t(full ? "mic.noSpace" : "mic.prepare"));
         setPhase("review");
         return;
       }
+      // Saved: an earlier take of this mission (one that failed) is replaced by the new one. Only
+      // now, so a save that fails never loses the previous take.
+      await Promise.all(box.items.filter((i) => i.missionId === mission.mission_id && i.id !== sha).map((i) => outbox.discard(i.id)));
       void clearDraft(userId, campaignId);
       // Saved. A nearly full phone may lose it before it is sent: say so (APP-007).
       void freeSpaceBytes().then((free) => {
@@ -513,6 +517,12 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   function skipMission() {
     if (!currentId) return;
+    // The last mission left: skipping would show "All recorded!" with it still to do (N-14).
+    if (!nextInQueue(queue, currentId, (id) => { const m = byId.get(id); return Boolean(m && canRecordNow(m, onPhone)); })) {
+      setFlash("lastOne");
+      later(() => setFlash(null), 2200);
+      return;
+    }
     const q = skip(queue, currentId);
     setQueue(q);
     advance(currentId, sessionCount, q);
@@ -572,6 +582,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // Takes waiting on the phone are done as far as the speaker is concerned (MAN-004, APP-026).
   const open = toRecordCount(missions, onPhone);
+  // This campaign's takes still on the phone (not failed): they need the app open to be sent.
+  const waitingHere = box.items.filter((i) => i.userId === userId && i.campaignId === campaignId && i.state !== "failed").length;
   const shell = (children: React.ReactNode, footer?: React.ReactNode) => (
     <div className="relative flex h-dvh flex-col overflow-hidden bg-[radial-gradient(120%_80%_at_50%_0%,#0a5bb0_0%,#00396f_45%,#001b36_100%)] text-white">
       <p ref={statusRef} className="sr-only" role="status" aria-live="polite">
@@ -587,8 +599,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       </header>
       {flash ? (
         <div role="status" className="afk-pop absolute inset-x-4 top-[calc(max(env(safe-area-inset-top),12px)+56px)] z-20 flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-xl">
-          {flash === "offline" ? <CloudOff size={18} className="text-amber-600" aria-hidden /> : <Check size={18} className="text-emerald-600" aria-hidden />}
-          {flash === "offline" ? t("saved.flashOffline") : t("saved.flash")}
+          {flash === "offline" ? <CloudOff size={18} className="text-amber-600" aria-hidden /> : flash === "lastOne" ? null : <Check size={18} className="text-emerald-600" aria-hidden />}
+          {flash === "offline" ? t("saved.flashOffline") : flash === "lastOne" ? t("skipLast") : t("saved.flash")}
         </div>
       ) : null}
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-2">{children}</main>
@@ -663,7 +675,12 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         </div>
         <h1 className="text-3xl font-black">{t("done.title")}</h1>
         {sessionCount > 0 ? <p className="text-lg font-bold text-yellow">{t("done.sessionCount", { n: sessionCount })}</p> : null}
-        <p className="text-base text-white/85">{t("done.body")}</p>
+        {/* Takes go only while the app is open and online: never say "done" while some wait (N-4). */}
+        {waitingHere > 0 ? (
+          <p role="status" className="rounded-2xl bg-amber-400/15 px-4 py-3 text-base font-semibold text-amber-50 ring-1 ring-amber-300/40">{t("done.onPhone", { n: waitingHere })}</p>
+        ) : (
+          <p className="text-base text-white/85">{t(card.kind === "qualification" ? "done.bodyTest" : "done.body")}</p>
+        )}
       </div>,
       <Link href={hubHref} className="grid min-h-14 place-items-center rounded-2xl bg-white text-lg font-bold text-primary">
         {t("done.back")}
@@ -683,7 +700,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     <div key={mission.mission_id} className="afk-slide-in flex flex-1 flex-col gap-4 pt-2">
       <div className="flex items-center justify-between text-sm font-semibold text-white/75">
         <span>{t("missionOf", { n: Math.min(position, missions.length), total: missions.length })}</span>
-        <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.say") : t(`type.${mission.type}`)}</span>
+        <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.sayIn", { language: card.language.name }) : t(`type.${mission.type}`)}</span>
       </div>
       <PromptCard mission={mission} lang={card.language.code} size={size} onSize={changeSize} sayIn={card.kind === "qualification" ? { language: card.language.name, uiLocale: locale } : undefined} />
       {micError ? (

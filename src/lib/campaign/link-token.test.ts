@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clearToken, malformedTokenInHash, savedToken, saveToken, tokenFromHash } from "./link-token";
+import { clearToken, dismissTokenFor, isTokenDismissedFor, malformedTokenInHash, savedToken, saveToken, tokenFromHash } from "./link-token";
 
 const TOKEN = "AbCdEf0123456789AbCdEf0123456789AbCdEf01234";
 const memory = () => {
@@ -48,5 +48,25 @@ describe("malformedTokenInHash", () => {
     expect(malformedTokenInHash(`#t=${TOKEN}`)).toBe(false);
     expect(malformedTokenInHash("")).toBe(false);
     expect(malformedTokenInHash("#section-2")).toBe(false);
+  });
+});
+
+describe("an invitation this account gave up on (N-1)", () => {
+  it("is not claimed again for that account, still is for another, and a clear forgets it", () => {
+    const s = memory();
+    saveToken(TOKEN, s);
+    expect(isTokenDismissedFor(TOKEN, "user-a", s)).toBe(false);
+    dismissTokenFor(TOKEN, "user-a", s);
+    expect(isTokenDismissedFor(TOKEN, "user-a", s)).toBe(true);
+    expect(isTokenDismissedFor(TOKEN, "user-b", s)).toBe(false);
+    expect(isTokenDismissedFor(`${TOKEN.slice(0, 42)}Z`, "user-a", s)).toBe(false);
+    expect(savedToken(s)).toBe(TOKEN);
+    clearToken(s);
+    expect(isTokenDismissedFor(TOKEN, "user-a", s)).toBe(false);
+  });
+  it("survives junk in storage", () => {
+    const s = memory();
+    s.setItem("afriklang.campaign.token.dismissed.v1", "{not json");
+    expect(isTokenDismissedFor(TOKEN, "user-a", s)).toBe(false);
   });
 });

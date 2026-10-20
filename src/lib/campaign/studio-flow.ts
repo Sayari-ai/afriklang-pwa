@@ -75,12 +75,12 @@ export const MAX_TAKE_S = 600;
 
 /**
  * When the studio stops a take by itself, in seconds from the start of the recording (the silent
- * tail then follows). Timed types stop at their maximum (tail included, so the take is exactly
- * that long). A read sentence has no timer on screen: it stops 1 s past its maximum, so a
- * recording the speaker forgot to stop ends (as "too long") instead of growing until the phone
- * runs out of memory.
+ * tail then follows): at the speech type's maximum, tail included, so the take is exactly that
+ * long and is accepted. Read sentences too: they used to stop 1 s past their maximum, which made
+ * every auto-stopped read take "too long" (N-10). `timed` is kept for callers; it no longer
+ * changes the answer. Without a maximum: MAX_TAKE_S.
  */
-export function autoStopAtS(timed: boolean, maxS: number, pad: number): number {
+export function autoStopAtS(_timed: boolean, maxS: number, pad: number): number {
   const cap = Math.min(MAX_TAKE_S, maxS > 0 ? maxS : MAX_TAKE_S);
-  return timed ? Math.max(pad, cap - pad) : Math.min(MAX_TAKE_S - pad, cap + 1);
+  return Math.max(pad, cap - pad);
 }

@@ -7,7 +7,8 @@
     "button": "Continue with Google",
     "starting": "Opening Google…",
     "error": "We could not open Google sign-in. Please try again.",
-    "notConfigured": "Developer note: sign-in is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
+    "notConfigured": "Developer note: sign-in is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+    "inApp": "This page is open inside another app (WhatsApp, Facebook, Instagram…), where Google sign-in does not work. Open it in Chrome or Safari: tap the ⋮ or ··· menu, then “Open in browser”."
   },
   "claiming": {
     "title": "Checking your invitation…",
@@ -21,7 +22,10 @@
     "useAnother": "Use another Google account",
     "otherAccountHint": "Your invitation is still saved. Sign in with the right account to continue.",
     "continue": "Go to my campaigns",
-    "contact": "Need help? Contact the Afriklang team."
+    "contact": "Need help? Contact the Afriklang team.",
+    "accountFor": "This invitation was sent to {email}. Sign in with the Google account that uses this address.",
+    "noAccountHint": "No Google account with this address? Ask the Afriklang team to change the email address of your invitation.",
+    "autoRetry": "We will try again by ourselves as soon as your connection is back."
   },
   "brokenLink": {
     "title": "This invitation link is incomplete",

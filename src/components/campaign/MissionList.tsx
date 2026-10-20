@@ -48,6 +48,8 @@ export function MissionList({ campaignId, readOnly }: Props) {
   const live = useLiveMissions(res.state === "ready" ? res.data.missions : null);
   // A qualification test's sentences are shown in English or French and said in the speaker's language.
   const qualifying = res.state === "ready" && res.data.campaign?.kind === "qualification";
+  // The test's language by name, as the studio says it ("Say this in Wolof"), not "your language" (L-20).
+  const sayIn = qualifying && res.state === "ready" ? res.data.campaign.language.name : null;
   // Once a test is sent, a rejection is a result, not a request to record again.
   const stage = res.state === "ready" ? res.data.campaign?.qualification?.stage : undefined;
   const testClosed = qualifying && stage != null && stage !== "recording";
@@ -99,14 +101,14 @@ export function MissionList({ campaignId, readOnly }: Props) {
       <ul id="mission-panel" role="tabpanel" className="space-y-2">
         {list.length === 0 ? <li className="rounded-2xl bg-white p-5 text-center text-sm text-slate-600">{t(`empty.${tab}`)}</li> : null}
         {list.map((m) => (
-          <MissionRow key={m.mission_id} campaignId={campaignId} mission={m} local={onPhone.get(m.mission_id)} active={box.activeId != null && box.items.some((i) => i.id === box.activeId && i.missionId === m.mission_id)} readOnly={readOnly || testClosed} qualifying={qualifying} testClosed={testClosed} />
+          <MissionRow key={m.mission_id} campaignId={campaignId} mission={m} local={onPhone.get(m.mission_id)} active={box.activeId != null && box.items.some((i) => i.id === box.activeId && i.missionId === m.mission_id)} readOnly={readOnly || testClosed} qualifying={qualifying} testClosed={testClosed} sayIn={sayIn} />
         ))}
       </ul>
     </section>
   );
 }
 
-function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifying = false, testClosed = false }: { campaignId: string; mission: Mission; local: OutboxState | undefined; active: boolean; readOnly: boolean; qualifying?: boolean; testClosed?: boolean }) {
+function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifying = false, testClosed = false, sayIn = null }: { campaignId: string; mission: Mission; local: OutboxState | undefined; active: boolean; readOnly: boolean; qualifying?: boolean; testClosed?: boolean; sayIn?: string | null }) {
   const t = useTranslations("campaign.home");
   const tm = useTranslations("campaign.flow.missions");
   const why = useRejectionText()(m.rejection_reason);
@@ -128,8 +130,8 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifyin
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2 text-xs text-slate-500">
           <span className="font-mono font-semibold">#{m.position}</span>
-          <span>{qualifying && m.type === "read" ? tm("types.say") : tm(`types.${m.type}`)}</span>
-          {m.duration_s.min != null && m.duration_s.max != null && m.type !== "read" ? <span>{tm("duration", { min: m.duration_s.min, max: m.duration_s.max })}</span> : null}
+          <span>{qualifying && m.type === "read" ? (sayIn ? tm("types.sayIn", { language: sayIn }) : tm("types.say")) : tm(`types.${m.type}`)}</span>
+          {m.duration_s.min != null && m.duration_s.max != null ? <span>{tm("duration", { min: m.duration_s.min, max: m.duration_s.max })}</span> : null}
         </span>
         <span className="block text-sm font-semibold text-slate-900">{truncate(m.prompt.text_or_topic, 110)}</span>
         {m.status === "rejected" && !local ? <span className="mt-1 block text-xs font-semibold text-amber-800">{testClosed ? tm("notAccepted", { reason: why ?? "" }) : why ? tm("reason", { reason: why }) : tm("noReason")}</span> : null}

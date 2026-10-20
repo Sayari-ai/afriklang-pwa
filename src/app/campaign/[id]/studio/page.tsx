@@ -9,6 +9,7 @@ import { Studio } from "@/components/campaign/studio/Studio";
 import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
+import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
 
 const dark = "flex h-dvh flex-col items-center justify-center gap-4 bg-[#001b36] px-6 text-center text-white";
 const pill = "inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-6 font-bold text-primary";
@@ -21,6 +22,12 @@ export default function StudioPage() {
   const session = useCampaignSession();
   const list = useCampaignList();
   const missions = useCampaignMissions(id);
+  // A cold start straight on the studio: read the phone's takes now rather than after the shell's
+  // runner starts (the studio waits for them below).
+  const box = useOutbox();
+  useEffect(() => {
+    if (!box.loaded) void outbox.refresh();
+  }, [box.loaded]);
   // Read once: which mission the studio opens on (the address is then kept up to date by the studio).
   const [startId] = useState(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("m")));
   // Online, the studio opens on a fresh mission list (its order is fixed when it opens); offline, on the
@@ -70,7 +77,9 @@ export default function StudioPage() {
       </div>
     );
   }
-  if (list.state !== "ready" || missions.state !== "ready" || session.status !== "signedIn" || stale || filling) {
+  // The takes already on the phone decide what is left to record: never pick the queue before
+  // they are read, or a queued take comes up to record again and is replaced (M-18).
+  if (list.state !== "ready" || missions.state !== "ready" || session.status !== "signedIn" || stale || filling || !box.loaded) {
     return (
       <div className={dark} role="status">
         <span aria-hidden className="size-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />

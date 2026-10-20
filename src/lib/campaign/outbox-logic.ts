@@ -50,6 +50,8 @@ export type OutboxItem = {
   nextAttemptAt: number;
   /** Why it is held or failed: a campaign error code, or an upload failure key. */
   lastCode: string | null;
+  /** When it became "failed" (ms): a dead take is kept 30 days from then, not from when it was recorded. */
+  failedAt?: number;
   /**
    * The upload ticket for this file, kept so a retry or an app restart reuses it. Never read by
    * the app (it is passed through as is). Absent on items saved before tickets existed.
@@ -113,14 +115,21 @@ export function decideUploadFailure(e: UploadOutcome, attempts: number, online: 
   // The server said how long to wait (429, 503): do that, not less (each try resends the file).
   const asked = e.retryAfterS && e.retryAfterS > 0 ? Math.min(3600, e.retryAfterS) * SECOND : 0;
   if (e.status === 429) return { kind: "retry", code: "rateLimited", delayMs: Math.max(asked, 30 * SECOND, backoffMs(attempts, random)) };
-  if (e.status >= 500) return { kind: "retry", code: "server", delayMs: Math.max(asked, backoffMs(attempts, random)) };
+  // Every retry resends the whole file: the upload pace (15 s up to 15 minutes), never the 5-minute one.
+  if (e.status >= 500) return { kind: "retry", code: "server", delayMs: Math.max(asked, uploadBackoffMs(attempts, random)) };
   // Sayari does not take this language yet: nothing is wrong with the take and recording it again
-  // cannot help. Keep it and try again every hour; it goes once Sayari accepts the language.
-  if (e.status === 400 && /unsupported language/i.test(e.detail ?? "")) return { kind: "hold", code: "language_unsupported", delayMs: 60 * MINUTE };
+  // cannot help. Keep it and try again after 1 hour, then 2, 4… up to once a day (each try resends
+  // the whole file); it goes once Sayari accepts the language (M-15).
+  if (e.status === 400 && /unsupported language/i.test(e.detail ?? "")) return { kind: "hold", code: "language_unsupported", delayMs: languageHoldMs(attempts) };
   // Only a refusal of the file itself is final (APP-018). 404, 408, 409, 411, 425… come from a proxy,
   // the CDN or a deploy in progress: try again later.
   if (FINAL_UPLOAD_STATUSES.has(e.status)) return { kind: "fail", code: "refused" };
-  return { kind: "retry", code: e.status >= 400 ? "server" : "other", delayMs: backoffMs(attempts, random) };
+  return { kind: "retry", code: e.status >= 400 ? "server" : "other", delayMs: uploadBackoffMs(attempts, random) };
+}
+
+/** 1 h, 2 h, 4 h … then once a day, for a take Sayari refuses for its language. */
+export function languageHoldMs(attempts: number): number {
+  return Math.min(24 * 60 * MINUTE, 60 * MINUTE * 2 ** Math.min(5, Math.max(0, attempts)));
 }
 
 /** A ticket is reused only while it has more than this left (an upload on a slow link takes a while). */
@@ -163,8 +172,11 @@ export function decideTicket(res: Pick<CampaignFailure, "ok" | "code" | "reason"
   return d;
 }
 
-/** Codes that may clear by themselves: keep the take and try again later. */
-const HOLD_CODES = new Set(["campaign_paused", "partner_consent", "unauthorized", "account_consent", "profile_incomplete", "consent_version_changed"]);
+/**
+ * Codes that may clear by themselves: keep the take and try again later. "blocked" too: a
+ * Linguistic Lead may lift a block, and the speaker was told their missions would wait (M-17).
+ */
+const HOLD_CODES = new Set(["campaign_paused", "partner_consent", "unauthorized", "account_consent", "profile_incomplete", "consent_version_changed", "blocked"]);
 /**
  * "No campaign consent": the audio must not stay on the phone when the speaker withdrew it from
  * this app (APP-004). Otherwise it may be a withdrawal elsewhere, or a dashboard that answers it
@@ -176,7 +188,7 @@ const DROP_IF_WITHDRAWN_HERE = "campaign_consent";
 /** What the outbox knows about the take beyond the answer. */
 export type SubmitContext = { withdrawnHere?: boolean };
 /** Codes after which the take can never be saved for this mission. */
-export const DEAD_CODES: ReadonlySet<string> = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "blocked", "not_linked", "test_closed"]);
+export const DEAD_CODES: ReadonlySet<string> = new Set(["campaign_closed", "not_assigned", "campaign_not_open", "not_linked", "test_closed"]);
 
 /**
  * Whether a failed take is worth a "Try again" (the same file, sent again). Not when it can never
@@ -200,7 +212,7 @@ export function decideSubmit(
   if (res.code === "offline") return { kind: "retry", code: "offline", delayMs: 0 };
   if (res.code === DROP_IF_WITHDRAWN_HERE) return ctx.withdrawnHere ? { kind: "drop", code: res.code } : { kind: "hold", code: res.code, delayMs: 10 * MINUTE };
   // Signed out: a minute (signing in again restarts the runner at once anyway). Never 0: a due-now hold would loop.
-  if (HOLD_CODES.has(res.code)) return { kind: "hold", code: res.code, delayMs: res.code === "unauthorized" ? MINUTE : 10 * MINUTE };
+  if (HOLD_CODES.has(res.code)) return { kind: "hold", code: res.code, delayMs: res.code === "unauthorized" ? MINUTE : res.code === "blocked" ? 6 * 60 * MINUTE : 10 * MINUTE };
   if (DEAD_CODES.has(res.code)) return { kind: "fail", code: res.code };
   if (res.code === "rate_limited") {
     const wait = res.retryAfterS && res.retryAfterS > 0 ? res.retryAfterS * SECOND : 30 * SECOND;
@@ -226,7 +238,7 @@ export function applyDecision(item: OutboxItem, d: Decision, now: number): Outbo
     case "hold":
       return { ...item, state: "held", attempts: item.attempts + 1, nextAttemptAt: now + d.delayMs, lastCode: d.code };
     case "fail":
-      return { ...item, state: "failed", lastCode: d.code };
+      return { ...item, state: "failed", lastCode: d.code, failedAt: now };
   }
 }
 
@@ -281,6 +293,6 @@ export function precheckFromCard(nextStep: string | null | undefined): string | 
 export const DEAD_TAKE_KEEP_MS = 30 * 24 * 60 * MINUTE;
 
 /** Failed takes that can never be sent (campaign closed, mission no longer theirs) and are older than DEAD_TAKE_KEEP_MS. */
-export function expiredDeadTakes<T extends Pick<OutboxItem, "state" | "lastCode" | "createdAt">>(items: readonly T[], now: number): T[] {
-  return items.filter((i) => i.state === "failed" && i.lastCode != null && DEAD_CODES.has(i.lastCode) && now - i.createdAt > DEAD_TAKE_KEEP_MS);
+export function expiredDeadTakes<T extends Pick<OutboxItem, "state" | "lastCode" | "createdAt" | "failedAt">>(items: readonly T[], now: number): T[] {
+  return items.filter((i) => i.state === "failed" && i.lastCode != null && DEAD_CODES.has(i.lastCode) && now - (i.failedAt ?? i.createdAt) > DEAD_TAKE_KEEP_MS);
 }

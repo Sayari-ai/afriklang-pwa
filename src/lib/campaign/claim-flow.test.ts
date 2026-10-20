@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acceptedPercent, chipFor, claimOutcome, nextView, type ClaimState } from "./claim-flow";
+import { acceptedPercent, chipFor, claimOutcome, maskedEmailIn, nextView, type ClaimState } from "./claim-flow";
 import type { CampaignErrorCode } from "./types";
 
 const idle: ClaimState = { status: "idle" };
@@ -58,5 +58,14 @@ describe("chipFor / acceptedPercent", () => {
     expect(acceptedPercent({ total: 0, accepted: 0 })).toBe(0);
     expect(acceptedPercent({ total: 8, accepted: 2 })).toBe(25);
     expect(acceptedPercent({ total: 2, accepted: 5 })).toBe(100);
+  });
+});
+
+describe("maskedEmailIn", () => {
+  it("takes the masked address out of the dashboard's English hint", () => {
+    expect(maskedEmailIn("Sign in with the Google account for a***@yahoo.fr, the address this invitation was sent to.")).toBe("a***@yahoo.fr");
+    expect(maskedEmailIn("Sign in with the Google account for ***@example.org.")).toBe("***@example.org");
+    expect(maskedEmailIn("This contributor has no email on file.")).toBeNull();
+    expect(maskedEmailIn(null)).toBeNull();
   });
 });
