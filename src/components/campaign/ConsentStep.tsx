@@ -16,7 +16,8 @@ export function ConsentStep({ type, card, onSigned }: Props) {
   const id = useId();
   const consent = card.consents[type];
   // The address is typed by an admin on the dashboard: only http(s) may become a link.
-  const textUrl = safeExternalUrl(consent.text_url);
+  // The text in the language the speaker reads the app in (the locale recorded on signing).
+  const textUrl = safeExternalUrl(consent.text_urls?.[locale] ?? consent.text_url);
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const sending = useRef(false); // a second tap before the re-render must not sign twice

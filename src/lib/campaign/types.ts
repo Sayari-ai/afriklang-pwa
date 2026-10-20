@@ -33,7 +33,12 @@ export type Dispatch = "planned" | "pool";
  */
 export type Rewards = { accepted: number; accepted_s?: number; pending_s?: number };
 
-export type ConsentView = { required_version: string | null; signed: boolean; signed_version: string | null; text_url: string | null };
+/**
+ * `text_url`: the text in the contributor's language as the dashboard stores it. `text_urls`: the
+ * text in every language it exists in (newer dashboards), so the app opens the one the speaker
+ * reads the app in, the locale it records with the signature (M-16).
+ */
+export type ConsentView = { required_version: string | null; signed: boolean; signed_version: string | null; text_url: string | null; text_urls?: Record<string, string> | null };
 
 export type CampaignCard = {
   assignment_id: string;

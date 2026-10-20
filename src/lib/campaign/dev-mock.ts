@@ -199,8 +199,8 @@ function progress(missions: Mission[]) {
 }
 
 const CONSENTS = (s: State, campaign: boolean) => ({
-  account: { required_version: "v2", signed: s.account, signed_version: s.account ? "v2" : null, text_url: "https://example.com/consent/account" },
-  campaign: { required_version: "v1", signed: campaign, signed_version: campaign ? "v1" : null, text_url: "https://example.com/consent/campaign" },
+  account: { required_version: "v2", signed: s.account, signed_version: s.account ? "v2" : null, text_url: "https://example.com/consent/account", text_urls: { en: "https://example.com/consent/account", fr: "https://example.com/consent/account-fr" } },
+  campaign: { required_version: "v1", signed: campaign, signed_version: campaign ? "v1" : null, text_url: "https://example.com/consent/campaign", text_urls: { en: "https://example.com/consent/campaign", fr: "https://example.com/consent/campaign-fr" } },
 });
 
 /** The dashboard's list of Wolof varieties; a variety the speaker typed is added on save, like the dashboard does. */
