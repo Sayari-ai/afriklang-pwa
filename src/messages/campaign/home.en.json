@@ -77,6 +77,7 @@
     "expiresNote": "Recordings that can never be sent are deleted from the phone after 30 days.",
     "recordAgain": "Record again",
     "tryAgain": "Try again",
+    "attempt": "Try {n} · {code}",
     "state": {
       "pending": "Waiting to send",
       "sending": "Sending…",

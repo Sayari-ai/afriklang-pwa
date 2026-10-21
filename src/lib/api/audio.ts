@@ -85,6 +85,8 @@ export class AudioUploadError extends Error {
     public readonly isNetwork: boolean = false,
     /** Seconds the server asked to wait (`Retry-After` on 429/503), when it said. */
     public readonly retryAfterS: number | null = null,
+    /** The machine code the proxy names in its JSON `error` (`server_misconfigured`, `ticket_required`…), when it does. */
+    public readonly code: string | null = null,
   ) {
     super(message);
     this.name = "AudioUploadError";
@@ -222,7 +224,19 @@ export async function uploadAudio(args: UploadAudioArgs): Promise<UploadAudioRes
     response.status,
     false,
     parseRetryAfter(response.retryAfter),
+    errorCodeOf(response.text),
   );
+}
+
+/** The `error` code of a JSON error body (`{"error":"server_misconfigured"}`), or null: a message or HTML is not a code. */
+export function errorCodeOf(text: string): string | null {
+  try {
+    const body: unknown = JSON.parse(text);
+    const code = body && typeof body === "object" ? (body as Record<string, unknown>).error : null;
+    return typeof code === "string" && /^[a-z_]{1,40}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
 }
 
 type RawResponse = { status: number; statusText: string; text: string; retryAfter: string | null };

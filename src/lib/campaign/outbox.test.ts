@@ -46,6 +46,13 @@ describe("outbox decisions", () => {
     expect(decideUploadFailure({ status: 429, isNetwork: false, retryAfterS: 600 }, 0, true, () => 0.5)).toEqual({ kind: "retry", code: "rateLimited", delayMs: 600_000 });
     expect(decideUploadFailure({ status: 503, isNetwork: false }, 0, true).kind).toBe("retry");
   });
+  it("holds a take when the upload path is misconfigured, and keeps retrying any other server error", () => {
+    expect(decideUploadFailure({ status: 500, isNetwork: false, code: "server_misconfigured" }, 0, true)).toEqual({ kind: "hold", code: "misconfigured", delayMs: 600_000 });
+    expect(decideUploadFailure({ status: 500, isNetwork: false }, 0, true, () => 0.5)).toEqual({ kind: "retry", code: "server", delayMs: 15_000 });
+    expect(decideUploadFailure({ status: 502, isNetwork: false, code: "server_misconfigured" }, 0, true).kind).toBe("retry");
+    expect(decideUploadFailure({ status: 409, isNetwork: false, code: "ticket_required" }, 0, true)).toMatchObject({ kind: "retry", code: "server" });
+  });
+
   it("keeps a take Sayari refuses for its language, and retries it after 1 h, 2 h, 4 h… then daily (M-15)", () => {
     const detail = 'Upload failed (400): {"detail":"Unsupported language. Supported: [\'ee\', \'wo\']"}';
     expect(decideUploadFailure({ status: 400, isNetwork: false, detail }, 0, true)).toEqual({ kind: "hold", code: "language_unsupported", delayMs: 3_600_000 });
@@ -148,6 +155,41 @@ describe("outbox runner", () => {
     // At the upload pace (at least 15 s), never the 5-minute submit pace from 5 s.
     expect(store.m.get("sha1")!.nextAttemptAt - 100).toBeGreaterThanOrEqual(15_000);
     expect(store.m.get("sha2")!.attempts).toBe(0);
+  });
+
+  it("keeps the server's own code on the take, for support", async () => {
+    const store = memStore([item()]);
+    const upload = vi.fn(async () => {
+      throw { status: 409, isNetwork: false, code: "ticket_required" };
+    });
+    const ob = createOutbox({ store, upload, submit: vi.fn(), online: () => true, now: () => 100 });
+    await ob.drain("u1");
+    expect(store.m.get("sha1")!).toMatchObject({ state: "pending", lastCode: "server", lastDetail: "ticket_required", attempts: 1 });
+  });
+
+  it("a misconfigured upload path pauses every upload until 'send now', not just the one take", async () => {
+    let t = 100;
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 }), item({ id: "sha3", missionId: "m3", createdAt: 3, uploaded: true, sayariId: "r3" })]);
+    const upload = vi.fn(async () => {
+      throw { status: 500, isNetwork: false, code: "server_misconfigured" };
+    });
+    const submit = vi.fn(async () => ({ ok: true as const, data: { duplicate: false } }));
+    const ob = createOutbox({ store, upload, submit, online: () => true, now: () => t });
+    await ob.drain("u1");
+    // The uploaded take still went (only its small submit was left); one file was tried, then the pause.
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(store.m.has("sha3")).toBe(false);
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(store.m.get("sha1")!).toMatchObject({ state: "held", lastCode: "misconfigured", lastDetail: "server_misconfigured" });
+    expect(store.m.get("sha2")!).toMatchObject({ state: "pending", attempts: 0 });
+    // The other take waits for the pause too: no wake before it ends, no upload on a run meanwhile.
+    expect(ob.nextWake("u1")).toBe(100 + 600_000);
+    t = 5_000;
+    await ob.drain("u1");
+    expect(upload).toHaveBeenCalledTimes(1);
+    // "Send now" lifts the pause at once.
+    await ob.retryNow("u1");
+    expect(upload).toHaveBeenCalledTimes(2);
   });
 
   it("a hold for one take (its language) does not stop the others", async () => {

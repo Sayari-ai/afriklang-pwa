@@ -50,6 +50,11 @@ export type OutboxItem = {
   nextAttemptAt: number;
   /** Why it is held or failed: a campaign error code, or an upload failure key. */
   lastCode: string | null;
+  /**
+   * The server's own code behind `lastCode` when it named one (`server_misconfigured` behind
+   * "server"), for support: shown in History after a few tries. Absent on older items.
+   */
+  lastDetail?: string | null;
   /** When it became "failed" (ms): a dead take is kept 30 days from then, not from when it was recorded. */
   failedAt?: number;
   /**
@@ -65,8 +70,8 @@ export type StoredTicket = { value: string; expiresAt: number };
 /** What the UI sees of an item (no audio): `bytes` is the audio's size. */
 export type OutboxSummary = Omit<OutboxItem, "blob"> & { bytes: number };
 
-/** `detail`: the error text (the upload proxy passes Sayari's answer through). */
-export type UploadOutcome = { status: number; isNetwork: boolean; retryAfterS?: number | null; detail?: string };
+/** `detail`: the error text (the upload proxy passes Sayari's answer through). `code`: the proxy's JSON `error` code, when it named one. */
+export type UploadOutcome = { status: number; isNetwork: boolean; retryAfterS?: number | null; detail?: string; code?: string | null };
 
 export type Decision =
   | { kind: "done"; duplicate?: boolean }
@@ -115,6 +120,9 @@ export function decideUploadFailure(e: UploadOutcome, attempts: number, online: 
   // The server said how long to wait (429, 503): do that, not less (each try resends the file).
   const asked = e.retryAfterS && e.retryAfterS > 0 ? Math.min(3600, e.retryAfterS) * SECOND : 0;
   if (e.status === 429) return { kind: "retry", code: "rateLimited", delayMs: Math.max(asked, 30 * SECOND, backoffMs(attempts, random)) };
+  // The proxy has no upload key, or Sayari refuses it: no retry clears that until someone fixes the
+  // server, and every try resends the whole file. Held like a misconfigured submit ("Send now" still forces a try).
+  if (e.status === 500 && e.code === "server_misconfigured") return { kind: "hold", code: "misconfigured", delayMs: 10 * MINUTE };
   // Every retry resends the whole file: the upload pace (15 s up to 15 minutes), never the 5-minute one.
   if (e.status >= 500) return { kind: "retry", code: "server", delayMs: Math.max(asked, uploadBackoffMs(attempts, random)) };
   // Sayari does not take this language yet: nothing is wrong with the take and recording it again
@@ -225,8 +233,11 @@ export function decideSubmit(
   return { kind: "fail", code: res.code };
 }
 
-/** The item after a retry/hold/fail decision (done, rejected, superseded and drop remove it). */
-export function applyDecision(item: OutboxItem, d: Decision, now: number): OutboxItem | null {
+/**
+ * The item after a retry/hold/fail decision (done, rejected, superseded and drop remove it).
+ * `detail`: the server's own code behind the decision, kept as `lastDetail` (null when it named none).
+ */
+export function applyDecision(item: OutboxItem, d: Decision, now: number, detail: string | null = null): OutboxItem | null {
   switch (d.kind) {
     case "done":
     case "rejected":
@@ -234,11 +245,11 @@ export function applyDecision(item: OutboxItem, d: Decision, now: number): Outbo
     case "drop":
       return null;
     case "retry":
-      return { ...item, state: "pending", attempts: item.attempts + 1, nextAttemptAt: now + d.delayMs, lastCode: d.code };
+      return { ...item, state: "pending", attempts: item.attempts + 1, nextAttemptAt: now + d.delayMs, lastCode: d.code, lastDetail: detail };
     case "hold":
-      return { ...item, state: "held", attempts: item.attempts + 1, nextAttemptAt: now + d.delayMs, lastCode: d.code };
+      return { ...item, state: "held", attempts: item.attempts + 1, nextAttemptAt: now + d.delayMs, lastCode: d.code, lastDetail: detail };
     case "fail":
-      return { ...item, state: "failed", lastCode: d.code, failedAt: now };
+      return { ...item, state: "failed", lastCode: d.code, lastDetail: detail, failedAt: now };
   }
 }
 

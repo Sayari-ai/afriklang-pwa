@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AudioUploadError, IDLE_TIMEOUT_MS, recordingIdFromResponse, RESPONSE_TIMEOUT_MS, uploadAudio } from "./audio";
+import { AudioUploadError, errorCodeOf, IDLE_TIMEOUT_MS, recordingIdFromResponse, RESPONSE_TIMEOUT_MS, uploadAudio } from "./audio";
 
 describe("recordingIdFromResponse", () => {
   it("finds an id in the shapes an upload endpoint plausibly answers with", () => {
@@ -13,6 +13,14 @@ describe("recordingIdFromResponse", () => {
   it("answers null, never throws, when there is nothing usable", () => {
     for (const b of [null, undefined, "text", 5, [], {}, { id: "" }, { id: {} }, { files: [] }, { files: ["str"] }]) expect(recordingIdFromResponse(b)).toBeNull();
     expect(recordingIdFromResponse({ id: "x".repeat(500) })?.length).toBe(200);
+  });
+});
+
+describe("errorCodeOf", () => {
+  it("reads the proxy's error code, and nothing that is not one", () => {
+    expect(errorCodeOf('{"error":"server_misconfigured","message":"SAYARI_UPLOAD_KEY is not set"}')).toBe("server_misconfigured");
+    expect(errorCodeOf('{"error":"ticket_required"}')).toBe("ticket_required");
+    for (const t of ["", "<html>500</html>", '{"error":"Expected multipart/form-data"}', '{"detail":"invalid_wav"}', '{"error":5}', "null", "[]"]) expect(errorCodeOf(t)).toBeNull();
   });
 });
 
@@ -107,5 +115,6 @@ describe("uploadAudio over a slow link", () => {
     const e = await p;
     expect(e.status).toBe(429);
     expect(e.retryAfterS).toBe(120);
+    expect(e.code).toBe("rate_limited");
   });
 });

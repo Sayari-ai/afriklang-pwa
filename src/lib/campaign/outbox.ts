@@ -77,13 +77,16 @@ export type OutboxDeps = {
 };
 
 /** An error from `upload` that carries an HTTP status (AudioUploadError has this shape). */
-type UploadErrorLike = { status?: number; isNetwork?: boolean; retryAfterS?: number | null; message?: string };
+type UploadErrorLike = { status?: number; isNetwork?: boolean; retryAfterS?: number | null; message?: string; code?: string | null };
 
 /** How far the take being sent has gone (bytes of the request body). */
 export type OutboxProgress = { id: string; sent: number; total: number };
 
 /** A decision after which the next take would fail the same way (the network is gone or too weak). */
 const stopsRun = (d: Decision) => d.kind === "retry" && STOP_RUN_CODES.has(d.code);
+/** The upload path itself is broken (no upload key, or Sayari refuses it): every take would fail the same way. */
+const SERVER_PAUSE_MS = 10 * MINUTE;
+const serverBroken = (d: Decision) => d.kind === "hold" && d.code === "misconfigured";
 
 const summary = (item: OutboxItem): OutboxSummary => {
   const { blob, ...rest } = item;
@@ -105,6 +108,8 @@ export function createOutbox(deps: OutboxDeps) {
   const blocked = new Set<string>();
   /** "The dashboard issues no tickets" is said once per app start, not once per take. */
   let saidNoTickets = false;
+  /** Until then no take is uploaded: the server said it cannot take any (cleared by "Send now" or "Try again"). */
+  let pausedUntil = 0;
   const listeners = new Set<() => void>();
   const eventListeners = new Set<(e: OutboxEvent) => void>();
   let snapshot: { items: OutboxSummary[]; activeId: string | null; loaded: boolean; progress: OutboxProgress | null } = { items, activeId, loaded, progress };
@@ -134,8 +139,8 @@ export function createOutbox(deps: OutboxDeps) {
     notify();
   }
 
-  async function settle(item: OutboxItem, d: Decision) {
-    const next = applyDecision(item, d, now());
+  async function settle(item: OutboxItem, d: Decision, detail: string | null = null) {
+    const next = applyDecision(item, d, now(), detail);
     if (next) await deps.store.put(next);
     else await deps.store.remove(item.id);
     const s = summary(next ?? item);
@@ -226,8 +231,14 @@ export function createOutbox(deps: OutboxDeps) {
         const err = (e ?? {}) as UploadErrorLike;
         // Sayari refused the ticket (expired on the way, or already used): the next try asks for a new one.
         if (err.status === 409 && current.ticket) current = { ...current, ticket: null };
-        const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork), retryAfterS: err.retryAfterS ?? null, detail: typeof err.message === "string" ? err.message : "" }, current.attempts, deps.online());
-        await settle(current, d);
+        const code = typeof err.code === "string" ? err.code : null;
+        const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork), retryAfterS: err.retryAfterS ?? null, detail: typeof err.message === "string" ? err.message : "", code }, current.attempts, deps.online());
+        await settle(current, d, code);
+        // A broken upload path would refuse every take: pause them all, not just this one.
+        if (serverBroken(d)) {
+          pausedUntil = now() + SERVER_PAUSE_MS;
+          return false;
+        }
         // Any upload to retry stops the run: the next take would hit the same server or link
         // trouble and resend a whole file for nothing (N-6). Holds and failures concern this take only.
         return d.kind !== "retry";
@@ -263,6 +274,8 @@ export function createOutbox(deps: OutboxDeps) {
       // Read it again: it may have been deleted, sent by another tab or changed since the list was read.
       const item = blocked.has(listed.campaignId) ? undefined : await deps.store.get(listed.id).catch(() => undefined);
       if (!item || item.state === "failed" || item.nextAttemptAt > now()) continue;
+      // The server cannot take uploads right now: only takes already uploaded (their submit) go.
+      if (!item.uploaded && now() < pausedUntil) continue;
       activeId = item.id;
       notify();
       const keepGoing = await sendOne(item);
@@ -336,6 +349,7 @@ export function createOutbox(deps: OutboxDeps) {
     },
     /** Send a failed take again (the speaker's "Try again", APP-018). */
     async retryFailed(id: string, userId: string) {
+      pausedUntil = 0;
       const i = await deps.store.get(id);
       if (!i || i.state !== "failed") return;
       await deps.store.put({ ...i, state: "pending", nextAttemptAt: 0, lastCode: null });
@@ -371,6 +385,7 @@ export function createOutbox(deps: OutboxDeps) {
      * reset or brought back (APP-019).
      */
     async retryNow(userId: string) {
+      pausedUntil = 0;
       const lock = deps.withLock ?? ((run) => run());
       await lock(async () => {
         const all = await deps.store.all();
@@ -383,7 +398,8 @@ export function createOutbox(deps: OutboxDeps) {
       await refresh();
       return drain(userId);
     },
-    nextWake: (userId: string) => nextWake(items, userId),
+    /** During a pause, takes still to upload wake when it ends. */
+    nextWake: (userId: string) => nextWake(items.map((i) => (i.uploaded ? i : { ...i, nextAttemptAt: Math.max(i.nextAttemptAt, pausedUntil) })), userId),
     subscribe(fn: () => void) {
       listeners.add(fn);
       return () => listeners.delete(fn);

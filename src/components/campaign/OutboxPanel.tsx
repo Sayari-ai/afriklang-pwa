@@ -105,8 +105,11 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                     <p className="text-xs text-slate-600">
                       {t(`state.${state}`)}
                       {state === "sending" && pct !== null ? <span aria-hidden> {t("percent", { pct })}</span> : null}
-                      {(state === "held" || state === "failed") && i.lastCode ? ` · ${t(`reason.${outboxReasonKey(i.lastCode)}`)}` : ""}
+                      {/* A waiting take that already failed says why too, or it looks stuck for no reason. */}
+                      {state !== "sending" && i.lastCode ? ` · ${t(`reason.${outboxReasonKey(i.lastCode)}`)}` : ""}
                     </p>
+                    {/* For support, after a few tries: the count and the server's own code (from a screenshot). */}
+                    {state !== "sending" && i.attempts >= 2 && (i.lastDetail ?? i.lastCode) ? <p className="font-mono text-[11px] text-slate-500">{t("attempt", { n: i.attempts, code: i.lastDetail ?? i.lastCode ?? "" })}</p> : null}
                   </div>
                   {state === "failed" ? (
                     <>
