@@ -1,8 +1,13 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { daysLeft, hasMissions, outboxReasonKey, rejectionReasonCode, setupStep, toRecordCount, totals } from "./view";
-import { REJECTION_REASONS } from "./types";
+import { campaignMicDistance, daysLeft, hasMissions, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, toRecordCount, totals } from "./view";
+import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
+import flowEn from "../../messages/campaign/flow.en.json";
+import flowFr from "../../messages/campaign/flow.fr.json";
+import homeEn from "../../messages/campaign/home.en.json";
+import homeFr from "../../messages/campaign/home.fr.json";
 
 describe("speaker view facts", () => {
   it("counts days to the deadline in local days", () => {
@@ -68,6 +73,57 @@ describe("rejection reasons (MAN-002)", () => {
     for (const r of REJECTION_REASONS) {
       expect(en.rejection[r]).toMatch(/\.$/);
       expect(fr.rejection[r]).toMatch(/\.$/);
+    }
+  });
+});
+
+describe("microphone distance", () => {
+  // What the dashboard's bridge sends: the campaign spec's recording.mic_distance_cm, here its
+  // defaults (in every campaign built from its example campaign file), [from, to] cm per kind.
+  const BRIDGE_MIC = { read: [20, 30], conversational: [30, 50] };
+  const card = (types: SpeechType[], mic: { mic_distance_cm?: unknown } = { mic_distance_cm: BRIDGE_MIC }) =>
+    ({
+      instructions: {
+        recording: { min_level_dbfs: -35, silence_margin_s: 1, ...mic },
+        speech_types: types.map((type) => ({ type, duration_min_s: 3, duration_max_s: 15 })),
+      },
+    }) as Pick<CampaignCard, "instructions">;
+
+  /** The hub tip and the Instructions rule, worded as CampaignHub and Instructions word them. */
+  function texts(c: Pick<CampaignCard, "instructions">, locale: "en" | "fr") {
+    const tip = createTranslator({ locale, messages: { home: locale === "en" ? homeEn : homeFr }, namespace: "home.hub.tips" });
+    const rule = createTranslator({ locale, messages: { flow: locale === "en" ? flowEn : flowFr }, namespace: "flow.instructions" });
+    const { main, conversation } = campaignMicDistance(c);
+    return {
+      tip: main && conversation ? tip("distanceConversation", { ...main, convMin: conversation.min, convMax: conversation.max }) : main ? tip("distance", main) : tip("distanceDefault"),
+      rule: main && !conversation ? rule("mic", main) : null,
+    };
+  }
+
+  it("reads the dashboard's [from, to] pairs, not a {min, max} it never sends", () => {
+    expect(texts(card(["read"]), "en")).toEqual({ tip: "Phone 20–30 cm from your mouth", rule: "Hold the phone 20 to 30 cm from your mouth." });
+    expect(texts(card(["read"]), "fr")).toEqual({ tip: "Téléphone à 20–30 cm de la bouche", rule: "Tenez le téléphone à 20 à 30 cm de votre bouche." });
+  });
+  it("gives speaking freely the reading distance, and conversations their own", () => {
+    expect(micDistance(card(["spontaneous"]), "spontaneous")).toEqual({ min: 20, max: 30 });
+    expect(micDistance(card(["conversational"]), "conversational")).toEqual({ min: 30, max: 50 });
+    expect(campaignMicDistance(card(["read", "spontaneous"]))).toEqual({ main: { min: 20, max: 30 }, conversation: null });
+    expect(campaignMicDistance(card(["conversational"]))).toEqual({ main: { min: 30, max: 50 }, conversation: null });
+  });
+  it("names both distances when the campaign's conversations are held further away", () => {
+    const mixed = card(["read", "spontaneous", "conversational"]);
+    expect(campaignMicDistance(mixed)).toEqual({ main: { min: 20, max: 30 }, conversation: { min: 30, max: 50 } });
+    expect(texts(mixed, "en")).toEqual({ tip: "Phone 20–30 cm from your mouth, 30–50 cm in a conversation", rule: null });
+    // The same distance for both kinds is one rule.
+    expect(campaignMicDistance(card(["read", "conversational"], { mic_distance_cm: { read: [25, 40], conversational: [25, 40] } }))).toEqual({ main: { min: 25, max: 40 }, conversation: null });
+  });
+  it("falls back to the generic advice without a usable distance", () => {
+    // An older card without the field, and the {min, max} the app used to expect.
+    const none = [{}, { mic_distance_cm: null }, { mic_distance_cm: { min: 15, max: 30 } }];
+    const broken = [{ read: [10] }, { read: "near" }, { read: [30, 20] }, { read: [0, 10] }, { read: ["20", "30"] }].map((m) => ({ mic_distance_cm: m }));
+    for (const mic of [...none, ...broken]) {
+      expect(campaignMicDistance(card(["read"], mic)), JSON.stringify(mic)).toEqual({ main: null, conversation: null });
+      expect(texts(card(["read"], mic), "en"), JSON.stringify(mic)).toEqual({ tip: "Phone a hand's width from your mouth", rule: null });
     }
   });
 });

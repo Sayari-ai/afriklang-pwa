@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useCampaignSession } from "@/lib/campaign/hooks";
 import { useOutbox, withdrawFromCampaign } from "@/lib/campaign/outbox-client";
 import type { CampaignCard, CampaignFailure } from "@/lib/campaign/types";
+import { campaignMicDistance, micDistance } from "@/lib/campaign/view";
 import { FailureMessage, buttonSecondary } from "./CampaignHubParts";
 
 const SPEECH_ORDER = ["read", "spontaneous", "conversational"] as const;
@@ -31,8 +32,9 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
 
   const rec = card.instructions.recording;
-  const mic = rec.mic_distance_cm;
-  const micText = mic?.min != null && mic?.max != null ? t("mic", { min: mic.min, max: mic.max }) : mic?.min != null ? t("micMin", { min: mic.min }) : mic?.max != null ? t("micMax", { max: mic.max }) : null;
+  // One distance for the whole campaign goes with the rules; two (conversations held further away) go with each type.
+  const mic = campaignMicDistance(card);
+  const perType = mic.conversation !== null;
 
   // Shown open on the first visit, then collapsed on later ones.
   useEffect(() => {
@@ -74,7 +76,7 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
             <ul className="list-disc space-y-1 pl-5">
               <li>{t("quiet")}</li>
               {rec.background ? <li>{t("background", { text: rec.background })}</li> : null}
-              {micText ? <li>{micText}</li> : null}
+              {mic.main && !perType ? <li>{t("mic", mic.main)}</li> : null}
               <li>{t("level", { level: rec.min_level_dbfs })}</li>
               <li>{t("silence", { s: rec.silence_margin_s })}</li>
             </ul>
@@ -83,13 +85,17 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
             <div>
               <h2 className="mb-1 text-base font-bold text-slate-900">{t("byType")}</h2>
               <ul className="space-y-3">
-                {types.map((s) => (
-                  <li key={s.type} className="rounded-xl border border-slate-200 p-3">
-                    <p className="font-bold text-slate-900">{t(`types.${s.type}.name`)} · {t("duration", { min: s.duration_min_s, max: s.duration_max_s })}</p>
-                    <p>{t(`types.${s.type}.help`)}</p>
-                    {s.missions_per_session ? <p className="text-slate-500">{t("perSession", s.missions_per_session)}</p> : null}
-                  </li>
-                ))}
+                {types.map((s) => {
+                  const typeMic = perType ? micDistance(card, s.type) : null;
+                  return (
+                    <li key={s.type} className="rounded-xl border border-slate-200 p-3">
+                      <p className="font-bold text-slate-900">{t(`types.${s.type}.name`)} · {t("duration", { min: s.duration_min_s, max: s.duration_max_s })}</p>
+                      <p>{t(`types.${s.type}.help`)}</p>
+                      {typeMic ? <p>{t("mic", typeMic)}</p> : null}
+                      {s.missions_per_session ? <p className="text-slate-500">{t("perSession", s.missions_per_session)}</p> : null}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}

@@ -97,8 +97,6 @@
     "quiet": "Choisissez une pièce calme. Éteignez la télévision, la radio et les ventilateurs.",
     "background": "Arrière-plan : {text}",
     "mic": "Tenez le téléphone à {min} à {max} cm de votre bouche.",
-    "micMin": "Tenez le téléphone à au moins {min} cm de votre bouche.",
-    "micMax": "Tenez le téléphone à {max} cm au plus de votre bouche.",
     "level": "Parlez clairement et assez fort : l'enregistrement doit atteindre au moins {level} dBFS en moyenne. L'application le vérifie pour vous.",
     "silence": "Restez silencieux environ {s, plural, one {# seconde} other {# secondes}} avant de commencer et après avoir fini.",
     "byType": "Quoi faire, selon le type",
