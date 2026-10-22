@@ -36,6 +36,8 @@ const BATCH = 6;
 const REFILL_BELOW = 3;
 const LEASE_MS = 72 * 3_600_000;
 const READ_MAX_S = 15;
+/** The card's recording rules, as the dashboard sends them (its defaults: mic distance [from, to] cm per kind, not {min, max}). */
+const RECORDING = { min_level_dbfs: -35, silence_margin_s: 1, background: "Quiet room, no music", mic_distance_cm: { read: [20, 30], conversational: [30, 50] } } satisfies CampaignCard["instructions"]["recording"];
 
 type PoolMission = Mission & { cancelled?: boolean };
 type State = {
@@ -228,7 +230,7 @@ function plannedCard(s: State): CampaignCard {
     blocked_reason: null,
     consents: CONSENTS(s, s.planned.consent),
     instructions: {
-      recording: { min_level_dbfs: -35, silence_margin_s: 1, background: "Quiet room, no music", mic_distance_cm: { min: 15, max: 30 } },
+      recording: RECORDING,
       speech_types: [
         { type: "read", duration_min_s: 3, duration_max_s: 15, missions_per_session: { min: 5, max: 20 } },
         { type: "spontaneous", duration_min_s: 8, duration_max_s: 30, missions_per_session: null },
@@ -258,7 +260,7 @@ function poolCard(s: State): CampaignCard {
     blocked_reason: null,
     consents: CONSENTS(s, s.pool.consent),
     instructions: {
-      recording: { min_level_dbfs: -35, silence_margin_s: 1, background: "Quiet room, no music", mic_distance_cm: { min: 15, max: 30 } },
+      recording: RECORDING,
       speech_types: [{ type: "read", duration_min_s: 3, duration_max_s: READ_MAX_S, missions_per_session: { min: 3, max: BATCH } }],
     },
     partner: null,
@@ -285,7 +287,7 @@ function qualCard(s: State): CampaignCard {
     blocked_reason: null,
     consents: CONSENTS(s, q.consent),
     instructions: {
-      recording: { min_level_dbfs: -35, silence_margin_s: 1, background: "Quiet room, no music", mic_distance_cm: { min: 20, max: 30 } },
+      recording: RECORDING,
       speech_types: [
         { type: "read", duration_min_s: 3, duration_max_s: 15, missions_per_session: { min: 20, max: 50 } },
         { type: "spontaneous", duration_min_s: 15, duration_max_s: 30, missions_per_session: { min: 10, max: 20 } },

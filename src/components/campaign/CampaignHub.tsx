@@ -16,7 +16,7 @@ import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard, type ContributorView } from "@/lib/campaign/types";
 import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
 import { useOutbox } from "@/lib/campaign/outbox-client";
-import { daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
+import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
 import { OutboxPanel } from "./OutboxPanel";
 import { LanguageBadge, ProgressRing, useQualificationText } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
@@ -271,10 +271,13 @@ function Stepper({ current }: { current: 1 | 2 | 3 }) {
 
 function Tips({ card }: { card: CampaignCard }) {
   const t = useTranslations("campaign.home.hub.tips");
-  const mic = card.instructions.recording.mic_distance_cm;
+  const { main, conversation } = campaignMicDistance(card);
   const tips = [
     { Icon: VolumeX, text: t("quiet") },
-    { Icon: Hand, text: mic?.min != null && mic?.max != null ? t("distance", { min: mic.min, max: mic.max }) : t("distanceDefault") },
+    {
+      Icon: Hand,
+      text: main && conversation ? t("distanceConversation", { ...main, convMin: conversation.min, convMax: conversation.max }) : main ? t("distance", main) : t("distanceDefault"),
+    },
     { Icon: Volume2, text: t("wait") },
     { Icon: Ear, text: t("listen") },
   ];

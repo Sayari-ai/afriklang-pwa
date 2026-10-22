@@ -1,7 +1,7 @@
 /** Small pure facts the speaker screens show (kept out of the components so they can be tested). */
 
 import type { OutboxState } from "./outbox-logic";
-import { REJECTION_REASONS, type CampaignCard, type Mission, type NextStep, type RejectionReason } from "./types";
+import { REJECTION_REASONS, type CampaignCard, type Mission, type NextStep, type RejectionReason, type SpeechType } from "./types";
 
 /**
  * A mission's `rejection_reason` as one of the dashboard's reason codes, or null when it is not one
@@ -58,6 +58,33 @@ export function daysLeft(deadline: string | null, now = new Date()): number | nu
   const end = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((end.getTime() - today.getTime()) / 86_400_000);
+}
+
+export type MicRange = { min: number; max: number };
+
+/**
+ * How far to hold the phone (cm) for one speech type. The card carries the campaign spec's
+ * `{ read: [from, to], conversational: [from, to] }`; speaking freely is a monologue, so it follows
+ * `read`. Null when the card has none (the field is optional) or the pair is not two numbers.
+ */
+export function micDistance(card: Pick<CampaignCard, "instructions">, type: SpeechType): MicRange | null {
+  const pair: unknown = card.instructions.recording.mic_distance_cm?.[type === "conversational" ? "conversational" : "read"];
+  if (!Array.isArray(pair) || pair.length !== 2) return null;
+  const [min, max] = pair as unknown[];
+  return typeof min === "number" && typeof max === "number" && min > 0 && min <= max ? { min, max } : null;
+}
+
+/**
+ * The campaign's distance for all its missions (`main`), or, when its conversations are held at
+ * another distance than reading and speaking freely, `main` for those and `conversation` for the
+ * conversations. `main` null: no distance on the card, the screens give the generic advice.
+ */
+export function campaignMicDistance(card: Pick<CampaignCard, "instructions">): { main: MicRange | null; conversation: MicRange | null } {
+  const types = new Set(card.instructions.speech_types.map((s) => s.type));
+  const alone = types.has("read") || types.has("spontaneous") ? micDistance(card, "read") : null;
+  const together = types.has("conversational") ? micDistance(card, "conversational") : null;
+  if (alone && together && (alone.min !== together.min || alone.max !== together.max)) return { main: alone, conversation: together };
+  return { main: alone ?? together, conversation: null };
 }
 
 /** The short reason shown for a take held or failed on the phone (key under campaign.home.outbox.reason). */

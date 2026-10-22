@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { signMockTicket } from "./dev-mock";
+import type { CampaignCard } from "./types";
 
 type Vector = { key: string; payload: Record<string, unknown>; payload_json: string; ticket: string };
 const vectors = JSON.parse(readFileSync("docs/contracts/test-vectors.json", "utf8")) as { upload_ticket: Vector[] };
@@ -62,6 +63,28 @@ describe("dev mock upload_ticket answer", () => {
     expect(await ask()).toMatchObject({ status: 410, body: { code: "campaign_closed" } });
     (win.__afkMock as { tickets: (m: string) => void }).tickets("old_dashboard");
     expect(await ask()).toMatchObject({ status: 404, body: { error: "route_not_found" } });
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("dev mock campaign cards", () => {
+  it("send the microphone distance in the dashboard's shape, so the app shows a real one", async () => {
+    const mem = new Map<string, string>();
+    const win: Record<string, unknown> = { fetch: async () => new Response("{}"), XMLHttpRequest: class {} };
+    vi.stubGlobal("window", win);
+    vi.stubGlobal("localStorage", { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), removeItem: (k: string) => void mem.delete(k) });
+    vi.stubEnv("NEXT_PUBLIC_CAMPAIGN_MOCK", "1");
+    const { installCampaignMock } = await import("./dev-mock");
+    const { campaignMicDistance } = await import("./view");
+    installCampaignMock();
+    const res = await (win.fetch as typeof fetch)("https://mock.supabase.co/functions/v1/campaigns", { method: "POST", body: JSON.stringify({ action: "campaigns" }) });
+    const { campaigns } = (await res.json()) as { campaigns: CampaignCard[] };
+    expect(campaigns.length).toBeGreaterThan(0);
+    for (const c of campaigns) {
+      expect(c.instructions.recording.mic_distance_cm, c.code).toEqual({ read: [20, 30], conversational: [30, 50] });
+      expect(campaignMicDistance(c).main, c.code).toEqual({ min: 20, max: 30 });
+    }
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });

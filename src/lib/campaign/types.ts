@@ -65,7 +65,12 @@ export type CampaignCard = {
   blocked_reason: string | null;
   consents: { account: ConsentView; campaign: ConsentView };
   instructions: {
-    recording: { min_level_dbfs: number; silence_margin_s: number; background?: string; mic_distance_cm?: { min?: number; max?: number } | null; [k: string]: unknown };
+    /**
+     * `mic_distance_cm`: the campaign spec's distances as the dashboard sends them, `[from, to]` cm
+     * for reading (speaking freely follows it) and for conversations. Optional; read it through
+     * `micDistance` / `campaignMicDistance` (view.ts).
+     */
+    recording: { min_level_dbfs: number; silence_margin_s: number; background?: string; mic_distance_cm?: { read?: [number, number]; conversational?: [number, number] } | null; [k: string]: unknown };
     speech_types: { type: SpeechType; duration_min_s: number; duration_max_s: number; missions_per_session?: { min: number; max: number } | null }[];
   };
   partner: { speaker_id: string | null; ready: boolean } | null;
