@@ -117,6 +117,7 @@
       "title": "Bien enregistrer",
       "quiet": "Une pièce calme, sans télé ni ventilateur",
       "distance": "Téléphone à {min}–{max} cm de la bouche",
+      "distanceConversation": "Téléphone à {min}–{max} cm de la bouche, {convMin}–{convMax} cm en conversation",
       "distanceDefault": "Téléphone à une main de la bouche",
       "wait": "Attendez « Parlez »",
       "listen": "Réécoutez avant d'envoyer"

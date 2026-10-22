@@ -117,6 +117,7 @@
       "title": "How to record well",
       "quiet": "A quiet room, no TV or fan",
       "distance": "Phone {min}–{max} cm from your mouth",
+      "distanceConversation": "Phone {min}–{max} cm from your mouth, {convMin}–{convMax} cm in a conversation",
       "distanceDefault": "Phone a hand's width from your mouth",
       "wait": "Wait for “Speak now”",
       "listen": "Listen back before you submit"
