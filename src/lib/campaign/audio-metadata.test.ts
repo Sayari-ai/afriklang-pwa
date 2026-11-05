@@ -17,7 +17,8 @@ const contributor = {
 } as unknown as ContributorView;
 const mission = (over: Partial<Mission> = {}) =>
   ({ mission_id: "m1", code: "M0007", type: "read", position: 7, status: "todo", rejection_reason: null, prompt: { id: "P007", text_or_topic: "Dama bëgg…", category: null }, duration_s: { min: 3, max: 15 }, partner_speaker_id: null, partner_ready: false, recording: null, ...over }) as Mission;
-const build = (m: Mission) =>
+const capture = { recordedAt: new Date("2026-10-12T09:00:00Z"), submittedAt: new Date("2026-10-12T09:00:05Z"), inputSampleRate: 48000, processing: { echoCancellation: true }, sizeBytes: 204844, paddingS: 1.2, quietHintShown: false, advice: null, sentAnyway: false, takeNumber: 2, sessionId: "s1", indexInSession: 3, appLocale: "fr", utcOffsetMin: 0, device: { label: "Android Chrome", os: "Android", browser: "Chrome" }, appVersion: "0.1.0" };
+const build = (m: Mission, over: Partial<typeof capture> = {}) =>
   buildAudioMetadata({
     card,
     mission: m,
@@ -26,7 +27,7 @@ const build = (m: Mission) =>
     rules: { durationMinS: 3, durationMaxS: 15, minLevelDbfs: -35, silenceMarginS: 1 },
     sha256: "a".repeat(64),
     filename: "f.wav",
-    capture: { recordedAt: new Date("2026-10-12T09:00:00Z"), submittedAt: new Date("2026-10-12T09:00:05Z"), inputSampleRate: 48000, processing: { echoCancellation: true }, sizeBytes: 204844, paddingS: 1.2, quietHintShown: false, takeNumber: 2, sessionId: "s1", indexInSession: 3, appLocale: "fr", utcOffsetMin: 0, device: { label: "Android Chrome", os: "Android", browser: "Chrome" }, appVersion: "0.1.0" },
+    capture: { ...capture, ...over },
   });
 
 describe("audio metadata document", () => {
@@ -34,6 +35,7 @@ describe("audio metadata document", () => {
     const d = build(mission());
     expect(d.schema_version).toBe(AUDIO_SCHEMA_VERSION);
     expect(d.prompt.role).toBe("transcript_reference");
+    expect(d.quality).toMatchObject({ app_checks_passed: true, advice: null, sent_anyway: false });
     expect(d.audio).toMatchObject({ capture_sample_rate: 48000, resampled: true, processing: { echo_cancellation: true, noise_suppression: null } });
     expect(d.speaker).toEqual({ speaker_id: "SPK-7Q2M9X4D", native_language: "wol", variety: "Baol-Baol", country: "SN", region: "Thiès", gender: "female", age_band: "30-44", declared_device: "Samsung A14" });
     expect(d.consent).toEqual({ recorded: true, account_version: "v2", campaign_version: "v1" });
@@ -48,6 +50,13 @@ describe("audio metadata document", () => {
   });
   it("reads OS and browser coarsely", () => {
     expect(parseDevice("Mozilla/5.0 (Linux; Android 14) AppleWebKit Chrome/129 Mobile Safari")).toEqual({ os: "Android", browser: "Chrome" });
+  });
+  it("tells the truth about the app's checks: an advice sent anyway is not a pass", () => {
+    const d = build(mission(), { advice: "noisy", sentAnyway: true });
+    expect(d.quality).toMatchObject({ app_checks_passed: false, advice: "noisy", sent_anyway: true });
+    expect(build(mission(), { advice: null, sentAnyway: false }).quality.app_checks_passed).toBe(true);
+    // The keys are additive: the schema version does not move.
+    expect(d.schema_version).toBe("afriklang.audio/2.0");
   });
 });
 

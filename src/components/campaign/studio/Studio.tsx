@@ -445,6 +445,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       }
       const metadata = buildMetadata(take.analysis, sha, deviceLabel(navigator.userAgent), null);
       const filename = buildCampaignFilename({ languageCode: card.language.code, speakerId, missionCode: mission.code });
+      // The advice the review screen showed (the same check as the render below): a submit over it is "Send anyway".
+      const shown = checkTake(take.analysis, rules!);
+      const advice = shown && !shown.blocking ? shown.problem : null;
       const audioDoc = buildAudioMetadata({
         card,
         mission,
@@ -461,6 +464,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           sizeBytes: take.blob.size,
           paddingS: pad,
           quietHintShown: take.quietHintShown,
+          advice,
+          sentAnyway: advice !== null,
           takeNumber: take.takeNumber,
           sessionId,
           indexInSession: sessionCount + 1,
