@@ -60,7 +60,10 @@ describe("studio link focus (?m=a,b)", () => {
     expect(parseFocus(` ${u(1)} , ${u(2)},`)).toEqual([u(1), u(2)]);
     expect(parseFocus(`${u(1)},${u(1)},${u(2)}`)).toEqual([u(1), u(2)]);
     expect(parseFocus(`${u(1)},m2,../admin,${u(2).slice(0, 35)},${u(3)}x,<b>`)).toEqual([u(1)]);
-    expect(parseFocus(u(1).toUpperCase())).toEqual([u(1).toUpperCase()]);
+    // Lowercased: the dashboard writes ids in lowercase and the queue matches them exactly.
+    const hex = "abcdefab-cdef-4abc-8def-abcdefabcdef";
+    expect(parseFocus(hex.toUpperCase())).toEqual([hex]);
+    expect(parseFocus(`${hex.toUpperCase()},${hex},${u(2)}`)).toEqual([hex, u(2)]);
     const many = Array.from({ length: 14 }, (_, i) => u(i + 1));
     expect(parseFocus(many.join(","))).toEqual(many.slice(0, MAX_FOCUS));
   });

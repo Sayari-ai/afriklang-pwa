@@ -8,6 +8,8 @@
  * open redirect. Modelled on link-token.ts (the same `Store` injection for tests).
  */
 
+import { parseFocus } from "./studio-flow";
+
 const KEY = "afriklang.campaign.return.v1";
 const PATH_RE = /^\/campaign\/[0-9a-f-]{36}\/studio(\?m=[0-9a-f,-]{36,400})?$/;
 /** A saved path older than this is forgotten: the speaker has moved on. */
@@ -21,6 +23,18 @@ function store(): Store | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * The studio path to come back to, rebuilt from its parts rather than copied from the address: a
+ * mail client may encode the link's commas (`%2C`) or change the case of the ids, and the raw
+ * search would then fail the shape check below and the focus be lost after sign-in. The ids go
+ * through parseFocus (well-formed, lowercase, at most MAX_FOCUS); the campaign id is lowercased.
+ * A campaign id that is not a UUID gives a path saveReturnPath refuses.
+ */
+export function studioReturnPath(campaignId: string, m: string | null): string {
+  const ids = parseFocus(m);
+  return `/campaign/${campaignId.toLowerCase()}/studio${ids.length ? `?m=${ids.join(",")}` : ""}`;
 }
 
 /** True for a studio path of this app (`/campaign/<uuid>/studio`, with or without `?m=`). */

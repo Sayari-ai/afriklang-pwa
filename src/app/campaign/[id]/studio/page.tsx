@@ -10,7 +10,7 @@ import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
-import { saveReturnPath } from "@/lib/campaign/return-path";
+import { saveReturnPath, studioReturnPath } from "@/lib/campaign/return-path";
 import { parseFocus } from "@/lib/campaign/studio-flow";
 
 const dark = "flex h-dvh flex-col items-center justify-center gap-4 bg-[#001b36] px-6 text-center text-white";
@@ -60,11 +60,14 @@ export default function StudioPage() {
   const filling = !opened && pool.pool && pool.pending;
   if (!opened && missions.state === "ready" && !stale && !filling) setOpened(true);
   // Signed out on a studio link (the "to record again" email): remember where to come back to.
-  // Sign-in always lands on /campaign, which follows it (return-path.ts).
+  // Sign-in always lands on /campaign, which follows it (return-path.ts). The path is rebuilt
+  // from the route and the parsed focus, not copied from the address: a mail client may have
+  // encoded the link's commas, and the window's address can lag behind the router here.
   const signedOut = list.state === "signedOut" || missions.state === "signedOut";
+  const focusParam = search.get("m");
   useEffect(() => {
-    if (signedOut) saveReturnPath(window.location.pathname + window.location.search);
-  }, [signedOut]);
+    if (signedOut) saveReturnPath(studioReturnPath(id, focusParam));
+  }, [signedOut, id, focusParam]);
   const back = (
     <Link href={`/campaign/${id}`} className={pill}>
       {t("guard.back")}

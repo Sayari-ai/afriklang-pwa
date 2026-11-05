@@ -21,14 +21,15 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export const MAX_FOCUS = 10;
 
 /**
- * The mission ids a studio link names (`?m=a,b`): well-formed ids only, once each, at most
- * MAX_FOCUS. One id is where the session starts; several are a focus (sessionQueue). The "to
- * record again" email builds such links with exactly the refused clips.
+ * The mission ids a studio link names (`?m=a,b`): well-formed ids only, lowercased (the
+ * dashboard writes them so, and the queue matches them exactly), once each, at most MAX_FOCUS.
+ * One id is where the session starts; several are a focus (sessionQueue). The "to record again"
+ * email builds such links with exactly the refused clips.
  */
 export function parseFocus(q: string | null): string[] {
   const out: string[] = [];
   for (const raw of (q ?? "").split(",")) {
-    const id = raw.trim();
+    const id = raw.trim().toLowerCase();
     if (!UUID_RE.test(id) || out.includes(id)) continue;
     out.push(id);
     if (out.length >= MAX_FOCUS) break;
