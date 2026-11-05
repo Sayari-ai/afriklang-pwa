@@ -197,6 +197,30 @@ export function guessDevice(ua: string): string {
 }
 
 /**
+ * `v` when it is a language code as the dashboard writes them (three lowercase ISO 639-3
+ * letters), else null. The bridge's `first_language.code` and the stored native language are
+ * checked here rather than trusted by type: a number or a malformed code must not reach the
+ * form, where it would crash the validation or the language name.
+ */
+export const languageCodeOf = (v: unknown): string | null => (typeof v === "string" && /^[a-z]{3}$/.test(v) ? v : null);
+
+/**
+ * The language's name in `locale` from its code, or the code in capitals when the engine has no
+ * name for it. Never throws, whatever the engine or the code does: the fallback is computed
+ * before anything that can fail.
+ */
+export function languageDisplayName(code: string, locale: string): string {
+  const fallback = typeof code === "string" ? code.toUpperCase() : "";
+  let name: string | undefined;
+  try {
+    name = new Intl.DisplayNames([locale], { type: "language" }).of(code);
+  } catch {
+    // an older engine, a locale or a code it refuses: the capitalised code still says which language
+  }
+  return name && name !== code ? name : fallback;
+}
+
+/**
  * Stored values win, except a stored gender the form does not offer ("other", "undisclosed"),
  * which is asked again.
  *
@@ -208,7 +232,7 @@ export function guessDevice(ua: string): string {
 export function initialValues(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile" | "first_language">, ua: string): ProfileValues {
   const s = contributor.profile.values;
   return {
-    native_language: s?.nativeLanguage || contributor.first_language?.code || card.language.code,
+    native_language: languageCodeOf(s?.nativeLanguage) ?? languageCodeOf(contributor.first_language?.code) ?? card.language.code,
     variety: s?.variety ?? "",
     country: s?.country ?? "",
     region: s?.region ?? "",

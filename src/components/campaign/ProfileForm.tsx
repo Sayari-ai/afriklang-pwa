@@ -18,6 +18,7 @@ import {
   MAX_TEXT,
   countryOptions,
   initialValues,
+  languageDisplayName,
   matchVariety,
   outsideTargets,
   profileErrorsFromServer,
@@ -89,12 +90,9 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   const nativeName = useMemo(() => {
     const code = values.native_language;
     if (code === card.language.code) return card.language.name;
-    if (contributor.first_language?.code === code && contributor.first_language.name) return contributor.first_language.name;
-    try {
-      return new Intl.DisplayNames([locale], { type: "language" }).of(code) ?? code.toUpperCase();
-    } catch {
-      return code.toUpperCase();
-    }
+    const first = contributor.first_language;
+    if (first?.code === code && typeof first.name === "string" && first.name) return first.name;
+    return languageDisplayName(code, locale);
   }, [values.native_language, card.language, contributor.first_language, locale]);
 
   const set = (k: keyof ProfileInput) => (v: string) => {

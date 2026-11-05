@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, guessDevice, initialValues, matchVariety, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
+import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
 
 const ok: ProfileValues = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: " Thiès ", gender: "female", age_band: "30-44", device: "Android" };
 const varieties = ["Baol-Baol", "Saloum-Saloum"];
@@ -139,6 +139,32 @@ describe("defaults", () => {
     expect(initialValues(fuc, { profile: { complete: false, missing: [], values: null } }, "").native_language).toBe("fuc");
     expect(initialValues(fuc, { profile: { complete: false, missing: [], values: null }, first_language: null }, "").native_language).toBe("fuc");
     expect(initialValues(fuc, { profile: { complete: false, missing: [], values: null }, first_language: { code: null, name: "Unknown" } }, "").native_language).toBe("fuc");
+  });
+  it("trusts no language code by type: anything but three lowercase letters is treated as absent", () => {
+    const fuc = { language: { code: "fuc", name: "Pulaar", varieties: [] } };
+    const none = { complete: false, missing: [], values: null };
+    // A bridge or a saved copy may carry a number or a malformed code: the form must not crash on it.
+    const odd = (code: unknown) => initialValues(fuc, { profile: none, first_language: { code: code as string, name: "Wolof" } }, "").native_language;
+    expect(odd(123)).toBe("fuc");
+    expect(odd("WOL")).toBe("fuc");
+    expect(odd("wo")).toBe("fuc");
+    expect(odd("wol ")).toBe("fuc");
+    expect(odd({})).toBe("fuc");
+    expect(odd("wol")).toBe("wol");
+    const stored = (nativeLanguage: unknown) => initialValues(fuc, { profile: { complete: true, missing: [], values: { nativeLanguage: nativeLanguage as string, variety: null, country: null, region: null, gender: null, ageBand: null, device: null } }, first_language: { code: "wol", name: "Wolof" } }, "");
+    expect(stored(123).native_language).toBe("wol");
+    expect(stored("bam").native_language).toBe("bam");
+    expect(() => validateProfile(stored(123), [])).not.toThrow();
+    expect(languageCodeOf("wol")).toBe("wol");
+    for (const v of [123, null, undefined, "", "WOL", "wolof", "w-l", ["wol"]]) expect(languageCodeOf(v), String(v)).toBeNull();
+  });
+  it("names a language from its code without ever throwing", () => {
+    expect(languageDisplayName("wol", "en")).toBe("Wolof");
+    expect(languageDisplayName("wol", "fr").toLowerCase()).toBe("wolof");
+    expect(languageDisplayName("zzz", "en")).toBe("ZZZ");
+    expect(languageDisplayName(123 as unknown as string, "en")).toBe("");
+    // An engine that refuses the locale tag: the fallback, never a throw.
+    expect(languageDisplayName("wol", "not a locale!")).toBe("WOL");
   });
   it("asks the sex again when the stored value is not Female or Male", () => {
     const card = { language: { code: "wol", name: "Wolof", varieties } };

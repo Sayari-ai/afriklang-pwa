@@ -9,6 +9,7 @@
 
 import type { TakeAnalysis, TakeProblem, TakeRules } from "@/lib/audio/analyze";
 import type { CampaignCard, ContributorView, Mission } from "./types";
+import { MAX_TEXT } from "./profile-form";
 
 /** Additive keys only since 2.0 (`quality.advice`, `quality.sent_anyway`); Sayari does not read the version. */
 export const AUDIO_SCHEMA_VERSION = "afriklang.audio/2.0";
@@ -166,6 +167,17 @@ export function parseDevice(ua: string): { os: string | null; browser: string | 
 }
 
 /**
+ * The test's variety as the bridge sent it, checked rather than trusted by type: a trimmed name of
+ * at most MAX_TEXT characters (the dashboard's column), else null. It is forwarded to Sayari as
+ * `dialect` and `speaker.variety`, so nothing but a string may pass.
+ */
+function testVariety(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s && s.length <= MAX_TEXT ? s : null;
+}
+
+/**
  * The variety that labels this campaign's audio. A qualification test carries its own (the
  * attempt's, the one the applicant gave for that language on the form): it wins, whatever the
  * profile says. Otherwise the speaker's declared variety, only when it belongs to the campaign's
@@ -173,7 +185,10 @@ export function parseDevice(ua: string): { os: string | null; browser: string | 
  * language, its variety is that language's and must not label this campaign's audio. Null otherwise.
  */
 export function varietyFor(card: Pick<CampaignCard, "language" | "kind" | "qualification">, contributor: Pick<ContributorView, "profile">): string | null {
-  if (card.kind === "qualification" && card.qualification?.variety) return card.qualification.variety;
+  if (card.kind === "qualification") {
+    const v = testVariety(card.qualification?.variety);
+    if (v) return v;
+  }
   const v = contributor.profile.values?.variety ?? null;
   const native = contributor.profile.values?.nativeLanguage ?? null;
   if (!v) return null;
