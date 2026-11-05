@@ -1,5 +1,5 @@
 import { createTranslator } from "next-intl";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { formatMeasure, rejectDetailOf, rejectDetailMessage } from "./reject-detail";
 import { REJECT_CHECKS, type RejectDetail } from "./types";
 import en from "../../messages/campaign/common.en.json";
@@ -45,13 +45,46 @@ describe("rejectDetailMessage", () => {
     expect(rejectDetailMessage({ check: "background_noise", measured: -38.26, limit: -45, unit: "dBFS", bound: "max" }, "en").values).toEqual({ measured: "-38.3", limit: "-45.0" });
   });
 
-  it("shows a ratio as a percentage: no decimal from 10 %, one below, a decimal comma and a space in French", () => {
-    expect(formatMeasure(0.014, "ratio", "en")).toBe("1.4%");
-    expect(formatMeasure(0.014, "ratio", "fr")).toMatch(/^1,4\s%$/);
-    expect(formatMeasure(0.25, "ratio", "en")).toBe("25%");
-    expect(formatMeasure(0.1, "ratio", "fr")).toMatch(/^10\s%$/);
-    expect(formatMeasure(0.0999, "ratio", "en")).toBe("10%");
+  it("formats the ten shared vectors of E09 exactly, in English and French (doc 10, Number formatting)", () => {
+    // The same table is tested in the dashboard (tests/qualification/reject-detail.test.ts).
+    const table: [number, RejectDetail["unit"], string, string][] = [
+      [3, "s", "3.0", "3,0"],
+      [2.46, "s", "2.5", "2,5"],
+      [7.3, "dB", "7.3", "7,3"],
+      [10, "dB", "10.0", "10,0"],
+      [-42.25, "dBFS", "-42.3", "-42,3"],
+      [0.014, "ratio", "1.4%", "1,4\u00a0%"],
+      [0.001, "ratio", "0.1%", "0,1\u00a0%"],
+      [0.01, "ratio", "1%", "1\u00a0%"],
+      [0.0999, "ratio", "10%", "10\u00a0%"],
+      [0.355, "ratio", "36%", "36\u00a0%"],
+    ];
+    for (const [n, unit, en, fr] of table) {
+      expect(formatMeasure(n, unit, "en"), `${n} ${unit} en`).toBe(en);
+      expect(formatMeasure(n, unit, "fr"), `${n} ${unit} fr`).toBe(fr);
+    }
     expect(rejectDetailMessage({ check: "clipping", measured: 0.014, limit: 0.005, unit: "ratio", bound: "max" }, "en").values).toEqual({ measured: "1.4%", limit: "0.5%" });
+  });
+
+  it("never groups digits, never shows an exponent or a negative zero, and never asks Intl", () => {
+    const spy = vi.spyOn(Intl, "NumberFormat");
+    try {
+      expect(formatMeasure(1234.5, "s", "en")).toBe("1234.5");
+      expect(formatMeasure(1234.5, "s", "fr")).toBe("1234,5");
+      expect(formatMeasure(12.345, "ratio", "fr")).toBe("1235\u00a0%");
+      expect(formatMeasure(-0, "s", "en")).toBe("0.0");
+      expect(formatMeasure(-0.04, "dBFS", "fr")).toBe("0,0");
+      expect(formatMeasure(-0.0004, "ratio", "en")).toBe("0%");
+      expect(formatMeasure(1e21, "s", "en")).toBe("1000000000000000000000.0");
+      // 1e23 has no exact double: only the shape is promised (digits, a no-break space, no exponent).
+      expect(formatMeasure(1e21, "ratio", "fr")).toMatch(/^\d{23}\u00a0%$/);
+      // The locale tag's region does not matter; anything else reads as English.
+      expect(formatMeasure(0.5, "ratio", "fr-SN")).toBe("50\u00a0%");
+      expect(formatMeasure(0.5, "ratio", "wo")).toBe("50%");
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("keeps the measured sentence of the checks that quote no number, and drops it when a needed number is missing", () => {
@@ -106,7 +139,7 @@ describe("the words of a refused take (E09 check copy)", () => {
       fix: "Installez-vous dans une pièce calme, éteignez ventilateur, télévision et musique, et tenez le téléphone à environ 20 cm de la bouche.",
     });
     expect(lines(SAMPLE.clipping, "en").measured).toBe("1.4% of the sound was saturated; the limit is 0.5%.");
-    expect(lines(SAMPLE.clipping, "fr").measured).toMatch(/^1,4\s% du son était saturé ; la limite est de 0,5\s%\.$/);
+    expect(lines(SAMPLE.clipping, "fr").measured).toBe("1,4\u00a0% du son était saturé ; la limite est de 0,5\u00a0%.");
     expect(lines(SAMPLE.long_silence, "en").measured).toBe("42% of the recording was silence between your first and last word; the limit is 30%.");
     expect(lines(SAMPLE.wrong_format, "fr").measured).toBe("L'enregistrement n'était pas au format attendu.");
     expect(lines(SAMPLE.processing_failed, "en")).toEqual({ title: "We could not process this recording", measured: "Our system could not read this recording. This is not your fault.", fix: "Please record it once more." });
