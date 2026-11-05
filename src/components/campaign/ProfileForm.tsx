@@ -73,15 +73,29 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     }
     return countryOptions((c) => names?.of(c) ?? c, locale);
   }, [locale]);
-  const choices = useMemo(() => varietyChoices(card), [card]);
+  // The variety is the native language's. On a card in another language the form has no list for
+  // it: free text, no chips, and no promise about what is new (profile-form.ts).
+  const sameLanguage = values.native_language === card.language.code;
+  const choices = useMemo(() => varietyChoices(card, values.native_language), [card, values.native_language]);
   const suggestions = suggestVarieties(values.variety, choices);
   const typedVariety = tidyVariety(values.variety);
   // While suggestions still match, the speaker is probably mid-word: say nothing about the value yet.
   const settled = suggestions.length === 0;
-  const canAdd = canAddVarieties(card);
+  const canAdd = canAddVarieties(card, values.native_language);
   const isNewVariety =
-    canAdd && settled && typedVariety !== "" && /\p{L}/u.test(typedVariety) && !VARIETY_SEPARATOR.test(typedVariety) && !matchVariety(typedVariety, choices);
+    sameLanguage && canAdd && settled && typedVariety !== "" && /\p{L}/u.test(typedVariety) && !VARIETY_SEPARATOR.test(typedVariety) && !matchVariety(typedVariety, choices);
   const outside = settled ? outsideTargets(typedVariety, card) : null;
+  // The language the variety belongs to, by name: the card's, the first language of the form, or the code.
+  const nativeName = useMemo(() => {
+    const code = values.native_language;
+    if (code === card.language.code) return card.language.name;
+    if (contributor.first_language?.code === code && contributor.first_language.name) return contributor.first_language.name;
+    try {
+      return new Intl.DisplayNames([locale], { type: "language" }).of(code) ?? code.toUpperCase();
+    } catch {
+      return code.toUpperCase();
+    }
+  }, [values.native_language, card.language, contributor.first_language, locale]);
 
   const set = (k: keyof ProfileInput) => (v: string) => {
     setValues((s) => ({ ...s, [k]: v }));
@@ -235,7 +249,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
 
       {field(
         "variety",
-        t("variety", { language: card.language.name }),
+        t("variety", { language: nativeName }),
         text("variety", "off"),
         t(canAdd ? "varietyHint" : "varietyHintPick"),
       )}
@@ -255,7 +269,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
       ) : null}
       {isNewVariety && !errors.variety ? (
         <p className="-mt-2 text-sm text-slate-600" aria-live="polite">
-          {t("varietyNew", { name: typedVariety, language: card.language.name })}
+          {t("varietyNew", { name: typedVariety, language: nativeName })}
         </p>
       ) : null}
       {outside ? (

@@ -53,15 +53,24 @@ const CONTROL = /[\u0000-\u001f\u007f]/;
 // The speaker types their variety. The form suggests the ones the dashboard knows; a name it
 // does not know is added by the dashboard on save (so nobody is stuck when an admin has not
 // listed their variety yet).
+//
+// The variety belongs to the speaker's NATIVE language (the dashboard adds a new name to that
+// language), and the card's lists belong to the card's language. They are the same list only when
+// the two languages are the same; on a test card in a second language the form has no list, so it
+// takes free text without chips.
 
 /** Several varieties typed at once ("Zezuru, Ndau / Manyika"): the profile holds one. */
 export const VARIETY_SEPARATOR = /[,;/|+&]/;
 
 /**
- * Whether the dashboard adds a variety it does not know. An older dashboard sends no
- * `known_varieties` and refuses unknown names, so the form must not promise to add one.
+ * Whether a name outside the suggestions may be sent. With the card's own language, that is
+ * whether the dashboard adds a variety it does not know: an older dashboard sends no
+ * `known_varieties` and refuses unknown names, so the form must not promise to add one. With
+ * another native language there is no list at all, so every name may be sent: the dashboard
+ * checks it against that language's own list.
  */
-export const canAddVarieties = (card: Pick<CampaignCard, "language">) => card.language.known_varieties !== undefined;
+export const canAddVarieties = (card: Pick<CampaignCard, "language">, nativeLanguage: string) =>
+  nativeLanguage !== card.language.code || card.language.known_varieties !== undefined;
 
 /** One space between words and none at the ends (the dashboard tidies the same way). */
 export const tidyVariety = (s: string) => s.trim().replace(/\s+/g, " ");
@@ -71,8 +80,13 @@ export function varietyKey(s: string): string {
   return s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[\s\-'’‘_.]+/g, " ").trim();
 }
 
-/** What the form suggests: the campaign's varieties first, then the language's others, no duplicates. */
-export function varietyChoices(card: Pick<CampaignCard, "language">): string[] {
+/**
+ * What the form suggests: the campaign's varieties first, then the language's others, no
+ * duplicates. Nothing when the speaker's native language is not the card's: those lists are
+ * another language's.
+ */
+export function varietyChoices(card: Pick<CampaignCard, "language">, nativeLanguage: string): string[] {
+  if (nativeLanguage !== card.language.code) return [];
   const seen = new Set<string>();
   const out: string[] = [];
   for (const name of [...card.language.varieties, ...(card.language.known_varieties ?? [])]) {
@@ -133,7 +147,7 @@ export function validateProfile(v: ProfileValues, choices: readonly string[], ca
     else if (CONTROL.test(s)) errors[k] = "control";
     else if (!HAS_WORD.test(s)) errors[k] = "noLetters";
   };
-  // Not asked: it is the campaign's language (see initialValues). The server checks it again.
+  // Not asked on the form (see initialValues). The server checks it again.
   need("native_language", () => true);
   const variety = tidyVariety(v.variety);
   if (!variety) errors.variety = "required";
@@ -160,7 +174,7 @@ export function validateProfile(v: ProfileValues, choices: readonly string[], ca
 /**
  * The profile fields a server 400 named in `fieldErrors`. Keys may be the body names
  * ("age_band") or the dashboard's camelCase ("ageBand"); others are ignored. The native language
- * has no field of its own on the form (it is the campaign's), so its error shows on the variety.
+ * has no field of its own on the form (it is not asked), so its error shows on the variety.
  */
 export function profileErrorsFromServer(fieldErrors: Record<string, string> | undefined): ProfileErrors {
   const out: ProfileErrors = {};
@@ -183,15 +197,18 @@ export function guessDevice(ua: string): string {
 }
 
 /**
- * Stored values win, except:
- * - the native language is always the campaign's: the varieties offered belong to it, and the
- *   dashboard checks the variety against the native language;
- * - a stored gender the form does not offer ("other", "undisclosed") is asked again.
+ * Stored values win, except a stored gender the form does not offer ("other", "undisclosed"),
+ * which is asked again.
+ *
+ * The native language is not asked: the stored one wins; then the language the applicant marked
+ * as first on the application form; then this card's language. A speaker tested in Wolof (native)
+ * and Pulaar keeps Wolof whichever test card they open first: the profile is one per speaker, and
+ * the dashboard files the variety under the native language.
  */
-export function initialValues(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile">, ua: string): ProfileValues {
+export function initialValues(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile" | "first_language">, ua: string): ProfileValues {
   const s = contributor.profile.values;
   return {
-    native_language: card.language.code,
+    native_language: s?.nativeLanguage || contributor.first_language?.code || card.language.code,
     variety: s?.variety ?? "",
     country: s?.country ?? "",
     region: s?.region ?? "",

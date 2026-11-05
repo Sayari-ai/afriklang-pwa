@@ -43,8 +43,8 @@ describe("variety", () => {
     expect(validateProfile({ ...ok, variety: "Manyika Karanga" }, varieties).errors.variety).toBeUndefined();
   });
   it("against a dashboard that cannot add varieties, only a listed one is sent", () => {
-    expect(canAddVarieties({ language: { code: "sna", name: "Shona", varieties: [] } })).toBe(false);
-    expect(canAddVarieties({ language: { code: "sna", name: "Shona", varieties: [], known_varieties: [] } })).toBe(true);
+    expect(canAddVarieties({ language: { code: "sna", name: "Shona", varieties: [] } }, "sna")).toBe(false);
+    expect(canAddVarieties({ language: { code: "sna", name: "Shona", varieties: [], known_varieties: [] } }, "sna")).toBe(true);
     expect(validateProfile({ ...ok, variety: "Zezuru" }, varieties, false).errors.variety).toBe("notListed");
     expect(validateProfile({ ...ok, variety: "baol baol" }, varieties, false).input?.variety).toBe("Baol-Baol");
   });
@@ -56,8 +56,22 @@ describe("variety", () => {
   });
   it("suggests the campaign's varieties first, then the language's others, once each", () => {
     const card = { language: { code: "wol", name: "Wolof", varieties: ["Saloum-Saloum"], known_varieties: ["Baol-Baol", "saloum saloum", "Lebou"] } };
-    expect(varietyChoices(card)).toEqual(["Saloum-Saloum", "Baol-Baol", "Lebou"]);
-    expect(varietyChoices({ language: { code: "wol", name: "Wolof", varieties } })).toEqual(varieties);
+    expect(varietyChoices(card, "wol")).toEqual(["Saloum-Saloum", "Baol-Baol", "Lebou"]);
+    expect(varietyChoices({ language: { code: "wol", name: "Wolof", varieties } }, "wol")).toEqual(varieties);
+  });
+  it("on a card in another language than the native one, offers no chips and refuses nothing as unlisted (A5)", () => {
+    const fuc = { language: { code: "fuc", name: "Pulaar", varieties: ["Fuuta Tooro"], known_varieties: ["Fuuta Tooro", "Fuuta Jalon"] } };
+    expect(varietyChoices(fuc, "wol")).toEqual([]);
+    expect(canAddVarieties(fuc, "wol")).toBe(true);
+    // Even against an older dashboard without `known_varieties`: there is no list to pick from.
+    expect(canAddVarieties({ language: { code: "fuc", name: "Pulaar", varieties: ["Fuuta Tooro"] } }, "wol")).toBe(true);
+    const choices = varietyChoices(fuc, "wol");
+    const r = validateProfile({ ...ok, variety: "Lebou" }, choices, canAddVarieties(fuc, "wol"));
+    expect(r.errors).toEqual({});
+    expect(r.input?.variety).toBe("Lebou");
+    // The same language: today's behaviour.
+    expect(varietyChoices(fuc, "fuc")).toEqual(["Fuuta Tooro", "Fuuta Jalon"]);
+    expect(canAddVarieties(fuc, "fuc")).toBe(true);
   });
   it("suggests names starting with the text first, hides the list on an exact match", () => {
     const choices = ["Dakar urban", "Baol-Baol", "Lebou", "Bao"];
@@ -107,14 +121,24 @@ describe("defaults", () => {
     expect(guessDevice("Mozilla/5.0 (iPhone; CPU iPhone OS 17)")).toBe("iPhone");
     expect(guessDevice("")).toBe("");
   });
-  it("prefers stored values, but the native language is always the campaign's", () => {
+  it("prefers stored values", () => {
     const card = { language: { code: "wol", name: "Wolof", varieties } };
     const none = initialValues(card, { profile: { complete: false, missing: [], values: null } }, "Android");
-    expect(none.native_language).toBe("wol");
     expect(none.device).toBe("Android");
-    const stored = initialValues(card, { profile: { complete: false, missing: [], values: { nativeLanguage: "fra", variety: null, country: "SN", region: null, gender: null, ageBand: null, device: "Tecno" } } }, "Android");
-    expect(stored.native_language).toBe("wol");
+    const stored = initialValues(card, { profile: { complete: false, missing: [], values: { nativeLanguage: "wol", variety: null, country: "SN", region: null, gender: null, ageBand: null, device: "Tecno" } } }, "Android");
     expect(stored.device).toBe("Tecno");
+  });
+  it("never overwrites the native language from a test card: stored, then the form's first language, then the card (A5)", () => {
+    const fuc = { language: { code: "fuc", name: "Pulaar", varieties: ["Fuuta Tooro"] } };
+    const values = (nativeLanguage: string | null) => ({ nativeLanguage, variety: null, country: null, region: null, gender: null, ageBand: null, device: null });
+    expect(initialValues(fuc, { profile: { complete: true, missing: [], values: values("wol") } }, "").native_language).toBe("wol");
+    expect(initialValues(fuc, { profile: { complete: true, missing: [], values: values("wol") }, first_language: { code: "bam", name: "Bambara" } }, "").native_language).toBe("wol");
+    expect(initialValues(fuc, { profile: { complete: false, missing: [], values: null }, first_language: { code: "wol", name: "Wolof" } }, "").native_language).toBe("wol");
+    expect(initialValues(fuc, { profile: { complete: false, missing: [], values: values(null) }, first_language: { code: "wol", name: "Wolof" } }, "").native_language).toBe("wol");
+    // No stored value and no first language (an older dashboard, or an applicant from before the form asked): the card's.
+    expect(initialValues(fuc, { profile: { complete: false, missing: [], values: null } }, "").native_language).toBe("fuc");
+    expect(initialValues(fuc, { profile: { complete: false, missing: [], values: null }, first_language: null }, "").native_language).toBe("fuc");
+    expect(initialValues(fuc, { profile: { complete: false, missing: [], values: null }, first_language: { code: null, name: "Unknown" } }, "").native_language).toBe("fuc");
   });
   it("asks the sex again when the stored value is not Female or Male", () => {
     const card = { language: { code: "wol", name: "Wolof", varieties } };
