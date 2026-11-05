@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Qualification test: create (README §4.1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "test_id",
+    "source",
+    "language"
+  ],
+  "properties": {
+    "test_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "source": {
+      "enum": [
+        "clips",
+        "reference",
+        "staff"
+      ]
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{3}$"
+    },
+    "translation_language": {
+      "enum": [
+        "en",
+        "fr"
+      ]
+    },
+    "mission_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "minItems": 10,
+      "maxItems": 10,
+      "uniqueItems": true
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "clips"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "mission_ids",
+          "translation_language",
+          "expires_at"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "reference"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "translation_language",
+          "expires_at"
+        ],
+        "not": {
+          "required": [
+            "mission_ids"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "staff"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "mission_ids"
+        ],
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "expires_at"
+              ]
+            },
+            {
+              "required": [
+                "translation_language"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

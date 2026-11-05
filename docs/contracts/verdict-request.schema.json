@@ -83,6 +83,9 @@
           "occurred_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "reject_detail": {
+            "$ref": "#/$defs/rejectDetail"
           }
         },
         "allOf": [
@@ -110,8 +113,81 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "not": {
+                    "const": "rejected"
+                  }
+                }
+              }
+            },
+            "then": {
+              "not": {
+                "required": [
+                  "reject_detail"
+                ]
+              }
+            }
           }
         ]
+      }
+    }
+  },
+  "$defs": {
+    "rejectDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check",
+        "measured",
+        "limit",
+        "unit",
+        "bound"
+      ],
+      "properties": {
+        "check": {
+          "enum": [
+            "too_short",
+            "too_long",
+            "low_snr",
+            "background_noise",
+            "clipping",
+            "long_silence",
+            "wrong_format",
+            "processing_failed"
+          ]
+        },
+        "measured": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "limit": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unit": {
+          "enum": [
+            "s",
+            "dB",
+            "dBFS",
+            "ratio",
+            null
+          ]
+        },
+        "bound": {
+          "enum": [
+            "min",
+            "max",
+            null
+          ]
+        }
       }
     }
   }

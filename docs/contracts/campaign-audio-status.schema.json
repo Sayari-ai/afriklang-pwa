@@ -68,6 +68,16 @@
               "number",
               "null"
             ]
+          },
+          "reject_detail": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/rejectDetail"
+              }
+            ]
           }
         }
       }
@@ -76,6 +86,61 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "rejectDetail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check",
+        "measured",
+        "limit",
+        "unit",
+        "bound"
+      ],
+      "properties": {
+        "check": {
+          "enum": [
+            "too_short",
+            "too_long",
+            "low_snr",
+            "background_noise",
+            "clipping",
+            "long_silence",
+            "wrong_format",
+            "processing_failed"
+          ]
+        },
+        "measured": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "limit": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unit": {
+          "enum": [
+            "s",
+            "dB",
+            "dBFS",
+            "ratio",
+            null
+          ]
+        },
+        "bound": {
+          "enum": [
+            "min",
+            "max",
+            null
+          ]
+        }
       }
     }
   }

@@ -94,7 +94,20 @@
     "duration_max_s": {
       "type": "number",
       "exclusiveMinimum": 0,
-      "maximum": 3600
+      "maximum": 3600,
+      "description": "Longest whole-file length (s) accepted, padding included; Sayari refuses above this plus 0.5 s (422 too_long)."
+    },
+    "duration_min_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 3600,
+      "description": "Optional. Shortest whole-file length (s) accepted, padding included; Sayari refuses below this minus 0.5 s (422 too_short)."
+    },
+    "purpose": {
+      "enum": [
+        "qualification"
+      ],
+      "description": "Absent for collection campaigns. \"qualification\": a qualification-test take (README §4): held by Sayari until the dashboard hands it to a test, never in the annotators' queue, never delivered."
     }
   }
 }

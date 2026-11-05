@@ -57,6 +57,12 @@
       "timestamp": "1760349600",
       "raw_body": "{\"events\":[{\"event_id\":\"5d0c8f3e-2b1a-4c9d-8e7f-6a5b4c3d2e1f\",\"sayari_recording_id\":\"48211\",\"mission_id\":\"a8c0e6d2-5b41-4f7e-9d13-2c6f0b7a9e11\",\"source_sha256\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\"status\":\"accepted\",\"reason\":null,\"original_duration_s\":8.21,\"occurred_at\":\"2026-10-13T10:00:00Z\"}]}",
       "header": "v1=19344b1932c56af1b2cbd20d4a68e46956afe27a06fa6407badce0780fb082cc"
+    },
+    {
+      "key": "test-verdict-secret-fedcba9876543210",
+      "timestamp": "1762336800",
+      "raw_body": "{\"events\":[{\"event_id\":\"7a1e4b2c-9d3f-4e8a-b6c5-2f1d0e9a8b7c\",\"sayari_recording_id\":\"48212\",\"mission_id\":\"a8c0e6d2-5b41-4f7e-9d13-2c6f0b7a9e11\",\"source_sha256\":\"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\"status\":\"rejected\",\"reason\":\"level\",\"original_duration_s\":7.9,\"occurred_at\":\"2026-11-05T10:00:00Z\",\"reject_detail\":{\"check\":\"low_snr\",\"measured\":7.3,\"limit\":10,\"unit\":\"dB\",\"bound\":\"min\"}}]}",
+      "header": "v1=53c20f3b2d682685894d1d8d000e17432dadae18c31b4eb60d6d11b738c0b3e7"
     }
   ]
 }
