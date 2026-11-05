@@ -12,7 +12,7 @@ import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/
 import { truncate } from "@/lib/campaign/mission-list";
 import { isQualification, type CampaignCard, type Mission } from "@/lib/campaign/types";
 import { totalPaidTime } from "@/lib/campaign/pool";
-import { rejectionReasonCode, totals } from "@/lib/campaign/view";
+import { isTestRecording, rejectionReasonCode, totals } from "@/lib/campaign/view";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { LanguageBadge } from "./CampaignCardView";
 import { buttonPrimary, useFailureText, useRejectDetailText, useRejectionText } from "./CampaignHubParts";
@@ -130,7 +130,7 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
   // result, not a request: "Not accepted" with a short reason (the take was said in the speaker's
   // language, not read).
   const test = isQualification(card);
-  const testRecording = test && (res.data.campaign.qualification ?? card.qualification)?.stage === "recording";
+  const testRecording = test && isTestRecording(res.data.campaign.qualification ?? card.qualification);
   const testReason = (r: string | null) => {
     const code = rejectionReasonCode(r);
     return code ? t(`reasons.${code}`) : r;

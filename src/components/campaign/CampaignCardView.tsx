@@ -11,7 +11,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { isPool, isRefusal, paidTime } from "@/lib/campaign/pool";
 import { usePoolMemo } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard } from "@/lib/campaign/types";
-import { daysLeft, openCountOnPhone, setupStep, testRedoCount } from "@/lib/campaign/view";
+import { daysLeft, isTestRecording, openCountOnPhone, setupStep, testRedoCount } from "@/lib/campaign/view";
 import { useTimeText } from "./PoolParts";
 
 export function ProgressRing({ value, total, size = 64 }: { value: number; total: number; size?: number }) {
@@ -60,7 +60,7 @@ function QualificationCardView({ card, waitingOk }: { card: CampaignCard; waitin
   // Clips the automatic checks sent back (the "to record again" email names them): the same chip as a campaign card.
   const redo = testRedoCount(card);
   const hub = `/campaign/${card.campaign_id}`;
-  const recording = !card.qualification || card.qualification.stage === "recording";
+  const recording = isTestRecording(card.qualification);
   const cta =
     recording && card.next_step === "ready" && open > 0
       ? { href: `${hub}/studio`, label: done > 0 ? t("continue", { n: open }) : t("start"), go: true }

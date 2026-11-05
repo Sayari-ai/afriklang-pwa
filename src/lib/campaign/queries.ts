@@ -62,7 +62,8 @@ export function markSubmitted(userId: string, campaignId: string, missionId: str
     missions: d.missions.map((m) => {
       if (m.mission_id !== missionId) return m;
       from = m.status;
-      return { ...m, status: "submitted", rejection_reason: null, recording: { status: "uploaded", rejection_reason: null } };
+      // A new take replaces the refused one: its reason and its detail go with it.
+      return { ...m, status: "submitted", rejection_reason: null, rejection_detail: null, recording: { status: "uploaded", rejection_reason: null, rejection_detail: null } };
     }),
     campaign: d.campaign && from ? { ...d.campaign, progress: shiftProgress(d.campaign.progress, from) } : d.campaign,
   }));

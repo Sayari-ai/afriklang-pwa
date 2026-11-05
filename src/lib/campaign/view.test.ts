@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, daysLeft, hasMissions, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
+import { campaignMicDistance, daysLeft, hasMissions, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -67,6 +67,15 @@ describe("speaker view facts", () => {
     expect(testRedoCount({ progress, qualification: null })).toBe(2);
     expect(testRedoCount({ progress: { ...progress, rejected: 0 }, qualification: q("recording") })).toBe(0);
     for (const stage of ["in_review", "decided", "cancelled"] as const) expect(testRedoCount({ progress, qualification: q(stage) }), stage).toBe(0);
+  });
+  it("reads a test without a view as still recording, the one rule of the card, its chip and the history", () => {
+    const q = (stage: "recording" | "in_review" | "decided" | "cancelled") => ({ attempt_no: 1, stage, decision: null, accepted: null, total: 10, retry_after: null });
+    expect(isTestRecording(null)).toBe(true);
+    expect(isTestRecording(undefined)).toBe(true);
+    expect(isTestRecording(q("recording"))).toBe(true);
+    for (const stage of ["in_review", "decided", "cancelled"] as const) expect(isTestRecording(q(stage)), stage).toBe(false);
+    const progress = { total: 10, todo: 7, submitted: 1, accepted: 0, rejected: 2 };
+    for (const qualification of [null, q("recording"), q("decided")]) expect(testRedoCount({ progress, qualification })).toBe(isTestRecording(qualification) ? 2 : 0);
   });
 });
 

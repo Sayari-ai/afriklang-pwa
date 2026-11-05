@@ -1,7 +1,7 @@
 /** Small pure facts the speaker screens show (kept out of the components so they can be tested). */
 
 import type { OutboxState } from "./outbox-logic";
-import { REJECTION_REASONS, type CampaignCard, type Mission, type NextStep, type RejectionReason, type SpeechType } from "./types";
+import { REJECTION_REASONS, type CampaignCard, type Mission, type NextStep, type QualificationView, type RejectionReason, type SpeechType } from "./types";
 
 /**
  * A mission's `rejection_reason` as one of the dashboard's reason codes, or null when it is not one
@@ -32,7 +32,14 @@ export const openCount = (c: Pick<CampaignCard, "progress">) => c.progress.todo 
  * test is still recording (as the card's button treats a test without a view). Once it is sent, a
  * rejection is the reviewer's result, nothing to redo: 0.
  */
-export const testRedoCount = (c: Pick<CampaignCard, "progress" | "qualification">) => (!c.qualification || c.qualification.stage === "recording" ? c.progress.rejected : 0);
+export const testRedoCount = (c: Pick<CampaignCard, "progress" | "qualification">) => (isTestRecording(c.qualification) ? c.progress.rejected : 0);
+
+/**
+ * Whether a test is still at its recording stage. A card without a qualification view (an older
+ * dashboard, a saved copy) counts as recording: the card's button, its "to redo" chip and the
+ * history's status all read it through this one rule, so they never disagree.
+ */
+export const isTestRecording = (q: QualificationView | null | undefined): boolean => !q || q.stage === "recording";
 
 /**
  * Left to record, the one count every screen shows (MAN-004): to do + to redo, minus the missions
