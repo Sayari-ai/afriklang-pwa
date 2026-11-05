@@ -10,6 +10,7 @@ import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
+import { parseFocus } from "@/lib/campaign/studio-flow";
 
 const dark = "flex h-dvh flex-col items-center justify-center gap-4 bg-[#001b36] px-6 text-center text-white";
 const pill = "inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-6 font-bold text-primary";
@@ -28,8 +29,13 @@ export default function StudioPage() {
   useEffect(() => {
     if (!box.loaded) void outbox.refresh();
   }, [box.loaded]);
-  // Read once: which mission the studio opens on (the address is then kept up to date by the studio).
-  const [startId] = useState(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("m")));
+  // Read once: which mission the studio opens on, or, with several ids (`?m=a,b`, the "to record
+  // again" email's link), the only missions of this session (the address is then kept up to date by the studio).
+  const [startId] = useState<string | string[] | null>(() => {
+    if (typeof window === "undefined") return null;
+    const ids = parseFocus(new URLSearchParams(window.location.search).get("m"));
+    return ids.length === 0 ? null : ids.length === 1 ? ids[0] : ids;
+  });
   // Online, the studio opens on a fresh mission list (its order is fixed when it opens); offline, on the
   // saved copy. Once open, it stays open through later refreshes.
   const [opened, setOpened] = useState(false);

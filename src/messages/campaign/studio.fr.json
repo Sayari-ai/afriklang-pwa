@@ -106,7 +106,8 @@
     "back": "Retour à ma campagne",
     "batchTitle": "Lot enregistré !",
     "onPhone": "{n, plural, one {# enregistrement est encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à son envoi.} other {# enregistrements sont encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à leur envoi.}}",
-    "bodyTest": "Vous avez enregistré toutes les consignes de votre test. Merci ! L'équipe l'examine et vous recevrez le résultat par e-mail."
+    "bodyTest": "Vous avez enregistré toutes les consignes de votre test. Merci ! L'équipe l'examine et vous recevrez le résultat par e-mail.",
+    "bodyFocus": "Les enregistrements demandés par ce lien sont faits. Merci ! S'il reste autre chose à enregistrer, c'est sur la page de la campagne."
   },
   "guard": {
     "notReady": {
@@ -144,5 +145,6 @@
     "goal": "Objectif de la séance atteint",
     "done": "Tout est enregistré"
   },
-  "skipLast": "C'est la dernière qui reste : enregistrez-la, ou revenez plus tard."
+  "skipLast": "C'est la dernière qui reste : enregistrez-la, ou revenez plus tard.",
+  "focusDone": "Ces enregistrements sont déjà faits. Voici ce qu'il reste."
 }

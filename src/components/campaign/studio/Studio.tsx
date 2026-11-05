@@ -28,7 +28,7 @@ import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import { buildMetadata, buildSayariCampaignFields, deviceLabel, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
-import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
+import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
 import { isRefusal } from "@/lib/campaign/pool";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
@@ -59,7 +59,8 @@ type Props = {
   userId: string;
   speakerId: string;
   contributor: ContributorView;
-  startId: string | null;
+  /** One id: open on it. Several: a focus, the session is those recordings alone (sessionQueue). */
+  startId: string | string[] | null;
   /** Pool campaigns: the batch's draws (the studio asks for more when it is recorded). Null when planned. */
   pool?: PoolState | null;
 };
@@ -84,6 +85,11 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // The session's order is fixed when the studio opens (later answers only remove missions from it).
   const [queue, setQueue] = useState<string[]>(() => sessionQueue(missions, onPhone, startId));
+  // A link naming several recordings (`?m=a,b`) restricts the session to them. When none of them
+  // is left to record, the session is the usual full one, and the speaker is told (focusDone).
+  const focus = Array.isArray(startId) ? startId : null;
+  const [focusActive] = useState(() => focus != null && queue.length > 0 && queue.every((id) => focus.includes(id)));
+  const focusDone = focus != null && !focusActive;
   const [currentId, setCurrentId] = useState<string | null>(() => queue[0] ?? null);
   const [phase, setPhase] = useState<Phase>(() => (queue.length ? "idle" : "done"));
   const [count, setCount] = useState(COUNTDOWN_S);
@@ -105,16 +111,17 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // Missions that became recordable during the session (sent back by the team, or drawn for a pool
   // campaign) join the end of the queue. A pool session that had run out picks up the new batch.
+  // A focused session takes only missions of its focus: never the whole campaign.
   const isPoolSession = pool != null;
   useEffect(() => {
-    const fresh = sessionQueue(missions, onPhoneRef.current, null).filter((id) => !queue.includes(id));
+    const fresh = (focusActive && focus ? focusQueue(missions, onPhoneRef.current, focus) : sessionQueue(missions, onPhoneRef.current, null)).filter((id) => !queue.includes(id));
     if (!fresh.length) return;
     setQueue((q) => [...q, ...fresh.filter((id) => !q.includes(id))]);
     if (isPoolSession && phase === "done") {
       setCurrentId(fresh[0]);
       setPhase("idle");
     }
-  }, [missions, queue, isPoolSession, phase]);
+  }, [missions, queue, isPoolSession, phase, focusActive, focus]);
 
   // The mission on screen keeps its last known copy: in a pool campaign it can leave the list while
   // it is being recorded (its lease ended, or a refresh came in), and the take must still go through.
@@ -219,12 +226,14 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     };
   }, [userId, campaignId]);
 
-  // The address shows the current mission, so a reload comes back to it.
+  // The address shows the current mission, so a reload comes back to it. A focused session keeps
+  // its other ids after it, so a reload keeps the restriction (ids are UUIDs: nothing to encode,
+  // and the link's commas stay commas, as the email writes them).
   useEffect(() => {
     if (!currentId) return;
-    const url = `/campaign/${campaignId}/studio?m=${encodeURIComponent(currentId)}`;
+    const url = `/campaign/${campaignId}/studio?m=${focusActive ? [currentId, ...queue.filter((id) => id !== currentId)].join(",") : encodeURIComponent(currentId)}`;
     if (window.location.pathname + window.location.search !== url) window.history.replaceState(window.history.state, "", url);
-  }, [campaignId, currentId]);
+  }, [campaignId, currentId, focusActive, queue]);
 
   // An unsent take or a running recording asks before the tab closes.
   const unsaved = take !== null || phase === "lead" || phase === "speaking" || phase === "tail";
@@ -679,7 +688,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         {waitingHere > 0 ? (
           <p role="status" className="rounded-2xl bg-amber-400/15 px-4 py-3 text-base font-semibold text-amber-50 ring-1 ring-amber-300/40">{t("done.onPhone", { n: waitingHere })}</p>
         ) : (
-          <p className="text-base text-white/85">{t(card.kind === "qualification" ? "done.bodyTest" : "done.body")}</p>
+          // A focused session recorded what its link asked for, not "every mission": say so.
+          <p className="text-base text-white/85">{t(focusActive ? "done.bodyFocus" : card.kind === "qualification" ? "done.bodyTest" : "done.body")}</p>
         )}
       </div>,
       <Link href={hubHref} className="grid min-h-14 place-items-center rounded-2xl bg-white text-lg font-bold text-primary">
@@ -702,6 +712,11 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         <span>{t("missionOf", { n: Math.min(position, missions.length), total: missions.length })}</span>
         <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.sayIn", { language: card.language.name }) : t(`type.${mission.type}`)}</span>
       </div>
+      {focusDone ? (
+        <p role="status" className="rounded-2xl bg-white/10 px-4 py-2 text-sm text-white/90">
+          {t("focusDone")}
+        </p>
+      ) : null}
       <PromptCard mission={mission} lang={card.language.code} size={size} onSize={changeSize} sayIn={card.kind === "qualification" ? { language: card.language.name, uiLocale: locale } : undefined} />
       {micError ? (
         <p role="alert" className="rounded-2xl bg-red-500/20 px-4 py-3 text-sm font-medium text-red-50 ring-1 ring-red-300/40">

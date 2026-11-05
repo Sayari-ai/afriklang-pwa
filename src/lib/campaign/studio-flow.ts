@@ -16,11 +16,48 @@ export function canRecordNow(m: Mission, onPhone: ReadonlyMap<string, OutboxStat
   return m.type !== "conversational" || m.partner_ready;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** A studio link names at most this many recordings (`?m=a,b,…`). */
+export const MAX_FOCUS = 10;
+
+/**
+ * The mission ids a studio link names (`?m=a,b`): well-formed ids only, once each, at most
+ * MAX_FOCUS. One id is where the session starts; several are a focus (sessionQueue). The "to
+ * record again" email builds such links with exactly the refused clips.
+ */
+export function parseFocus(q: string | null): string[] {
+  const out: string[] = [];
+  for (const raw of (q ?? "").split(",")) {
+    const id = raw.trim();
+    if (!UUID_RE.test(id) || out.includes(id)) continue;
+    out.push(id);
+    if (out.length >= MAX_FOCUS) break;
+  }
+  return out;
+}
+
+/** The missions of `focus` that can be recorded now, in the focus order. An id that is not a mission of the list is ignored. */
+export function focusQueue(missions: readonly Mission[], onPhone: ReadonlyMap<string, OutboxState>, focus: readonly string[]): string[] {
+  const byId = new Map(missions.map((m) => [m.mission_id, m]));
+  return focus.filter((id) => {
+    const m = byId.get(id);
+    return m != null && canRecordNow(m, onPhone);
+  });
+}
+
 /**
  * The session's order: the missions to redo first (they were already attempted), then the rest
- * by position. `startId`, when recordable, comes first.
+ * by position. `start`: one id, when recordable, comes first; several ids are a focus, and the
+ * session is those alone, in that order (focusQueue). A focus with nothing left to record (all
+ * recorded again already, or waiting on the phone) gives the full order instead, so the link
+ * never opens on an empty studio: the studio says so (focusDone).
  */
-export function sessionQueue(missions: readonly Mission[], onPhone: ReadonlyMap<string, OutboxState>, startId: string | null): string[] {
+export function sessionQueue(missions: readonly Mission[], onPhone: ReadonlyMap<string, OutboxState>, start: string | readonly string[] | null): string[] {
+  if (Array.isArray(start)) {
+    const focused = focusQueue(missions, onPhone, start as readonly string[]);
+    return focused.length ? focused : sessionQueue(missions, onPhone, null);
+  }
+  const startId = typeof start === "string" ? start : null;
   const open = missions.filter((m) => canRecordNow(m, onPhone));
   const redo = open.filter((m) => m.status === "rejected").sort((a, b) => a.position - b.position);
   const todo = open.filter((m) => m.status === "todo").sort((a, b) => a.position - b.position);

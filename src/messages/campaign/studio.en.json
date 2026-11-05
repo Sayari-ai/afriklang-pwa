@@ -106,7 +106,8 @@
     "back": "Back to my campaign",
     "batchTitle": "Batch recorded!",
     "onPhone": "{n, plural, one {# recording is still on this phone. Keep the app open and connected until it is sent.} other {# recordings are still on this phone. Keep the app open and connected until they are sent.}}",
-    "bodyTest": "You have recorded every prompt of your test. Thank you! The team reviews it and you will get the result by email."
+    "bodyTest": "You have recorded every prompt of your test. Thank you! The team reviews it and you will get the result by email.",
+    "bodyFocus": "The recordings this link asked for are done. Thank you! Anything else left to record is on the campaign page."
   },
   "guard": {
     "notReady": {
@@ -144,5 +145,6 @@
     "goal": "Session goal reached",
     "done": "Everything is recorded"
   },
-  "skipLast": "This is the last one left: record it, or come back later."
+  "skipLast": "This is the last one left: record it, or come back later.",
+  "focusDone": "These recordings are already done. Here is what is left."
 }
