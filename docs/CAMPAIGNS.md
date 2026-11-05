@@ -240,10 +240,20 @@ NEXT_PUBLIC_CAMPAIGN_MOCK=1 NEXT_PUBLIC_SUPABASE_URL=https://mock.supabase.co NE
 ```
 
 Opens signed in as a fake speaker with two Wolof campaigns (setup not done yet): a planned one of 12
-missions and a pool one (batches of 6, draw again under 3, 72 h leases). Audio uploads are accepted
-locally. In the browser console:
+missions and a pool one (batches of 6, draw again under 3, 72 h leases); and three qualification
+tests of 10 prompts, Wolof (the speaker's first language), Pulaar and Bambara, each with its own
+variety, as one application in several languages produces. Audio uploads are accepted locally. A
+submit clearly shorter than the prompt's minimum is refused (422 `recording_rejected`) with what was
+measured, as the dashboard does. In the browser console:
 
 - `__afkMock.review()` plays the reviewer (first submitted take sent back, the others accepted)
+- `__afkMock.qcReject(missionId, "low_snr")` plays the automatic checks: that mission's take comes
+  back to record again, with the reason and what was measured (`rejection_detail`); any check of
+  `REJECT_CHECKS` (`too_short`, `too_long`, `low_snr`, `background_noise`, `clipping`, `long_silence`,
+  `wrong_format`, `processing_failed`). The mission ids are in the `missions` answer (Network tab) or
+  in the studio's address bar (`?m=`)
+- `__afkMock.qualify("eligible")` decides a test once it is in review (`"retry"`: a new attempt,
+  `"not_eligible"`); a second argument names another test (`"fuc"`, `"bam"`)
 - `__afkMock.poolStatus("cell_full")` refuses the next draws with that status (`"ok"` lifts it; pass
   `true` as a second argument to list another campaign in `elsewhere`)
 - `__afkMock.leaseSoon()` / `__afkMock.expire()` end the pool batch's leases in 5 hours / now

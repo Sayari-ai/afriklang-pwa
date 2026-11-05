@@ -7,7 +7,9 @@
  *
  * It signs in a fake speaker, answers the campaign bridge from state kept in localStorage
  * (reset with `window.__afkMock.reset()`), and accepts audio uploads. Two campaigns: a planned one
- * (every mission assigned up front) and a pool one (the speaker draws leased batches).
+ * (every mission assigned up front) and a pool one (the speaker draws leased batches); and three
+ * qualification tests, Wolof (the speaker's first language), Pulaar and Bambara, each with its
+ * own variety, as one application in several languages produces (A7).
  *
  * In the browser console:
  *   __afkMock.review()                 the reviewer: rejects the first submitted take, accepts the others
@@ -18,19 +20,33 @@
  *   __afkMock.tickets("old_dashboard")  upload tickets: "ok" (default), "old_dashboard" (404 without a
  *                                      code, as a dashboard without the route), or a refusal code
  *                                      such as "campaign_closed" or "campaign_paused"
- *   __afkMock.qualify("eligible")      decides the qualification test once it is in review
- *                                      ("eligible", "retry": a new attempt, "not_eligible")
+ *   __afkMock.qualify("eligible")      decides the Wolof qualification test once it is in review
+ *                                      ("eligible", "retry": a new attempt, "not_eligible"); a second
+ *                                      argument names another test ("fuc", "bam")
+ *   __afkMock.qcReject(missionId, "low_snr")  the automatic checks refused that mission's take: it comes
+ *                                      back to record again with what was measured (any REJECT_CHECKS value)
  *
  * The answers mirror afriklang-landing-page/docs/CAMPAIGN_BRIDGE_CONTRACT.md: keep them in step.
  */
 
-import type { CampaignCard, Mission, NextStep, PoolStatus, QualificationView } from "./types";
+import { REJECT_CHECKS, type CampaignCard, type ContributorView, type Mission, type NextStep, type PoolStatus, type QualificationView, type RejectCheck, type RejectDetail, type RejectionReason } from "./types";
 
-const KEY = "afriklang.mock.v2";
+const KEY = "afriklang.mock.v3";
 const USER = { id: "00000000-0000-4000-8000-00000000a11c", email: "awa.diop@example.com" };
 const PLANNED_ID = "00000000-0000-4000-8000-0000000000c1";
 const POOL_ID = "00000000-0000-4000-8000-0000000000c2";
 const QUAL_ID = "00000000-0000-4000-8000-0000000000c3";
+export const QUAL_FUC_ID = "00000000-0000-4000-8000-0000000000c4";
+export const QUAL_BAM_ID = "00000000-0000-4000-8000-0000000000c5";
+
+/** The three qualification tests: one per language the applicant chose, each with the variety given for it (A5). */
+type QualLang = "wol" | "fuc" | "bam";
+const QUAL_LANGS: Record<QualLang, { id: string; assignment: string; name: string; code: string; variety: string; varieties: string[]; idPrefix: string }> = {
+  wol: { id: QUAL_ID, assignment: "00000000-0000-4000-8000-0000000000a3", name: "Wolof", code: "WOL_GEN_QUALIF_01", variety: "Dakar urban", varieties: [], idPrefix: "e" },
+  fuc: { id: QUAL_FUC_ID, assignment: "00000000-0000-4000-8000-0000000000a4", name: "Pulaar", code: "FUC_GEN_QUALIF_01", variety: "Fuuta Tooro", varieties: ["Fuuta Tooro", "Fuuta Jalon"], idPrefix: "f" },
+  bam: { id: QUAL_BAM_ID, assignment: "00000000-0000-4000-8000-0000000000a5", name: "Bambara", code: "BAM_GEN_QUALIF_01", variety: "Bamako", varieties: ["Bamako", "Ségou"], idPrefix: "b" },
+};
+const QUAL_LANG_CODES = Object.keys(QUAL_LANGS) as QualLang[];
 /** Pool settings: a batch of 6, draw again under 3, 72 h leases. */
 const BATCH = 6;
 const REFILL_BELOW = 3;
@@ -45,15 +61,18 @@ type State = {
   account: boolean;
   speakerId: string | null;
   variety: string | null;
+  /** The native language the profile was saved with (the app never overwrites it from a test card, A5). */
+  nativeLanguage?: string | null;
   planned: { consent: boolean; missions: Mission[] };
   pool: { consent: boolean; missions: PoolMission[]; nextPrompt: number; forced: Exclude<PoolStatus, "ok"> | null; elsewhere: boolean };
   /** Seconds of each submitted take (for the paid time), by mission id. */
   seconds: Record<string, number>;
   /** How `upload_ticket` answers: "ok", "old_dashboard", or a refusal code. */
   tickets?: string;
-  /** The qualification test (absent from states saved before it existed). */
-  qual?: { consent: boolean; attempt: number; stage: QualificationView["stage"]; decision: QualificationView["decision"]; missions: Mission[] };
+  /** The qualification tests, one per language (absent from states saved before they existed). */
+  quals?: Record<QualLang, QualState>;
 };
+type QualState = { consent: boolean; attempt: number; stage: QualificationView["stage"]; decision: QualificationView["decision"]; missions: Mission[] };
 
 /** A qualification draw: one sentence per category and 5 topics, shown in the speaker's working language. */
 const QUAL_SCRIPTS: [Mission["type"], string, string][] = [
@@ -69,15 +88,17 @@ const QUAL_SCRIPTS: [Mission["type"], string, string][] = [
   ["spontaneous", "topic", "Talk about a celebration you enjoy."],
 ];
 
-function qualMissions(attempt: number): Mission[] {
+function qualMissions(lang: QualLang, attempt: number): Mission[] {
+  const { code, idPrefix } = QUAL_LANGS[lang];
   return QUAL_SCRIPTS.map(([type, category, text], i) => ({
-    mission_id: uuid(attempt * 100 + i + 1, "e"),
-    code: `WOL_GEN_QUALIF_01_M${String((attempt - 1) * 10 + i + 1).padStart(4, "0")}`,
+    mission_id: uuid(attempt * 100 + i + 1, idPrefix),
+    code: `${code}_M${String((attempt - 1) * 10 + i + 1).padStart(4, "0")}`,
     type,
     position: i + 1,
     status: "todo",
     rejection_reason: null,
-    prompt: { id: `WOL_GEN_QUALIF_01_PQ${attempt}${i}`, text_or_topic: attempt > 1 ? `${text} (2)` : text, category },
+    rejection_detail: null,
+    prompt: { id: `${code}_PQ${attempt}${i}`, text_or_topic: attempt > 1 ? `${text} (2)` : text, category },
     duration_s: type === "read" ? { min: 3, max: 15 } : { min: 15, max: 30 },
     partner_speaker_id: null,
     partner_ready: false,
@@ -85,7 +106,21 @@ function qualMissions(attempt: number): Mission[] {
     lease_until: null,
   }));
 }
-const initialQual = (): NonNullable<State["qual"]> => ({ consent: false, attempt: 1, stage: "recording", decision: null, missions: qualMissions(1) });
+const initialQual = (lang: QualLang): QualState => ({ consent: false, attempt: 1, stage: "recording", decision: null, missions: qualMissions(lang, 1) });
+const initialQuals = (): Record<QualLang, QualState> => ({ wol: initialQual("wol"), fuc: initialQual("fuc"), bam: initialQual("bam") });
+/** The test a campaign id names, or null. */
+const qualOf = (s: State, campaignId: unknown): { lang: QualLang; q: QualState } | null => {
+  const lang = QUAL_LANG_CODES.find((l) => QUAL_LANGS[l].id === campaignId);
+  return lang ? { lang, q: s.quals![lang] } : null;
+};
+/** The test holding a mission, or null. */
+const qualWithMission = (s: State, missionId: unknown): { lang: QualLang; q: QualState; m: Mission } | null => {
+  for (const lang of QUAL_LANG_CODES) {
+    const m = s.quals![lang].missions.find((x) => x.mission_id === missionId);
+    if (m) return { lang, q: s.quals![lang], m };
+  }
+  return null;
+};
 
 const PROMPTS: [Mission["type"], string][] = [
   ["read", "Dama bëgg yónnee xaalis ci sama doom bu nekk Dakar."],
@@ -167,7 +202,7 @@ const load = (): State => {
   } catch {
     s = initial();
   }
-  s.qual ??= initialQual();
+  s.quals ??= initialQuals();
   return s;
 };
 const save = (s: State) => localStorage.setItem(KEY, JSON.stringify(s));
@@ -267,16 +302,19 @@ function poolCard(s: State): CampaignCard {
   };
 }
 
-function qualCard(s: State): CampaignCard {
-  const q = s.qual!;
+function qualCard(s: State, lang: QualLang): CampaignCard {
+  const q = s.quals![lang];
+  const L = QUAL_LANGS[lang];
   const accepted = q.missions.filter((m) => m.status === "accepted").length;
+  // The Wolof lists grow with what the speaker types (the profile's language); the others are fixed.
+  const varieties = lang === "wol" ? knownVarieties(s) : L.varieties;
   return {
-    assignment_id: "00000000-0000-4000-8000-0000000000a3",
-    campaign_id: QUAL_ID,
-    code: "WOL_GEN_QUALIF_01",
-    title: "Wolof qualification test",
+    assignment_id: L.assignment,
+    campaign_id: L.id,
+    code: L.code,
+    title: `${L.name} qualification test`,
     status: "launched",
-    language: { code: "wol", name: "Wolof", varieties: knownVarieties(s), known_varieties: knownVarieties(s) },
+    language: { code: lang, name: L.name, varieties, known_varieties: varieties },
     topic: { domain: "General conversation", sub_domain: null },
     deadline: null,
     dispatch: "planned",
@@ -295,17 +333,40 @@ function qualCard(s: State): CampaignCard {
     },
     partner: null,
     kind: "qualification",
-    qualification: { attempt_no: q.attempt, stage: q.stage, decision: q.decision, accepted: q.stage === "decided" ? accepted : null, total: 10, retry_after: q.decision === "not_eligible" ? new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10) : null },
+    qualification: { attempt_no: q.attempt, stage: q.stage, decision: q.decision, accepted: q.stage === "decided" ? accepted : null, total: 10, retry_after: q.decision === "not_eligible" ? new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10) : null, variety: L.variety },
   };
 }
 
-function contributor(s: State) {
+function contributor(s: State): ContributorView {
   return {
     contributor_id: "00000000-0000-4000-8000-0000000000b1",
     speaker_id: s.speakerId,
     locale: "en" as const,
-    profile: { complete: s.profile, missing: s.profile ? [] : ["region"], values: s.profile ? { nativeLanguage: "wol", variety: s.variety, country: "SN", region: "Thiès", gender: "female", ageBand: "30-44", device: "Android Chrome" } : null },
+    profile: { complete: s.profile, missing: s.profile ? [] : ["region"], values: s.profile ? { nativeLanguage: s.nativeLanguage ?? "wol", variety: s.variety, country: "SN", region: "Thiès", gender: "female", ageBand: "30-44", device: "Android Chrome" } : null },
+    // The language the applicant marked as first on the form: the profile's native language (A5).
+    first_language: { code: "wol", name: "Wolof" },
   };
+}
+
+/** What the automatic checks say when they refuse a take for `check`: plausible numbers, the shape of 03 §7. */
+function qcDetail(check: RejectCheck, m: Mission): { reason: RejectionReason; detail: RejectDetail } {
+  const d = (reason: RejectionReason, detail: Omit<RejectDetail, "check">) => ({ reason, detail: { check, ...detail } });
+  switch (check) {
+    case "too_short":
+      return d("duration", { measured: 2.1, limit: m.duration_s.min ?? 3, unit: "s", bound: "min" });
+    case "too_long":
+      return d("duration", { measured: (m.duration_s.max ?? 15) + 3.9, limit: m.duration_s.max ?? 15, unit: "s", bound: "max" });
+    case "low_snr":
+      return d("level", { measured: 7.3, limit: 10, unit: "dB", bound: "min" });
+    case "background_noise":
+      return d("level", { measured: -38.2, limit: -45, unit: "dBFS", bound: "max" });
+    case "clipping":
+      return d("level", { measured: 0.014, limit: 0.005, unit: "ratio", bound: "max" });
+    case "long_silence":
+      return d("silence", { measured: 0.42, limit: 0.3, unit: "ratio", bound: "max" });
+    default:
+      return d("other", { measured: null, limit: null, unit: null, bound: null });
+  }
 }
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -402,13 +463,13 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
   if (mode !== "ok") return json({ error: "Refused (mock).", code: mode }, TICKET_REFUSALS[mode] ?? 403);
   const planned = s.planned.missions.find((x) => x.mission_id === body.mission_id);
   const pooled = s.pool.missions.find((x) => x.mission_id === body.mission_id);
-  const qual = s.qual!.missions.find((x) => x.mission_id === body.mission_id);
-  const m = planned ?? pooled ?? qual;
+  const qual = qualWithMission(s, body.mission_id);
+  const m = planned ?? pooled ?? qual?.m;
   if (!m) return notAssigned();
-  const refused = gate(s, planned ? s.planned.consent : pooled ? s.pool.consent : s.qual!.consent);
+  const refused = gate(s, planned ? s.planned.consent : pooled ? s.pool.consent : qual!.q.consent);
   if (refused) return refused;
-  if (qual && s.qual!.stage !== "recording") return json({ error: "This test is closed: your recordings are being reviewed.", code: "test_closed" }, 403);
-  const card = planned ? plannedCard(s) : pooled ? poolCard(s) : qualCard(s);
+  if (qual && qual.q.stage !== "recording") return json({ error: "This test is closed: your recordings are being reviewed.", code: "test_closed" }, 403);
+  const card = planned ? plannedCard(s) : pooled ? poolCard(s) : qualCard(s, qual!.lang);
   const exp = Math.floor(Date.now() / 1000) + 30 * 60;
   const payload = {
     v: 1,
@@ -421,7 +482,8 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
     mission_type: m.type,
     prompt_id: m.prompt.id,
     language: card.language.code,
-    variety: s.variety || null,
+    // A test's audio carries the test's variety (the attempt's), a campaign's the profile's.
+    variety: qual ? QUAL_LANGS[qual.lang].variety : s.variety || null,
     domain: planned ? "FIN" : "GEN",
     speaker_ids: m.type === "conversational" && m.partner_speaker_id ? [s.speakerId ?? "SPK-7Q2M9X4D", m.partner_speaker_id] : [s.speakerId ?? "SPK-7Q2M9X4D"],
     source_sha256: String(body.source_sha256),
@@ -434,8 +496,9 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
 async function bridge(body: Record<string, unknown>): Promise<Response> {
   await delay(250);
   const s = load();
-  const cards = () => [plannedCard(s), poolCard(s), qualCard(s)];
+  const cards = () => [plannedCard(s), poolCard(s), ...QUAL_LANG_CODES.map((lang) => qualCard(s, lang))];
   const campaignId = body.campaign_id;
+  const qual = qualOf(s, campaignId);
   switch (body.action) {
     case "claim":
       return json({ contributor: contributor(s), campaign: plannedCard(s) });
@@ -446,21 +509,22 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
     case "profile":
       s.profile = true;
       s.variety = String(body.variety ?? "");
+      s.nativeLanguage = typeof body.native_language === "string" && body.native_language ? body.native_language : "wol";
       s.speakerId ??= "SPK-7Q2M9X4D";
       save(s);
       return json({ contributor: contributor(s), blocked: [] });
     case "consent":
       if (body.type === "account") s.account = true;
       else if (campaignId === POOL_ID) s.pool.consent = true;
-      else if (campaignId === QUAL_ID) s.qual!.consent = true;
+      else if (qual) qual.q.consent = true;
       else s.planned.consent = true;
       save(s);
       return json({ signed_version: String(body.version), already: false });
     case "missions": {
-      if (campaignId === QUAL_ID) {
-        const refused = gate(s, s.qual!.consent);
+      if (qual) {
+        const refused = gate(s, qual.q.consent);
         if (refused) return refused;
-        return json({ campaign: qualCard(s), missions: s.qual!.missions, rewards: { accepted: 0, accepted_s: 0, pending_s: 0 } });
+        return json({ campaign: qualCard(s, qual.lang), missions: qual.q.missions, rewards: { accepted: 0, accepted_s: 0, pending_s: 0 } });
       }
       if (campaignId === POOL_ID) {
         const refused = gate(s, s.pool.consent);
@@ -498,21 +562,28 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       return json({ returned, pool: { open: s.pool.missions.filter((m) => !m.cancelled && isOpen(m)).length, refill_below: REFILL_BELOW } });
     }
     case "submit": {
-      const q = s.qual!;
-      const qm = q.missions.find((x) => x.mission_id === body.mission_id);
-      if (qm && q.stage !== "recording") return json({ error: "This test is closed: your recordings are being reviewed.", code: "test_closed" }, 403);
-      const m: PoolMission | undefined = s.planned.missions.find((x) => x.mission_id === body.mission_id) ?? s.pool.missions.find((x) => x.mission_id === body.mission_id) ?? qm;
+      const found = qualWithMission(s, body.mission_id);
+      if (found && found.q.stage !== "recording") return json({ error: "This test is closed: your recordings are being reviewed.", code: "test_closed" }, 403);
+      const m: PoolMission | undefined = s.planned.missions.find((x) => x.mission_id === body.mission_id) ?? s.pool.missions.find((x) => x.mission_id === body.mission_id) ?? found?.m;
       if (!m) return notAssigned();
       if (m.status === "submitted" || m.status === "accepted") return json({ recording_id: "r-" + m.code, mission_status: m.status, duplicate: true });
+      const rec = body.recording as { duration_s?: unknown } | undefined;
+      const duration = typeof rec?.duration_s === "number" ? rec.duration_s : 0;
+      // The dashboard's submit check refuses a take clearly shorter than the prompt's minimum, and
+      // says what it measured (A15, the dashboard's C2). The mission stays as it was.
+      if (m.duration_s.min != null && duration < m.duration_s.min - 0.5) {
+        const detail: RejectDetail = { check: "too_short", measured: duration, limit: m.duration_s.min, unit: "s", bound: "min" };
+        return json({ error: `Too short: ${duration} s, this prompt needs at least ${m.duration_s.min} s.`, code: "recording_rejected", reason: "duration", detail }, 422);
+      }
       // A late take (lease ended, mission cancelled) is always kept: the mission comes back as submitted.
       m.cancelled = false;
       m.status = "submitted";
       m.rejection_reason = null;
-      m.recording = { status: "uploaded", rejection_reason: null };
-      const rec = body.recording as { duration_s?: unknown } | undefined;
-      s.seconds[m.mission_id] = typeof rec?.duration_s === "number" ? rec.duration_s : 0;
+      m.rejection_detail = null;
+      m.recording = { status: "uploaded", rejection_reason: null, rejection_detail: null };
+      s.seconds[m.mission_id] = duration;
       // The dashboard moves a test to review once all its takes passed the automatic checks.
-      if (qm && q.missions.every((x) => x.status === "submitted")) q.stage = "in_review";
+      if (found && found.q.missions.every((x) => x.status === "submitted")) found.q.stage = "in_review";
       save(s);
       return json({ recording_id: "r-" + m.code, mission_status: "submitted", duplicate: false });
     }
@@ -666,18 +737,39 @@ export function installCampaignMock() {
       s.tickets = mode;
       save(s);
     },
-    /** The qualification test's review: 8 accepted (eligible), 6 (retry: a new attempt), or 3 (not eligible). */
-    qualify: (decision: "eligible" | "retry" | "not_eligible" = "eligible") => {
+    /** A qualification test's review: 8 accepted (eligible), 6 (retry: a new attempt), or 3 (not eligible). `lang`: which test ("wol" by default). */
+    qualify: (decision: "eligible" | "retry" | "not_eligible" = "eligible", lang: QualLang = "wol") => {
       const s = load();
-      const q = s.qual!;
+      const q = s.quals![lang];
       const accept = decision === "eligible" ? 8 : decision === "retry" ? 6 : 3;
       q.missions.forEach((m, i) => {
         m.status = i < accept ? "accepted" : "rejected";
         m.rejection_reason = i < accept ? null : "variety";
-        m.recording = { status: m.status, rejection_reason: m.rejection_reason };
+        m.rejection_detail = null;
+        m.recording = { status: m.status, rejection_reason: m.rejection_reason, rejection_detail: null };
       });
-      if (decision === "retry") s.qual = { ...q, attempt: q.attempt + 1, stage: "recording", decision: null, missions: qualMissions(q.attempt + 1) };
+      if (decision === "retry") s.quals![lang] = { ...q, attempt: q.attempt + 1, stage: "recording", decision: null, missions: qualMissions(lang, q.attempt + 1) };
       else Object.assign(q, { stage: "decided", decision });
+      save(s);
+    },
+    /**
+     * The automatic checks refused a mission's take for `check` (a REJECT_CHECKS value): the
+     * mission comes back to record again, with the reason the check maps to and what was measured
+     * (on the mission and on its recording, as the dashboard sends them). A test that had moved to
+     * review comes back to recording.
+     */
+    qcReject: (missionId: string, check: RejectCheck = "low_snr") => {
+      if (!(REJECT_CHECKS as readonly string[]).includes(check)) throw new Error(`unknown check: ${check}; one of ${REJECT_CHECKS.join(", ")}`);
+      const s = load();
+      const found = qualWithMission(s, missionId);
+      const m = s.planned.missions.find((x) => x.mission_id === missionId) ?? s.pool.missions.find((x) => x.mission_id === missionId) ?? found?.m;
+      if (!m) throw new Error(`no mission ${missionId}`);
+      const { reason, detail } = qcDetail(check, m);
+      m.status = "rejected";
+      m.rejection_reason = reason;
+      m.rejection_detail = detail;
+      m.recording = { status: "rejected", rejection_reason: reason, rejection_detail: detail };
+      if (found && found.q.stage === "in_review") found.q.stage = "recording";
       save(s);
     },
     /** The pool batch's leases have ended. */
