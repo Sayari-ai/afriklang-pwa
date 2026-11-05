@@ -11,6 +11,7 @@
 import { filledCard } from "./card-fill";
 import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { getCampaignAuth, storedCampaignUser } from "./auth-client";
+import { rejectDetailOf } from "./reject-detail";
 import type {
   CampaignCard,
   CampaignErrorCode,
@@ -99,6 +100,8 @@ export function toResult<T>(status: number, json: unknown, retryAfter?: string |
   const code: CampaignErrorCode = status === 429 ? "rate_limited" : (named ?? codeFromStatus(status));
   const isCodeInError = typeof body.error === "string" && (KNOWN.has(body.error) || edgeCode(body.error));
   const fieldErrors = fieldErrorsOf(body.fieldErrors);
+  // A refused recording says what was measured (A15); a malformed detail is dropped, never shown.
+  const detail = rejectDetailOf(body.detail);
   const failure: CampaignFailure = {
     ok: false,
     status,
@@ -106,6 +109,7 @@ export function toResult<T>(status: number, json: unknown, retryAfter?: string |
     message: typeof body.message === "string" ? body.message : typeof body.error === "string" && !isCodeInError ? body.error : "",
     ...(typeof body.next_step === "string" ? { nextStep: body.next_step as NextStep } : {}),
     ...(typeof body.reason === "string" ? { reason: body.reason as CampaignFailure["reason"] } : {}),
+    ...(detail ? { detail } : {}),
     ...(retryAfter && Number.isFinite(Number(retryAfter)) && Number(retryAfter) >= 0 ? { retryAfterS: Number(retryAfter) } : {}),
     ...(fieldErrors ? { fieldErrors } : {}),
   };

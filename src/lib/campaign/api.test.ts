@@ -62,6 +62,14 @@ describe("toResult: precise failures", () => {
     expect(toResult(200, null)).toMatchObject({ ok: false, code: "bridge_error" });
     expect(toResult(200, [1])).toMatchObject({ ok: false, code: "bridge_error" });
   });
+
+  it("a refused recording keeps what the check measured (A15), drops a malformed detail, and has no key without one", () => {
+    const detail = { check: "too_short", measured: 2.1, limit: 3, unit: "s", bound: "min" };
+    expect(toResult(422, { error: "Too short.", code: "recording_rejected", reason: "duration", detail })).toMatchObject({ code: "recording_rejected", reason: "duration", detail });
+    expect(toResult(422, { error: "Too short.", code: "recording_rejected", reason: "duration", detail: { check: "made_up", measured: 2, limit: 3, unit: "s", bound: "min" } })).not.toHaveProperty("detail");
+    expect(toResult(422, { error: "Too short.", code: "recording_rejected", reason: "duration", detail: { check: "too_short", measured: "2.1", limit: 3, unit: "s", bound: "min" } })).not.toHaveProperty("detail");
+    expect(toResult(422, { error: "Too short.", code: "recording_rejected", reason: "duration" })).not.toHaveProperty("detail");
+  });
 });
 
 describe("toResult: codes with their own handling (H-8)", () => {
