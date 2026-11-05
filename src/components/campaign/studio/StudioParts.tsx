@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { TEXT_SIZES } from "@/lib/campaign/studio-flow";
 import type { Mission } from "@/lib/campaign/types";
-import { useRejectionText } from "../CampaignHubParts";
+import { RejectDetailLines, useRejectDetailText } from "../CampaignHubParts";
 
 // ── Prompt ───────────────────────────────────────────────────────────────
 
@@ -18,7 +18,8 @@ import { useRejectionText } from "../CampaignHubParts";
 export function PromptCard({ mission, lang, size, onSize, sayIn }: { mission: Mission; lang: string; size: number; onSize: (n: number) => void; sayIn?: { language: string; uiLocale: string } }) {
   const t = useTranslations("campaign.studio");
   const label = sayIn && mission.type !== "conversational" ? t(mission.type === "read" ? "prompt.sayIn" : "prompt.talkIn", { language: sayIn.language }) : t(`prompt.${mission.type}`);
-  const why = useRejectionText()(mission.rejection_reason);
+  // A mission to redo says why, and how to fix it, right before the speaker records again.
+  const why = useRejectDetailText()(mission);
   const { min, max } = mission.duration_s;
   const text = TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, Math.max(0, size))];
   return (
@@ -36,7 +37,8 @@ export function PromptCard({ mission, lang, size, onSize, sayIn }: { mission: Mi
       </div>
       {mission.status === "rejected" ? (
         <p role="note" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
-          {why ? t("prompt.redoReason", { reason: why }) : t("prompt.redo")}
+          {why ? t("prompt.redoReason", { reason: why.title }) : t("prompt.redo")}
+          {why ? <RejectDetailLines text={why} /> : null}
         </p>
       ) : null}
       <p lang={sayIn ? sayIn.uiLocale : lang} className={`${text} font-semibold leading-snug ${mission.type === "read" ? "" : "text-slate-800"}`}>

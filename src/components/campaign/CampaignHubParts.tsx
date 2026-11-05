@@ -5,9 +5,11 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { Lightbulb } from "lucide-react";
 import { ERROR_KEY } from "@/lib/campaign/errors";
+import { rejectDetailMessage, rejectDetailOf } from "@/lib/campaign/reject-detail";
 import { rejectionReasonCode } from "@/lib/campaign/view";
-import type { CampaignFailure } from "@/lib/campaign/types";
+import type { CampaignFailure, Mission, RejectDetail } from "@/lib/campaign/types";
 
 export const buttonPrimary =
   "inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-4 py-3 text-base font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500";
@@ -40,6 +42,56 @@ export function useRejectionText() {
     if (code) return t(code);
     return reason?.trim() ? reason.trim() : null;
   };
+}
+
+/** Why a take was refused, in the speaker's language: a title, what was measured (null without numbers), how to fix it (null for a reviewer's own words). */
+export type RejectText = { title: string; measured: string | null; fix: string | null };
+
+/**
+ * What a refused take says, the same words as the "to record again" email (E09). With a detail
+ * from the automatic checks (`rejection_detail`, on the mission or its recording): the check's
+ * title, what was measured with the limit, and how to fix it. Without one (an older dashboard, or
+ * a reviewer's decision): today's reason sentence as the title, nothing else. Null with no reason
+ * at all. `fromDetail` gives the same three lines for a bare detail (the activity log keeps one).
+ */
+export function useRejectDetailText() {
+  const t = useTranslations("campaign.common");
+  const locale = useLocale();
+  const reasonText = useRejectionText();
+  const fromDetail = (d: RejectDetail): RejectText => {
+    const m = rejectDetailMessage(d, locale);
+    return { title: t(m.titleKey), measured: m.measuredKey ? t(m.measuredKey, m.values) : null, fix: t(m.fixKey) };
+  };
+  const ofMission = (m: Pick<Mission, "rejection_reason" | "rejection_detail" | "recording">): RejectText | null => {
+    // Guarded again here: a saved copy or a newer dashboard may carry a check this app does not know.
+    const d = rejectDetailOf(m.rejection_detail ?? m.recording?.rejection_detail);
+    if (d) return fromDetail(d);
+    const title = reasonText(m.rejection_reason);
+    return title ? { title, measured: null, fix: null } : null;
+  };
+  return Object.assign(ofMission, { fromDetail });
+}
+
+/**
+ * The "what we measured" and "how to fix it" lines under a refused take's title. Nothing without
+ * a detail. `tone`: on a white card ("light") or on the studio's dark background ("dark").
+ */
+export function RejectDetailLines({ text, tone = "light" }: { text: RejectText; tone?: "light" | "dark" }) {
+  const t = useTranslations("campaign.common.rejectDetail");
+  if (!text.measured && !text.fix) return null;
+  const muted = tone === "dark" ? "text-amber-50/80" : "text-slate-600";
+  const tip = tone === "dark" ? "text-amber-50" : "text-slate-800";
+  return (
+    <span className="mt-1 block space-y-1 text-xs font-normal">
+      {text.measured ? <span className={`block ${muted}`}>{t("measuredLabel", { measured: text.measured })}</span> : null}
+      {text.fix ? (
+        <span className={`flex items-start gap-1 ${tip}`}>
+          <Lightbulb size={14} className="mt-0.5 shrink-0" aria-hidden />
+          <span>{t("fixLabel", { fix: text.fix })}</span>
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 /** A failed write, with a way back to sign-in when the session expired. */

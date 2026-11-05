@@ -1,6 +1,9 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 import { formatMeasure, rejectDetailOf, rejectDetailMessage } from "./reject-detail";
 import { REJECT_CHECKS, type RejectDetail } from "./types";
+import en from "../../messages/campaign/common.en.json";
+import fr from "../../messages/campaign/common.fr.json";
 
 const good: RejectDetail = { check: "low_snr", measured: 7.3, limit: 10, unit: "dB", bound: "min" };
 
@@ -57,5 +60,55 @@ describe("rejectDetailMessage", () => {
     }
     expect(rejectDetailMessage({ ...good, measured: null }, "en").measuredKey).toBeNull();
     expect(rejectDetailMessage({ ...good, limit: null }, "fr").measuredKey).toBeNull();
+  });
+});
+
+describe("the words of a refused take (E09 check copy)", () => {
+  /** The three lines as the screens build them (useRejectDetailText in CampaignHubParts). */
+  const lines = (d: RejectDetail, locale: "en" | "fr") => {
+    const t = createTranslator({ locale, messages: { common: locale === "en" ? en : fr }, namespace: "common" });
+    const m = rejectDetailMessage(d, locale);
+    return { title: t(m.titleKey), measured: m.measuredKey ? t(m.measuredKey, m.values) : null, fix: t(m.fixKey) };
+  };
+  const SAMPLE: Record<RejectDetail["check"], RejectDetail> = {
+    too_short: { check: "too_short", measured: 2.14, limit: 3, unit: "s", bound: "min" },
+    too_long: { check: "too_long", measured: 33.9, limit: 30, unit: "s", bound: "max" },
+    low_snr: { check: "low_snr", measured: 7.3, limit: 10, unit: "dB", bound: "min" },
+    background_noise: { check: "background_noise", measured: -38.2, limit: -45, unit: "dBFS", bound: "max" },
+    clipping: { check: "clipping", measured: 0.014, limit: 0.005, unit: "ratio", bound: "max" },
+    long_silence: { check: "long_silence", measured: 0.42, limit: 0.3, unit: "ratio", bound: "max" },
+    wrong_format: { check: "wrong_format", measured: null, limit: null, unit: null, bound: null },
+    processing_failed: { check: "processing_failed", measured: null, limit: null, unit: null, bound: null },
+  };
+
+  it("renders every check in English and French with the numbers in, and no placeholder left", () => {
+    for (const check of REJECT_CHECKS) {
+      for (const locale of ["en", "fr"] as const) {
+        const l = lines(SAMPLE[check], locale);
+        expect(l.title, `${check} ${locale}`).toMatch(/\S/);
+        expect(l.fix, `${check} ${locale}`).toMatch(/\S/);
+        expect(l.measured, `${check} ${locale}`).toMatch(/\S/);
+        for (const s of [l.title, l.measured, l.fix]) expect(s, `${check} ${locale}`).not.toMatch(/[{}]|rejectDetail\./);
+      }
+    }
+  });
+
+  it("says exactly what the email says", () => {
+    expect(lines(SAMPLE.too_short, "en")).toEqual({
+      title: "Too short",
+      measured: "It lasted 2.1 s; this prompt needs at least 3.0 s.",
+      fix: "Watch the timer on screen and keep speaking until you reach the length it shows.",
+    });
+    expect(lines(SAMPLE.too_short, "fr").measured).toBe("Il durait 2,1 s ; cette consigne demande au moins 3,0 s.");
+    expect(lines(SAMPLE.low_snr, "fr")).toEqual({
+      title: "Votre voix ne ressortait pas assez du bruit de fond",
+      measured: "Votre voix dépassait le bruit de fond de 7,3 dB ; il faut au moins 10,0 dB.",
+      fix: "Installez-vous dans une pièce calme, éteignez ventilateur, télévision et musique, et tenez le téléphone à environ 20 cm de la bouche.",
+    });
+    expect(lines(SAMPLE.clipping, "en").measured).toBe("1.4% of the sound was saturated; the limit is 0.5%.");
+    expect(lines(SAMPLE.clipping, "fr").measured).toMatch(/^1,4\s% du son était saturé ; la limite est de 0,5\s%\.$/);
+    expect(lines(SAMPLE.long_silence, "en").measured).toBe("42% of the recording was silence between your first and last word; the limit is 30%.");
+    expect(lines(SAMPLE.wrong_format, "fr").measured).toBe("L'enregistrement n'était pas au format attendu.");
+    expect(lines(SAMPLE.processing_failed, "en")).toEqual({ title: "We could not process this recording", measured: "Our system could not read this recording. This is not your fault.", fix: "Please record it once more." });
   });
 });

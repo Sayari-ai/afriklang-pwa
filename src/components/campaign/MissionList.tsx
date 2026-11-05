@@ -17,7 +17,7 @@ import { canRecordNow } from "@/lib/campaign/studio-flow";
 import type { Mission, SpeechType } from "@/lib/campaign/types";
 import { useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions } from "@/lib/campaign/pool-client";
-import { useFailureText, useRejectionText } from "./CampaignHubParts";
+import { RejectDetailLines, useFailureText, useRejectDetailText } from "./CampaignHubParts";
 import { LeaseLeft } from "./PoolParts";
 
 type Tab = "todo" | "redo" | "sent" | "accepted";
@@ -111,7 +111,8 @@ export function MissionList({ campaignId, readOnly }: Props) {
 function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifying = false, testClosed = false, sayIn = null }: { campaignId: string; mission: Mission; local: OutboxState | undefined; active: boolean; readOnly: boolean; qualifying?: boolean; testClosed?: boolean; sayIn?: string | null }) {
   const t = useTranslations("campaign.home");
   const tm = useTranslations("campaign.flow.missions");
-  const why = useRejectionText()(m.rejection_reason);
+  // Why it came back: the check's words (title, what was measured, how to fix it) or the reviewer's.
+  const why = useRejectDetailText()(m);
   const Icon = TYPE_ICON[m.type];
   const recordable = !readOnly && canRecordNow(m, local ? new Map([[m.mission_id, local]]) : new Map());
   const partnerWait = m.type === "conversational" && !m.partner_ready && (m.status === "todo" || m.status === "rejected");
@@ -134,7 +135,12 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifyin
           {m.duration_s.min != null && m.duration_s.max != null ? <span>{tm("duration", { min: m.duration_s.min, max: m.duration_s.max })}</span> : null}
         </span>
         <span className="block text-sm font-semibold text-slate-900">{truncate(m.prompt.text_or_topic, 110)}</span>
-        {m.status === "rejected" && !local ? <span className="mt-1 block text-xs font-semibold text-amber-800">{testClosed ? tm("notAccepted", { reason: why ?? "" }) : why ? tm("reason", { reason: why }) : tm("noReason")}</span> : null}
+        {m.status === "rejected" && !local ? (
+          <span className="mt-1 block text-xs font-semibold text-amber-800">
+            {testClosed ? tm("notAccepted", { reason: why?.title ?? "" }) : why ? tm("reason", { reason: why.title }) : tm("noReason")}
+            {why && !testClosed ? <RejectDetailLines text={why} /> : null}
+          </span>
+        ) : null}
         {!local ? <LeaseLeft mission={m} /> : null}
         {partnerWait ? (
           <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-800">

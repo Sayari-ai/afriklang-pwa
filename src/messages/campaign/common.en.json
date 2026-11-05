@@ -99,5 +99,49 @@
     "reading_gap": "The recording does not match the sentence. Read it exactly as written.",
     "speaker_balance": "One voice took almost all of the conversation. Both of you should speak about as much.",
     "other": "The reviewer could not accept this take."
+  },
+  "rejectDetail": {
+    "too_short": {
+      "title": "Too short",
+      "measured": "It lasted {measured} s; this prompt needs at least {limit} s.",
+      "fix": "Watch the timer on screen and keep speaking until you reach the length it shows."
+    },
+    "too_long": {
+      "title": "Too long",
+      "measured": "It lasted {measured} s; the limit is {limit} s.",
+      "fix": "Keep to the time shown on screen. For a free answer, a few sentences are enough."
+    },
+    "low_snr": {
+      "title": "Your voice was not clear above the background",
+      "measured": "Your voice was {measured} dB above the background noise; we need at least {limit} dB.",
+      "fix": "Move to a quiet room, turn off fans, TV and music, and hold the phone about 20 cm from your mouth."
+    },
+    "background_noise": {
+      "title": "Too much background noise",
+      "measured": "The background noise was at {measured} dBFS; it must stay below {limit} dBFS.",
+      "fix": "Find a quieter place, away from the street, other voices and machines, then record again."
+    },
+    "clipping": {
+      "title": "Too loud: the sound was distorted",
+      "measured": "{measured} of the sound was saturated; the limit is {limit}.",
+      "fix": "Hold the phone a little further away (about 20 cm) and speak at your normal volume, without shouting."
+    },
+    "long_silence": {
+      "title": "Too many long pauses",
+      "measured": "{measured} of the recording was silence between your first and last word; the limit is {limit}.",
+      "fix": "Read the prompt and prepare your answer before pressing Record, then speak without long breaks."
+    },
+    "wrong_format": {
+      "title": "The file could not be used",
+      "measured": "The recording was not in the format we need.",
+      "fix": "Record it again in the app. If it happens again, update the app or try another phone."
+    },
+    "processing_failed": {
+      "title": "We could not process this recording",
+      "measured": "Our system could not read this recording. This is not your fault.",
+      "fix": "Please record it once more."
+    },
+    "measuredLabel": "What we measured: {measured}",
+    "fixLabel": "How to fix it: {fix}"
   }
 }
