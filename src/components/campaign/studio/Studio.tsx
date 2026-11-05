@@ -27,7 +27,7 @@ import { LOW_SPACE_BYTES, freeSpaceBytes } from "@/lib/campaign/storage-safety";
 import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
-import { buildMetadata, buildSayariCampaignFields, deviceLabel, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
+import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
 import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
 import { isRefusal } from "@/lib/campaign/pool";
 import type { PoolState } from "@/lib/campaign/pool-client";
@@ -82,6 +82,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const onPhoneRef = useRef(onPhone);
   const byId = useMemo(() => new Map(missions.map((m) => [m.mission_id, m])), [missions]);
   const byIdRef = useRef(byId);
+  const cardRef = useRef(card);
 
   // The session's order is fixed when the studio opens (later answers only remove missions from it).
   const [queue, setQueue] = useState<string[]>(() => sessionQueue(missions, onPhone, startId));
@@ -217,6 +218,16 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       takesRef.current.set(d.missionId, d.takeNumber);
       setQueue((q) => (q.includes(d.missionId) ? q : [d.missionId, ...q]));
       setCurrentId(d.missionId);
+      // The length check runs again (draftProblem): a take saved just before the check, by a crash
+      // in between, must not come back as a checked take. The usual notice says why, as at Stop.
+      const p = draftProblem(d.analysis, cardRef.current, m);
+      if (p) {
+        void clearDraft(userId, campaignId);
+        setTake(null);
+        setProblem(p);
+        setPhase("problem");
+        return;
+      }
       setProblem(null);
       setTake({ blob: d.blob, analysis: d.analysis, recordedAt: new Date(d.recordedAt), inputSampleRate: d.inputSampleRate, processing: d.processing, quietHintShown: d.quietHintShown, takeNumber: d.takeNumber, restored: true });
       setPhase("review");
@@ -552,6 +563,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     interruptRef.current = interrupt;
     currentIdRef.current = currentId;
     byIdRef.current = byId;
+    cardRef.current = card;
     beginTailRef.current = beginTail;
     pressRef.current = press;
     submitRef.current = submit;

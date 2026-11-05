@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMetadata, buildSayariCampaignFields, deviceLabel, formatClock, takeRules } from "./record-flow";
+import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, takeRules } from "./record-flow";
 import type { CampaignCard, Mission } from "./types";
 
 const card = (over: Partial<CampaignCard> = {}): CampaignCard =>
@@ -46,5 +46,21 @@ describe("buildSayariCampaignFields", () => {
   });
   it("never carries a name, email or user id", () => {
     expect(Object.keys(buildSayariCampaignFields(c, m, meta)).join(" ")).not.toMatch(/name|email|user_id/);
+  });
+});
+
+describe("draftProblem", () => {
+  // A take saved on the phone the moment recording stopped (drafts.ts) comes back on the review
+  // screen after a crash. The length check runs again on it: a crash between saving the draft and
+  // the check could keep a take that must be recorded again, and it must not come back as checked.
+  const fine = { duration_s: 25, level_dbfs: -20, peak_dbfs: -3, silence_before_s: 2, silence_after_s: 2, noise_floor_dbfs: -60 };
+  it("names the blocking problem of a saved take, and nothing for one that only gets advice", () => {
+    expect(draftProblem({ ...fine, duration_s: 4 }, card(), mission())).toBe("too_short");
+    expect(draftProblem({ ...fine, duration_s: 61 }, card(), mission())).toBe("too_long");
+    expect(draftProblem(fine, card(), mission())).toBeNull();
+    // Too quiet is advice on the review screen, not a reason to drop the take.
+    expect(draftProblem({ ...fine, level_dbfs: -40 }, card(), mission())).toBeNull();
+    // The rules are the draft's mission's, not another mission's: a read sentence has its own length.
+    expect(draftProblem({ ...fine, duration_s: 4 }, card({ instructions: { speech_types: [{ type: "read", duration_min_s: 2, duration_max_s: 10 }] } }), mission({ type: "read" }))).toBeNull();
   });
 });
