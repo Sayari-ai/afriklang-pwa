@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, daysLeft, hasMissions, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, toRecordCount, totals } from "./view";
+import { campaignMicDistance, daysLeft, hasMissions, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -59,6 +59,14 @@ describe("speaker view facts", () => {
   it("sums progress", () => {
     const p = (n: number) => ({ progress: { total: n, todo: 0, submitted: n, accepted: n, rejected: 0 } });
     expect(totals([p(1), p(2)])).toEqual({ accepted: 3, submitted: 3, rejected: 0, total: 3 });
+  });
+  it("counts a test's clips to record again only while it is recording (R28)", () => {
+    const q = (stage: "recording" | "in_review" | "decided" | "cancelled") => ({ attempt_no: 1, stage, decision: null, accepted: null, total: 10, retry_after: null });
+    const progress = { total: 10, todo: 7, submitted: 1, accepted: 0, rejected: 2 };
+    expect(testRedoCount({ progress, qualification: q("recording") })).toBe(2);
+    expect(testRedoCount({ progress, qualification: null })).toBe(2);
+    expect(testRedoCount({ progress: { ...progress, rejected: 0 }, qualification: q("recording") })).toBe(0);
+    for (const stage of ["in_review", "decided", "cancelled"] as const) expect(testRedoCount({ progress, qualification: q(stage) }), stage).toBe(0);
   });
 });
 

@@ -28,6 +28,13 @@ export const hasMissions = (c: Pick<CampaignCard, "progress" | "dispatch" | "nex
 export const openCount = (c: Pick<CampaignCard, "progress">) => c.progress.todo + c.progress.rejected;
 
 /**
+ * A qualification test's clips to record again: the takes its automatic checks refused, while the
+ * test is still recording (as the card's button treats a test without a view). Once it is sent, a
+ * rejection is the reviewer's result, nothing to redo: 0.
+ */
+export const testRedoCount = (c: Pick<CampaignCard, "progress" | "qualification">) => (!c.qualification || c.qualification.stage === "recording" ? c.progress.rejected : 0);
+
+/**
  * Left to record, the one count every screen shows (MAN-004): to do + to redo, minus the missions
  * whose take is already waiting on the phone (a failed take still needs the speaker). From the
  * mission list when it is known; from the card's counts otherwise (`waitingOnPhone`: takes of the
