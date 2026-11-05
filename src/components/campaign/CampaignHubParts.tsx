@@ -73,19 +73,17 @@ export function useRejectDetailText() {
 }
 
 /**
- * The "what we measured" and "how to fix it" lines under a refused take's title. Nothing without
- * a detail. `tone`: on a white card ("light") or on the studio's dark background ("dark").
+ * The "what we measured" and "how to fix it" lines under a refused take's title, on a white card
+ * (the mission list, the studio's prompt card). Nothing without a detail.
  */
-export function RejectDetailLines({ text, tone = "light" }: { text: RejectText; tone?: "light" | "dark" }) {
+export function RejectDetailLines({ text }: { text: RejectText }) {
   const t = useTranslations("campaign.common.rejectDetail");
   if (!text.measured && !text.fix) return null;
-  const muted = tone === "dark" ? "text-amber-50/80" : "text-slate-600";
-  const tip = tone === "dark" ? "text-amber-50" : "text-slate-800";
   return (
     <span className="mt-1 block space-y-1 text-xs font-normal">
-      {text.measured ? <span className={`block ${muted}`}>{t("measuredLabel", { measured: text.measured })}</span> : null}
+      {text.measured ? <span className="block text-slate-600">{t("measuredLabel", { measured: text.measured })}</span> : null}
       {text.fix ? (
-        <span className={`flex items-start gap-1 ${tip}`}>
+        <span className="flex items-start gap-1 text-slate-800">
           <Lightbulb size={14} className="mt-0.5 shrink-0" aria-hidden />
           <span>{t("fixLabel", { fix: text.fix })}</span>
         </span>
