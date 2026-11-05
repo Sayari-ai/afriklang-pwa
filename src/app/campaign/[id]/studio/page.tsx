@@ -10,6 +10,7 @@ import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
+import { saveReturnPath } from "@/lib/campaign/return-path";
 import { parseFocus } from "@/lib/campaign/studio-flow";
 
 const dark = "flex h-dvh flex-col items-center justify-center gap-4 bg-[#001b36] px-6 text-center text-white";
@@ -55,13 +56,19 @@ export default function StudioPage() {
   const stale = !opened && !waitedEnough && missions.state === "ready" && online && (missions.saved || missions.refreshing) && !missions.failure;
   const filling = !opened && pool.pool && pool.pending;
   if (!opened && missions.state === "ready" && !stale && !filling) setOpened(true);
+  // Signed out on a studio link (the "to record again" email): remember where to come back to.
+  // Sign-in always lands on /campaign, which follows it (return-path.ts).
+  const signedOut = list.state === "signedOut" || missions.state === "signedOut";
+  useEffect(() => {
+    if (signedOut) saveReturnPath(window.location.pathname + window.location.search);
+  }, [signedOut]);
   const back = (
     <Link href={`/campaign/${id}`} className={pill}>
       {t("guard.back")}
     </Link>
   );
 
-  if (list.state === "signedOut" || missions.state === "signedOut") {
+  if (signedOut) {
     return (
       <div className={dark} role="alert">
         <p>{tc("errors.unauthorized")}</p>
