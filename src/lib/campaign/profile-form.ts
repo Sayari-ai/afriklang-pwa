@@ -174,16 +174,30 @@ export function validateProfile(v: ProfileValues, choices: readonly string[], ca
 /**
  * The profile fields a server 400 named in `fieldErrors`. Keys may be the body names
  * ("age_band") or the dashboard's camelCase ("ageBand"); others are ignored. The native language
- * has no field of its own on the form (it is not asked), so its error shows on the variety.
+ * has no field of its own on the form (it is not asked): the form shows its message by the variety.
  */
 export function profileErrorsFromServer(fieldErrors: Record<string, string> | undefined): ProfileErrors {
   const out: ProfileErrors = {};
   for (const key of Object.keys(fieldErrors ?? {})) {
     const snake = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`) as keyof ProfileInput;
-    if (snake === "native_language") out.variety = "server";
-    else if (PROFILE_FIELDS.includes(snake)) out[snake] = "server";
+    if (PROFILE_FIELDS.includes(snake)) out[snake] = "server";
   }
   return out;
+}
+
+/**
+ * The profile to send again when the dashboard refused `native_language` (a code it does not
+ * know: the application form may name a language the campaigns' list lacks): the same input with
+ * this card's language, as the form filled it before the first language existed, rather than a
+ * speaker stuck on a field they cannot see. Null when there is nothing to retry: the refusal
+ * names other fields, the input already carries the card's language, or a native language is
+ * stored on the profile (`stored`), which the app never overwrites (A5): the speaker then reads
+ * the server's words.
+ */
+export function nativeLanguageFallback(input: ProfileInput, fieldErrors: Record<string, string> | undefined, card: Pick<CampaignCard, "language">, stored: string | null): ProfileInput | null {
+  if (stored || !profileErrorsFromServer(fieldErrors).native_language) return null;
+  if (input.native_language === card.language.code) return null;
+  return { ...input, native_language: card.language.code };
 }
 
 /** A short device name from the user agent, e.g. "Android". Editable by the person. */

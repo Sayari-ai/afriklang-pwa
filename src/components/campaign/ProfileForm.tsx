@@ -18,8 +18,10 @@ import {
   MAX_TEXT,
   countryOptions,
   initialValues,
+  languageCodeOf,
   languageDisplayName,
   matchVariety,
+  nativeLanguageFallback,
   outsideTargets,
   profileErrorsFromServer,
   suggestVarieties,
@@ -61,6 +63,8 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   );
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
+  // What the dashboard said about the native language, when it refused it (shown to English readers).
+  const [serverSaid, setServerSaid] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // State updates are not synchronous: a ref stops a second tap from sending the form twice.
   const sending = useRef(false);
@@ -102,7 +106,9 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
 
   const focusFirst = (found: ProfileErrors) => {
     const first = Object.keys(found)[0];
-    if (first) document.getElementById(`${uid}-${first}`)?.focus();
+    // The native language has no field: its message sits by the variety.
+    const id = first === "native_language" ? "variety" : first;
+    if (id) document.getElementById(`${uid}-${id}`)?.focus();
   };
 
   async function submit(e: FormEvent) {
@@ -118,12 +124,24 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     sending.current = true;
     setBusy(true);
     setFailure(null);
+    setServerSaid(null);
     try {
-      const res = await saveProfile(input);
+      let res = await saveProfile(input);
+      if (!res.ok && res.code === "invalid_input") {
+        // The dashboard does not know the native language (one the application form named): this
+        // card's language stands in, once, rather than a speaker stuck on a field they cannot see.
+        // Never over a stored native language (A5): nativeLanguageFallback refuses then.
+        const again = nativeLanguageFallback(input, res.fieldErrors, card, languageCodeOf(contributor.profile.values?.nativeLanguage));
+        if (again) {
+          setValues((s) => ({ ...s, native_language: again.native_language }));
+          res = await saveProfile(again);
+        }
+      }
       if (res.ok) return onSaved();
       // A 400 that names fields: mark them (with each field's own hint) rather than one vague line.
       const fromServer = res.code === "invalid_input" ? profileErrorsFromServer(res.fieldErrors) : {};
       if (Object.keys(fromServer).length) {
+        setServerSaid(res.fieldErrors?.native_language ?? res.fieldErrors?.nativeLanguage ?? null);
         setErrors(fromServer);
         focusFirst(fromServer);
       } else setFailure(res);
@@ -245,6 +263,12 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
         <p className="text-sm text-slate-600">{t("privacy")}</p>
       </div>
 
+      {errors.native_language ? (
+        <p role="alert" className="rounded-2xl bg-red-50 p-3 text-sm text-red-800">
+          {t("errors.server.native_language", { language: nativeName })}
+          {locale === "en" && serverSaid ? ` (${serverSaid})` : ""}
+        </p>
+      ) : null}
       {field(
         "variety",
         t("variety", { language: nativeName }),

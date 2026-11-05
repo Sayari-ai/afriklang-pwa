@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
+import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, nativeLanguageFallback, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
 
 const ok: ProfileValues = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: " Thiès ", gender: "female", age_band: "30-44", device: "Android" };
 const varieties = ["Baol-Baol", "Saloum-Saloum"];
@@ -100,8 +100,23 @@ describe("free text and server answers", () => {
   it("marks the fields a 400 named, in either naming style, and ignores the rest", () => {
     expect(profileErrorsFromServer({ variety: "unknown", ageBand: "bad", "recording.duration_s": "x", user_id: "x" })).toEqual({ variety: "server", age_band: "server" });
     expect(profileErrorsFromServer(undefined)).toEqual({});
-    // The native language has no field on the form: its error shows on the variety.
-    expect(profileErrorsFromServer({ nativeLanguage: "unknown" })).toEqual({ variety: "server" });
+    // The native language has no field on the form: its error is named as its own, and shown by the variety.
+    expect(profileErrorsFromServer({ nativeLanguage: "unknown" })).toEqual({ native_language: "server" });
+    expect(profileErrorsFromServer({ native_language: "unknown", variety: "x" })).toEqual({ native_language: "server", variety: "server" });
+  });
+  it("falls back to the card's language once when the dashboard does not know the native language, unless one is stored (A5)", () => {
+    const fuc = { language: { code: "fuc", name: "Pulaar", varieties: [] } };
+    const input = { native_language: "wol", variety: "Dakar", country: "SN", region: "Thiès", gender: "female", age_band: "30-44", device: "Android" };
+    const refused = { native_language: "Native language must be one of the known languages." };
+    // The code came from the application form or the card, nothing is stored yet: this card's language stands in.
+    expect(nativeLanguageFallback(input, refused, fuc, null)).toEqual({ ...input, native_language: "fuc" });
+    expect(nativeLanguageFallback(input, { nativeLanguage: "unknown" }, fuc, null)).toEqual({ ...input, native_language: "fuc" });
+    // A stored native language is never overwritten by the app (A5): the speaker reads the server's words instead.
+    expect(nativeLanguageFallback(input, refused, fuc, "wol")).toBeNull();
+    // Already the card's language, so nothing else to try; or another field refused: no retry.
+    expect(nativeLanguageFallback({ ...input, native_language: "fuc" }, refused, fuc, null)).toBeNull();
+    expect(nativeLanguageFallback(input, { variety: "unknown" }, fuc, null)).toBeNull();
+    expect(nativeLanguageFallback(input, undefined, fuc, null)).toBeNull();
   });
 });
 

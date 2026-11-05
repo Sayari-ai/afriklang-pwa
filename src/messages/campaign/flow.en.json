@@ -56,6 +56,7 @@
       "oneVariety": "Enter one variety only: the one you speak best. Remove the commas or slashes.",
       "notListed": "This variety is not in the list yet. Choose one from the suggestions, or contact the Afriklang team.",
       "server": {
+        "native_language": "Our system does not know your native language ({language}) yet, so your profile could not be saved. Contact the Afriklang team and we will add it.",
         "variety": "This variety was not accepted. Choose one from the suggestions, or contact the Afriklang team.",
         "country": "This country was not accepted. Choose one from the list.",
         "region": "This region was not accepted. Enter a region or city name, 80 characters at most.",
