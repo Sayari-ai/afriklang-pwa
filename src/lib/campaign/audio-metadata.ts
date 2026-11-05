@@ -154,11 +154,14 @@ export function parseDevice(ua: string): { os: string | null; browser: string | 
 }
 
 /**
- * The speaker's declared variety, only when it belongs to the campaign's language (APP-015). The
- * profile is one per speaker: saved from a campaign in another language, its variety is that
- * language's, and must not label this campaign's audio. Null otherwise.
+ * The variety that labels this campaign's audio. A qualification test carries its own (the
+ * attempt's, the one the applicant gave for that language on the form): it wins, whatever the
+ * profile says. Otherwise the speaker's declared variety, only when it belongs to the campaign's
+ * language (APP-015): the profile is one per speaker, so saved from a campaign in another
+ * language, its variety is that language's and must not label this campaign's audio. Null otherwise.
  */
-export function varietyFor(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile">): string | null {
+export function varietyFor(card: Pick<CampaignCard, "language" | "kind" | "qualification">, contributor: Pick<ContributorView, "profile">): string | null {
+  if (card.kind === "qualification" && card.qualification?.variety) return card.qualification.variety;
   const v = contributor.profile.values?.variety ?? null;
   const native = contributor.profile.values?.nativeLanguage ?? null;
   if (!v) return null;

@@ -62,4 +62,14 @@ describe("variety per campaign (APP-015)", () => {
     expect(varietyFor(card("wol", []), who("fuc", "Fuuta Tooro"))).toBeNull();
     expect(varietyFor(card("wol", ["Dakar"]), who("wol", null))).toBeNull();
   });
+  it("labels a qualification test with the test's own variety, else today's rule (A5)", () => {
+    const test = (variety: string | null | undefined) => ({ ...card("fuc", []), kind: "qualification" as const, qualification: { attempt_no: 1, stage: "recording" as const, decision: null, accepted: null, total: 10, retry_after: null, ...(variety === undefined ? {} : { variety }) } });
+    // The speaker's profile variety is a Wolof one: the Pulaar test is labelled with the attempt's.
+    expect(varietyFor(test("Fuuta Tooro"), who("wol", "Dakar"))).toBe("Fuuta Tooro");
+    // Without a test variety (an older dashboard): the profile rule, which refuses another language's variety.
+    expect(varietyFor(test(undefined), who("wol", "Dakar"))).toBeNull();
+    expect(varietyFor(test(null), who("fuc", "Fuuta Jalon"))).toBe("Fuuta Jalon");
+    // A collection campaign ignores the field.
+    expect(varietyFor({ ...card("wol", ["Dakar"]), kind: "collection" as const, qualification: { attempt_no: 1, stage: "recording" as const, decision: null, accepted: null, total: 10, retry_after: null, variety: "Saloum" } }, who("wol", "Dakar"))).toBe("Dakar");
+  });
 });
