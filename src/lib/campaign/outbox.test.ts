@@ -202,6 +202,20 @@ describe("outbox runner", () => {
     await ob.drain("u1");
     expect(store.m.size).toBe(0);
     expect(events[0]).toMatchObject({ type: "rejected", reason: "silence" });
+    expect(events[0]).not.toHaveProperty("detail");
+  });
+
+  it("a refusal that says what was measured carries it to the decision and the event (R27)", async () => {
+    const detail = { check: "too_short" as const, measured: 2.1, limit: 3, unit: "s" as const, bound: "min" as const };
+    expect(decideSubmit({ ok: false, code: "recording_rejected", reason: "duration", detail }, 0)).toEqual({ kind: "rejected", reason: "duration", detail });
+    expect(decideSubmit({ ok: false, code: "recording_rejected", reason: "duration" }, 0)).toEqual({ kind: "rejected", reason: "duration" });
+    const store = memStore([item({ uploaded: true })]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: async () => ({ ok: false, status: 422, code: "recording_rejected", reason: "duration", message: "Too short.", detail }), online: () => true });
+    const events: OutboxEvent[] = [];
+    ob.onEvent((e) => events.push(e));
+    await ob.drain("u1");
+    expect(store.m.size).toBe(0);
+    expect(events[0]).toEqual(expect.objectContaining({ type: "rejected", reason: "duration", detail }));
   });
 });
 

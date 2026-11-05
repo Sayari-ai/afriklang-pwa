@@ -40,7 +40,7 @@ import {
 } from "./outbox-logic";
 
 const MINUTE = 60_000;
-import type { CampaignResult, RecordingMetadata } from "./types";
+import type { CampaignResult, RecordingMetadata, RejectDetail } from "./types";
 
 export type OutboxStore = {
   all(): Promise<OutboxItem[]>;
@@ -51,7 +51,8 @@ export type OutboxStore = {
 
 export type OutboxEvent =
   | { type: "sent"; item: OutboxSummary; duplicate: boolean }
-  | { type: "rejected"; item: OutboxSummary; reason: string }
+  /** `detail`: what the dashboard's check measured, when it says (A15). */
+  | { type: "rejected"; item: OutboxSummary; reason: string; detail?: RejectDetail }
   | { type: "superseded"; item: OutboxSummary }
   | { type: "failed"; item: OutboxSummary; code: string }
   | { type: "dropped"; item: OutboxSummary; code: string }
@@ -140,7 +141,7 @@ export function createOutbox(deps: OutboxDeps) {
     else await deps.store.remove(item.id);
     const s = summary(next ?? item);
     if (d.kind === "done") emit({ type: "sent", item: s, duplicate: Boolean(d.duplicate) });
-    else if (d.kind === "rejected") emit({ type: "rejected", item: s, reason: d.reason });
+    else if (d.kind === "rejected") emit({ type: "rejected", item: s, reason: d.reason, ...(d.detail ? { detail: d.detail } : {}) });
     else if (d.kind === "superseded") emit({ type: "superseded", item: s });
     else if (d.kind === "fail") emit({ type: "failed", item: s, code: d.code });
     else if (d.kind === "hold") emit({ type: "held", item: s, code: d.code });

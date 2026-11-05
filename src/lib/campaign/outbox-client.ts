@@ -140,7 +140,8 @@ function onOutboxEvent(userId: string, e: OutboxEvent) {
       logActivity(userId, { ...base, type: "sent" });
       break;
     case "rejected":
-      logActivity(userId, { ...base, type: "rejected", detail: e.reason });
+      // The measured detail travels with the entry, so the history says what to fix (R27).
+      logActivity(userId, { ...base, type: "rejected", detail: e.reason, ...(e.detail ? { rejectDetail: e.detail } : {}) });
       refreshCampaign(userId, e.item.campaignId);
       break;
     case "superseded":

@@ -11,7 +11,7 @@
  */
 
 import { isRetryable } from "./errors";
-import type { CampaignFailure, RecordingMetadata, SpeechType } from "./types";
+import type { CampaignFailure, RecordingMetadata, RejectDetail, SpeechType } from "./types";
 
 export type OutboxState =
   /** Waiting for its turn (or for the network). */
@@ -73,8 +73,8 @@ export type Decision =
   | { kind: "retry"; code: string; delayMs: number }
   | { kind: "hold"; code: string; delayMs: number }
   | { kind: "fail"; code: string }
-  /** The dashboard refused the take for the specification: the mission is to record again. */
-  | { kind: "rejected"; reason: NonNullable<CampaignFailure["reason"]> }
+  /** The dashboard refused the take for the specification: the mission is to record again. `detail`: what its check measured (A15), when it says. */
+  | { kind: "rejected"; reason: NonNullable<CampaignFailure["reason"]>; detail?: RejectDetail }
   /** The mission already has another recording: nothing more to send. */
   | { kind: "superseded" }
   /** The take must not be kept (the speaker withdrew their consent for the campaign): delete it. */
@@ -201,13 +201,13 @@ export function canRetryFailed(code: string | null | undefined): boolean {
 
 /** After the metadata submit answered (or failed). */
 export function decideSubmit(
-  res: { ok: true; duplicate?: boolean } | Pick<CampaignFailure, "ok" | "code" | "reason" | "retryAfterS">,
+  res: { ok: true; duplicate?: boolean } | Pick<CampaignFailure, "ok" | "code" | "reason" | "retryAfterS" | "detail">,
   attempts: number,
   random?: () => number,
   ctx: SubmitContext = {},
 ): Decision {
   if (res.ok) return { kind: "done", duplicate: Boolean(res.duplicate) };
-  if (res.code === "recording_rejected") return { kind: "rejected", reason: res.reason ?? "other" };
+  if (res.code === "recording_rejected") return { kind: "rejected", reason: res.reason ?? "other", ...(res.detail ? { detail: res.detail } : {}) };
   if (res.code === "already_submitted") return { kind: "superseded" };
   if (res.code === "offline") return { kind: "retry", code: "offline", delayMs: 0 };
   if (res.code === DROP_IF_WITHDRAWN_HERE) return ctx.withdrawnHere ? { kind: "drop", code: res.code } : { kind: "hold", code: res.code, delayMs: 10 * MINUTE };
