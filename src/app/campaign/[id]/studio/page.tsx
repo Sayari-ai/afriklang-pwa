@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useFailureText } from "@/components/campaign/CampaignHubParts";
@@ -31,10 +31,13 @@ export default function StudioPage() {
     if (!box.loaded) void outbox.refresh();
   }, [box.loaded]);
   // Read once: which mission the studio opens on, or, with several ids (`?m=a,b`, the "to record
-  // again" email's link), the only missions of this session (the address is then kept up to date by the studio).
+  // again" email's link), the only missions of this session (the address is then kept up to date by
+  // the studio). From the router, not `window.location`: arriving by a client-side `router.replace`
+  // (the way back from sign-in, campaign/page.tsx), the window still shows the previous page's URL
+  // while this first render runs.
+  const search = useSearchParams();
   const [startId] = useState<string | string[] | null>(() => {
-    if (typeof window === "undefined") return null;
-    const ids = parseFocus(new URLSearchParams(window.location.search).get("m"));
+    const ids = parseFocus(search.get("m"));
     return ids.length === 0 ? null : ids.length === 1 ? ids[0] : ids;
   });
   // Online, the studio opens on a fresh mission list (its order is fixed when it opens); offline, on the
