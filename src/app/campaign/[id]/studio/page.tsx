@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { useFailureText } from "@/components/campaign/CampaignHubParts";
 import { Studio } from "@/components/campaign/studio/Studio";
 import { isRetryable } from "@/lib/campaign/errors";
-import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
+import { sessionExpired, useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { saveReturnPath, studioReturnPath } from "@/lib/campaign/return-path";
@@ -20,6 +20,7 @@ export default function StudioPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("campaign.studio");
   const tc = useTranslations("campaign.common");
+  const th = useTranslations("campaign.flow.hub");
   const failureText = useFailureText();
   const session = useCampaignSession();
   const list = useCampaignList();
@@ -75,9 +76,13 @@ export default function StudioPage() {
   );
 
   if (signedOut) {
+    // "Expired" only when a session held here ended by itself: a refused call while still signed
+    // in, or a session that Auth ended. No session at all (signed out on purpose, never signed in
+    // on this phone) is a plain "sign in to continue".
+    const expired = session.status === "signedIn" || sessionExpired();
     return (
       <div className={dark} role="alert">
-        <p>{tc("errors.unauthorized")}</p>
+        <p>{expired ? tc("errors.unauthorized") : th("signedOut")}</p>
         <Link href="/campaign" className={pill}>{tc("continue")}</Link>
       </div>
     );
