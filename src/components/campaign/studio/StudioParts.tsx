@@ -5,6 +5,7 @@
 import { Mic, Minus, Pause, Play, Plus, Square, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { languageInText } from "@/lib/campaign/language-name";
 import { TEXT_SIZES } from "@/lib/campaign/studio-flow";
 import type { Mission } from "@/lib/campaign/types";
 import { RejectDetailLines, useRejectDetailText } from "../CampaignHubParts";
@@ -17,7 +18,7 @@ import { RejectDetailLines, useRejectDetailText } from "../CampaignHubParts";
  */
 export function PromptCard({ mission, lang, size, onSize, sayIn }: { mission: Mission; lang: string; size: number; onSize: (n: number) => void; sayIn?: { language: string; uiLocale: string } }) {
   const t = useTranslations("campaign.studio");
-  const label = sayIn && mission.type !== "conversational" ? t(mission.type === "read" ? "prompt.sayIn" : "prompt.talkIn", { language: sayIn.language }) : t(`prompt.${mission.type}`);
+  const label = sayIn && mission.type !== "conversational" ? t(mission.type === "read" ? "prompt.sayIn" : "prompt.talkIn", { language: languageInText(sayIn.language, sayIn.uiLocale) }) : t(`prompt.${mission.type}`);
   // A mission to redo says why, and how to fix it, right before the speaker records again.
   const why = useRejectDetailText()(mission);
   const { min, max } = mission.duration_s;

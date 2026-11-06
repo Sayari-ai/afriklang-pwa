@@ -30,6 +30,7 @@ import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
 import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, paddingS, queueProgress, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
 import { isRefusal } from "@/lib/campaign/pool";
+import { languageInText } from "@/lib/campaign/language-name";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
 import { toRecordCount } from "@/lib/campaign/view";
@@ -733,7 +734,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     <div key={mission.mission_id} className="afk-slide-in flex flex-1 flex-col gap-4 pt-2">
       <div className="flex items-center justify-between text-sm font-semibold text-white/75">
         <span>{t("missionOf", { n: position, total })}</span>
-        <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.sayIn", { language: card.language.name }) : t(`type.${mission.type}`)}</span>
+        <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.sayIn", { language: languageInText(card.language.name, locale) }) : t(`type.${mission.type}`)}</span>
       </div>
       {focusDone ? (
         <p role="status" className="rounded-2xl bg-white/10 px-4 py-2 text-sm text-white/90">

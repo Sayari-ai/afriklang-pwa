@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useId, useRef, useState } from "react";
 import { signConsent } from "@/lib/campaign/api";
+import { languageInText } from "@/lib/campaign/language-name";
 import { clearWithdrawn } from "@/lib/campaign/withdrawals";
 import { isQualification, type CampaignCard, type CampaignFailure } from "@/lib/campaign/types";
 import { safeExternalUrl } from "@/lib/security/safe-url";
@@ -61,7 +62,7 @@ export function ConsentStep({ type, card, onSigned }: Props) {
           <p className="text-base text-slate-700">{type === "account"
               ? t("accountSummary")
               : isQualification(card)
-                ? t("testSummary", { language: card.language.name })
+                ? t("testSummary", { language: languageInText(card.language.name, locale) })
                 : topic
                   ? t("campaignSummary", { code: card.code, topic })
                   : t("campaignSummaryNoTopic", { code: card.code })}</p>

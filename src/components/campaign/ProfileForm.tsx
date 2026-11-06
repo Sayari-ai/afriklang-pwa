@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { saveProfile } from "@/lib/campaign/api";
+import { languageInText } from "@/lib/campaign/language-name";
 import {
   AGE_BANDS,
   GENDERS,
@@ -98,6 +99,8 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     if (first?.code === code && typeof first.name === "string" && first.name) return first.name;
     return languageDisplayName(code, locale);
   }, [values.native_language, card.language, contributor.first_language, locale]);
+  // Inside a sentence (« Quelle variété de wolof parlez-vous ? »).
+  const nameInText = languageInText(nativeName, locale);
 
   const set = (k: keyof ProfileInput) => (v: string) => {
     setValues((s) => ({ ...s, [k]: v }));
@@ -265,13 +268,13 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
 
       {errors.native_language ? (
         <p role="alert" className="rounded-2xl bg-red-50 p-3 text-sm text-red-800">
-          {t("errors.server.native_language", { language: nativeName })}
+          {t("errors.server.native_language", { language: nameInText })}
           {locale === "en" && serverSaid ? ` (${serverSaid})` : ""}
         </p>
       ) : null}
       {field(
         "variety",
-        t("variety", { language: nativeName }),
+        t("variety", { language: nameInText }),
         text("variety", "off"),
         t(canAdd ? "varietyHint" : "varietyHintPick"),
       )}
@@ -291,7 +294,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
       ) : null}
       {isNewVariety && !errors.variety ? (
         <p className="-mt-2 text-sm text-slate-600" aria-live="polite">
-          {t("varietyNew", { name: typedVariety, language: nativeName })}
+          {t("varietyNew", { name: typedVariety, language: nameInText })}
         </p>
       ) : null}
       {outside ? (

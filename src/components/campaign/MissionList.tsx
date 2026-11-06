@@ -7,9 +7,10 @@
 
 import { AlertTriangle, CheckCircle2, ChevronRight, Hourglass, MessagesSquare, Mic, MessageCircle, BookOpen, UploadCloud, Users } from "lucide-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { isRetryable } from "@/lib/campaign/errors";
+import { languageInText } from "@/lib/campaign/language-name";
 import { truncate } from "@/lib/campaign/mission-list";
 import { missionsInOutbox, type OutboxState } from "@/lib/campaign/outbox-logic";
 import { useOutbox } from "@/lib/campaign/outbox-client";
@@ -49,7 +50,8 @@ export function MissionList({ campaignId, readOnly }: Props) {
   // A qualification test's sentences are shown in English or French and said in the speaker's language.
   const qualifying = res.state === "ready" && res.data.campaign?.kind === "qualification";
   // The test's language by name, as the studio says it ("Say this in Wolof"), not "your language" (L-20).
-  const sayIn = qualifying && res.state === "ready" ? res.data.campaign.language.name : null;
+  const locale = useLocale();
+  const sayIn = qualifying && res.state === "ready" ? languageInText(res.data.campaign.language.name, locale) : null;
   // Once a test is sent, a rejection is a result, not a request to record again.
   const stage = res.state === "ready" ? res.data.campaign?.qualification?.stage : undefined;
   const testClosed = qualifying && stage != null && stage !== "recording";
