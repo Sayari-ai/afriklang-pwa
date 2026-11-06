@@ -28,7 +28,7 @@ import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
-import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
+import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, paddingS, queueProgress, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
 import { isRefusal } from "@/lib/campaign/pool";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
@@ -132,7 +132,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const mission = found ?? (held && held.mission_id === currentId ? held : null);
   const rules = mission ? takeRules(card, mission) : null;
   const pad = paddingS(card);
-  const goal = sessionGoal(card);
+  // A focus is the whole session: its bar counts the focus, and the campaign's session goal
+  // (and its celebration) does not apply.
+  const goal = focusActive ? null : sessionGoal(card);
   const timed = mission ? isTimed(mission.type) : false;
   const minS = mission ? (mission.duration_s.min ?? rules?.durationMinS ?? 0) : 0;
   // Shown for every type: a read sentence has a maximum too, and the speaker must see it (N-10).
@@ -620,7 +622,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           <X size={22} aria-hidden />
         </Link>
         <div className="min-w-0 flex-1">
-          <SessionBar count={sessionCount} goal={goal} />
+          <SessionBar count={sessionCount} goal={focusActive ? queue.length : goal} />
         </div>
       </header>
       {flash ? (
@@ -718,7 +720,11 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   // Advice about the take on the review screen (quiet, noisy, short pause): the speaker may send anyway.
   const check = take ? checkTake(take.analysis, rules) : null;
   const advice = check && !check.blocking ? (check.problem as "silent" | "clipped" | "too_quiet" | "noisy" | "silence") : null;
-  const position = Math.max(1, missions.length - open + 1);
+  // A focus counts its own queue ("1 of 2"); otherwise the whole campaign's missions.
+  const focusProgress = focusActive ? queueProgress(queue, (id) => { const m = byId.get(id); return Boolean(m && canRecordNow(m, onPhone)); }) : null;
+  const position = focusProgress ? focusProgress.position : Math.min(Math.max(1, missions.length - open + 1), missions.length);
+  const total = focusProgress ? focusProgress.total : missions.length;
+  const leftHere = focusProgress ? focusProgress.left : open;
   const progress = recording && maxS ? elapsed / maxS : null;
   const buttonMode = phase === "countdown" ? "countdown" : recording ? "recording" : phase === "analyzing" || phase === "saving" ? "busy" : "record";
   const buttonLabel = recording || phase === "countdown" ? (phase === "speaking" ? t("button.stop") : t("button.cancel")) : t("button.record");
@@ -726,7 +732,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   return shell(
     <div key={mission.mission_id} className="afk-slide-in flex flex-1 flex-col gap-4 pt-2">
       <div className="flex items-center justify-between text-sm font-semibold text-white/75">
-        <span>{t("missionOf", { n: Math.min(position, missions.length), total: missions.length })}</span>
+        <span>{t("missionOf", { n: position, total })}</span>
         <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.sayIn", { language: card.language.name }) : t(`type.${mission.type}`)}</span>
       </div>
       {focusDone ? (
@@ -768,7 +774,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
               <RotateCcw size={18} aria-hidden /> {t("review.again")}
             </button>
             <button type="button" onClick={() => void submit()} disabled={phase === "saving"} className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white text-lg font-bold text-primary shadow-lg disabled:opacity-70">
-              {phase === "saving" ? t("review.preparing") : advice ? t("review.sendAnyway") : open > 1 ? t("review.submit") : t("review.submitLast")}
+              {phase === "saving" ? t("review.preparing") : advice ? t("review.sendAnyway") : leftHere > 1 ? t("review.submit") : t("review.submitLast")}
               {phase !== "saving" ? <ChevronRight size={20} aria-hidden /> : null}
             </button>
           </div>

@@ -77,6 +77,17 @@ export function nextInQueue(queue: readonly string[], currentId: string | null, 
   return null;
 }
 
+/**
+ * Where a focused session (`?m=a,b`) stands: the focus is the whole session, so the counter
+ * counts its queue ("1 of 2"), not the campaign's missions. `left`: the queue's missions still to
+ * record (the one on screen included); `position`: the one on screen, 1-based, never above `total`.
+ */
+export function queueProgress(queue: readonly string[], isOpen: (id: string) => boolean): { position: number; total: number; left: number } {
+  const total = queue.length;
+  const left = queue.filter(isOpen).length;
+  return { position: Math.max(1, Math.min(total, total - left + 1)), total, left };
+}
+
 /** Move a skipped mission to the end of the queue. */
 export function skip(queue: readonly string[], id: string): string[] {
   return [...queue.filter((x) => x !== id), id];
