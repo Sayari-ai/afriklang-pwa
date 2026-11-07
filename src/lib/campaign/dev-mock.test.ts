@@ -82,7 +82,7 @@ describe("dev mock qualification tests (several languages, refusal details)", ()
       const res = await (win.fetch as typeof fetch)("https://mock.supabase.co/functions/v1/campaigns", { method: "POST", body: JSON.stringify(body) });
       return { status: res.status, body: (await res.json()) as Record<string, unknown> };
     };
-    const mock = win.__afkMock as { qcReject: (missionId: string, check?: string) => void; qualify: (d?: string, lang?: string) => void };
+    const mock = win.__afkMock as { qcReject: (missionId: string, check?: string) => void; qualify: (d?: string, lang?: string) => void; oldApplicant: (on?: boolean) => void };
     return { bridge, mock, QUAL_FUC_ID, QUAL_BAM_ID };
   }
   const QUAL_ID = "00000000-0000-4000-8000-0000000000c3";
@@ -100,6 +100,31 @@ describe("dev mock qualification tests (several languages, refusal details)", ()
     ]);
     for (const c of tests) expect(c.progress.total, c.code).toBe(10);
     expect(contributor.first_language).toEqual({ code: "wol", name: "Wolof" });
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("oldApplicant: no first language and two test languages, so the profile form asks; the answer is kept", async () => {
+    const { bridge, mock, QUAL_FUC_ID } = await rig();
+    const { firstLanguageChoices } = await import("./profile-form");
+    // A filled profile first: the old applicant starts without one.
+    await bridge({ action: "profile", variety: "Baol-Baol", native_language: "wol", gender: "male" });
+    mock.oldApplicant();
+    const before = (await bridge({ action: "campaigns" })).body as { contributor: ContributorView; campaigns: CampaignCard[] };
+    expect(before.contributor.first_language).toBeNull();
+    expect(before.contributor.profile.values).toBeNull();
+    expect(before.contributor.gender).toBe("female");
+    expect(before.campaigns.map((c) => [c.campaign_id, c.kind, c.next_step])).toEqual([[QUAL_ID, "qualification", "profile"], [QUAL_FUC_ID, "qualification", "profile"]]);
+    expect(firstLanguageChoices(before.campaigns, before.contributor, "en")?.map((c) => c.code)).toEqual(["fuc", "wol"]);
+    // The speaker answers Pulaar on the Wolof test: the profile keeps it, and the form no longer asks.
+    await bridge({ action: "profile", variety: "Fuuta Tooro", native_language: "fuc", gender: "female" });
+    const after = (await bridge({ action: "campaigns" })).body as { contributor: ContributorView; campaigns: CampaignCard[] };
+    expect(after.contributor.profile.values).toMatchObject({ nativeLanguage: "fuc", variety: "Fuuta Tooro", gender: "female" });
+    expect(firstLanguageChoices(after.campaigns, after.contributor, "en")).toBeNull();
+    mock.oldApplicant(false);
+    const usual = (await bridge({ action: "campaigns" })).body as { contributor: ContributorView; campaigns: CampaignCard[] };
+    expect(usual.contributor.first_language).toEqual({ code: "wol", name: "Wolof" });
+    expect(usual.campaigns).toHaveLength(5);
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });

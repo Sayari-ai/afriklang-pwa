@@ -64,10 +64,10 @@ export function CampaignHub({ campaignId }: { campaignId: string }) {
       </div>
     );
   }
-  return <Hub card={card} contributor={contributor} reload={list.reload} />;
+  return <Hub card={card} cards={campaigns} contributor={contributor} reload={list.reload} />;
 }
 
-function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: ContributorView; reload: () => void }) {
+function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: readonly CampaignCard[]; contributor: ContributorView; reload: () => void }) {
   const t = useTranslations("campaign.home");
   const locale = useLocale();
   const tf = useTranslations("campaign.flow");
@@ -149,7 +149,7 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
 
       {card.next_step === "profile" || (card.next_step === "blocked" && correcting) ? (
         <Panel>
-          <ProfileForm card={card} contributor={contributor} onSaved={after("profile")} heading={card.next_step === "blocked" ? tf("profile.correctTitle") : undefined} />
+          <ProfileForm card={card} cards={cards} contributor={contributor} onSaved={after("profile")} heading={card.next_step === "blocked" ? tf("profile.correctTitle") : undefined} />
         </Panel>
       ) : null}
       {card.next_step === "blocked" && !correcting ? (

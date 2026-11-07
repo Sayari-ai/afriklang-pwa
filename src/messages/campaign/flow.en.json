@@ -18,7 +18,9 @@
     "intro": "A few details help us match your voice to the right project. Everything is required.",
     "privacy": "Your name never travels with your audio: only a pseudonymous speaker ID does.",
     "correctTitle": "Correct my profile",
+    "firstLanguage": "Which of these is your first language?",
     "variety": "Which variety of {language} do you speak?",
+    "varietyOfFirst": "Which variety of your first language do you speak?",
     "varietyHint": "Type the name of your variety, or tap one of the suggestions. If it is not listed, type it in full: it will be added.",
     "varietyHintPick": "Type the name of your variety and tap it in the suggestions.",
     "varietySuggestions": "Suggested varieties",
@@ -42,6 +44,7 @@
     },
     "errors": {
       "required": {
+        "native_language": "Choose your first language.",
         "variety": "Type or choose the variety of the language you speak.",
         "country": "Choose the country you live in.",
         "region": "Enter your region or city.",

@@ -25,6 +25,9 @@
  *                                      argument names another test ("fuc", "bam")
  *   __afkMock.qcReject(missionId, "low_snr")  the automatic checks refused that mission's take: it comes
  *                                      back to record again with what was measured (any REJECT_CHECKS value)
+ *   __afkMock.oldApplicant()           an applicant from before the form asked the first language: no
+ *                                      first language, no profile, and only the Wolof and Pulaar tests, so
+ *                                      the profile step asks which is the first language (`false` undoes it)
  *
  * The answers mirror afriklang-landing-page/docs/CAMPAIGN_BRIDGE_CONTRACT.md: keep them in step.
  */
@@ -63,6 +66,8 @@ type State = {
   variety: string | null;
   /** The native language the profile was saved with (the app never overwrites it from a test card, A5). */
   nativeLanguage?: string | null;
+  /** The gender the profile was saved with. */
+  gender?: string | null;
   planned: { consent: boolean; missions: Mission[] };
   pool: { consent: boolean; missions: PoolMission[]; nextPrompt: number; forced: Exclude<PoolStatus, "ok"> | null; elsewhere: boolean };
   /** Seconds of each submitted take (for the paid time), by mission id. */
@@ -71,6 +76,11 @@ type State = {
   tickets?: string;
   /** The qualification tests, one per language (absent from states saved before they existed). */
   quals?: Record<QualLang, QualState>;
+  /**
+   * An old applicant: the dashboard knows no first language and the list holds only the Wolof and
+   * Pulaar tests (no campaigns yet), so the profile form asks which one is first.
+   */
+  oldApplicant?: boolean;
 };
 type QualState = { consent: boolean; attempt: number; stage: QualificationView["stage"]; decision: QualificationView["decision"]; missions: Mission[] };
 
@@ -342,9 +352,12 @@ function contributor(s: State): ContributorView {
     contributor_id: "00000000-0000-4000-8000-0000000000b1",
     speaker_id: s.speakerId,
     locale: "en" as const,
-    profile: { complete: s.profile, missing: s.profile ? [] : ["region"], values: s.profile ? { nativeLanguage: s.nativeLanguage ?? "wol", variety: s.variety, country: "SN", region: "Thiès", gender: "female", ageBand: "30-44", device: "Android Chrome" } : null },
+    profile: { complete: s.profile, missing: s.profile ? [] : ["region"], values: s.profile ? { nativeLanguage: s.nativeLanguage ?? "wol", variety: s.variety, country: "SN", region: "Thiès", gender: s.gender ?? "female", ageBand: "30-44", device: "Android Chrome" } : null },
     // The language the applicant marked as first on the form: the profile's native language (A5).
-    first_language: { code: "wol", name: "Wolof" },
+    // None for an applicant from before the form asked.
+    first_language: s.oldApplicant ? null : { code: "wol", name: "Wolof" },
+    // The sex given on the application form: prefills the profile's (the speaker can change it).
+    gender: "female",
   };
 }
 
@@ -496,7 +509,7 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
 async function bridge(body: Record<string, unknown>): Promise<Response> {
   await delay(250);
   const s = load();
-  const cards = () => [plannedCard(s), poolCard(s), ...QUAL_LANG_CODES.map((lang) => qualCard(s, lang))];
+  const cards = () => (s.oldApplicant ? [qualCard(s, "wol"), qualCard(s, "fuc")] : [plannedCard(s), poolCard(s), ...QUAL_LANG_CODES.map((lang) => qualCard(s, lang))]);
   const campaignId = body.campaign_id;
   const qual = qualOf(s, campaignId);
   switch (body.action) {
@@ -510,6 +523,7 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       s.profile = true;
       s.variety = String(body.variety ?? "");
       s.nativeLanguage = typeof body.native_language === "string" && body.native_language ? body.native_language : "wol";
+      s.gender = typeof body.gender === "string" && body.gender ? body.gender : "female";
       s.speakerId ??= "SPK-7Q2M9X4D";
       save(s);
       return json({ contributor: contributor(s), blocked: [] });
@@ -770,6 +784,16 @@ export function installCampaignMock() {
       m.rejection_detail = detail;
       m.recording = { status: "rejected", rejection_reason: reason, rejection_detail: detail };
       if (found && found.q.stage === "in_review") found.q.stage = "recording";
+      save(s);
+    },
+    /**
+     * An applicant from before the form asked the first language (`on` false: the usual speaker):
+     * no first language, the profile not filled yet, and only the Wolof and Pulaar tests.
+     */
+    oldApplicant: (on = true) => {
+      const s = load();
+      s.oldApplicant = on;
+      if (on) Object.assign(s, { profile: false, nativeLanguage: null, variety: null, gender: null });
       save(s);
     },
     /** The pool batch's leases have ended. */

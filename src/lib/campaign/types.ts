@@ -24,6 +24,12 @@ export type ContributorView = {
    * contributor applied before the form asked.
    */
   first_language?: { code: string | null; name: string } | null;
+  /**
+   * The sex the applicant gave on the application form, the profile's values: prefills the
+   * profile's gender when none is stored (the field stays visible and editable). Optional: an
+   * older dashboard does not send it; null when the form did not ask or the applicant did not say.
+   */
+  gender?: "female" | "male" | null;
 };
 
 /**

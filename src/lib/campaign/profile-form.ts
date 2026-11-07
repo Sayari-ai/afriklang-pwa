@@ -1,6 +1,6 @@
 /** Pure parts of the profile form: allowed values, validation, defaults. No React, no DOM. */
 
-import type { CampaignCard, ContributorView, ProfileInput } from "./types";
+import { isQualification, type CampaignCard, type ContributorView, type ProfileInput } from "./types";
 
 // Mirror the dashboard's closed lists (src/lib/campaigns/reference.ts); the server validates again.
 // The app asks Female or Male only; the dashboard also knows "other" / "undisclosed" (set by an admin).
@@ -131,8 +131,10 @@ export function outsideTargets(variety: string, card: Pick<CampaignCard, "langua
 /**
  * `choices`: the known varieties (varietyChoices); a known name is sent under its list spelling.
  * `canAdd`: whether a name outside `choices` may be sent (canAddVarieties).
+ * `nativeChoices`: the language codes the form asks the first language among
+ * (firstLanguageChoices), when it asks; the answer must be one of them.
  */
-export function validateProfile(v: ProfileValues, choices: readonly string[], canAdd = true): { input: ProfileInput | null; errors: ProfileErrors } {
+export function validateProfile(v: ProfileValues, choices: readonly string[], canAdd = true, nativeChoices: readonly string[] | null = null): { input: ProfileInput | null; errors: ProfileErrors } {
   const t = (s: string) => s.trim();
   const errors: ProfileErrors = {};
   const need = (k: keyof ProfileInput, ok: (s: string) => boolean) => {
@@ -147,8 +149,9 @@ export function validateProfile(v: ProfileValues, choices: readonly string[], ca
     else if (CONTROL.test(s)) errors[k] = "control";
     else if (!HAS_WORD.test(s)) errors[k] = "noLetters";
   };
-  // Not asked on the form (see initialValues). The server checks it again.
-  need("native_language", () => true);
+  // Asked only when it is unknown and the speaker has tests in several languages (firstLanguageChoices);
+  // otherwise filled by initialValues. The server checks it again.
+  need("native_language", (s) => !nativeChoices || nativeChoices.includes(s));
   const variety = tidyVariety(v.variety);
   if (!variety) errors.variety = "required";
   else if (variety.length > MAX_TEXT) errors.variety = "tooLong";
@@ -234,23 +237,77 @@ export function languageDisplayName(code: string, locale: string): string {
   return name && name !== code ? name : fallback;
 }
 
+/** `v` when it is one of the genders the form offers, else null (not trusted by type). */
+const offeredGender = (v: unknown): string | null => (typeof v === "string" && (GENDERS as readonly string[]).includes(v) ? v : null);
+
+/**
+ * The native language the form sends. While the first language is asked (`firstChoices`), the
+ * speaker's answer when it is one of the choices, else empty. Otherwise the live contributor's:
+ * the stored one, then the application form's first language, then `filled` (what initialValues
+ * filled from the hub's first copy, or the card's language a refused save fell back to). Live,
+ * because the hub paints from a saved copy and refreshes behind it: a refresh that brings a stored
+ * native language or a first language must win over the stale copy's card language.
+ */
+export function formNativeLanguage(contributor: Pick<ContributorView, "profile" | "first_language">, firstChoices: readonly LanguageChoice[] | null, answer: string, filled: string): string {
+  if (firstChoices) return firstChoices.some((c) => c.code === answer) ? answer : "";
+  return languageCodeOf(contributor.profile.values?.nativeLanguage) ?? languageCodeOf(contributor.first_language?.code) ?? filled;
+}
+
+/** A language the speaker may name as their first one: its code and its catalogue name. */
+export type LanguageChoice = { code: string; name: string };
+
+/**
+ * The languages the form asks the first language among, or null when it does not ask (the form
+ * then fills the native language itself, see initialValues). It asks only when nothing else says
+ * which language is the speaker's first: no native language is stored, the dashboard sends no
+ * first language (null, or absent on an older dashboard), and the speaker has qualification tests
+ * in two or more languages. Otherwise an applicant tested in Wolof and Pulaar with neither known
+ * would get whichever test they open first as their native language, and their variety filed
+ * under it for good.
+ *
+ * The choices are the languages of every test card in the list (one per language, whatever its
+ * state or whether it still has missions: each is a language the applicant chose), sorted by name.
+ * A first language the dashboard knows only by name (`code` null) still counts as known: the
+ * tests' languages are then not the speaker's first, and the form keeps its old behaviour.
+ */
+export function firstLanguageChoices(cards: readonly Pick<CampaignCard, "kind" | "language">[], contributor: Pick<ContributorView, "profile" | "first_language">, locale: string): LanguageChoice[] | null {
+  if (languageCodeOf(contributor.profile.values?.nativeLanguage)) return null;
+  if (contributor.first_language != null) return null;
+  const byCode = new Map<string, LanguageChoice>();
+  for (const c of cards) {
+    if (!isQualification(c)) continue;
+    const code = languageCodeOf(c.language?.code);
+    if (!code || byCode.has(code)) continue;
+    const name = typeof c.language.name === "string" && c.language.name.trim() ? c.language.name.trim() : languageDisplayName(code, locale);
+    byCode.set(code, { code, name });
+  }
+  if (byCode.size < 2) return null;
+  return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name, locale));
+}
+
 /**
  * Stored values win, except a stored gender the form does not offer ("other", "undisclosed"),
- * which is asked again.
+ * which is asked again: the field stays empty so the speaker chooses (never the application's
+ * answer over it, or a speaker saving without looking would overwrite it). Only when no gender is
+ * stored does the one the applicant gave on the application form (`contributor.gender`, when the
+ * form offers it) prefill the field, as the dashboard's profileFormDefaults does. Either way the
+ * field stays on the form, so the speaker sees it and can change it.
  *
- * The native language is not asked: the stored one wins; then the language the applicant marked
- * as first on the application form; then this card's language. A speaker tested in Wolof (native)
- * and Pulaar keeps Wolof whichever test card they open first: the profile is one per speaker, and
- * the dashboard files the variety under the native language.
+ * The native language (see also formNativeLanguage): the stored one wins; then the language the applicant marked as first on
+ * the application form; then this card's language. A speaker tested in Wolof (native) and Pulaar
+ * keeps Wolof whichever test card they open first: the profile is one per speaker, and the
+ * dashboard files the variety under the native language. When none of the first two is known and
+ * the tests span several languages, the form asks instead (firstLanguageChoices), and the
+ * speaker's answer replaces this value.
  */
-export function initialValues(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile" | "first_language">, ua: string): ProfileValues {
+export function initialValues(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile" | "first_language" | "gender">, ua: string): ProfileValues {
   const s = contributor.profile.values;
   return {
     native_language: languageCodeOf(s?.nativeLanguage) ?? languageCodeOf(contributor.first_language?.code) ?? card.language.code,
     variety: s?.variety ?? "",
     country: s?.country ?? "",
     region: s?.region ?? "",
-    gender: s?.gender && (GENDERS as readonly string[]).includes(s.gender) ? s.gender : "",
+    gender: s?.gender ? (offeredGender(s.gender) ?? "") : (offeredGender(contributor.gender) ?? ""),
     age_band: s?.ageBand ?? "",
     device: s?.device ?? guessDevice(ua),
   };
