@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, firstLanguageChoices, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, nativeLanguageFallback, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
+import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, firstLanguageChoices, formNativeLanguage, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, nativeLanguageFallback, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
 
 const ok: ProfileValues = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: " Thiès ", gender: "female", age_band: "30-44", device: "Android" };
 const varieties = ["Baol-Baol", "Saloum-Saloum"];
@@ -245,6 +245,26 @@ describe("first language question", () => {
   });
   it("names a card without a name from its code", () => {
     expect(firstLanguageChoices([test("wol", ""), test("fuc", "Pulaar")], { profile: none, first_language: null }, "en")).toEqual([{ code: "fuc", name: "Pulaar" }, { code: "wol", name: "Wolof" }]);
+  });
+  it("follows the refreshed contributor once the question is gone, not the stale first copy's card language", () => {
+    const fuc = { language: { code: "fuc", name: "Pulaar", varieties: [] } };
+    // The hub's first copy: no first language, two tests: asked; values filled with the card's language.
+    const stale = { profile: none, first_language: null };
+    const filled = initialValues(fuc, stale, "").native_language;
+    expect(filled).toBe("fuc");
+    const asked = firstLanguageChoices(wolFuc, stale, "en");
+    expect(formNativeLanguage(stale, asked, "", filled)).toBe("");
+    expect(formNativeLanguage(stale, asked, "wol", filled)).toBe("wol");
+    expect(formNativeLanguage(stale, asked, "bam", filled)).toBe("");
+    // The refresh brings a first language, or a native language stored meanwhile: no question, and that one wins.
+    const withFirst = { profile: none, first_language: { code: "wol", name: "Wolof" } };
+    expect(firstLanguageChoices(wolFuc, withFirst, "en")).toBeNull();
+    expect(formNativeLanguage(withFirst, null, "fuc", filled)).toBe("wol");
+    const withStored = { profile: stored("wol"), first_language: null };
+    expect(formNativeLanguage(withStored, null, "", filled)).toBe("wol");
+    // Nothing known either way: what the form filled (or the card's language a refused save fell back to).
+    expect(formNativeLanguage({ profile: none, first_language: null }, null, "", filled)).toBe("fuc");
+    expect(formNativeLanguage({ profile: none, first_language: { code: null, name: "Seereer" } }, null, "", "fuc")).toBe("fuc");
   });
   it("requires an answer among the choices", () => {
     const codes = ["fuc", "wol"];

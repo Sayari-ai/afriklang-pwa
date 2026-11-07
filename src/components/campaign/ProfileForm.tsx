@@ -19,6 +19,7 @@ import {
   MAX_TEXT,
   countryOptions,
   firstLanguageChoices,
+  formNativeLanguage,
   initialValues,
   languageCodeOf,
   languageDisplayName,
@@ -69,10 +70,10 @@ export function ProfileForm({ card, cards, contributor, onSaved, heading }: Prop
   // The languages to ask the first one among, or null (not asked: profile-form.ts). Follows the
   // list: the hub paints from the last saved copy and refreshes it behind, so the question may come
   // or go after the form opened. While it is asked, the native language is the speaker's answer
-  // (empty until they give one); otherwise the one initialValues filled.
+  // (empty until they give one); otherwise the live contributor's (formNativeLanguage).
   const firstChoices = useMemo(() => firstLanguageChoices(cards, contributor, locale), [cards, contributor, locale]);
   const [firstAnswer, setFirstAnswer] = useState("");
-  const native = firstChoices ? (firstChoices.some((c) => c.code === firstAnswer) ? firstAnswer : "") : values.native_language;
+  const native = formNativeLanguage(contributor, firstChoices, firstAnswer, values.native_language);
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
   // What the dashboard said about the native language, when it refused it (shown to English readers).

@@ -240,6 +240,19 @@ export function languageDisplayName(code: string, locale: string): string {
 /** `v` when it is one of the genders the form offers, else null (not trusted by type). */
 const offeredGender = (v: unknown): string | null => (typeof v === "string" && (GENDERS as readonly string[]).includes(v) ? v : null);
 
+/**
+ * The native language the form sends. While the first language is asked (`firstChoices`), the
+ * speaker's answer when it is one of the choices, else empty. Otherwise the live contributor's:
+ * the stored one, then the application form's first language, then `filled` (what initialValues
+ * filled from the hub's first copy, or the card's language a refused save fell back to). Live,
+ * because the hub paints from a saved copy and refreshes behind it: a refresh that brings a stored
+ * native language or a first language must win over the stale copy's card language.
+ */
+export function formNativeLanguage(contributor: Pick<ContributorView, "profile" | "first_language">, firstChoices: readonly LanguageChoice[] | null, answer: string, filled: string): string {
+  if (firstChoices) return firstChoices.some((c) => c.code === answer) ? answer : "";
+  return languageCodeOf(contributor.profile.values?.nativeLanguage) ?? languageCodeOf(contributor.first_language?.code) ?? filled;
+}
+
 /** A language the speaker may name as their first one: its code and its catalogue name. */
 export type LanguageChoice = { code: string; name: string };
 
@@ -278,7 +291,7 @@ export function firstLanguageChoices(cards: readonly Pick<CampaignCard, "kind" |
  * application form (`contributor.gender`, when the form offers it); else empty. Either way the
  * field stays on the form, so the speaker sees it and can change it.
  *
- * The native language: the stored one wins; then the language the applicant marked as first on
+ * The native language (see also formNativeLanguage): the stored one wins; then the language the applicant marked as first on
  * the application form; then this card's language. A speaker tested in Wolof (native) and Pulaar
  * keeps Wolof whichever test card they open first: the profile is one per speaker, and the
  * dashboard files the variety under the native language. When none of the first two is known and
