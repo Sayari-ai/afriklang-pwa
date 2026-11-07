@@ -191,7 +191,8 @@
     "paid": "Accepted audio: {accepted} · In review: {pending}",
     "statusTest": {
       "rejected": "Not accepted"
-    }
+    },
+    "statusRedo": "To record again"
   },
   "qualification": {
     "title": "Qualification test",

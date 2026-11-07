@@ -7,9 +7,11 @@
  * The reference for Sayari is docs/SAYARI_UPLOAD_PAYLOAD.json and the shared spec document.
  */
 
-import type { TakeAnalysis, TakeRules } from "@/lib/audio/analyze";
+import type { TakeAnalysis, TakeProblem, TakeRules } from "@/lib/audio/analyze";
 import type { CampaignCard, ContributorView, Mission } from "./types";
+import { MAX_TEXT } from "./profile-form";
 
+/** Additive keys only since 2.0 (`quality.advice`, `quality.sent_anyway`); Sayari does not read the version. */
 export const AUDIO_SCHEMA_VERSION = "afriklang.audio/2.0";
 
 export type CaptureInfo = {
@@ -24,6 +26,14 @@ export type CaptureInfo = {
   paddingS: number;
   /** The "too quiet" hint was shown during this take. */
   quietHintShown: boolean;
+  /**
+   * The one advisory problem the review screen showed for this take (quiet, clipped, noisy,
+   * silence at the edges, no voice), or null when the app's checks found nothing to say. A
+   * blocking problem (the length) never reaches a submit.
+   */
+  advice: TakeProblem | null;
+  /** The speaker pressed "Send anyway" over that advice. */
+  sentAnyway: boolean;
   /** Takes recorded for this mission in this studio session, this one included (failed checks count). */
   takeNumber: number;
   sessionId: string;
@@ -85,7 +95,10 @@ export function buildAudioMetadata(args: {
       silence_after_s: a.silence_after_s,
       clipped: a.peak_dbfs >= 0,
       noise_floor_dbfs: nn(a.noise_floor_dbfs),
-      app_checks_passed: true,
+      // True only when the app had nothing to say about the take; "Send anyway" over an advice is recorded as such.
+      app_checks_passed: c.advice === null,
+      advice: c.advice,
+      sent_anyway: c.sentAnyway,
       rules: { duration_min_s: rules.durationMinS, duration_max_s: rules.durationMaxS, min_level_dbfs: rules.minLevelDbfs, silence_margin_s: rules.silenceMarginS },
       studio_padding_s: c.paddingS,
       quiet_hint_shown: c.quietHintShown,
@@ -154,11 +167,28 @@ export function parseDevice(ua: string): { os: string | null; browser: string | 
 }
 
 /**
- * The speaker's declared variety, only when it belongs to the campaign's language (APP-015). The
- * profile is one per speaker: saved from a campaign in another language, its variety is that
- * language's, and must not label this campaign's audio. Null otherwise.
+ * The test's variety as the bridge sent it, checked rather than trusted by type: a trimmed name of
+ * at most MAX_TEXT characters (the dashboard's column), else null. It is forwarded to Sayari as
+ * `dialect` and `speaker.variety`, so nothing but a string may pass.
  */
-export function varietyFor(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile">): string | null {
+function testVariety(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  return s && s.length <= MAX_TEXT ? s : null;
+}
+
+/**
+ * The variety that labels this campaign's audio. A qualification test carries its own (the
+ * attempt's, the one the applicant gave for that language on the form): it wins, whatever the
+ * profile says. Otherwise the speaker's declared variety, only when it belongs to the campaign's
+ * language (APP-015): the profile is one per speaker, so saved from a campaign in another
+ * language, its variety is that language's and must not label this campaign's audio. Null otherwise.
+ */
+export function varietyFor(card: Pick<CampaignCard, "language" | "kind" | "qualification">, contributor: Pick<ContributorView, "profile">): string | null {
+  if (card.kind === "qualification") {
+    const v = testVariety(card.qualification?.variety);
+    if (v) return v;
+  }
   const v = contributor.profile.values?.variety ?? null;
   const native = contributor.profile.values?.nativeLanguage ?? null;
   if (!v) return null;

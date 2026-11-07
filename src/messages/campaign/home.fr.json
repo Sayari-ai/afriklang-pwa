@@ -191,7 +191,8 @@
     "paid": "Audio accepté : {accepted} · En vérification : {pending}",
     "statusTest": {
       "rejected": "Non accepté"
-    }
+    },
+    "statusRedo": "À réenregistrer"
   },
   "qualification": {
     "title": "Test de qualification",

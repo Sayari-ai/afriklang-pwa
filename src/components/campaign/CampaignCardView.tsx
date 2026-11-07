@@ -11,7 +11,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { isPool, isRefusal, paidTime } from "@/lib/campaign/pool";
 import { usePoolMemo } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard } from "@/lib/campaign/types";
-import { daysLeft, openCountOnPhone, setupStep } from "@/lib/campaign/view";
+import { daysLeft, isTestRecording, openCountOnPhone, setupStep, testRedoCount } from "@/lib/campaign/view";
 import { useTimeText } from "./PoolParts";
 
 export function ProgressRing({ value, total, size = 64 }: { value: number; total: number; size?: number }) {
@@ -52,12 +52,15 @@ export function useQualificationText() {
 /** The qualification test on the home screen: not paid, no deadline, one sentence once everything is sent. */
 function QualificationCardView({ card, waitingOk }: { card: CampaignCard; waitingOk: number }) {
   const t = useTranslations("campaign.home.qualification");
+  const tc = useTranslations("campaign.home.card");
   const status = useQualificationText()(card);
   const { progress } = card;
   const done = progress.submitted + progress.accepted;
   const open = openCountOnPhone(card, waitingOk);
+  // Clips the automatic checks sent back (the "to record again" email names them): the same chip as a campaign card.
+  const redo = testRedoCount(card);
   const hub = `/campaign/${card.campaign_id}`;
-  const recording = !card.qualification || card.qualification.stage === "recording";
+  const recording = isTestRecording(card.qualification);
   const cta =
     recording && card.next_step === "ready" && open > 0
       ? { href: `${hub}/studio`, label: done > 0 ? t("continue", { n: open }) : t("start"), go: true }
@@ -81,7 +84,14 @@ function QualificationCardView({ card, waitingOk }: { card: CampaignCard; waitin
         {status ? (
           <p role="status" className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-800">{status}</p>
         ) : (
-          <p className="mb-3 text-sm font-bold text-slate-900">{t("recording", { done, total: progress.total })}</p>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <p className="text-sm font-bold text-slate-900">{t("recording", { done, total: progress.total })}</p>
+            {redo > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                <AlertTriangle size={12} aria-hidden /> {tc("redo", { n: redo })}
+              </span>
+            ) : null}
+          </div>
         )}
         {cta ? (
           <Link href={cta.href} className={`mt-3 flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl px-4 text-base font-black transition ${cta.go ? "bg-submit text-white shadow-[0_6px_0_var(--color-primary-deep)] active:translate-y-0.5 active:shadow-[0_3px_0_var(--color-primary-deep)]" : "bg-primary text-white"}`}>

@@ -7,9 +7,10 @@
 
 import { ArrowLeft, Check, Ear, Hand, Mic, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 import { logActivity } from "@/lib/campaign/activity";
+import { languageInText } from "@/lib/campaign/language-name";
 import { isRetryable } from "@/lib/campaign/errors";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
@@ -68,6 +69,7 @@ export function CampaignHub({ campaignId }: { campaignId: string }) {
 
 function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: ContributorView; reload: () => void }) {
   const t = useTranslations("campaign.home");
+  const locale = useLocale();
   const tf = useTranslations("campaign.flow");
   const session = useCampaignSession();
   const userId = session.status === "signedIn" ? session.userId : null;
@@ -143,7 +145,7 @@ function Hub({ card, contributor, reload }: { card: CampaignCard; contributor: C
       {step ? <Stepper current={step} /> : null}
 
       {!step && card.next_step !== "blocked" && !qualifying ? <PaidTime card={card} /> : null}
-      {qualifying && !testStatus && card.next_step === "ready" ? <p className="rounded-2xl bg-primary/5 p-4 text-sm font-medium text-slate-800">{t("qualification.intro", { language: card.language.name })}</p> : null}
+      {qualifying && !testStatus && card.next_step === "ready" ? <p className="rounded-2xl bg-primary/5 p-4 text-sm font-medium text-slate-800">{t("qualification.intro", { language: languageInText(card.language.name, locale) })}</p> : null}
 
       {card.next_step === "profile" || (card.next_step === "blocked" && correcting) ? (
         <Panel>

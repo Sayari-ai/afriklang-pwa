@@ -18,6 +18,12 @@ export type ContributorView = {
   speaker_id: string | null;
   locale: "en" | "fr";
   profile: { complete: boolean; missing: string[]; values: ProfileValues | null };
+  /**
+   * The language the applicant marked as their first one on the application form: prefills the
+   * native language of the profile. Optional: an older dashboard does not send it; null when the
+   * contributor applied before the form asked.
+   */
+  first_language?: { code: string | null; name: string } | null;
 };
 
 /**
@@ -92,6 +98,8 @@ export type QualificationView = {
   accepted: number | null;
   total: number;
   retry_after: string | null;
+  /** The variety the test is for (the attempt's): labels the test audio. Optional: an older dashboard does not send it. */
+  variety?: string | null;
 };
 
 export const isQualification = (c: Pick<CampaignCard, "kind">) => c.kind === "qualification";
@@ -103,11 +111,13 @@ export type Mission = {
   position: number;
   status: "todo" | "submitted" | "accepted" | "rejected";
   rejection_reason: string | null;
+  /** What the automatic check measured when it refused the last take (A12). Optional: an older dashboard does not send it; null for a reviewer's own decision. */
+  rejection_detail?: RejectDetail | null;
   prompt: { id: string; text_or_topic: string; category: string | null };
   duration_s: { min: number | null; max: number | null };
   partner_speaker_id: string | null;
   partner_ready: boolean;
-  recording: { status: "uploaded" | "pre_annotated" | "accepted" | "rejected"; rejection_reason: string | null } | null;
+  recording: { status: "uploaded" | "pre_annotated" | "accepted" | "rejected"; rejection_reason: string | null; rejection_detail?: RejectDetail | null } | null;
   /** Pool missions: record and submit before then, or the mission goes back to the pool. Null (or absent) when planned. */
   lease_until?: string | null;
 };
@@ -194,6 +204,27 @@ export type CampaignErrorCode =
 export const REJECTION_REASONS = ["level", "duration", "silence", "variety", "banned_topic", "reading_gap", "speaker_balance", "other"] as const;
 export type RejectionReason = (typeof REJECTION_REASONS)[number];
 
+// Mirror of the dashboard's src/lib/qualification/reject-detail.ts; keep in sync (auto-recruitment plan, 03 §7).
+export const REJECT_CHECKS = [
+  "too_short", // duration below the limit (s)
+  "too_long", // duration above the limit (s)
+  "low_snr", // voice not loud enough above the background (dB)
+  "background_noise", // background noise level too high (dBFS)
+  "clipping", // share of saturated samples (ratio 0–1)
+  "long_silence", // share of silence between first and last word (ratio 0–1)
+  "wrong_format", // not 16 kHz mono 16-bit PCM, or more than one channel (dashboard submit check)
+  "processing_failed", // Sayari could not process the file
+] as const;
+export type RejectCheck = (typeof REJECT_CHECKS)[number];
+/** What an automatic check measured when it refused a take, and the limit in force at that moment. */
+export type RejectDetail = {
+  check: RejectCheck;
+  measured: number | null; // in `unit`; null for wrong_format / processing_failed
+  limit: number | null; // the limit in force when the check ran
+  unit: "s" | "dB" | "dBFS" | "ratio" | null;
+  bound: "min" | "max" | null; // measured must be >= limit (min) or <= limit (max)
+};
+
 export type CampaignFailure = {
   ok: false;
   status: number;
@@ -201,6 +232,8 @@ export type CampaignFailure = {
   message: string;
   nextStep?: NextStep;
   reason?: RejectionReason;
+  /** `recording_rejected` only: what the submit check measured (A15). Absent from an older dashboard. */
+  detail?: RejectDetail;
   retryAfterS?: number;
   /** Per-field problems of a 400 (Edge Function or dashboard), keyed by the body field name, e.g. "variety" or "recording.duration_s". */
   fieldErrors?: Record<string, string>;

@@ -92,6 +92,29 @@ export async function signInWithGoogle(returnPath = "/campaign"): Promise<void> 
 }
 
 /**
+ * Set when the speaker signs out themselves, removed at the next sign-in: a link opened after
+ * that asks to sign in without saying the session expired (session-memory.ts). Kept on the phone
+ * so a sign-out in another tab, and the reload after it, see it too.
+ */
+const SIGNED_OUT_ON_PURPOSE_KEY = "afriklang.campaign.signedOutOnPurpose.v1";
+
+export function signedOutOnPurpose(): boolean {
+  try {
+    return localStorage.getItem(SIGNED_OUT_ON_PURPOSE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function forgetSignOut(): void {
+  try {
+    localStorage.removeItem(SIGNED_OUT_ON_PURPOSE_KEY);
+  } catch {
+    // storage blocked: nothing was saved
+  }
+}
+
+/**
  * Sign out on this phone (APP-008). Scope "local": the default "global" would also sign the speaker
  * out of every other device. Online, this session is revoked on the server too. supabase-js keeps
  * the saved session when that call fails (offline, bad network), so the saved session is then
@@ -99,6 +122,12 @@ export async function signInWithGoogle(returnPath = "/campaign"): Promise<void> 
  * The caller reloads the page afterwards (the client still holds the session in memory).
  */
 export async function signOut(): Promise<void> {
+  try {
+    // Before the session goes: the "signed out" event it fires must already read it.
+    localStorage.setItem(SIGNED_OUT_ON_PURPOSE_KEY, "1");
+  } catch {
+    // storage blocked: the screens then say the session expired, which is only less precise
+  }
   if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_CAMPAIGN_MOCK === "1") {
     try {
       localStorage.setItem("afriklang.mock.signedOut", "1");

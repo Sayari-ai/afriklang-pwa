@@ -12,10 +12,10 @@ import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/
 import { truncate } from "@/lib/campaign/mission-list";
 import { isQualification, type CampaignCard, type Mission } from "@/lib/campaign/types";
 import { totalPaidTime } from "@/lib/campaign/pool";
-import { rejectionReasonCode, totals } from "@/lib/campaign/view";
+import { isTestRecording, rejectionReasonCode, totals } from "@/lib/campaign/view";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { LanguageBadge } from "./CampaignCardView";
-import { buttonPrimary, useFailureText, useRejectionText } from "./CampaignHubParts";
+import { buttonPrimary, useFailureText, useRejectDetailText, useRejectionText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { MissionSkeleton } from "./MissionList";
 import { OutboxPanel } from "./OutboxPanel";
@@ -120,15 +120,26 @@ export function HistoryScreen() {
 function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filter }) {
   const t = useTranslations("campaign.home.history");
   const rejectionText = useRejectionText();
+  const detailText = useRejectDetailText();
   const res = useCampaignMissions(card.campaign_id);
   if (res.state === "error") return <p className="rounded-2xl bg-red-50 p-3 text-sm text-red-800">{t("loadError")}</p>;
   if (res.state !== "ready") return <MissionSkeleton />;
   const shown = res.data.missions.filter(MATCH[filter]).sort((a, b) => a.position - b.position);
-  // A test take is not redone, and was not read but said in the speaker's language: short reasons only.
+  // A test take refused by the automatic checks while the test is still recording is recorded
+  // again: it says so, with the check's title. Once the test is sent, a rejection is the reviewer's
+  // result, not a request: "Not accepted" with a short reason (the take was said in the speaker's
+  // language, not read).
   const test = isQualification(card);
+  const testRecording = test && isTestRecording(res.data.campaign.qualification ?? card.qualification);
   const testReason = (r: string | null) => {
     const code = rejectionReasonCode(r);
     return code ? t(`reasons.${code}`) : r;
+  };
+  const statusOf = (m: Mission): string => {
+    if (m.status !== "rejected") return t(`status.${m.status as "submitted" | "accepted"}`);
+    if (!test) return [t("status.rejected"), rejectionText(m.rejection_reason)].filter(Boolean).join(" · ");
+    if (testRecording) return [t("statusRedo"), detailText(m)?.title].filter(Boolean).join(" · ");
+    return [t("statusTest.rejected"), testReason(m.rejection_reason)].filter(Boolean).join(" · ");
   };
 
   return (
@@ -156,8 +167,7 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-slate-900">{truncate(m.prompt.text_or_topic, 90)}</p>
                 <p className="text-xs text-slate-500">
-                  <span className="font-mono">#{m.position}</span> · {test && m.status === "rejected" ? t("statusTest.rejected") : t(`status.${m.status as "submitted" | "accepted" | "rejected"}`)}
-                  {m.status === "rejected" ? (test ? (testReason(m.rejection_reason) ? ` · ${testReason(m.rejection_reason)}` : "") : rejectionText(m.rejection_reason) ? ` · ${rejectionText(m.rejection_reason)}` : "") : ""}
+                  <span className="font-mono">#{m.position}</span> · {statusOf(m)}
                 </p>
               </div>
             </li>

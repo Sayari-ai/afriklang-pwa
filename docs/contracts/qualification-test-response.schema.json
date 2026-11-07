@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Qualification test: created (README §4.1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "test_id",
+    "status",
+    "items",
+    "link",
+    "expires_at"
+  ],
+  "properties": {
+    "test_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "status": {
+      "enum": [
+        "open",
+        "submitted"
+      ]
+    },
+    "items": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "link": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "expires_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  }
+}

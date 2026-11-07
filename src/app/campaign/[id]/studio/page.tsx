@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useFailureText } from "@/components/campaign/CampaignHubParts";
 import { Studio } from "@/components/campaign/studio/Studio";
 import { isRetryable } from "@/lib/campaign/errors";
-import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
+import { sessionExpired, useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
+import { saveReturnPath, studioReturnPath } from "@/lib/campaign/return-path";
+import { parseFocus } from "@/lib/campaign/studio-flow";
 
 const dark = "flex h-dvh flex-col items-center justify-center gap-4 bg-[#001b36] px-6 text-center text-white";
 const pill = "inline-flex min-h-12 items-center justify-center rounded-2xl bg-white px-6 font-bold text-primary";
@@ -18,6 +20,7 @@ export default function StudioPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("campaign.studio");
   const tc = useTranslations("campaign.common");
+  const th = useTranslations("campaign.flow.hub");
   const failureText = useFailureText();
   const session = useCampaignSession();
   const list = useCampaignList();
@@ -28,8 +31,16 @@ export default function StudioPage() {
   useEffect(() => {
     if (!box.loaded) void outbox.refresh();
   }, [box.loaded]);
-  // Read once: which mission the studio opens on (the address is then kept up to date by the studio).
-  const [startId] = useState(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("m")));
+  // Read once: which mission the studio opens on, or, with several ids (`?m=a,b`, the "to record
+  // again" email's link), the only missions of this session (the address is then kept up to date by
+  // the studio). From the router, not `window.location`: arriving by a client-side `router.replace`
+  // (the way back from sign-in, campaign/page.tsx), the window still shows the previous page's URL
+  // while this first render runs.
+  const search = useSearchParams();
+  const [startId] = useState<string | string[] | null>(() => {
+    const ids = parseFocus(search.get("m"));
+    return ids.length === 0 ? null : ids.length === 1 ? ids[0] : ids;
+  });
   // Online, the studio opens on a fresh mission list (its order is fixed when it opens); offline, on the
   // saved copy. Once open, it stays open through later refreshes.
   const [opened, setOpened] = useState(false);
@@ -49,16 +60,29 @@ export default function StudioPage() {
   const stale = !opened && !waitedEnough && missions.state === "ready" && online && (missions.saved || missions.refreshing) && !missions.failure;
   const filling = !opened && pool.pool && pool.pending;
   if (!opened && missions.state === "ready" && !stale && !filling) setOpened(true);
+  // Signed out on a studio link (the "to record again" email): remember where to come back to.
+  // Sign-in always lands on /campaign, which follows it (return-path.ts). The path is rebuilt
+  // from the route and the parsed focus, not copied from the address: a mail client may have
+  // encoded the link's commas, and the window's address can lag behind the router here.
+  const signedOut = list.state === "signedOut" || missions.state === "signedOut";
+  const focusParam = search.get("m");
+  useEffect(() => {
+    if (signedOut) saveReturnPath(studioReturnPath(id, focusParam));
+  }, [signedOut, id, focusParam]);
   const back = (
     <Link href={`/campaign/${id}`} className={pill}>
       {t("guard.back")}
     </Link>
   );
 
-  if (list.state === "signedOut" || missions.state === "signedOut") {
+  if (signedOut) {
+    // "Expired" only when a session held here ended by itself: a refused call while still signed
+    // in, or a session that Auth ended. No session at all (signed out on purpose, never signed in
+    // on this phone) is a plain "sign in to continue".
+    const expired = session.status === "signedIn" || sessionExpired();
     return (
       <div className={dark} role="alert">
-        <p>{tc("errors.unauthorized")}</p>
+        <p>{expired ? tc("errors.unauthorized") : th("signedOut")}</p>
         <Link href="/campaign" className={pill}>{tc("continue")}</Link>
       </div>
     );

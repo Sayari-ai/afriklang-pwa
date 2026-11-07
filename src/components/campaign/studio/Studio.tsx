@@ -27,9 +27,10 @@ import { LOW_SPACE_BYTES, freeSpaceBytes } from "@/lib/campaign/storage-safety";
 import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
-import { buildMetadata, buildSayariCampaignFields, deviceLabel, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
-import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, nextInQueue, paddingS, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
+import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
+import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, paddingS, queueProgress, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
 import { isRefusal } from "@/lib/campaign/pool";
+import { languageInText } from "@/lib/campaign/language-name";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
 import { toRecordCount } from "@/lib/campaign/view";
@@ -59,7 +60,8 @@ type Props = {
   userId: string;
   speakerId: string;
   contributor: ContributorView;
-  startId: string | null;
+  /** One id: open on it. Several: a focus, the session is those recordings alone (sessionQueue). */
+  startId: string | string[] | null;
   /** Pool campaigns: the batch's draws (the studio asks for more when it is recorded). Null when planned. */
   pool?: PoolState | null;
 };
@@ -81,9 +83,15 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const onPhoneRef = useRef(onPhone);
   const byId = useMemo(() => new Map(missions.map((m) => [m.mission_id, m])), [missions]);
   const byIdRef = useRef(byId);
+  const cardRef = useRef(card);
 
   // The session's order is fixed when the studio opens (later answers only remove missions from it).
   const [queue, setQueue] = useState<string[]>(() => sessionQueue(missions, onPhone, startId));
+  // A link naming several recordings (`?m=a,b`) restricts the session to them. When none of them
+  // is left to record, the session is the usual full one, and the speaker is told (focusDone).
+  const focus = Array.isArray(startId) ? startId : null;
+  const [focusActive] = useState(() => focus != null && queue.length > 0 && queue.every((id) => focus.includes(id)));
+  const focusDone = focus != null && !focusActive;
   const [currentId, setCurrentId] = useState<string | null>(() => queue[0] ?? null);
   const [phase, setPhase] = useState<Phase>(() => (queue.length ? "idle" : "done"));
   const [count, setCount] = useState(COUNTDOWN_S);
@@ -105,16 +113,17 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // Missions that became recordable during the session (sent back by the team, or drawn for a pool
   // campaign) join the end of the queue. A pool session that had run out picks up the new batch.
+  // A focused session takes only missions of its focus: never the whole campaign.
   const isPoolSession = pool != null;
   useEffect(() => {
-    const fresh = sessionQueue(missions, onPhoneRef.current, null).filter((id) => !queue.includes(id));
+    const fresh = (focusActive && focus ? focusQueue(missions, onPhoneRef.current, focus) : sessionQueue(missions, onPhoneRef.current, null)).filter((id) => !queue.includes(id));
     if (!fresh.length) return;
     setQueue((q) => [...q, ...fresh.filter((id) => !q.includes(id))]);
     if (isPoolSession && phase === "done") {
       setCurrentId(fresh[0]);
       setPhase("idle");
     }
-  }, [missions, queue, isPoolSession, phase]);
+  }, [missions, queue, isPoolSession, phase, focusActive, focus]);
 
   // The mission on screen keeps its last known copy: in a pool campaign it can leave the list while
   // it is being recorded (its lease ended, or a refresh came in), and the take must still go through.
@@ -124,7 +133,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const mission = found ?? (held && held.mission_id === currentId ? held : null);
   const rules = mission ? takeRules(card, mission) : null;
   const pad = paddingS(card);
-  const goal = sessionGoal(card);
+  // A focus is the whole session: its bar counts the focus, and the campaign's session goal
+  // (and its celebration) does not apply.
+  const goal = focusActive ? null : sessionGoal(card);
   const timed = mission ? isTimed(mission.type) : false;
   const minS = mission ? (mission.duration_s.min ?? rules?.durationMinS ?? 0) : 0;
   // Shown for every type: a read sentence has a maximum too, and the speaker must see it (N-10).
@@ -210,6 +221,16 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       takesRef.current.set(d.missionId, d.takeNumber);
       setQueue((q) => (q.includes(d.missionId) ? q : [d.missionId, ...q]));
       setCurrentId(d.missionId);
+      // The length check runs again (draftProblem): a take saved just before the check, by a crash
+      // in between, must not come back as a checked take. The usual notice says why, as at Stop.
+      const p = draftProblem(d.analysis, cardRef.current, m);
+      if (p) {
+        void clearDraft(userId, campaignId);
+        setTake(null);
+        setProblem(p);
+        setPhase("problem");
+        return;
+      }
       setProblem(null);
       setTake({ blob: d.blob, analysis: d.analysis, recordedAt: new Date(d.recordedAt), inputSampleRate: d.inputSampleRate, processing: d.processing, quietHintShown: d.quietHintShown, takeNumber: d.takeNumber, restored: true });
       setPhase("review");
@@ -219,12 +240,14 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     };
   }, [userId, campaignId]);
 
-  // The address shows the current mission, so a reload comes back to it.
+  // The address shows the current mission, so a reload comes back to it. A focused session keeps
+  // its other ids after it, so a reload keeps the restriction (ids are UUIDs: nothing to encode,
+  // and the link's commas stay commas, as the email writes them).
   useEffect(() => {
     if (!currentId) return;
-    const url = `/campaign/${campaignId}/studio?m=${encodeURIComponent(currentId)}`;
+    const url = `/campaign/${campaignId}/studio?m=${focusActive ? [currentId, ...queue.filter((id) => id !== currentId)].join(",") : encodeURIComponent(currentId)}`;
     if (window.location.pathname + window.location.search !== url) window.history.replaceState(window.history.state, "", url);
-  }, [campaignId, currentId]);
+  }, [campaignId, currentId, focusActive, queue]);
 
   // An unsent take or a running recording asks before the tab closes.
   const unsaved = take !== null || phase === "lead" || phase === "speaking" || phase === "tail";
@@ -436,6 +459,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       }
       const metadata = buildMetadata(take.analysis, sha, deviceLabel(navigator.userAgent), null);
       const filename = buildCampaignFilename({ languageCode: card.language.code, speakerId, missionCode: mission.code });
+      // The advice the review screen showed (the same check as the render below): a submit over it is "Send anyway".
+      const shown = checkTake(take.analysis, rules!);
+      const advice = shown && !shown.blocking ? shown.problem : null;
       const audioDoc = buildAudioMetadata({
         card,
         mission,
@@ -452,6 +478,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           sizeBytes: take.blob.size,
           paddingS: pad,
           quietHintShown: take.quietHintShown,
+          advice,
+          sentAnyway: advice !== null,
           takeNumber: take.takeNumber,
           sessionId,
           indexInSession: sessionCount + 1,
@@ -538,6 +566,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     interruptRef.current = interrupt;
     currentIdRef.current = currentId;
     byIdRef.current = byId;
+    cardRef.current = card;
     beginTailRef.current = beginTail;
     pressRef.current = press;
     submitRef.current = submit;
@@ -594,7 +623,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           <X size={22} aria-hidden />
         </Link>
         <div className="min-w-0 flex-1">
-          <SessionBar count={sessionCount} goal={goal} />
+          <SessionBar count={sessionCount} goal={focusActive ? queue.length : goal} />
         </div>
       </header>
       {flash ? (
@@ -679,7 +708,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         {waitingHere > 0 ? (
           <p role="status" className="rounded-2xl bg-amber-400/15 px-4 py-3 text-base font-semibold text-amber-50 ring-1 ring-amber-300/40">{t("done.onPhone", { n: waitingHere })}</p>
         ) : (
-          <p className="text-base text-white/85">{t(card.kind === "qualification" ? "done.bodyTest" : "done.body")}</p>
+          // A focused session recorded what its link asked for, not "every mission": say so.
+          <p className="text-base text-white/85">{t(focusActive ? "done.bodyFocus" : card.kind === "qualification" ? "done.bodyTest" : "done.body")}</p>
         )}
       </div>,
       <Link href={hubHref} className="grid min-h-14 place-items-center rounded-2xl bg-white text-lg font-bold text-primary">
@@ -691,7 +721,11 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   // Advice about the take on the review screen (quiet, noisy, short pause): the speaker may send anyway.
   const check = take ? checkTake(take.analysis, rules) : null;
   const advice = check && !check.blocking ? (check.problem as "silent" | "clipped" | "too_quiet" | "noisy" | "silence") : null;
-  const position = Math.max(1, missions.length - open + 1);
+  // A focus counts its own queue ("1 of 2"); otherwise the whole campaign's missions.
+  const focusProgress = focusActive ? queueProgress(queue, (id) => { const m = byId.get(id); return Boolean(m && canRecordNow(m, onPhone)); }) : null;
+  const position = focusProgress ? focusProgress.position : Math.min(Math.max(1, missions.length - open + 1), missions.length);
+  const total = focusProgress ? focusProgress.total : missions.length;
+  const leftHere = focusProgress ? focusProgress.left : open;
   const progress = recording && maxS ? elapsed / maxS : null;
   const buttonMode = phase === "countdown" ? "countdown" : recording ? "recording" : phase === "analyzing" || phase === "saving" ? "busy" : "record";
   const buttonLabel = recording || phase === "countdown" ? (phase === "speaking" ? t("button.stop") : t("button.cancel")) : t("button.record");
@@ -699,9 +733,14 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   return shell(
     <div key={mission.mission_id} className="afk-slide-in flex flex-1 flex-col gap-4 pt-2">
       <div className="flex items-center justify-between text-sm font-semibold text-white/75">
-        <span>{t("missionOf", { n: Math.min(position, missions.length), total: missions.length })}</span>
-        <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.sayIn", { language: card.language.name }) : t(`type.${mission.type}`)}</span>
+        <span>{t("missionOf", { n: position, total })}</span>
+        <span className="rounded-full bg-white/10 px-3 py-1 text-xs">{card.kind === "qualification" && mission.type === "read" ? t("type.sayIn", { language: languageInText(card.language.name, locale) }) : t(`type.${mission.type}`)}</span>
       </div>
+      {focusDone ? (
+        <p role="status" className="rounded-2xl bg-white/10 px-4 py-2 text-sm text-white/90">
+          {t("focusDone")}
+        </p>
+      ) : null}
       <PromptCard mission={mission} lang={card.language.code} size={size} onSize={changeSize} sayIn={card.kind === "qualification" ? { language: card.language.name, uiLocale: locale } : undefined} />
       {micError ? (
         <p role="alert" className="rounded-2xl bg-red-500/20 px-4 py-3 text-sm font-medium text-red-50 ring-1 ring-red-300/40">
@@ -736,7 +775,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
               <RotateCcw size={18} aria-hidden /> {t("review.again")}
             </button>
             <button type="button" onClick={() => void submit()} disabled={phase === "saving"} className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white text-lg font-bold text-primary shadow-lg disabled:opacity-70">
-              {phase === "saving" ? t("review.preparing") : advice ? t("review.sendAnyway") : open > 1 ? t("review.submit") : t("review.submitLast")}
+              {phase === "saving" ? t("review.preparing") : advice ? t("review.sendAnyway") : leftHere > 1 ? t("review.submit") : t("review.submitLast")}
               {phase !== "saving" ? <ChevronRight size={20} aria-hidden /> : null}
             </button>
           </div>

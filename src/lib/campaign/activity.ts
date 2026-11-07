@@ -4,6 +4,8 @@
  * adds the "when" for the History screen. Kept per user, newest first, at most MAX entries.
  */
 
+import type { RejectDetail } from "./types";
+
 export type ActivityType = "sent" | "rejected" | "failed" | "profile" | "consent" | "withdrawn";
 
 export type Activity = {
@@ -16,6 +18,8 @@ export type Activity = {
   prompt?: string;
   /** A reason or code, when there is one. */
   detail?: string;
+  /** A refused take: what the dashboard's check measured (A15). Entries saved before it existed have none. */
+  rejectDetail?: RejectDetail;
 };
 
 const MAX = 200;

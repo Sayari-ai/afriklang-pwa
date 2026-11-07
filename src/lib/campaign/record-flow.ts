@@ -1,6 +1,6 @@
 /** Pure helpers of the recording studio: the take's rules, its metadata, and the fields sent to Sayari. */
 
-import type { TakeAnalysis, TakeRules } from "@/lib/audio/analyze";
+import { checkTake, type TakeAnalysis, type TakeProblem, type TakeRules } from "@/lib/audio/analyze";
 import type { CampaignCard, Mission, RecordingMetadata, SpeechType } from "./types";
 
 export const isTimed = (type: SpeechType) => type !== "read";
@@ -15,6 +15,18 @@ export function takeRules(card: CampaignCard, mission: Mission): TakeRules {
     minLevelDbfs: num(rec?.min_level_dbfs) ?? -35,
     silenceMarginS: num(rec?.silence_margin_s) ?? 1,
   };
+}
+
+/**
+ * The blocking problem of a take brought back from the phone's storage (drafts.ts), or null when
+ * it may go to the review screen. The length check runs again on it, with its own mission's rules:
+ * a crash between saving the draft and the check could keep a take that must be recorded again,
+ * and it must not come back as a checked take (its metadata would say the app's checks passed).
+ * Advice (quiet, noisy, short pause) is not blocking: the review screen shows it, as always.
+ */
+export function draftProblem(analysis: TakeAnalysis, card: CampaignCard, mission: Mission): TakeProblem | null {
+  const c = checkTake(analysis, takeRules(card, mission));
+  return c?.blocking ? c.problem : null;
 }
 
 /** Short device label from the user agent, e.g. "Android Chrome". */

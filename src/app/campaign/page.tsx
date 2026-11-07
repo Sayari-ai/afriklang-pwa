@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClaimCampaignList } from "@/components/campaign/ClaimCampaignList";
 import { ClaimFailureCard } from "@/components/campaign/ClaimFailureCard";
@@ -11,10 +12,12 @@ import { claimOutcome, nextView, type ClaimState } from "@/lib/campaign/claim-fl
 import { useCampaignSession } from "@/lib/campaign/hooks";
 import { clearToken, dismissTokenFor, isTokenDismissedFor, takeLinkFromLocation } from "@/lib/campaign/link-token";
 import { loadCampaigns } from "@/lib/campaign/queries";
+import { takeReturnPath } from "@/lib/campaign/return-path";
 
 export default function CampaignLandingPage() {
   const t = useTranslations("campaign.claim");
   const common = useTranslations("campaign.common");
+  const router = useRouter();
   const session = useCampaignSession();
 
   // null until the URL / storage has been read (never during server render).
@@ -122,6 +125,18 @@ export default function CampaignLandingPage() {
 
   const view = nextView({ session: session.status, hasToken: token === undefined ? null : Boolean(activeToken), claim });
   const email = session.status === "signedIn" ? session.email : null;
+
+  // Back from sign-in on a studio link (the "to record again" email): go on to that studio. Only
+  // once signed in and with no invitation being claimed (a token in the URL wins: the claim runs
+  // first; the saved path waits in storage for at most an hour). `take` clears it, so a second
+  // run of this effect finds nothing. The studio then loads the campaign through its own hooks.
+  const signedIn = session.status === "signedIn";
+  const settled = view === "home" || view === "claimed";
+  useEffect(() => {
+    if (!signedIn || !settled) return;
+    const path = takeReturnPath();
+    if (path) router.replace(path);
+  }, [signedIn, settled, router]);
 
   if (brokenLink && view !== "waiting" && view !== "claiming") return <ClaimBrokenLink onContinue={dismissBrokenLink} />;
 

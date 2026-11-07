@@ -19,10 +19,11 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import type { CampaignList, MissionList } from "./api";
-import { getCampaignAuth, isCampaignAuthConfigured, storedCampaignUser } from "./auth-client";
+import { forgetSignOut, getCampaignAuth, isCampaignAuthConfigured, signedOutOnPurpose, storedCampaignUser } from "./auth-client";
 import { cacheId, campaignCache, type Entry } from "./cache";
 import { needsSignIn } from "./errors";
 import { CAMPAIGNS, loadCampaigns, loadMissions, missionsKey } from "./queries";
+import { NO_SESSION_YET, rememberSession, type SessionMemory } from "./session-memory";
 import type { CampaignFailure } from "./types";
 
 /**
@@ -48,12 +49,15 @@ const INITIAL: SessionState = isCampaignAuthConfigured ? { status: "waiting" } :
 /** How long a saved speaker waits for the session check before their saved screens show. */
 export const OPTIMISTIC_SESSION_MS = 2500;
 let current: SessionState = INITIAL;
+let memory: SessionMemory = NO_SESSION_YET;
 let started = false;
 const sessionListeners = new Set<() => void>();
 
 function applySession(next: SessionState) {
+  memory = rememberSession(memory, next.status, next.status === "signedOut" && signedOutOnPurpose());
   if (sameSession(current, next)) return;
   current = next;
+  if (next.status === "signedIn") forgetSignOut();
   for (const l of [...sessionListeners]) l();
 }
 
@@ -61,12 +65,14 @@ function startSession() {
   if (started || !isCampaignAuthConfigured || typeof window === "undefined") return;
   started = true;
   const auth = getCampaignAuth().auth;
+  // Read before the first check: a session saved on the phone that Auth then refuses has expired.
+  const known = storedCampaignUser();
+  if (known) memory = { held: true, lost: false };
   const check = () => void auth.getSession().then(({ data }) => applySession(sessionStateFor(data.session)), () => applySession(sessionStateFor(null)));
   check();
   // Never keep a known speaker on a spinner while supabase-js retries an expired token on a bad
   // network (about 25 s, twice): their saved screens show after a short wait (at once when the
   // phone says it is offline), and the real answer replaces this as soon as it comes.
-  const known = storedCampaignUser();
   if (known) {
     const optimistic = () => {
       if (current.status === "waiting") applySession({ status: "signedIn", email: known.email, userId: known.id, verified: false });
@@ -78,6 +84,13 @@ function startSession() {
   // Back online: renew a session that could not be renewed offline.
   window.addEventListener("online", () => current.status === "signedIn" && !current.verified && check());
 }
+
+/**
+ * The speaker is signed out because their session ended by itself (refused by Auth, or not
+ * renewed), not because they signed out or never signed in here (session-memory.ts). Read it when
+ * the session state says "signedOut": it changes at the same time.
+ */
+export const sessionExpired = (): boolean => current.status === "signedOut" && memory.lost;
 
 const subscribeSession = (fn: () => void) => {
   sessionListeners.add(fn);

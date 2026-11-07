@@ -99,5 +99,49 @@
     "reading_gap": "L'enregistrement ne correspond pas à la phrase. Lisez-la exactement comme elle est écrite.",
     "speaker_balance": "Une seule voix a occupé presque toute la conversation. Parlez chacun à peu près autant.",
     "other": "La personne qui a vérifié l'enregistrement n'a pas pu l'accepter."
+  },
+  "rejectDetail": {
+    "too_short": {
+      "title": "Trop court",
+      "measured": "Il durait {measured} s ; cette consigne demande au moins {limit} s.",
+      "fix": "Surveillez le minuteur à l'écran et continuez à parler jusqu'à la durée indiquée."
+    },
+    "too_long": {
+      "title": "Trop long",
+      "measured": "Il durait {measured} s ; la limite est de {limit} s.",
+      "fix": "Restez dans le temps indiqué à l'écran. Pour une réponse libre, quelques phrases suffisent."
+    },
+    "low_snr": {
+      "title": "Votre voix ne ressortait pas assez du bruit de fond",
+      "measured": "Votre voix dépassait le bruit de fond de {measured} dB ; il faut au moins {limit} dB.",
+      "fix": "Installez-vous dans une pièce calme, éteignez ventilateur, télévision et musique, et tenez le téléphone à environ 20 cm de la bouche."
+    },
+    "background_noise": {
+      "title": "Trop de bruit de fond",
+      "measured": "Le bruit de fond était à {measured} dBFS ; il doit rester sous {limit} dBFS.",
+      "fix": "Trouvez un endroit plus calme, loin de la rue, des conversations et des machines, puis recommencez."
+    },
+    "clipping": {
+      "title": "Trop fort : le son était saturé",
+      "measured": "{measured} du son était saturé ; la limite est de {limit}.",
+      "fix": "Éloignez un peu le téléphone (environ 20 cm) et parlez à votre volume normal, sans crier."
+    },
+    "long_silence": {
+      "title": "Trop de longues pauses",
+      "measured": "{measured} de l'enregistrement était du silence entre votre premier et votre dernier mot ; la limite est de {limit}.",
+      "fix": "Lisez la consigne et préparez votre réponse avant d'appuyer sur Enregistrer, puis parlez sans longues pauses."
+    },
+    "wrong_format": {
+      "title": "Le fichier n'a pas pu être utilisé",
+      "measured": "L'enregistrement n'était pas au format attendu.",
+      "fix": "Refaites-le dans l'application. Si cela se reproduit, mettez l'application à jour ou essayez un autre téléphone."
+    },
+    "processing_failed": {
+      "title": "Nous n'avons pas pu traiter cet enregistrement",
+      "measured": "Notre système n'a pas pu lire cet enregistrement. Vous n'y êtes pour rien.",
+      "fix": "Merci de l'enregistrer une nouvelle fois."
+    },
+    "measuredLabel": "Ce que nous avons mesuré : {measured}",
+    "fixLabel": "Comment corriger : {fix}"
   }
 }

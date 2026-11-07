@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { saveProfile } from "@/lib/campaign/api";
+import { languageInText } from "@/lib/campaign/language-name";
 import {
   AGE_BANDS,
   GENDERS,
@@ -18,7 +19,10 @@ import {
   MAX_TEXT,
   countryOptions,
   initialValues,
+  languageCodeOf,
+  languageDisplayName,
   matchVariety,
+  nativeLanguageFallback,
   outsideTargets,
   profileErrorsFromServer,
   suggestVarieties,
@@ -60,6 +64,8 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   );
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
+  // What the dashboard said about the native language, when it refused it (shown to English readers).
+  const [serverSaid, setServerSaid] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // State updates are not synchronous: a ref stops a second tap from sending the form twice.
   const sending = useRef(false);
@@ -73,15 +79,28 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     }
     return countryOptions((c) => names?.of(c) ?? c, locale);
   }, [locale]);
-  const choices = useMemo(() => varietyChoices(card), [card]);
+  // The variety is the native language's. On a card in another language the form has no list for
+  // it: free text, no chips, and no promise about what is new (profile-form.ts).
+  const sameLanguage = values.native_language === card.language.code;
+  const choices = useMemo(() => varietyChoices(card, values.native_language), [card, values.native_language]);
   const suggestions = suggestVarieties(values.variety, choices);
   const typedVariety = tidyVariety(values.variety);
   // While suggestions still match, the speaker is probably mid-word: say nothing about the value yet.
   const settled = suggestions.length === 0;
-  const canAdd = canAddVarieties(card);
+  const canAdd = canAddVarieties(card, values.native_language);
   const isNewVariety =
-    canAdd && settled && typedVariety !== "" && /\p{L}/u.test(typedVariety) && !VARIETY_SEPARATOR.test(typedVariety) && !matchVariety(typedVariety, choices);
+    sameLanguage && canAdd && settled && typedVariety !== "" && /\p{L}/u.test(typedVariety) && !VARIETY_SEPARATOR.test(typedVariety) && !matchVariety(typedVariety, choices);
   const outside = settled ? outsideTargets(typedVariety, card) : null;
+  // The language the variety belongs to, by name: the card's, the first language of the form, or the code.
+  const nativeName = useMemo(() => {
+    const code = values.native_language;
+    if (code === card.language.code) return card.language.name;
+    const first = contributor.first_language;
+    if (first?.code === code && typeof first.name === "string" && first.name) return first.name;
+    return languageDisplayName(code, locale);
+  }, [values.native_language, card.language, contributor.first_language, locale]);
+  // Inside a sentence (« Quelle variété de wolof parlez-vous ? »).
+  const nameInText = languageInText(nativeName, locale);
 
   const set = (k: keyof ProfileInput) => (v: string) => {
     setValues((s) => ({ ...s, [k]: v }));
@@ -90,7 +109,9 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
 
   const focusFirst = (found: ProfileErrors) => {
     const first = Object.keys(found)[0];
-    if (first) document.getElementById(`${uid}-${first}`)?.focus();
+    // The native language has no field: its message sits by the variety.
+    const id = first === "native_language" ? "variety" : first;
+    if (id) document.getElementById(`${uid}-${id}`)?.focus();
   };
 
   async function submit(e: FormEvent) {
@@ -106,12 +127,24 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     sending.current = true;
     setBusy(true);
     setFailure(null);
+    setServerSaid(null);
     try {
-      const res = await saveProfile(input);
+      let res = await saveProfile(input);
+      if (!res.ok && res.code === "invalid_input") {
+        // The dashboard does not know the native language (one the application form named): this
+        // card's language stands in, once, rather than a speaker stuck on a field they cannot see.
+        // Never over a stored native language (A5): nativeLanguageFallback refuses then.
+        const again = nativeLanguageFallback(input, res.fieldErrors, card, languageCodeOf(contributor.profile.values?.nativeLanguage));
+        if (again) {
+          setValues((s) => ({ ...s, native_language: again.native_language }));
+          res = await saveProfile(again);
+        }
+      }
       if (res.ok) return onSaved();
       // A 400 that names fields: mark them (with each field's own hint) rather than one vague line.
       const fromServer = res.code === "invalid_input" ? profileErrorsFromServer(res.fieldErrors) : {};
       if (Object.keys(fromServer).length) {
+        setServerSaid(res.fieldErrors?.native_language ?? res.fieldErrors?.nativeLanguage ?? null);
         setErrors(fromServer);
         focusFirst(fromServer);
       } else setFailure(res);
@@ -233,9 +266,15 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
         <p className="text-sm text-slate-600">{t("privacy")}</p>
       </div>
 
+      {errors.native_language ? (
+        <p role="alert" className="rounded-2xl bg-red-50 p-3 text-sm text-red-800">
+          {t("errors.server.native_language", { language: nameInText })}
+          {locale === "en" && serverSaid ? ` (${serverSaid})` : ""}
+        </p>
+      ) : null}
       {field(
         "variety",
-        t("variety", { language: card.language.name }),
+        t("variety", { language: nameInText }),
         text("variety", "off"),
         t(canAdd ? "varietyHint" : "varietyHintPick"),
       )}
@@ -255,7 +294,7 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
       ) : null}
       {isNewVariety && !errors.variety ? (
         <p className="-mt-2 text-sm text-slate-600" aria-live="polite">
-          {t("varietyNew", { name: typedVariety, language: card.language.name })}
+          {t("varietyNew", { name: typedVariety, language: nameInText })}
         </p>
       ) : null}
       {outside ? (

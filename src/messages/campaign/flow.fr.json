@@ -56,6 +56,7 @@
       "oneVariety": "Indiquez une seule variété : celle que vous parlez le mieux. Retirez les virgules ou les barres obliques.",
       "notListed": "Cette variété n'est pas encore dans la liste. Choisissez-en une parmi les suggestions, ou contactez l'équipe Afriklang.",
       "server": {
+        "native_language": "Notre système ne connaît pas encore votre langue maternelle ({language}), votre profil n'a donc pas pu être enregistré. Contactez l'équipe Afriklang et nous l'ajouterons.",
         "variety": "Cette variété n'a pas été acceptée. Choisissez-en une parmi les suggestions, ou contactez l'équipe Afriklang.",
         "country": "Ce pays n'a pas été accepté. Choisissez-en un dans la liste.",
         "region": "Cette région n'a pas été acceptée. Indiquez un nom de région ou de ville, 80 caractères au maximum.",
