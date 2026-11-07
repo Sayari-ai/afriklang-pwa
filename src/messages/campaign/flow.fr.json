@@ -18,7 +18,9 @@
     "intro": "Quelques informations nous aident à associer votre voix au bon projet. Tous les champs sont obligatoires.",
     "privacy": "Votre nom ne voyage jamais avec votre audio : seul un identifiant de locuteur pseudonyme l'accompagne.",
     "correctTitle": "Corriger mon profil",
+    "firstLanguage": "Laquelle de ces langues est votre première langue ?",
     "variety": "Quelle variété de {language} parlez-vous ?",
+    "varietyOfFirst": "Quelle variété de votre première langue parlez-vous ?",
     "varietyHint": "Saisissez le nom de votre variété ou touchez l'une des suggestions. Si elle n'est pas proposée, écrivez-la en entier : elle sera ajoutée.",
     "varietyHintPick": "Saisissez le nom de votre variété et touchez-la dans les suggestions.",
     "varietySuggestions": "Variétés suggérées",
@@ -42,6 +44,7 @@
     },
     "errors": {
       "required": {
+        "native_language": "Choisissez votre première langue.",
         "variety": "Saisissez ou choisissez la variété de la langue que vous parlez.",
         "country": "Choisissez le pays où vous vivez.",
         "region": "Indiquez votre région ou votre ville.",

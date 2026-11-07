@@ -18,6 +18,7 @@ import {
   canAddVarieties,
   MAX_TEXT,
   countryOptions,
+  firstLanguageChoices,
   initialValues,
   languageCodeOf,
   languageDisplayName,
@@ -30,6 +31,7 @@ import {
   validateProfile,
   varietyChoices,
   type FieldError,
+  type LanguageChoice,
   type ProfileErrors,
   type ProfileValues,
 } from "@/lib/campaign/profile-form";
@@ -46,12 +48,14 @@ const control =
 
 type Props = {
   card: CampaignCard;
+  /** Every card of the speaker's list: their tests' languages, when the first language must be asked. */
+  cards: readonly CampaignCard[];
   contributor: ContributorView;
   onSaved: () => void;
   heading?: string;
 };
 
-export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
+export function ProfileForm({ card, cards, contributor, onSaved, heading }: Props) {
   const t = useTranslations("campaign.flow.profile");
   const locale = useLocale();
   const uid = useId();
@@ -62,6 +66,13 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
       typeof navigator === "undefined" ? "" : navigator.userAgent,
     ),
   );
+  // The languages to ask the first one among, or null (not asked: profile-form.ts). Follows the
+  // list: the hub paints from the last saved copy and refreshes it behind, so the question may come
+  // or go after the form opened. While it is asked, the native language is the speaker's answer
+  // (empty until they give one); otherwise the one initialValues filled.
+  const firstChoices = useMemo(() => firstLanguageChoices(cards, contributor, locale), [cards, contributor, locale]);
+  const [firstAnswer, setFirstAnswer] = useState("");
+  const native = firstChoices ? (firstChoices.some((c) => c.code === firstAnswer) ? firstAnswer : "") : values.native_language;
   const [errors, setErrors] = useState<ProfileErrors>({});
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
   // What the dashboard said about the native language, when it refused it (shown to English readers).
@@ -81,24 +92,27 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
   }, [locale]);
   // The variety is the native language's. On a card in another language the form has no list for
   // it: free text, no chips, and no promise about what is new (profile-form.ts).
-  const sameLanguage = values.native_language === card.language.code;
-  const choices = useMemo(() => varietyChoices(card, values.native_language), [card, values.native_language]);
+  const sameLanguage = native === card.language.code;
+  const choices = useMemo(() => varietyChoices(card, native), [card, native]);
   const suggestions = suggestVarieties(values.variety, choices);
   const typedVariety = tidyVariety(values.variety);
   // While suggestions still match, the speaker is probably mid-word: say nothing about the value yet.
   const settled = suggestions.length === 0;
-  const canAdd = canAddVarieties(card, values.native_language);
+  const canAdd = canAddVarieties(card, native);
   const isNewVariety =
     sameLanguage && canAdd && settled && typedVariety !== "" && /\p{L}/u.test(typedVariety) && !VARIETY_SEPARATOR.test(typedVariety) && !matchVariety(typedVariety, choices);
   const outside = settled ? outsideTargets(typedVariety, card) : null;
-  // The language the variety belongs to, by name: the card's, the first language of the form, or the code.
+  // The language the variety belongs to, by name: the card's, the one chosen in the question, the
+  // first language of the application form, or the code.
   const nativeName = useMemo(() => {
-    const code = values.native_language;
+    const code = native;
     if (code === card.language.code) return card.language.name;
+    const chosen = firstChoices?.find((c) => c.code === code);
+    if (chosen) return chosen.name;
     const first = contributor.first_language;
     if (first?.code === code && typeof first.name === "string" && first.name) return first.name;
     return languageDisplayName(code, locale);
-  }, [values.native_language, card.language, contributor.first_language, locale]);
+  }, [native, card.language, firstChoices, contributor.first_language, locale]);
   // Inside a sentence (« Quelle variété de wolof parlez-vous ? »).
   const nameInText = languageInText(nativeName, locale);
 
@@ -106,18 +120,23 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
     setValues((s) => ({ ...s, [k]: v }));
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
+  const answerFirst = (code: string) => {
+    setFirstAnswer(code);
+    setErrors((e) => ({ ...e, native_language: undefined }));
+  };
 
   const focusFirst = (found: ProfileErrors) => {
     const first = Object.keys(found)[0];
-    // The native language has no field: its message sits by the variety.
-    const id = first === "native_language" ? "variety" : first;
+    // The native language has a field only when it is asked (its first choice takes the focus);
+    // otherwise its message sits by the variety.
+    const id = first === "native_language" && !firstChoices ? "variety" : first;
     if (id) document.getElementById(`${uid}-${id}`)?.focus();
   };
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (sending.current) return;
-    const { input, errors: found } = validateProfile(values, choices, canAdd);
+    const { input, errors: found } = validateProfile({ ...values, native_language: native }, choices, canAdd, firstChoices?.map((c) => c.code) ?? null);
     setErrors(found);
     if (!input) {
       setFailure(null);
@@ -133,8 +152,9 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
       if (!res.ok && res.code === "invalid_input") {
         // The dashboard does not know the native language (one the application form named): this
         // card's language stands in, once, rather than a speaker stuck on a field they cannot see.
-        // Never over a stored native language (A5): nativeLanguageFallback refuses then.
-        const again = nativeLanguageFallback(input, res.fieldErrors, card, languageCodeOf(contributor.profile.values?.nativeLanguage));
+        // Never over a stored native language (A5): nativeLanguageFallback refuses then. Never over
+        // the speaker's own answer to the first-language question either: they read the refusal.
+        const again = firstChoices ? null : nativeLanguageFallback(input, res.fieldErrors, card, languageCodeOf(contributor.profile.values?.nativeLanguage));
         if (again) {
           setValues((s) => ({ ...s, native_language: again.native_language }));
           res = await saveProfile(again);
@@ -266,15 +286,33 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
         <p className="text-sm text-slate-600">{t("privacy")}</p>
       </div>
 
-      {errors.native_language ? (
+      {/* Only the server's refusal: a "required" left over from a question the refreshed list took away is not one. */}
+      {errors.native_language === "server" && !firstChoices ? (
         <p role="alert" className="rounded-2xl bg-red-50 p-3 text-sm text-red-800">
           {t("errors.server.native_language", { language: nameInText })}
           {locale === "en" && serverSaid ? ` (${serverSaid})` : ""}
         </p>
       ) : null}
+      {firstChoices ? (
+        <FirstLanguageQuestion
+          id={`${uid}-native_language`}
+          legend={t("firstLanguage")}
+          choices={firstChoices}
+          value={native}
+          onChange={answerFirst}
+          error={
+            errors.native_language
+              ? errors.native_language === "server"
+                ? t("errors.server.native_language", { language: nameInText }) + (locale === "en" && serverSaid ? ` (${serverSaid})` : "")
+                : errorText("native_language", errors.native_language)
+              : null
+          }
+        />
+      ) : null}
       {field(
         "variety",
-        t("variety", { language: nameInText }),
+        // Until the first language is chosen, the variety is of "your first language".
+        native ? t("variety", { language: nameInText }) : t("varietyOfFirst"),
         text("variety", "off"),
         t(canAdd ? "varietyHint" : "varietyHintPick"),
       )}
@@ -341,5 +379,44 @@ export function ProfileForm({ card, contributor, onSaved, heading }: Props) {
         {busy ? t("saving") : t("save")}
       </button>
     </form>
+  );
+}
+
+/**
+ * Which of the speaker's test languages is their first one: one radio per language, by its name.
+ * The first radio carries `id`, so the form can focus it when the answer is missing.
+ */
+function FirstLanguageQuestion({ id, legend, choices, value, onChange, error }: { id: string; legend: string; choices: readonly LanguageChoice[]; value: string; onChange: (code: string) => void; error: string | null }) {
+  const errId = `${id}-err`;
+  return (
+    // A radiogroup (allowed on fieldset) carries the required and invalid states the radios cannot.
+    <fieldset role="radiogroup" aria-required aria-invalid={!!error} aria-describedby={error ? errId : undefined} className="space-y-2">
+      <legend className="mb-1 block text-sm font-semibold text-slate-800">{legend}</legend>
+      {choices.map((c, i) => (
+        <label
+          key={c.code}
+          className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary"
+        >
+          <input
+            id={i === 0 ? id : `${id}-${c.code}`}
+            type="radio"
+            name={id}
+            value={c.code}
+            required
+            checked={value === c.code}
+            onChange={() => onChange(c.code)}
+            aria-describedby={error ? errId : undefined}
+            className="size-5 accent-primary"
+          />
+          {/* A name alone keeps the catalogue's capital, in French too. */}
+          <span>{c.name}</span>
+        </label>
+      ))}
+      {error ? (
+        <p id={errId} role="alert" className="text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+    </fieldset>
   );
 }

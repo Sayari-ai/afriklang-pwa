@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, nativeLanguageFallback, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
+import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, firstLanguageChoices, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, nativeLanguageFallback, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
 
 const ok: ProfileValues = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: " Thiès ", gender: "female", age_band: "30-44", device: "Android" };
 const varieties = ["Baol-Baol", "Saloum-Saloum"];
@@ -207,5 +207,53 @@ describe("defaults", () => {
     for (const odd of ["other", "undisclosed", "Female", " male", 1, {}, ""]) {
       expect(initialValues(card, { profile: none, gender: odd as "female" }, "").gender, String(odd)).toBe("");
     }
+  });
+});
+
+describe("first language question", () => {
+  const test = (code: string, name: string) => ({ kind: "qualification" as const, language: { code, name, varieties: [] } });
+  const collection = (code: string, name: string) => ({ kind: "collection" as const, language: { code, name, varieties: [] } });
+  const none = { complete: false, missing: [], values: null };
+  const stored = (nativeLanguage: string | null) => ({ complete: false, missing: [], values: { nativeLanguage, variety: null, country: null, region: null, gender: null, ageBand: null, device: null } });
+  const wolFuc = [test("wol", "Wolof"), test("fuc", "Pulaar")];
+
+  it("asks among the tests' languages, by name, when nothing says which is first", () => {
+    expect(firstLanguageChoices(wolFuc, { profile: none, first_language: null }, "en")).toEqual([{ code: "fuc", name: "Pulaar" }, { code: "wol", name: "Wolof" }]);
+    // An older dashboard sends no first language at all: unknown too.
+    expect(firstLanguageChoices(wolFuc, { profile: none }, "en")).toHaveLength(2);
+    // A profile saved without a native language (or with a malformed one) does not know it either.
+    expect(firstLanguageChoices(wolFuc, { profile: stored(null), first_language: null }, "en")).toHaveLength(2);
+    expect(firstLanguageChoices(wolFuc, { profile: stored("WOL"), first_language: null }, "en")).toHaveLength(2);
+  });
+  it("does not ask when the native language is stored or the application form named a first language", () => {
+    expect(firstLanguageChoices(wolFuc, { profile: stored("wol"), first_language: null }, "en")).toBeNull();
+    expect(firstLanguageChoices(wolFuc, { profile: none, first_language: { code: "fuc", name: "Pulaar" } }, "en")).toBeNull();
+    // Known by name only (no code yet): the tests' languages are not the first one, so no question.
+    expect(firstLanguageChoices(wolFuc, { profile: none, first_language: { code: null, name: "Seereer" } }, "en")).toBeNull();
+  });
+  it("counts languages, not cards, and only qualification tests", () => {
+    // One language: nothing to ask, the card's language stands in as before.
+    expect(firstLanguageChoices([test("wol", "Wolof")], { profile: none, first_language: null }, "en")).toBeNull();
+    // A second attempt of the same test is the same language.
+    expect(firstLanguageChoices([test("wol", "Wolof"), test("wol", "Wolof")], { profile: none, first_language: null }, "en")).toBeNull();
+    // A collection campaign is not a test.
+    expect(firstLanguageChoices([test("wol", "Wolof"), collection("fuc", "Pulaar")], { profile: none, first_language: null }, "en")).toBeNull();
+    expect(firstLanguageChoices([], { profile: none, first_language: null }, "en")).toBeNull();
+    // A card whose code is not a language code cannot be sent as one: left out.
+    expect(firstLanguageChoices([test("wol", "Wolof"), test("FUC", "Pulaar")], { profile: none, first_language: null }, "en")).toBeNull();
+    expect(firstLanguageChoices([test("wol", "Wolof"), test("fuc", "Pulaar"), test("bam", "Bambara"), collection("srr", "Seereer")], { profile: none, first_language: null }, "fr").map((c) => c.code)).toEqual(["bam", "fuc", "wol"]);
+  });
+  it("names a card without a name from its code", () => {
+    expect(firstLanguageChoices([test("wol", ""), test("fuc", "Pulaar")], { profile: none, first_language: null }, "en")).toEqual([{ code: "fuc", name: "Pulaar" }, { code: "wol", name: "Wolof" }]);
+  });
+  it("requires an answer among the choices", () => {
+    const codes = ["fuc", "wol"];
+    expect(validateProfile({ ...ok, native_language: "" }, varieties, true, codes).errors.native_language).toBe("required");
+    expect(validateProfile({ ...ok, native_language: "bam" }, varieties, true, codes).errors.native_language).toBe("invalid");
+    const r = validateProfile({ ...ok, native_language: "fuc" }, varieties, true, codes);
+    expect(r.errors).toEqual({});
+    expect(r.input?.native_language).toBe("fuc");
+    // Not asked: any filled value passes here (the server checks it).
+    expect(validateProfile({ ...ok, native_language: "bam" }, varieties).errors).toEqual({});
   });
 });
