@@ -63,6 +63,8 @@ type State = {
   variety: string | null;
   /** The native language the profile was saved with (the app never overwrites it from a test card, A5). */
   nativeLanguage?: string | null;
+  /** The gender the profile was saved with. */
+  gender?: string | null;
   planned: { consent: boolean; missions: Mission[] };
   pool: { consent: boolean; missions: PoolMission[]; nextPrompt: number; forced: Exclude<PoolStatus, "ok"> | null; elsewhere: boolean };
   /** Seconds of each submitted take (for the paid time), by mission id. */
@@ -342,9 +344,11 @@ function contributor(s: State): ContributorView {
     contributor_id: "00000000-0000-4000-8000-0000000000b1",
     speaker_id: s.speakerId,
     locale: "en" as const,
-    profile: { complete: s.profile, missing: s.profile ? [] : ["region"], values: s.profile ? { nativeLanguage: s.nativeLanguage ?? "wol", variety: s.variety, country: "SN", region: "Thiès", gender: "female", ageBand: "30-44", device: "Android Chrome" } : null },
+    profile: { complete: s.profile, missing: s.profile ? [] : ["region"], values: s.profile ? { nativeLanguage: s.nativeLanguage ?? "wol", variety: s.variety, country: "SN", region: "Thiès", gender: s.gender ?? "female", ageBand: "30-44", device: "Android Chrome" } : null },
     // The language the applicant marked as first on the form: the profile's native language (A5).
     first_language: { code: "wol", name: "Wolof" },
+    // The sex given on the application form: prefills the profile's (the speaker can change it).
+    gender: "female",
   };
 }
 
@@ -510,6 +514,7 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       s.profile = true;
       s.variety = String(body.variety ?? "");
       s.nativeLanguage = typeof body.native_language === "string" && body.native_language ? body.native_language : "wol";
+      s.gender = typeof body.gender === "string" && body.gender ? body.gender : "female";
       s.speakerId ??= "SPK-7Q2M9X4D";
       save(s);
       return json({ contributor: contributor(s), blocked: [] });

@@ -188,4 +188,24 @@ describe("defaults", () => {
     expect(withGender("undisclosed").gender).toBe("");
     expect(withGender("other").gender).toBe("");
   });
+  it("prefills the sex from the application form when none is stored, a stored one first", () => {
+    const card = { language: { code: "wol", name: "Wolof", varieties } };
+    const none = { complete: false, missing: [], values: null };
+    const stored = (gender: string | null) => ({ complete: true, missing: [], values: { nativeLanguage: "wol", variety: null, country: null, region: null, gender, ageBand: null, device: null } });
+    expect(initialValues(card, { profile: none, gender: "female" }, "").gender).toBe("female");
+    expect(initialValues(card, { profile: none, gender: "male" }, "").gender).toBe("male");
+    expect(initialValues(card, { profile: stored(null), gender: "male" }, "").gender).toBe("male");
+    // The stored one wins over the application form's.
+    expect(initialValues(card, { profile: stored("male"), gender: "female" }, "").gender).toBe("male");
+    // A stored value the form does not offer is asked again: prefilled from the application form, when it has one.
+    expect(initialValues(card, { profile: stored("undisclosed"), gender: "female" }, "").gender).toBe("female");
+    expect(initialValues(card, { profile: stored("undisclosed"), gender: null }, "").gender).toBe("");
+    // An older dashboard (no field), or the applicant did not say: empty, asked.
+    expect(initialValues(card, { profile: none }, "").gender).toBe("");
+    expect(initialValues(card, { profile: none, gender: null }, "").gender).toBe("");
+    // Not trusted by type: anything but a value the form offers is ignored.
+    for (const odd of ["other", "undisclosed", "Female", " male", 1, {}, ""]) {
+      expect(initialValues(card, { profile: none, gender: odd as "female" }, "").gender, String(odd)).toBe("");
+    }
+  });
 });

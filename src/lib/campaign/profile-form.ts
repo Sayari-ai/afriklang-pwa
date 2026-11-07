@@ -234,23 +234,28 @@ export function languageDisplayName(code: string, locale: string): string {
   return name && name !== code ? name : fallback;
 }
 
+/** `v` when it is one of the genders the form offers, else null (not trusted by type). */
+const offeredGender = (v: unknown): string | null => (typeof v === "string" && (GENDERS as readonly string[]).includes(v) ? v : null);
+
 /**
  * Stored values win, except a stored gender the form does not offer ("other", "undisclosed"),
- * which is asked again.
+ * which is asked again. The gender is the stored one; else the one the applicant gave on the
+ * application form (`contributor.gender`, when the form offers it); else empty. Either way the
+ * field stays on the form, so the speaker sees it and can change it.
  *
  * The native language is not asked: the stored one wins; then the language the applicant marked
  * as first on the application form; then this card's language. A speaker tested in Wolof (native)
  * and Pulaar keeps Wolof whichever test card they open first: the profile is one per speaker, and
  * the dashboard files the variety under the native language.
  */
-export function initialValues(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile" | "first_language">, ua: string): ProfileValues {
+export function initialValues(card: Pick<CampaignCard, "language">, contributor: Pick<ContributorView, "profile" | "first_language" | "gender">, ua: string): ProfileValues {
   const s = contributor.profile.values;
   return {
     native_language: languageCodeOf(s?.nativeLanguage) ?? languageCodeOf(contributor.first_language?.code) ?? card.language.code,
     variety: s?.variety ?? "",
     country: s?.country ?? "",
     region: s?.region ?? "",
-    gender: s?.gender && (GENDERS as readonly string[]).includes(s.gender) ? s.gender : "",
+    gender: offeredGender(s?.gender) ?? offeredGender(contributor.gender) ?? "",
     age_band: s?.ageBand ?? "",
     device: s?.device ?? guessDevice(ua),
   };
