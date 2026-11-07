@@ -261,6 +261,9 @@ measured, as the dashboard does. In the browser console:
   app then uploads without one); `"campaign_closed"`, `"campaign_paused"`… refuse them with that code;
   `"ok"` (default) issues them. Tickets are in the contract's exact format (signed with a made-up key).
   `window.__afkLastUpload` shows the last upload's fields and its `X-Campaign-Ticket`.
+- `__afkMock.oldApplicant()` plays an applicant from before the form asked the first language: no
+  first language, no profile yet, and only the Wolof and Pulaar tests, so the profile step asks which
+  of them is the first language (`false` goes back to the usual speaker)
 - `__afkMock.reset()` starts over
 
 Never active in a production build. The mock's answers must follow the bridge contract exactly.
