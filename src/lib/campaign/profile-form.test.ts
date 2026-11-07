@@ -197,8 +197,10 @@ describe("defaults", () => {
     expect(initialValues(card, { profile: stored(null), gender: "male" }, "").gender).toBe("male");
     // The stored one wins over the application form's.
     expect(initialValues(card, { profile: stored("male"), gender: "female" }, "").gender).toBe("male");
-    // A stored value the form does not offer is asked again: prefilled from the application form, when it has one.
-    expect(initialValues(card, { profile: stored("undisclosed"), gender: "female" }, "").gender).toBe("female");
+    // A stored value the form does not offer is asked again, left empty: never replaced by the
+    // application's answer, which a speaker saving without looking would send over it.
+    expect(initialValues(card, { profile: stored("undisclosed"), gender: "female" }, "").gender).toBe("");
+    expect(initialValues(card, { profile: stored("other"), gender: "male" }, "").gender).toBe("");
     expect(initialValues(card, { profile: stored("undisclosed"), gender: null }, "").gender).toBe("");
     // An older dashboard (no field), or the applicant did not say: empty, asked.
     expect(initialValues(card, { profile: none }, "").gender).toBe("");

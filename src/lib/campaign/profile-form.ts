@@ -287,8 +287,10 @@ export function firstLanguageChoices(cards: readonly Pick<CampaignCard, "kind" |
 
 /**
  * Stored values win, except a stored gender the form does not offer ("other", "undisclosed"),
- * which is asked again. The gender is the stored one; else the one the applicant gave on the
- * application form (`contributor.gender`, when the form offers it); else empty. Either way the
+ * which is asked again: the field stays empty so the speaker chooses (never the application's
+ * answer over it, or a speaker saving without looking would overwrite it). Only when no gender is
+ * stored does the one the applicant gave on the application form (`contributor.gender`, when the
+ * form offers it) prefill the field, as the dashboard's profileFormDefaults does. Either way the
  * field stays on the form, so the speaker sees it and can change it.
  *
  * The native language (see also formNativeLanguage): the stored one wins; then the language the applicant marked as first on
@@ -305,7 +307,7 @@ export function initialValues(card: Pick<CampaignCard, "language">, contributor:
     variety: s?.variety ?? "",
     country: s?.country ?? "",
     region: s?.region ?? "",
-    gender: offeredGender(s?.gender) ?? offeredGender(contributor.gender) ?? "",
+    gender: s?.gender ? (offeredGender(s.gender) ?? "") : (offeredGender(contributor.gender) ?? ""),
     age_band: s?.ageBand ?? "",
     device: s?.device ?? guessDevice(ua),
   };
