@@ -30,6 +30,7 @@
   "phase": {
     "idle": "Tap the button and wait for “Speak now”",
     "countdown": "Get ready…",
+    "waitingMic": "Starting the microphone… If your browser asks, tap Allow.",
     "lead": "Stay silent…",
     "speaking": "Speak now",
     "tail": "Stay silent a moment…",
@@ -84,14 +85,21 @@
   },
   "skip": "Skip for now",
   "mic": {
-    "permission-denied": "The microphone is blocked. Allow microphone access for this app in your browser settings, then try again.",
+    "permission-denied": "The microphone is blocked for this app, so nothing can be recorded.",
     "no-mic": "No microphone was found. Check your device, then try again.",
     "unsupported": "This browser cannot record audio. Open the app in a recent Chrome or Safari.",
     "internal": "Recording could not start. Close other apps that use the microphone, then try again.",
     "stopFailed": "The take could not be finished: no sound reached the app. Check the microphone, then record again.",
     "prepare": "Your take could not be prepared on this device. Try again, or update your browser.",
     "interrupted": "The recording was interrupted (a call, another app, or the microphone was disconnected), so it was not kept. Please record it again.",
-    "noSpace": "Your phone is full, so this take could not be saved. Free some space (photos, videos, apps), then press Submit again."
+    "noSpace": "Your phone is full, so this take could not be saved. Free some space (photos, videos, apps), then press Submit again.",
+    "startTimeout": "The microphone did not start. If your browser asked for the microphone, tap Allow. Otherwise reload the page and tap Record again.",
+    "inApp": "This page is open inside another app (WhatsApp, Facebook, Instagram…), which does not give it the microphone. Open the link in Chrome or Safari, then record.",
+    "help": {
+      "android": "To allow it: tap the lock or ⓘ next to the web address › Permissions › Microphone › Allow. If it is already allowed, open your phone's Settings › Apps › Chrome › Permissions › Microphone › Allow. In the installed app: press and hold its icon › App info › Permissions › Microphone. Then reload the page.",
+      "ios": "To allow it: tap “aA” next to the web address › Website Settings › Microphone › Allow. Also check your iPhone's Settings › Safari › Microphone › Allow (or Settings › Chrome › Microphone if you use Chrome). Then reload the page.",
+      "desktop": "To allow it: click the lock or ⓘ next to the web address, set Microphone to Allow, and check that your computer lets the browser use the microphone. Then reload the page."
+    }
   },
   "goal": {
     "title": "Session goal reached!",

@@ -30,6 +30,7 @@
   "phase": {
     "idle": "Appuyez sur le bouton et attendez « Parlez »",
     "countdown": "Préparez-vous…",
+    "waitingMic": "Démarrage du micro… Si votre navigateur le demande, appuyez sur Autoriser.",
     "lead": "Restez silencieux…",
     "speaking": "Parlez",
     "tail": "Restez silencieux un instant…",
@@ -84,14 +85,21 @@
   },
   "skip": "Passer pour l'instant",
   "mic": {
-    "permission-denied": "Le micro est bloqué. Autorisez l'accès au micro pour cette application dans les réglages du navigateur, puis réessayez.",
+    "permission-denied": "Le micro est bloqué pour cette application : rien ne peut être enregistré.",
     "no-mic": "Aucun micro trouvé. Vérifiez votre appareil, puis réessayez.",
     "unsupported": "Ce navigateur ne peut pas enregistrer de son. Ouvrez l'application dans une version récente de Chrome ou Safari.",
     "internal": "L'enregistrement n'a pas pu démarrer. Fermez les autres applications qui utilisent le micro, puis réessayez.",
     "stopFailed": "La prise n'a pas pu être terminée : aucun son n'est arrivé. Vérifiez le micro, puis recommencez.",
     "prepare": "Votre prise n'a pas pu être préparée sur cet appareil. Réessayez, ou mettez à jour votre navigateur.",
     "interrupted": "L'enregistrement a été interrompu (un appel, une autre application, ou le micro a été déconnecté) : il n'a pas été gardé. Recommencez, s'il vous plaît.",
-    "noSpace": "Votre téléphone est plein : cette prise n'a pas pu être gardée. Libérez de la place (photos, vidéos, applications), puis appuyez de nouveau sur Envoyer."
+    "noSpace": "Votre téléphone est plein : cette prise n'a pas pu être gardée. Libérez de la place (photos, vidéos, applications), puis appuyez de nouveau sur Envoyer.",
+    "startTimeout": "Le micro n'a pas démarré. Si votre navigateur a demandé le micro, appuyez sur Autoriser. Sinon, rechargez la page et appuyez de nouveau sur Enregistrer.",
+    "inApp": "Cette page est ouverte dans une autre application (WhatsApp, Facebook, Instagram…), qui ne lui donne pas le micro. Ouvrez le lien dans Chrome ou Safari, puis enregistrez.",
+    "help": {
+      "android": "Pour l'autoriser : appuyez sur le cadenas ou ⓘ à côté de l'adresse › Autorisations › Micro › Autoriser. S'il est déjà autorisé, ouvrez les Paramètres du téléphone › Applications › Chrome › Autorisations › Micro › Autoriser. Dans l'application installée : appui long sur son icône › Infos sur l'appli › Autorisations › Micro. Puis rechargez la page.",
+      "ios": "Pour l'autoriser : appuyez sur « aA » à côté de l'adresse › Réglages du site web › Micro › Autoriser. Vérifiez aussi Réglages de l'iPhone › Safari › Micro › Autoriser (ou Réglages › Chrome › Micro si vous utilisez Chrome). Puis rechargez la page.",
+      "desktop": "Pour l'autoriser : cliquez sur le cadenas ou ⓘ à côté de l'adresse, réglez Micro sur Autoriser, et vérifiez que votre ordinateur laisse le navigateur utiliser le micro. Puis rechargez la page."
+    }
   },
   "goal": {
     "title": "Objectif de la séance atteint !",
