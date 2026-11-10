@@ -13,7 +13,7 @@ import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/
 import { truncate } from "@/lib/campaign/mission-list";
 import { isQualification, type CampaignCard, type Mission } from "@/lib/campaign/types";
 import { totalPaidTime } from "@/lib/campaign/pool";
-import { historyGroups, isTestRecording, rejectionReasonCode, totals } from "@/lib/campaign/view";
+import { historyGroups, isTestRecording, rejectionReasonCode, submittedStatusKey, totals } from "@/lib/campaign/view";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { LanguageBadge } from "./CampaignCardView";
 import { buttonPrimary, useFailureText, useRejectDetailText, useRejectionText } from "./CampaignHubParts";
@@ -147,7 +147,8 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
     return code ? t(`reasons.${code}`) : r;
   };
   const statusOf = (m: Mission): string => {
-    if (m.status !== "rejected") return t(`status.${m.status as "submitted" | "accepted"}`);
+    if (m.status === "submitted") return t(`status.${submittedStatusKey(m)}`);
+    if (m.status !== "rejected") return t(`status.${m.status as "accepted"}`);
     // The check's own title when the refusal says what was measured (too loud, too noisy…), not the reason's general sentence (X-06).
     if (!test) return [t("status.rejected"), detailText(m)?.title ?? rejectionText(m.rejection_reason)].filter(Boolean).join(" · ");
     if (testRecording) return [t("statusRedo"), detailText(m)?.title].filter(Boolean).join(" · ");

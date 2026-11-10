@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, varietyBlockOf, waitsForPartner, withdrawOffered, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
+import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, submittedStatusKey, varietyBlockOf, waitsForPartner, withdrawOffered, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -199,5 +199,13 @@ describe("varietyBlockOf (APP2-28)", () => {
     expect(varietyBlockOf('Declared variety "Lebu" is not a target variety of this campaign (Baol-Baol, Kajoor)')).toEqual({ declared: "Lebu", targets: "Baol-Baol, Kajoor" });
     expect(varietyBlockOf("Something else")).toBeNull();
     expect(varietyBlockOf(null)).toBeNull();
+  });
+});
+
+describe("submittedStatusKey (X-14)", () => {
+  it("says 'sent' while the file has only reached Sayari, 'in review' once checked", () => {
+    expect(submittedStatusKey({ status: "submitted", recording: { status: "uploaded", rejection_reason: null } })).toBe("sent");
+    expect(submittedStatusKey({ status: "submitted", recording: { status: "pre_annotated", rejection_reason: null } })).toBe("submitted");
+    expect(submittedStatusKey({ status: "submitted", recording: null })).toBe("submitted");
   });
 });

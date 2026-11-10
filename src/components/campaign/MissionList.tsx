@@ -18,7 +18,7 @@ import { canRecordNow } from "@/lib/campaign/studio-flow";
 import type { Mission, SpeechType } from "@/lib/campaign/types";
 import { useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions } from "@/lib/campaign/pool-client";
-import { waitsForPartner } from "@/lib/campaign/view";
+import { submittedStatusKey, waitsForPartner } from "@/lib/campaign/view";
 import { RejectDetailLines, useFailureText, useRejectDetailText } from "./CampaignHubParts";
 import { LeaseLeft } from "./PoolParts";
 
@@ -135,7 +135,7 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifyin
   if (local && local !== "failed") status = <Badge tone="blue" icon={<UploadCloud size={12} aria-hidden />}>{active ? t("outbox.state.sending") : t(`outbox.state.${local}`)}</Badge>;
   else if (local === "failed") status = <Badge tone="red" icon={<AlertTriangle size={12} aria-hidden />}>{t("outbox.state.failed")}</Badge>;
   else if (m.status === "accepted") status = <Badge tone="green" icon={<CheckCircle2 size={12} aria-hidden />}>{t("history.status.accepted")}</Badge>;
-  else if (m.status === "submitted") status = <Badge tone="slate" icon={<Hourglass size={12} aria-hidden />}>{t("history.status.submitted")}</Badge>;
+  else if (m.status === "submitted") status = <Badge tone="slate" icon={<Hourglass size={12} aria-hidden />}>{t(`history.status.${submittedStatusKey(m)}`)}</Badge>;
 
   const body = (
     <>

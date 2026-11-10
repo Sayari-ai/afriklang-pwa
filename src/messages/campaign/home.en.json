@@ -193,6 +193,7 @@
       "other": "other"
     },
     "status": {
+      "sent": "Sent, being checked",
       "submitted": "In review",
       "accepted": "Accepted",
       "rejected": "To redo"

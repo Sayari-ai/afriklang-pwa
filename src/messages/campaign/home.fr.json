@@ -193,6 +193,7 @@
       "other": "autre"
     },
     "status": {
+      "sent": "Envoyé, en cours de contrôle",
       "submitted": "En vérification",
       "accepted": "Accepté",
       "rejected": "À refaire"

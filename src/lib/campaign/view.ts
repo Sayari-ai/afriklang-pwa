@@ -212,3 +212,11 @@ export function varietyBlockOf(reason: string | null | undefined): { declared: s
   const m = /^Declared variety "(.{1,80})" is not a target variety of this campaign \((.{1,300})\)$/.exec((reason ?? "").trim());
   return m ? { declared: m[1], targets: m[2] } : null;
 }
+
+/**
+ * A submitted mission's own state (X-14, the contract's recording status table): "sent" while the
+ * file has only reached Sayari (`uploaded`), "submitted" (in review) once its checks passed
+ * (`pre_annotated`) or when the dashboard does not say.
+ */
+export const submittedStatusKey = (m: Pick<Mission, "status" | "recording">): "sent" | "submitted" =>
+  m.status === "submitted" && m.recording?.status === "uploaded" ? "sent" : "submitted";
