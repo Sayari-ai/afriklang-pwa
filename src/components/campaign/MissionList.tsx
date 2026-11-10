@@ -91,7 +91,7 @@ export function MissionList({ campaignId, readOnly }: Props) {
 
   return (
     <section className="space-y-3">
-      <div role="tablist" aria-label={tm("title")} className="grid grid-cols-4 gap-1 rounded-2xl bg-slate-200/70 p-1">
+      <div role="tablist" aria-label={tm("title")} className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-200/70 p-1 min-[360px]:grid-cols-4">
         {tabs.map((k) => (
           <button
             key={k}

@@ -71,7 +71,8 @@ export function HistoryScreen() {
         <h1 className="text-2xl font-black">{t("title")}</h1>
         <p className="text-sm text-slate-600">{t("intro")}</p>
       </header>
-      <dl className="grid grid-cols-4 gap-2 text-center">
+      {/* 2 × 2 on the smallest phones: "En vérification" does not fit a quarter of 288 px (APP2-24). */}
+      <dl className="grid grid-cols-2 gap-2 text-center min-[360px]:grid-cols-4">
         {(
           [
             ["recorded", sum.submitted + sum.accepted + sum.rejected, "text-slate-900"],

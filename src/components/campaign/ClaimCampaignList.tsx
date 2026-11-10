@@ -84,9 +84,10 @@ function Home({ data }: { data: CampaignList }) {
       <section className="rounded-3xl bg-gradient-to-br from-primary to-[#003a70] p-5 text-white shadow-md">
         <h1 className="text-2xl font-black">{t("hello")}</h1>
         <p className="text-sm text-white/85">{t("intro")}</p>
-        {/* A speaker with only a qualification test has no paid work yet: no "0 min" and no streak (L-20). */}
+        {/* A speaker with only a qualification test has no paid work yet: no "0 min" and no streak (L-20).
+            Two columns on the smallest phones (320 px), where "12 h 45 min" does not fit a third (APP2-24). */}
         {collection.length ? (
-        <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
+        <dl className="mt-4 grid grid-cols-2 gap-2 text-center min-[360px]:grid-cols-3">
           {paid ? (
             <>
               <Stat icon={<CheckCircle2 size={18} aria-hidden />} value={time(paid.acceptedS)} label={t("stats.acceptedTime")} small />
@@ -98,7 +99,7 @@ function Home({ data }: { data: CampaignList }) {
               <Stat icon={<Hourglass size={18} aria-hidden />} value={sum.submitted} label={t("stats.inReview")} />
             </>
           )}
-          <Stat icon={<Flame size={18} aria-hidden className="text-yellow" />} value={streak} label={t("stats.streak", { n: streak })} />
+          <Stat icon={<Flame size={18} aria-hidden className="text-yellow" />} value={streak} label={t("stats.streak", { n: streak })} className="col-span-2 min-[360px]:col-span-1" />
         </dl>
         ) : null}
       </section>
@@ -133,9 +134,9 @@ function Home({ data }: { data: CampaignList }) {
   );
 }
 
-function Stat({ icon, value, label, small = false }: { icon: React.ReactNode; value: number | string; label: string; small?: boolean }) {
+function Stat({ icon, value, label, small = false, className = "" }: { icon: React.ReactNode; value: number | string; label: string; small?: boolean; className?: string }) {
   return (
-    <div className="rounded-2xl bg-white/10 px-2 py-3">
+    <div className={`rounded-2xl bg-white/10 px-2 py-3 ${className}`}>
       <dt className="sr-only">{label}</dt>
       <dd>
         <span className={`flex items-center justify-center gap-1 font-black tabular-nums ${small ? "text-base leading-7" : "text-2xl"}`}>
