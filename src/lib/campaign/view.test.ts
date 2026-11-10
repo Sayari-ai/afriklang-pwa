@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, daysLeft, hasMissions, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
+import { campaignMicDistance, daysLeft, hasMissions, historyGroups, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -145,5 +145,18 @@ describe("microphone distance", () => {
       expect(campaignMicDistance(card(["read"], mic)), JSON.stringify(mic)).toEqual({ main: null, conversation: null });
       expect(texts(card(["read"], mic), "en"), JSON.stringify(mic)).toEqual({ tip: "Phone a hand's width from your mouth", rule: null });
     }
+  });
+});
+
+describe("historyGroups (APP2-07)", () => {
+  const card = (next_step: string, total: number, todo: number) => ({ next_step, progress: { total, todo, submitted: 0, accepted: total - todo, rejected: 0 } }) as never;
+  it("a campaign with recordings waiting on a new consent is listed as locked, not hidden", () => {
+    const ready = card("ready", 10, 2);
+    const consent = card("campaign_consent", 10, 4);
+    const blocked = card("blocked", 5, 1);
+    const untouched = card("campaign_consent", 10, 10);
+    const g = historyGroups([ready, consent, blocked, untouched]);
+    expect(g.readable).toEqual([ready]);
+    expect(g.locked).toEqual([consent, blocked]);
   });
 });

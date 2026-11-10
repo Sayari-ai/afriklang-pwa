@@ -161,6 +161,11 @@
     },
     "empty": "No recordings here yet.",
     "nothingYet": "You have not recorded anything yet. Your recordings and their results will appear here.",
+    "locked": {
+      "consent": "Sign the consent to see and continue your recordings.",
+      "profile": "Complete your profile to see and continue your recordings.",
+      "blocked": "The team is checking your profile for this campaign. Your recordings are kept."
+    },
     "timeline": "Recent activity",
     "noActivity": "No activity on this phone yet.",
     "today": "Today",

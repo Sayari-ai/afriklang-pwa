@@ -161,6 +161,11 @@
     },
     "empty": "Aucun enregistrement ici pour l'instant.",
     "nothingYet": "Vous n'avez encore rien enregistré. Vos enregistrements et leurs résultats apparaîtront ici.",
+    "locked": {
+      "consent": "Signez le consentement pour voir et continuer vos enregistrements.",
+      "profile": "Complétez votre profil pour voir et continuer vos enregistrements.",
+      "blocked": "L'équipe vérifie votre profil pour cette campagne. Vos enregistrements sont conservés."
+    },
     "timeline": "Activité récente",
     "noActivity": "Aucune activité sur ce téléphone pour l'instant.",
     "today": "Aujourd'hui",

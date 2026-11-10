@@ -161,3 +161,14 @@ export function totals(cards: readonly Pick<CampaignCard, "progress">[]) {
     { accepted: 0, submitted: 0, rejected: 0, total: 0 },
   );
 }
+
+/**
+ * History's campaigns: `readable` lists its recordings (the bridge lists missions only once both
+ * consents are signed); `locked` has recordings the speaker cannot see until they act (a new consent
+ * to sign, the profile, a block): said, never "nothing recorded yet" (APP2-07).
+ */
+export function historyGroups<C extends Pick<CampaignCard, "next_step" | "progress">>(cards: readonly C[]): { readable: C[]; locked: C[] } {
+  const recorded = cards.filter((c) => c.progress.total > 0 && c.progress.total - c.progress.todo > 0);
+  const open = (c: C) => c.next_step === "ready" || c.next_step === "paused" || c.next_step === "closed";
+  return { readable: recorded.filter(open), locked: recorded.filter((c) => !open(c)) };
+}
