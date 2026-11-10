@@ -40,6 +40,17 @@ describe("campaign messages", () => {
     }
   });
 
+  it("a translated 404 page and a full reload on the error page exist (APP2-22)", () => {
+    for (const locale of ["en", "fr"]) {
+      const c = load(`common.${locale}.json`) as { notFoundPage?: Record<string, string>; reloadApp?: string };
+      expect(c.notFoundPage?.title && c.notFoundPage.open && c.reloadApp).toBeTruthy();
+    }
+    const app = path.resolve(__dirname, "../../app");
+    expect(readFileSync(path.join(app, "not-found.tsx"), "utf8")).toContain("notFoundPage");
+    expect(readFileSync(path.join(app, "error.tsx"), "utf8")).toContain("location.reload()");
+    expect(readFileSync(path.join(app, "global-error.tsx"), "utf8")).toContain("Recharger");
+  });
+
   it("every error code has a message in both languages", () => {
     for (const locale of ["en", "fr"]) {
       const errors = (load(`common.${locale}.json`).errors ?? {}) as Record<string, string>;

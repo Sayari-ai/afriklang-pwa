@@ -84,6 +84,12 @@
     "pending": "In review",
     "help": "You are paid for each hour of accepted audio."
   },
+  "notFoundPage": {
+    "title": "This page does not exist",
+    "body": "The link may be old or incomplete. Your missions and the recordings on this phone are safe.",
+    "open": "Open my missions"
+  },
+  "reloadApp": "Reload the app",
   "offlinePage": {
     "title": "You are offline",
     "body": "This page is not saved on your phone yet. Your missions and the recordings waiting to be sent are safe.",

@@ -84,6 +84,12 @@
     "pending": "En vérification",
     "help": "Vous êtes payé pour chaque heure d'audio acceptée."
   },
+  "notFoundPage": {
+    "title": "Cette page n'existe pas",
+    "body": "Le lien est peut-être ancien ou incomplet. Vos missions et les enregistrements sur ce téléphone sont en sécurité.",
+    "open": "Ouvrir mes missions"
+  },
+  "reloadApp": "Recharger l'application",
   "offlinePage": {
     "title": "Vous êtes hors ligne",
     "body": "Cette page n'est pas encore enregistrée sur votre téléphone. Vos missions et les enregistrements en attente d'envoi sont en sécurité.",
