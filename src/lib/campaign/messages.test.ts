@@ -32,6 +32,14 @@ describe("campaign messages", () => {
     expect((load("common.en.json").rejection as Record<string, string>).other).not.toMatch(/reviewer/i);
   });
 
+  it("the instructions give plain advice, no dBFS number (APP2-17)", () => {
+    for (const locale of ["en", "fr"]) {
+      const ins = load(`flow.${locale}.json`).instructions as Record<string, string>;
+      expect(ins.level).not.toMatch(/dBFS|\{/);
+      expect(ins.silence).not.toMatch(/\{/);
+    }
+  });
+
   it("every error code has a message in both languages", () => {
     for (const locale of ["en", "fr"]) {
       const errors = (load(`common.${locale}.json`).errors ?? {}) as Record<string, string>;

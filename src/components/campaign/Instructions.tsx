@@ -52,8 +52,9 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
               <li>{t("quiet")}</li>
               {rec.background ? <li>{t("background", { text: rec.background })}</li> : null}
               {mic.main && !perType ? <li>{t("mic", mic.main)}</li> : null}
-              <li>{t("level", { level: rec.min_level_dbfs })}</li>
-              <li>{t("silence", { s: rec.silence_margin_s })}</li>
+              {/* Plain advice: the studio records the silences and measures the level itself (APP2-17). */}
+              <li>{t("level")}</li>
+              <li>{t("silence")}</li>
             </ul>
           </div>
           {types.length ? (
