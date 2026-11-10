@@ -553,6 +553,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           utcOffsetMin: -new Date().getTimezoneOffset(),
           device: { label: deviceLabel(navigator.userAgent), ...parseDevice(navigator.userAgent) },
           appVersion: process.env.NEXT_PUBLIC_APP_VERSION ?? "0.1.0",
+          appBuild: process.env.NEXT_PUBLIC_APP_BUILD ?? null,
         },
       });
       const item: OutboxItem = {

@@ -44,6 +44,8 @@ export type CaptureInfo = {
   utcOffsetMin: number;
   device: { label: string; os: string | null; browser: string | null };
   appVersion: string;
+  /** The build (commit) that recorded the take; "0.1.0" alone does not say which one (APP2-26). */
+  appBuild?: string | null;
 };
 
 const nn = <T,>(v: T | null | undefined): T | null => (v === undefined ? null : v);
@@ -155,7 +157,7 @@ export function buildAudioMetadata(args: {
       app_locale: c.appLocale,
       utc_offset_min: c.utcOffsetMin,
     },
-    app: { name: "afriklang-pwa", version: c.appVersion },
+    app: { name: "afriklang-pwa", version: c.appVersion, build: c.appBuild || null },
   };
 }
 
