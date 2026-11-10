@@ -143,7 +143,7 @@
     "more": "Plus d'options",
     "allRecordedOnPhone": "{n, plural, one {Tout est enregistré, mais # enregistrement est encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à son envoi.} other {Tout est enregistré, mais # enregistrements sont encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à leur envoi.}}",
     "waitingPartner": "{n, plural, one {# conversation attend le consentement de votre partenaire.} other {# conversations attendent le consentement de votre partenaire.}}",
-    "allRecordedTest": "Tout est enregistré et envoyé. L'équipe examine votre test ; vous recevrez le résultat par e-mail."
+    "allRecordedTest": "Tout est enregistré et envoyé. L'équipe examine votre test ; vous recevrez le résultat par e-mail. Nous répondons en général sous 5 jours ouvrés."
   },
   "history": {
     "title": "Mon historique",
@@ -211,7 +211,7 @@
     "start": "Commencer le test",
     "continue": "{n, plural, one {Continuer · # restant} other {Continuer · # restants}}",
     "setup": "Terminez l'inscription pour commencer",
-    "inReview": "Tout est envoyé. Un locuteur natif écoute vos enregistrements ; vous recevrez le résultat par e-mail.",
+    "inReview": "Tout est envoyé. Un locuteur natif écoute vos enregistrements ; vous recevrez le résultat par e-mail. Nous répondons en général sous 5 jours ouvrés.",
     "eligible": "Réussi : {accepted, plural, one {# enregistrement accepté} other {# enregistrements acceptés}} sur {total}. L'équipe vous contactera.",
     "retry": "Pas encore réussi. L'équipe vous enverra un nouveau test, avec de nouvelles consignes.",
     "notEligible": "Pas réussi cette fois. Vous pourrez repasser le test à partir du {date}.",

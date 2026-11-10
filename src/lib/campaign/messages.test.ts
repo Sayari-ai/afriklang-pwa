@@ -57,6 +57,15 @@ describe("campaign messages", () => {
     expect(home).not.toMatch(/streakDays|stats\.streak/);
   });
 
+  it("the test-submitted screens say when to expect a reply (APP2-32)", () => {
+    const at = (o: unknown, path: string) => path.split(".").reduce((x, k) => (x as Record<string, unknown>)[k], o) as string;
+    for (const [locale, words] of [["en", "within 5 working days"], ["fr", "sous 5 jours ouvrés"]]) {
+      const home = load(`home.${locale}.json`);
+      const studio = load(`studio.${locale}.json`);
+      for (const text of [at(home, "hub.allRecordedTest"), at(home, "qualification.inReview"), at(studio, "done.bodyTest"), at(studio, "guard.testClosed.body")]) expect(text).toContain(words);
+    }
+  });
+
   it("every error code has a message in both languages", () => {
     for (const locale of ["en", "fr"]) {
       const errors = (load(`common.${locale}.json`).errors ?? {}) as Record<string, string>;
