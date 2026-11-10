@@ -35,6 +35,8 @@ import { languageInText } from "@/lib/campaign/language-name";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
 import { toRecordCount } from "@/lib/campaign/view";
+import { reportException } from "@/lib/analytics/client";
+import { track, type MicErrorCode } from "@/lib/analytics/events";
 import { PoolRefusal } from "../PoolParts";
 import { Confetti, PromptCard, RecordButton, SessionBar, TakePlayer } from "./StudioParts";
 
@@ -115,6 +117,13 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       return 1;
     }
   });
+
+  // Analytics: what the studio opened with, once per visit.
+  const campaignKind = card.kind ?? "collection";
+  useEffect(() => {
+    track("studio_opened", { campaign_kind: card.kind ?? "collection", language: card.language.code, to_record: queue.length, focused: Array.isArray(startId) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Missions that became recordable during the session (sent back by the team, or drawn for a pool
   // campaign) join the end of the queue. A pool session that had run out picks up the new batch.
@@ -288,6 +297,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     (e: unknown) => {
       const code = e instanceof RecorderError ? e.code : "internal";
       const help = micHelpFor(typeof navigator === "undefined" ? "" : navigator.userAgent);
+      reportMicError(help === "inApp" && code !== "no-mic" ? "inApp" : code, help === "inApp", e);
       // Inside WhatsApp, Facebook and the like, the answer is the same whatever failed: open the
       // page in the phone's browser.
       setMicError(help === "inApp" && code !== "no-mic" ? t("mic.inApp") : t(`mic.${code}`));
@@ -321,14 +331,16 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       // Only a blocking problem sends the speaker back to record; advice is shown on the review screen.
       const check = checkTake(analysis, rules);
       const p = check?.blocking ? check.problem : null;
+      track("take_checked", { result: p ? "problem" : check ? "advice" : "ok", ...(check ? { problem: check.problem } : {}), duration_s: Math.round(analysis.duration_s * 10) / 10, mission_type: missionTypeIn(byIdRef.current, mid) });
       if (p) void clearDraft(userId, campaignId);
       setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown, takeNumber });
       setProblem(p);
       setPhase(p ? "problem" : "review");
       vibrate(p ? [40, 60, 40] : 30);
-    } catch {
+    } catch (e) {
       recorderRef.current = null;
       if (attempt !== attemptRef.current) return;
+      reportMicError("stopFailed", false, e);
       setMicError(t("mic.stopFailed"));
       setPhase("idle");
     }
@@ -363,6 +375,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       setElapsed(0);
       setQuiet(false);
       quietShownRef.current = false;
+      const recordingId = currentIdRef.current;
+      track("record_started", { campaign_kind: campaignKind, mission_type: missionTypeIn(byIdRef.current, recordingId), take_number: (takesRef.current.get(recordingId ?? "") ?? 0) + 1 });
       setPhase("lead");
       vibrate(20);
       later(() => {
@@ -387,7 +401,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       };
       timers.current.push(setTimeout(tick, 100));
     },
-    [stopAtS, pad, rules?.minLevelDbfs],
+    [stopAtS, pad, rules?.minLevelDbfs, campaignKind],
   );
 
   useEffect(() => {
@@ -410,6 +424,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         if (attempt !== attemptRef.current || phaseRef.current !== "countdown") return;
         teardown();
         const help = micHelpFor(navigator.userAgent);
+        reportMicError(help === "inApp" ? "inApp" : "startTimeout", help === "inApp", null);
         setMicError(t(help === "inApp" ? "mic.inApp" : "mic.startTimeout"));
         setMicHelp(help === "inApp" ? null : help);
         setSlowStart(false);
@@ -565,6 +580,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       void freeSpaceBytes().then((free) => {
         if (free != null && free < LOW_SPACE_BYTES) setMicError(t("saved.lowSpace"));
       });
+      track("take_submitted", { take_number: take.takeNumber, mission_type: mission.type, campaign_kind: campaignKind, sent_anyway: advice !== null, offline: navigator.onLine === false });
       const n = sessionCount + 1;
       setSessionCount(n);
       setFlash(navigator.onLine === false ? "offline" : "online");
@@ -584,6 +600,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       later(() => setFlash(null), 2200);
       return;
     }
+    track("take_skipped", { mission_type: mission?.type ?? "unknown", campaign_kind: campaignKind });
     const q = skip(queue, currentId);
     setQueue(q);
     advance(currentId, sessionCount, q);
@@ -639,6 +656,15 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       void clearDraft(userId, campaignId);
     }
   }
+
+  // Analytics: every prompt of a qualification test recorded in this visit (sent or waiting on the phone).
+  const testDoneRef = useRef(false);
+  const testAllRecorded = card.kind === "qualification" && phase === "done" && sessionCount > 0 && toRecordCount(missions, onPhone) === 0;
+  useEffect(() => {
+    if (!testAllRecorded || testDoneRef.current) return;
+    testDoneRef.current = true;
+    track("test_completed", { language: card.language.code, prompts: missions.length, ...(card.qualification ? { attempt_no: card.qualification.attempt_no } : {}) });
+  }, [testAllRecorded, card.language.code, card.qualification, missions.length]);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -838,4 +864,16 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       </div>
     ),
   );
+}
+
+/** The type of a mission of the session, for analytics. */
+const missionTypeIn = (byId: ReadonlyMap<string, Mission>, id: string | null) => (id ? byId.get(id)?.type ?? "unknown" : "unknown");
+
+/**
+ * A microphone failure: an analytics event, and a handled exception in error tracking (which
+ * starts the session replay: analytics/init.ts). The error carries no prompt or audio.
+ */
+function reportMicError(code: MicErrorCode, inApp: boolean, error: unknown) {
+  track("record_mic_error", { code, in_app_browser: inApp });
+  reportException(error instanceof Error ? error : new Error(`Microphone: ${code}`), { source: "studio-mic", mic_code: code });
 }

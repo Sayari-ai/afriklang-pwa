@@ -18,6 +18,7 @@
  */
 
 import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { noteSignedIn } from "@/lib/analytics/client";
 import type { CampaignList, MissionList } from "./api";
 import { forgetSignOut, getCampaignAuth, isCampaignAuthConfigured, signedOutOnPurpose, storedCampaignUser } from "./auth-client";
 import { cacheId, campaignCache, type Entry } from "./cache";
@@ -58,6 +59,8 @@ function applySession(next: SessionState) {
   if (sameSession(current, next)) return;
   current = next;
   if (next.status === "signedIn") forgetSignOut();
+  // The end of a Google sign-in started in this tab (analytics: sign_in_completed).
+  if (next.status === "signedIn" && next.verified) noteSignedIn();
   for (const l of [...sessionListeners]) l();
 }
 

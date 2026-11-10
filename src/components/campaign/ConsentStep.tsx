@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useId, useRef, useState } from "react";
 import { signConsent } from "@/lib/campaign/api";
+import { track } from "@/lib/analytics/events";
 import { languageInText } from "@/lib/campaign/language-name";
 import { clearWithdrawn } from "@/lib/campaign/withdrawals";
 import { isQualification, type CampaignCard, type CampaignFailure } from "@/lib/campaign/types";
@@ -38,6 +39,7 @@ export function ConsentStep({ type, card, onSigned }: Props) {
       if (res.ok) {
         // Takes held since a withdrawal from this app may go again.
         if (type === "campaign") clearWithdrawn(card.campaign_id);
+        track("consent_signed", type === "campaign" ? { kind: type, campaign_kind: card.kind ?? "collection" } : { kind: type });
         return onSigned();
       }
       if (res.code === "consent_version_changed") {

@@ -9,6 +9,7 @@
 import { createStore, del, get, set, values, type UseStore } from "idb-keyval";
 import { useEffect, useSyncExternalStore } from "react";
 import { AudioUploadError, uploadAudio } from "@/lib/api/audio";
+import { track } from "@/lib/analytics/events";
 import { logActivity } from "./activity";
 import { requestUploadTicket, submitRecording, withdrawConsent } from "./api";
 import { campaignAccessToken, storedCampaignUser } from "./auth-client";
@@ -132,6 +133,7 @@ export function useOutboxRunner(userId: string | null) {
 }
 
 function onOutboxEvent(userId: string, e: OutboxEvent) {
+  trackOutboxEvent(e);
   const prompt = e.item.upload?.englishDescription?.trim();
   const base = { campaignId: e.item.campaignId, missionId: e.item.missionId, missionCode: e.item.missionCode, ...(prompt ? { prompt: prompt.length > 60 ? `${prompt.slice(0, 59)}…` : prompt } : {}) };
   switch (e.type) {
@@ -157,6 +159,14 @@ function onOutboxEvent(userId: string, e: OutboxEvent) {
     case "held":
       break;
   }
+}
+
+/** Analytics: a take sent, or given up on for good (retries are not events). Codes only, no prompt. */
+function trackOutboxEvent(e: OutboxEvent) {
+  const base = { mission_type: e.item.missionType ?? "unknown", attempts: e.item.attempts ?? 0 };
+  if (e.type === "sent") track("upload_succeeded", { ...base, duplicate: e.duplicate });
+  else if (e.type === "failed" || e.type === "dropped") track("upload_failed", { ...base, code: e.code });
+  else if (e.type === "rejected") track("upload_failed", { ...base, code: "recording_rejected", reason: e.reason });
 }
 
 /**

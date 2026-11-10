@@ -8,7 +8,8 @@
 import { ArrowLeft, Check, Ear, Hand, Mic, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { track } from "@/lib/analytics/events";
 import { logActivity } from "@/lib/campaign/activity";
 import { languageInText } from "@/lib/campaign/language-name";
 import { isRetryable } from "@/lib/campaign/errors";
@@ -78,6 +79,13 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
   const [withdrawn, setWithdrawn] = useState<number | null>(null);
   const step = setupStep(card.next_step);
   const qualifying = isQualification(card);
+  // Analytics: once per campaign opened (later refreshes of the card do not count).
+  const openedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (openedRef.current === card.campaign_id) return;
+    openedRef.current = card.campaign_id;
+    track("campaign_opened", { campaign_kind: card.kind ?? "collection", language: card.language.code, dispatch: card.dispatch ?? "planned", next_step: card.next_step });
+  }, [card.campaign_id, card.kind, card.language.code, card.dispatch, card.next_step]);
   // A qualification test that is being reviewed or decided takes no recording: a sentence says where it stands.
   const testStatus = useQualificationText()(card);
   const done = card.progress.submitted + card.progress.accepted;
