@@ -193,3 +193,10 @@ export function historyGroups<C extends Pick<CampaignCard, "next_step" | "progre
  */
 export const waitsForPartner = (m: Pick<Mission, "status" | "type" | "partner_ready">, local: OutboxState | undefined): boolean =>
   (m.status === "todo" || m.status === "rejected") && m.type === "conversational" && !m.partner_ready && !(local && local !== "failed");
+
+/**
+ * Whether the hub offers "Withdraw from this campaign" on its own, outside the instructions (which
+ * carry it while the speaker records): whenever the campaign consent is signed (APP2-09).
+ * `recordingView`: the hub shows the recording view with its instructions.
+ */
+export const withdrawOffered = (c: Pick<CampaignCard, "consents">, recordingView: boolean): boolean => c.consents.campaign.signed && !recordingView;

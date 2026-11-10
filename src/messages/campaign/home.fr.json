@@ -5,6 +5,7 @@
     "account": "Mon compte",
     "speakerId": "Votre identifiant de locuteur",
     "speakerIdHelp": "Seul cet identifiant accompagne vos enregistrements, jamais votre nom.",
+    "withdrawAccount": "Pour retirer votre consentement à enregistrer en général, ou demander la suppression de vos enregistrements, contactez l'équipe Afriklang.",
     "signedInAs": "Connecté avec {email}",
     "language": "Langue de l'application",
     "languages": {

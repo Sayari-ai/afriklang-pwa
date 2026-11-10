@@ -18,12 +18,12 @@ import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard, type ContributorView } from "@/lib/campaign/types";
 import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
-import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
+import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount, withdrawOffered } from "@/lib/campaign/view";
 import { OutboxPanel } from "./OutboxPanel";
 import { LanguageBadge, ProgressRing, useQualificationText } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
 import { ConsentStep } from "./ConsentStep";
-import { Instructions } from "./Instructions";
+import { Instructions, WithdrawControl } from "./Instructions";
 import { MissionList, MissionSkeleton } from "./MissionList";
 import { GiveBack, PaidTime, PoolPanel } from "./PoolParts";
 import { ProfileForm } from "./ProfileForm";
@@ -251,6 +251,22 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
             </div>
           </details>
         </>
+      ) : null}
+
+      {/* Paused, closed, a test with the team, a block, a new consent: withdrawing stays possible (APP2-09). */}
+      {withdrawn === null && withdrawOffered(card, card.next_step === "ready" && !testStatus) ? (
+        <details className="group rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+          <summary className="cursor-pointer list-none text-sm font-bold text-slate-700">{t("hub.more")}</summary>
+          <div className="mt-3">
+            <WithdrawControl
+              card={card}
+              onWithdrawn={(deleted) => {
+                setWithdrawn(deleted);
+                after("withdrawn")();
+              }}
+            />
+          </div>
+        </details>
       ) : null}
     </div>
   );

@@ -5,6 +5,7 @@
     "account": "My account",
     "speakerId": "Your speaker ID",
     "speakerIdHelp": "Only this ID travels with your recordings, never your name.",
+    "withdrawAccount": "To withdraw your consent to record in general, or to ask for your recordings to be deleted, contact the Afriklang team.",
     "signedInAs": "Signed in as {email}",
     "language": "App language",
     "languages": {

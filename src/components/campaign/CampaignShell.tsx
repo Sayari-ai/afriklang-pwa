@@ -250,6 +250,8 @@ function AccountSheet({ email, onClose }: { email: string | null; onClose: () =>
           </div>
         ) : null}
         {email ? <p className="mb-4 text-sm text-white/85">{t("signedInAs", { email })}</p> : null}
+        {/* The account consent: no button for it, but always a way (APP2-09). */}
+        <p className="mb-4 text-xs text-white/75">{t("withdrawAccount")}</p>
         <p className="mb-2 text-sm font-semibold">{t("language")}</p>
         <LocalePicker className="mb-6" />
         <button type="button" onClick={leave} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white font-bold text-primary">

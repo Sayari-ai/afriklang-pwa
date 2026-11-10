@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, waitsForPartner, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
+import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, waitsForPartner, withdrawOffered, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -179,5 +179,15 @@ describe("conversations waiting for the partner (APP2-08)", () => {
     expect(waitsForPartner(conv("d", false, "submitted"), undefined)).toBe(false);
     expect(waitsForPartner(conv("d", false), "pending")).toBe(false);
     expect(waitsForPartner(read("a"), undefined)).toBe(false);
+  });
+});
+
+describe("withdrawOffered (APP2-09)", () => {
+  const card = (signed: boolean) => ({ consents: { campaign: { signed } } }) as never;
+  it("offers withdrawal whenever the campaign consent is signed, outside the recording view", () => {
+    expect(withdrawOffered(card(true), false)).toBe(true);
+    // the recording view's instructions already carry it
+    expect(withdrawOffered(card(true), true)).toBe(false);
+    expect(withdrawOffered(card(false), false)).toBe(false);
   });
 });
