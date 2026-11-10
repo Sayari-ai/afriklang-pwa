@@ -159,6 +159,25 @@ describe("outbox with upload tickets", () => {
     expect(log).toHaveBeenCalledTimes(1);
   });
 
+  it("an older Edge Function behind a proxy that requires tickets: held with a reason, no file resent (APP2-04, X-07)", async () => {
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 })]);
+    let now = NOW;
+    const { ob, upload } = setup(store, vi.fn(async () => refused("unsupported", 404)), { now: () => now });
+    upload.mockImplementation(async () => {
+      throw { status: 409, isNetwork: false, message: 'Upload failed (409): {"error":"ticket_required"}' };
+    });
+    await ob.drain("u1");
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(store.m.get("sha1")).toMatchObject({ state: "held", lastCode: "ticket_required" });
+    expect(store.m.get("sha1")!.nextAttemptAt - NOW).toBeGreaterThanOrEqual(30 * MIN);
+    expect(store.m.get("sha2")).toMatchObject({ state: "pending", attempts: 0 });
+    // Later, the dashboard still has no tickets: nothing is uploaded again until it does.
+    now = NOW + 31 * MIN;
+    await ob.drain("u1");
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(store.m.get("sha1")).toMatchObject({ state: "held", lastCode: "ticket_required" });
+  });
+
   it("without requestTicket (tickets not wired), uploads as before", async () => {
     const store = memStore([item()]);
     const { ob, upload } = setup(store, undefined);

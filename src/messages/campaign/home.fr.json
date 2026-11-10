@@ -98,7 +98,8 @@
       "duplicate": "déjà envoyé pour une autre consigne : enregistrez de nouveau",
       "language": "cette langue ne peut pas encore être reçue. L'enregistrement est gardé et partira tout seul : inutile de le refaire",
       "profile": "votre profil doit être complété",
-      "blocked": "l'équipe vérifie votre profil ; l'enregistrement est gardé et partira ensuite"
+      "blocked": "l'équipe vérifie votre profil ; l'enregistrement est gardé et partira ensuite",
+      "fixing": "il y a un problème de notre côté, l'équipe le corrige. Votre enregistrement est en sécurité sur ce téléphone et sera envoyé tout seul"
     }
   },
   "hub": {

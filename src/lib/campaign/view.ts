@@ -102,7 +102,7 @@ export function campaignMicDistance(card: Pick<CampaignCard, "instructions">): {
 }
 
 /** The short reason shown for a take held or failed on the phone (key under campaign.home.outbox.reason). */
-export function outboxReasonKey(code: string | null): "paused" | "consent" | "profile" | "blocked" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" {
+export function outboxReasonKey(code: string | null): "paused" | "consent" | "profile" | "blocked" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" | "fixing" {
   switch (code) {
     case "test_closed":
       return "testClosed";
@@ -130,6 +130,10 @@ export function outboxReasonKey(code: string | null): "paused" | "consent" | "pr
       return "closed";
     case "language_unsupported":
       return "language";
+    // A fault on our side (APP2-02, APP2-04): said so, and that the take is safe.
+    case "misconfigured":
+    case "ticket_required":
+      return "fixing";
     case "tooLarge":
     case "refused":
     case "invalid_input":
@@ -138,7 +142,6 @@ export function outboxReasonKey(code: string | null): "paused" | "consent" | "pr
     case "server_error":
     case "bridge_error":
     case "bridge_unreachable":
-    case "misconfigured":
     case "rateLimited":
     case "rate_limited":
       return "server";

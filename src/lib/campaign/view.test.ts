@@ -48,6 +48,9 @@ describe("speaker view facts", () => {
     // A missing profile is not a consent, and a block waits for the team, not a closed campaign (N-16).
     expect(outboxReasonKey("profile_incomplete")).toBe("profile");
     expect(outboxReasonKey("blocked")).toBe("blocked");
+    // a fault on our side says so (APP2-02, APP2-04)
+    expect(outboxReasonKey("misconfigured")).toBe("fixing");
+    expect(outboxReasonKey("ticket_required")).toBe("fixing");
   });
   it("does not count a conversation waiting for the partner as to record (N-12)", () => {
     const mk = (id: string, over: Record<string, unknown> = {}) => ({ mission_id: id, status: "todo" as const, type: "read" as const, partner_ready: false, ...over });

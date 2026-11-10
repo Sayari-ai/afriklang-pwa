@@ -17,7 +17,7 @@ import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard, type ContributorView } from "@/lib/campaign/types";
 import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
-import { useOutbox } from "@/lib/campaign/outbox-client";
+import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
 import { OutboxPanel } from "./OutboxPanel";
 import { LanguageBadge, ProgressRing, useQualificationText } from "./CampaignCardView";
@@ -105,6 +105,13 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
   // Conversational missions waiting for the partner's consent: not recordable yet (N-12).
   const waitingPartner = live ? live.filter((m) => (m.status === "todo" || m.status === "rejected") && m.type === "conversational" && !m.partner_ready && !onPhone.has(m.mission_id)).length : 0;
 
+  // The card says ready (a consent signed, the profile completed, the campaign resumed, a block
+  // lifted): the takes held for that reason go now, not in 10 minutes or 6 hours (APP2-13).
+  const ready = card.next_step === "ready";
+  useEffect(() => {
+    if (ready && userId) void outbox.releaseHeld(userId, card.campaign_id);
+  }, [ready, userId, card.campaign_id]);
+
   const after = useCallback(
     (type: "profile" | "consent" | "withdrawn") => () => {
       if (userId) logActivity(userId, { type, campaignId: card.campaign_id });
@@ -173,12 +180,12 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
       ) : null}
       {card.next_step === "account_consent" ? (
         <Panel>
-          <ConsentStep key="account" type="account" card={card} onSigned={after("consent")} />
+          <ConsentStep key="account" type="account" card={card} onSigned={after("consent")} onChanged={reload} />
         </Panel>
       ) : null}
       {card.next_step === "campaign_consent" ? (
         <Panel>
-          <ConsentStep key="campaign" type="campaign" card={card} onSigned={after("consent")} />
+          <ConsentStep key="campaign" type="campaign" card={card} onSigned={after("consent")} onChanged={reload} />
         </Panel>
       ) : null}
 

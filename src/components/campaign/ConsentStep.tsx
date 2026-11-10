@@ -10,9 +10,10 @@ import { isQualification, type CampaignCard, type CampaignFailure } from "@/lib/
 import { safeExternalUrl } from "@/lib/security/safe-url";
 import { FailureMessage, Notice, buttonPrimary } from "./CampaignHubParts";
 
-type Props = { type: "account" | "campaign"; card: CampaignCard; onSigned: () => void };
+/** `onChanged`: the text changed before it was signed (nothing was signed): reload only (APP2-15). */
+type Props = { type: "account" | "campaign"; card: CampaignCard; onSigned: () => void; onChanged: () => void };
 
-export function ConsentStep({ type, card, onSigned }: Props) {
+export function ConsentStep({ type, card, onSigned, onChanged }: Props) {
   const t = useTranslations("campaign.flow.consent");
   const locale = useLocale() === "fr" ? "fr" : "en";
   const id = useId();
@@ -45,7 +46,7 @@ export function ConsentStep({ type, card, onSigned }: Props) {
       if (res.code === "consent_version_changed") {
         setChanged(true);
         setAgreed(false);
-        onSigned(); // reload so the new text and version appear
+        onChanged(); // reload so the new text and version appear; nothing was signed
       } else setFailure(res);
     } finally {
       sending.current = false;
