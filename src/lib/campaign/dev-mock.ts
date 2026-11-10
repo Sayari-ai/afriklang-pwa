@@ -41,6 +41,8 @@
 
 import { REJECT_CHECKS, type CampaignCard, type ContributorView, type Mission, type NextStep, type PoolStatus, type QualificationView, type RejectCheck, type RejectDetail, type RejectionReason } from "./types";
 
+/** The optional samples consent on every card, as the dashboard sends it when a version is active (decision A). */
+const SAMPLES = (s: State) => ({ version: "v1", text_url: "https://example.com/consent/samples", signed: Boolean(s.samples) });
 /** Sayari's default QC limits, as the dashboard puts them on every card (decision B). */
 const QC_LIMITS = { min_snr_db: 10, max_background_noise_db: -20, max_clipping_ratio: 0.01, max_silence_ratio: 0.5 };
 const KEY = "afriklang.mock.v3";
@@ -94,6 +96,8 @@ type State = {
   claim?: string;
   /** Sayari answers uploads with duplicate: true (X-08). */
   uploadDuplicate?: boolean;
+  /** The optional samples consent is signed (decision A). */
+  samples?: boolean;
 };
 /** `allInAt`: when the test's last take was submitted; the sweep moves it to review after SWEEP_MS (X-08). */
 type QualState = { consent: boolean; attempt: number; stage: QualificationView["stage"]; decision: QualificationView["decision"]; missions: Mission[]; allInAt?: number | null };
@@ -289,6 +293,7 @@ function plannedCard(s: State): CampaignCard {
     blocked_reason: null,
     consents: CONSENTS(s, s.planned.consent),
     qc_limits: QC_LIMITS,
+    samples_consent: SAMPLES(s),
     instructions: {
       recording: RECORDING,
       speech_types: [
@@ -320,6 +325,7 @@ function poolCard(s: State): CampaignCard {
     blocked_reason: null,
     consents: CONSENTS(s, s.pool.consent),
     qc_limits: QC_LIMITS,
+    samples_consent: SAMPLES(s),
     instructions: {
       recording: RECORDING,
       speech_types: [{ type: "read", duration_min_s: 3, duration_max_s: READ_MAX_S, missions_per_session: { min: 3, max: BATCH } }],
@@ -351,6 +357,7 @@ function qualCard(s: State, lang: QualLang): CampaignCard {
     blocked_reason: null,
     consents: CONSENTS(s, q.consent),
     qc_limits: QC_LIMITS,
+    samples_consent: SAMPLES(s),
     instructions: {
       recording: RECORDING,
       speech_types: [
@@ -570,6 +577,8 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
     // The dashboard always sends it (bridge-service).
     duration_min_s: m.duration_s.min ?? 0,
     ...(qual ? { purpose: "qualification" } : {}),
+    // Present only while the speaker's samples consent is signed (decision A).
+    ...(s.samples ? { sample_consent: true } : {}),
   };
   return json({ ticket: await signMockTicket(JSON.stringify(payload)), expires_at: new Date(exp * 1000).toISOString() });
 }
@@ -602,7 +611,8 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       save(s);
       return json({ contributor: contributor(s), blocked: [] });
     case "consent":
-      if (body.type === "account") s.account = true;
+      if (body.type === "samples") s.samples = true;
+      else if (body.type === "account") s.account = true;
       else if (campaignId === POOL_ID) s.pool.consent = true;
       else if (qual) qual.q.consent = true;
       else s.planned.consent = true;
@@ -679,6 +689,11 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
     case "upload_ticket":
       return uploadTicket(s, body);
     case "withdraw":
+      // The samples consent only: recording and the campaign consent are untouched (decision A).
+      if (body.type === "samples") {
+        s.samples = false;
+        save(s);
+      }
       return json({ withdrawn: true });
   }
   return json({ error: "unknown_action" }, 400);

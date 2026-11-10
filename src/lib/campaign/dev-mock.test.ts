@@ -281,3 +281,44 @@ describe("dev mock mirrors the bridge contract (X-08)", () => {
     done();
   });
 });
+
+describe("dev mock samples consent (decision A)", () => {
+  it("signs, puts sample_consent on tickets, and withdraws without touching recording", async () => {
+    const mem = new Map<string, string>();
+    const win: Record<string, unknown> = { fetch: async () => new Response("{}"), XMLHttpRequest: class {} };
+    vi.stubGlobal("window", win);
+    vi.stubGlobal("localStorage", { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), removeItem: (k: string) => void mem.delete(k) });
+    vi.stubEnv("NEXT_PUBLIC_CAMPAIGN_MOCK", "1");
+    const { installCampaignMock } = await import("./dev-mock");
+    installCampaignMock();
+    const bridge = async (body: Record<string, unknown>) => {
+      const res = await (win.fetch as typeof fetch)("https://mock.supabase.co/functions/v1/campaigns", { method: "POST", body: JSON.stringify(body) });
+      return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+    };
+    const PLANNED = "00000000-0000-4000-8000-0000000000c1";
+    const MISSION = "00000000-0000-4000-8000-000000000010";
+    const cards = async () => ((await bridge({ action: "campaigns" })).body as { campaigns: CampaignCard[] }).campaigns;
+    const ticketPayload = async () => {
+      const ok = await bridge({ action: "upload_ticket", mission_id: MISSION, source_sha256: "e".repeat(64), duration_s: 5 });
+      return JSON.parse(Buffer.from(String(ok.body.ticket).split(".")[0], "base64url").toString("utf8")) as Record<string, unknown>;
+    };
+    await bridge({ action: "profile", variety: "Baol-Baol" });
+    await bridge({ action: "consent", type: "account", version: "v2", locale: "en" });
+    await bridge({ action: "consent", type: "campaign", campaign_id: PLANNED, version: "v1", locale: "en" });
+    for (const c of await cards()) expect(c.samples_consent, c.code).toMatchObject({ version: "v1", signed: false });
+    expect(await ticketPayload()).not.toHaveProperty("sample_consent");
+
+    await bridge({ action: "consent", type: "samples", campaign_id: PLANNED, version: "v1", locale: "fr" });
+    for (const c of await cards()) expect(c.samples_consent?.signed, c.code).toBe(true);
+    expect(await ticketPayload()).toMatchObject({ sample_consent: true });
+
+    await bridge({ action: "withdraw", type: "samples" });
+    const after = await cards();
+    for (const c of after) expect(c.samples_consent?.signed, c.code).toBe(false);
+    // still recording: the campaign consent stands
+    expect(after.find((c) => c.campaign_id === PLANNED)?.next_step).toBe("ready");
+    expect(await ticketPayload()).not.toHaveProperty("sample_consent");
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+});

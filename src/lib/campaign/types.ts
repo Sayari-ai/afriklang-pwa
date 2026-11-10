@@ -94,6 +94,12 @@ export type CampaignCard = {
    * not send them, and the app then uses its own copy of Sayari's defaults (SAYARI_QC).
    */
   qc_limits?: QcLimitsView | null;
+  /**
+   * The optional consent to play the speaker's recordings as samples to prospective customers
+   * (decision A). Present only when the dashboard has an active version; never required, never
+   * blocks recording. `signed`: this speaker has a live signature of that version.
+   */
+  samples_consent?: { version: string; text_url: string | null; signed: boolean } | null;
   /** "qualification": the speaker's qualification test in this language (not paid; no redo once sent). Absent from older dashboards: a collection campaign. */
   kind?: "collection" | "qualification";
   /** Qualification campaigns only: the current attempt. */

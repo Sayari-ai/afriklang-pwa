@@ -6,6 +6,14 @@
     "speakerId": "Your speaker ID",
     "speakerIdHelp": "Only this ID travels with your recordings, never your name.",
     "withdrawAccount": "To withdraw your consent to record in general, or to ask for your recordings to be deleted, contact the Afriklang team.",
+    "samples": {
+      "label": "Recordings as samples",
+      "on": "On",
+      "off": "Off",
+      "help": "Some of your recordings may be played as samples to companies interested in the data. Optional: you can record either way.",
+      "read": "Read the text about samples",
+      "failed": "We could not save this choice. Check your connection and try again."
+    },
     "signedInAs": "Signed in as {email}",
     "language": "App language",
     "languages": {

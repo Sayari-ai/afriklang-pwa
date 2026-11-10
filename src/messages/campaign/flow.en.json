@@ -86,6 +86,8 @@
     "readText": "Read the full consent text",
     "opensNewTab": "(opens in a new tab)",
     "agree": "I have read and agree",
+    "samplesOptIn": "Also let Afriklang play some of my recordings as samples to companies interested in the data (optional; you can change this at any time).",
+    "samplesText": "Read the text about samples",
     "agreeFirst": "Tick the box above once you have read the text to continue.",
     "sign": "I agree",
     "signing": "Saving…",

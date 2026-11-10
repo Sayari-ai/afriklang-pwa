@@ -190,3 +190,16 @@ describe("body limit (X-13)", () => {
     expect(MAX_BODY_BYTES).toBe(32 * 1024);
   });
 });
+
+describe("samples consent (decision A)", () => {
+  it("signs and withdraws the optional samples consent", () => {
+    expect(buildForward("consent", { type: "samples", campaign_id: CID, version: "v1", locale: "fr" }, WHO)).toEqual({ ok: true, path: "consent", body: { user_id: WHO.userId, type: "samples", campaign_id: CID, version: "v1", locale: "fr" } });
+    expect(buildForward("withdraw", { type: "samples" }, WHO)).toEqual({ ok: true, path: "consent/withdraw", body: { user_id: WHO.userId, type: "samples" } });
+  });
+  it("a campaign withdrawal is forwarded exactly as before, and still needs its campaign", () => {
+    expect(buildForward("withdraw", { campaign_id: CID }, WHO)).toEqual({ ok: true, path: "consent/withdraw", body: { user_id: WHO.userId, campaign_id: CID } });
+    expect(buildForward("withdraw", { campaign_id: CID, type: "campaign" }, WHO)).toEqual({ ok: true, path: "consent/withdraw", body: { user_id: WHO.userId, campaign_id: CID } });
+    expect(buildForward("withdraw", {}, WHO)).toMatchObject({ ok: false, fieldErrors: { campaign_id: "campaign_id is required" } });
+    expect(buildForward("withdraw", { type: "account" }, WHO)).toMatchObject({ ok: false, fieldErrors: { type: expect.stringContaining("one of") } });
+  });
+});

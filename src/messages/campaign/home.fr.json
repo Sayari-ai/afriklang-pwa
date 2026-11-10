@@ -6,6 +6,14 @@
     "speakerId": "Votre identifiant de locuteur",
     "speakerIdHelp": "Seul cet identifiant accompagne vos enregistrements, jamais votre nom.",
     "withdrawAccount": "Pour retirer votre consentement à enregistrer en général, ou demander la suppression de vos enregistrements, contactez l'équipe Afriklang.",
+    "samples": {
+      "label": "Enregistrements comme exemples",
+      "on": "Oui",
+      "off": "Non",
+      "help": "Certains de vos enregistrements peuvent être écoutés, comme exemples, par des entreprises intéressées par les données. Facultatif : vous pouvez enregistrer dans les deux cas.",
+      "read": "Lire le texte sur les exemples",
+      "failed": "Ce choix n'a pas pu être enregistré. Vérifiez votre connexion et réessayez."
+    },
     "signedInAs": "Connecté avec {email}",
     "language": "Langue de l'application",
     "languages": {

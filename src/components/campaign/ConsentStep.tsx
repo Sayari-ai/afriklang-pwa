@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useId, useRef, useState } from "react";
 import { signConsent } from "@/lib/campaign/api";
+import { offersSamplesBox, samplesConsentOf } from "@/lib/campaign/samples-consent";
 import { track } from "@/lib/analytics/events";
 import { languageInText } from "@/lib/campaign/language-name";
 import { clearWithdrawn } from "@/lib/campaign/withdrawals";
@@ -22,6 +23,10 @@ export function ConsentStep({ type, card, onSigned, onChanged }: Props) {
   // The text in the language the speaker reads the app in (the locale recorded on signing).
   const textUrl = safeExternalUrl(consent.text_urls?.[locale] ?? consent.text_url);
   const [agreed, setAgreed] = useState(false);
+  // The optional samples consent (decision A): unticked, never needed to go on.
+  const samplesOffer = offersSamplesBox(type, card) ? samplesConsentOf(card) : null;
+  const samplesUrl = safeExternalUrl(samplesOffer?.textUrl ?? null);
+  const [samples, setSamples] = useState(false);
   const [busy, setBusy] = useState(false);
   const sending = useRef(false); // a second tap before the re-render must not sign twice
   const [failure, setFailure] = useState<CampaignFailure | null>(null);
@@ -40,6 +45,9 @@ export function ConsentStep({ type, card, onSigned, onChanged }: Props) {
       if (res.ok) {
         // Takes held since a withdrawal from this app may go again.
         if (type === "campaign") clearWithdrawn(card.campaign_id);
+        // Ticked: sign the samples consent too. Best effort: a failure never holds the speaker
+        // back (the account menu offers the choice again).
+        if (samples && samplesOffer) await signConsent({ type: "samples", campaignId: card.campaign_id, version: samplesOffer.version, locale }).catch(() => undefined);
         track("consent_signed", type === "campaign" ? { kind: type, campaign_kind: card.kind ?? "collection" } : { kind: type });
         return onSigned();
       }
@@ -85,6 +93,19 @@ export function ConsentStep({ type, card, onSigned, onChanged }: Props) {
             <input id={`${id}-agree`} type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="size-6 shrink-0 accent-primary" />
             <span className="text-base font-semibold text-slate-900">{t("agree")}</span>
           </label>
+          {samplesOffer ? (
+            <div className="space-y-1">
+              <label htmlFor={`${id}-samples`} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 px-3 py-2">
+                <input id={`${id}-samples`} type="checkbox" checked={samples} onChange={(e) => setSamples(e.target.checked)} className="size-6 shrink-0 accent-primary" />
+                <span className="text-sm text-slate-800">{t("samplesOptIn")}</span>
+              </label>
+              {samplesUrl ? (
+                <a href={samplesUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-primary underline underline-offset-2">
+                  {t("samplesText")} <span className="ml-1 text-xs font-normal">{t("opensNewTab")}</span>
+                </a>
+              ) : null}
+            </div>
+          ) : null}
           {failure ? <FailureMessage failure={failure} /> : null}
           <button type="button" onClick={sign} disabled={!agreed || busy || !textUrl} aria-describedby={!agreed && textUrl ? `${id}-hint` : undefined} className={buttonPrimary}>
             {busy ? t("signing") : t("sign")}
