@@ -92,6 +92,8 @@ function useAnalyticsIdentity(status: ReturnType<typeof useCampaignSession>["sta
 function useOfflinePages() {
   const list = useCampaignList();
   const online = useOnline();
+  // Pages are rendered in one language: a language change saves them again (APP2-29).
+  const locale = useLocale();
   // The phone's clock against the server's, for pool leases (clock.ts; at most every few hours).
   useEffect(() => {
     if (online) void measureClockSkew();
@@ -100,9 +102,9 @@ function useOfflinePages() {
   useEffect(() => {
     if (ids === null || !online) return;
     // After the page has settled: never compete with what the speaker is loading.
-    const t = setTimeout(() => void saveOfflinePages(ids ? ids.split("\n") : []), 3000);
+    const t = setTimeout(() => void saveOfflinePages(ids ? ids.split("\n") : [], locale), 3000);
     return () => clearTimeout(t);
-  }, [ids, online]);
+  }, [ids, online, locale]);
 }
 
 function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: boolean; email: string | null }) {

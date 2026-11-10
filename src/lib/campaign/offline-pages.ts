@@ -74,7 +74,13 @@ const offline = () => navigator.onLine === false;
 let running = false;
 const done = new Set<string>();
 
-export async function saveOfflinePages(campaignIds: readonly string[]): Promise<void> {
+/**
+ * What the saved pages were made with: the build (their HTML names its script files) and the
+ * language they were rendered in (APP2-29). A different stamp saves every page again.
+ */
+export const pagesStamp = (build: string, locale: string) => (locale ? `${build}|${locale}` : build);
+
+export async function saveOfflinePages(campaignIds: readonly string[], locale = ""): Promise<void> {
   if (running || typeof window === "undefined" || typeof caches === "undefined") return;
   void keepBuildAssets();
   if (!navigator.serviceWorker?.controller || offline()) return;
@@ -87,9 +93,10 @@ export async function saveOfflinePages(campaignIds: readonly string[]): Promise<
       lastBuild = localStorage.getItem(BUILD_KEY);
     } catch {
       // storage blocked: treat as the same build (fetch only what is missing)
-      lastBuild = BUILD;
+      lastBuild = pagesStamp(BUILD, locale);
     }
-    const newBuild = lastBuild !== BUILD;
+    const stamp = pagesStamp(BUILD, locale);
+    const newBuild = lastBuild !== stamp;
     const cache = await caches.open(CACHE);
     let ok = true;
     for (const path of offlinePaths(campaignIds)) {
@@ -110,7 +117,7 @@ export async function saveOfflinePages(campaignIds: readonly string[]): Promise<
     }
     if (ok) {
       try {
-        localStorage.setItem(BUILD_KEY, BUILD);
+        localStorage.setItem(BUILD_KEY, stamp);
       } catch {
         // ignore
       }
