@@ -25,6 +25,13 @@
  *                                      argument names another test ("fuc", "bam")
  *   __afkMock.qcReject(missionId, "low_snr")  the automatic checks refused that mission's take: it comes
  *                                      back to record again with what was measured (any REJECT_CHECKS value)
+ *   __afkMock.claim("email_mismatch")  the next invitation claims are refused with that code, as the dashboard
+ *                                      would ("email_unverified", "account_conflict", "invalid_link",
+ *                                      "link_expired", "campaign_closed", "misconfigured"; "ok" lifts it)
+ *   __afkMock.uploadDuplicate(true)    Sayari answers the next uploads with duplicate: true (its real answer
+ *                                      shape, {message, results:[{id, audio_sha256, duplicate, filename}]})
+ *   __afkMock.sweep()                  the dashboard's 15-minute sweep now: a test whose 10 takes are all in
+ *                                      moves to review (otherwise it does by itself 20 s after the last one)
  *   __afkMock.oldApplicant()           an applicant from before the form asked the first language: no
  *                                      first language, no profile, and only the Wolof and Pulaar tests, so
  *                                      the profile step asks which is the first language (`false` undoes it)
@@ -81,8 +88,13 @@ type State = {
    * Pulaar tests (no campaigns yet), so the profile form asks which one is first.
    */
   oldApplicant?: boolean;
+  /** How `claim` answers: "ok" (default) or a refusal code (X-08). */
+  claim?: string;
+  /** Sayari answers uploads with duplicate: true (X-08). */
+  uploadDuplicate?: boolean;
 };
-type QualState = { consent: boolean; attempt: number; stage: QualificationView["stage"]; decision: QualificationView["decision"]; missions: Mission[] };
+/** `allInAt`: when the test's last take was submitted; the sweep moves it to review after SWEEP_MS (X-08). */
+type QualState = { consent: boolean; attempt: number; stage: QualificationView["stage"]; decision: QualificationView["decision"]; missions: Mission[]; allInAt?: number | null };
 
 /** A qualification draw: one sentence per category and 5 topics, shown in the speaker's working language. */
 const QUAL_SCRIPTS: [Mission["type"], string, string][] = [
@@ -469,6 +481,51 @@ const TICKET_REFUSALS: Record<string, number> = {
   profile_incomplete: 403,
 };
 
+/** The dashboard's 422 for a length outside the prompt's limits (±0.5 s), with what it measured; null when it fits. */
+function lengthRefused(m: Pick<Mission, "duration_s">, duration: number | null): Response | null {
+  if (duration == null) return null;
+  const { min, max } = m.duration_s;
+  if (min != null && duration < min - 0.5) {
+    const detail: RejectDetail = { check: "too_short", measured: duration, limit: min, unit: "s", bound: "min" };
+    return json({ error: `Too short: ${duration} s, this prompt needs at least ${min} s.`, code: "recording_rejected", reason: "duration", detail }, 422);
+  }
+  if (max != null && duration > max + 0.5) {
+    const detail: RejectDetail = { check: "too_long", measured: duration, limit: max, unit: "s", bound: "max" };
+    return json({ error: `Too long: ${duration} s, this prompt takes at most ${max} s.`, code: "recording_rejected", reason: "duration", detail }, 422);
+  }
+  return null;
+}
+
+/** The dashboard's claim refusals (status, and the hint it gives for a wrong account). */
+const CLAIM_REFUSALS: Record<string, { status: number; error: string }> = {
+  email_mismatch: { status: 403, error: "Sign in with the Google account for a***@yahoo.fr, the address this invitation was sent to." },
+  email_unverified: { status: 403, error: "Your Google email address is not verified." },
+  account_conflict: { status: 409, error: "This invitation belongs to another account." },
+  invalid_link: { status: 404, error: "This invitation link is not valid." },
+  link_expired: { status: 410, error: "This invitation link has expired." },
+  campaign_closed: { status: 410, error: "This campaign has ended." },
+};
+
+/** After this long with every take in, the dashboard's sweep moves a test to review (it runs every 15 minutes; shorter here). */
+const SWEEP_MS = 20_000;
+/** The sweep: a test whose takes are all in (and passed the checks) goes to review. `now` true: whatever the time. */
+function sweep(s: State, now = false) {
+  for (const q of Object.values(s.quals ?? {})) {
+    if (q.stage === "recording" && q.allInAt && (now || Date.now() - q.allInAt >= SWEEP_MS) && q.missions.every((x) => x.status === "submitted")) {
+      q.stage = "in_review";
+      q.allInAt = null;
+    }
+  }
+}
+
+/** Sayari's upload answer (app/api/audio.py), with `duplicate` as the mock is set. */
+function sayariUploadAnswer(s: State, fields: Record<string, string>) {
+  return {
+    message: "Uploaded 1 file(s)",
+    results: [{ id: "say-" + Math.random().toString(36).slice(2, 10), audio_sha256: fields.source_sha256 ?? "", duplicate: Boolean(s.uploadDuplicate), filename: fields.__filename ?? "take.wav" }],
+  };
+}
+
 /** The `upload_ticket` answer: { ticket, expires_at }, the ticket's payload as upload-ticket.schema.json. */
 async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Response> {
   const mode = s.tickets ?? "ok";
@@ -482,6 +539,10 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
   const refused = gate(s, planned ? s.planned.consent : pooled ? s.pool.consent : qual!.q.consent);
   if (refused) return refused;
   if (qual && qual.q.stage !== "recording") return json({ error: "This test is closed: your recordings are being reviewed.", code: "test_closed" }, 403);
+  // As the dashboard: a length outside the prompt's limits (±0.5 s) is refused here, before any
+  // byte is uploaded (bridge-service, X-08).
+  const lengthRefusal = lengthRefused(m, typeof body.duration_s === "number" ? body.duration_s : null);
+  if (lengthRefusal) return lengthRefusal;
   const card = planned ? plannedCard(s) : pooled ? poolCard(s) : qualCard(s, qual!.lang);
   const exp = Math.floor(Date.now() / 1000) + 30 * 60;
   const payload = {
@@ -501,6 +562,8 @@ async function uploadTicket(s: State, body: Record<string, unknown>): Promise<Re
     speaker_ids: m.type === "conversational" && m.partner_speaker_id ? [s.speakerId ?? "SPK-7Q2M9X4D", m.partner_speaker_id] : [s.speakerId ?? "SPK-7Q2M9X4D"],
     source_sha256: String(body.source_sha256),
     duration_max_s: m.duration_s.max ?? 3600,
+    // The dashboard always sends it (bridge-service).
+    duration_min_s: m.duration_s.min ?? 0,
     ...(qual ? { purpose: "qualification" } : {}),
   };
   return json({ ticket: await signMockTicket(JSON.stringify(payload)), expires_at: new Date(exp * 1000).toISOString() });
@@ -513,10 +576,16 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
   const campaignId = body.campaign_id;
   const qual = qualOf(s, campaignId);
   switch (body.action) {
-    case "claim":
+    case "claim": {
+      const mode = s.claim ?? "ok";
+      if (mode === "misconfigured") return json({ error: "server_misconfigured" }, 500);
+      const refusal = CLAIM_REFUSALS[mode];
+      if (refusal) return json({ error: refusal.error, code: mode }, refusal.status);
       return json({ contributor: contributor(s), campaign: plannedCard(s) });
+    }
     case "campaigns":
       expire(s);
+      sweep(s);
       save(s);
       return json({ contributor: contributor(s), campaigns: cards() });
     case "profile":
@@ -535,6 +604,8 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       save(s);
       return json({ signed_version: String(body.version), already: false });
     case "missions": {
+      sweep(s);
+      save(s);
       if (qual) {
         const refused = gate(s, qual.q.consent);
         if (refused) return refused;
@@ -583,12 +654,10 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       if (m.status === "submitted" || m.status === "accepted") return json({ recording_id: "r-" + m.code, mission_status: m.status, duplicate: true });
       const rec = body.recording as { duration_s?: unknown } | undefined;
       const duration = typeof rec?.duration_s === "number" ? rec.duration_s : 0;
-      // The dashboard's submit check refuses a take clearly shorter than the prompt's minimum, and
-      // says what it measured (A15, the dashboard's C2). The mission stays as it was.
-      if (m.duration_s.min != null && duration < m.duration_s.min - 0.5) {
-        const detail: RejectDetail = { check: "too_short", measured: duration, limit: m.duration_s.min, unit: "s", bound: "min" };
-        return json({ error: `Too short: ${duration} s, this prompt needs at least ${m.duration_s.min} s.`, code: "recording_rejected", reason: "duration", detail }, 422);
-      }
+      // The dashboard's submit check refuses a take outside the prompt's limits, and says what it
+      // measured (A15, the dashboard's C2). The mission stays as it was.
+      const lengthRefusal = lengthRefused(m, duration);
+      if (lengthRefusal) return lengthRefusal;
       // A late take (lease ended, mission cancelled) is always kept: the mission comes back as submitted.
       m.cancelled = false;
       m.status = "submitted";
@@ -596,8 +665,9 @@ async function bridge(body: Record<string, unknown>): Promise<Response> {
       m.rejection_detail = null;
       m.recording = { status: "uploaded", rejection_reason: null, rejection_detail: null };
       s.seconds[m.mission_id] = duration;
-      // The dashboard moves a test to review once all its takes passed the automatic checks.
-      if (found && found.q.missions.every((x) => x.status === "submitted")) found.q.stage = "in_review";
+      // The dashboard moves a test to review once all its takes passed the automatic checks, at its
+      // next sweep (every 15 minutes), not at the last submit (X-08): the test stays "recording" until then.
+      if (found && found.q.missions.every((x) => x.status === "submitted")) found.q.allInAt = Date.now();
       save(s);
       return json({ recording_id: "r-" + m.code, mission_status: "submitted", duplicate: false });
     }
@@ -634,7 +704,9 @@ export function installCampaignMock() {
       }
       await delay(900);
       if (navigator.onLine === false) throw new TypeError("Failed to fetch");
-      return json({ audio_id: "say-" + Math.random().toString(36).slice(2, 10) });
+      const fields: Record<string, string> = {};
+      if (init?.body instanceof FormData) init.body.forEach((v, k) => (typeof v === "string" ? (fields[k] = v) : (fields.__filename = (v as File).name)));
+      return json(sayariUploadAnswer(load(), fields));
     }
     if (url.includes("/auth/v1/logout")) {
       localStorage.setItem("afriklang.mock.signedOut", "1");
@@ -688,9 +760,11 @@ export function installCampaignMock() {
         r.onerror = () => this.onerror?.();
         return r.send(body);
       }
+      const sent: Record<string, string> = {};
       if (body instanceof FormData) {
         const fields: Record<string, string> = {};
         body.forEach((v, k) => (fields[k] = typeof v === "string" ? v : `<file ${(v as File).name}, ${(v as File).size} bytes>`));
+        body.forEach((v, k) => (typeof v === "string" ? (sent[k] = v) : (sent.__filename = (v as File).name)));
         // The ticket header as the proxy would forward it (none: the old path without tickets).
         (window as unknown as { __afkLastUpload?: unknown }).__afkLastUpload = { ...fields, "X-Campaign-Ticket": this.ticket ?? "(none)" };
       }
@@ -706,7 +780,7 @@ export function installCampaignMock() {
         this.upload.onload?.();
         this.status = 200;
         this.statusText = "OK";
-        this.responseText = JSON.stringify({ audio_id: "say-" + Math.random().toString(36).slice(2, 10) });
+        this.responseText = JSON.stringify(sayariUploadAnswer(load(), sent));
         this.onload?.();
       })();
     }
@@ -723,12 +797,18 @@ export function installCampaignMock() {
       for (const m of [...s.planned.missions, ...s.pool.missions]) {
         if (m.status !== "submitted") continue;
         if (first) {
+          // The dashboard only ever sends a reason code (REJECTION_REASONS), never a reviewer's words (X-08).
           m.status = "rejected";
-          m.rejection_reason = "Background noise (a radio) under the voice.";
+          m.rejection_reason = "level";
+          m.rejection_detail = null;
+          m.recording = { status: "rejected", rejection_reason: "level", rejection_detail: null };
           // A rejected pool mission comes back to the same speaker with a new lease.
           if (m.lease_until) m.lease_until = new Date(Date.now() + LEASE_MS).toISOString();
           first = false;
-        } else m.status = "accepted";
+        } else {
+          m.status = "accepted";
+          m.recording = { status: "accepted", rejection_reason: null, rejection_detail: null };
+        }
       }
       save(s);
     },
@@ -794,6 +874,25 @@ export function installCampaignMock() {
       const s = load();
       s.oldApplicant = on;
       if (on) Object.assign(s, { profile: false, nativeLanguage: null, variety: null, gender: null });
+      save(s);
+    },
+    /** How the next invitation claims are answered: "ok", or a refusal code (CLAIM_REFUSALS, or "misconfigured"). */
+    claim: (mode = "ok") => {
+      if (mode !== "ok" && mode !== "misconfigured" && !CLAIM_REFUSALS[mode]) throw new Error(`unknown claim mode: ${mode}; one of ok, misconfigured, ${Object.keys(CLAIM_REFUSALS).join(", ")}`);
+      const s = load();
+      s.claim = mode;
+      save(s);
+    },
+    /** Sayari answers the next uploads with duplicate: true (`false` lifts it). */
+    uploadDuplicate: (on = true) => {
+      const s = load();
+      s.uploadDuplicate = on;
+      save(s);
+    },
+    /** The dashboard's sweep, now: a test with every take in moves to review. */
+    sweep: () => {
+      const s = load();
+      sweep(s, true);
       save(s);
     },
     /** The pool batch's leases have ended. */
