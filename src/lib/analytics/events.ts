@@ -5,7 +5,7 @@
  * Every property is a code, a number or a flag; `track` drops anything else and cuts long strings,
  * so a slip cannot send a sentence.
  *
- * `track` is a no-op when PostHog is not running (no token, localhost, server render, tests).
+ * `track` is a no-op when PostHog is not running (turned off, localhost, server render, tests).
  * This module never loads the SDK: init.ts registers the started client here.
  */
 

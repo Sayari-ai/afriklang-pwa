@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_POSTHOG_HOST, getPostHogConfig, isLocalHostname, shouldRunInBrowser } from "./config";
+import { DEFAULT_POSTHOG_HOST, DEFAULT_POSTHOG_PROJECT_TOKEN, getPostHogConfig, isLocalHostname, shouldRunInBrowser } from "./config";
 import { sanitizeEvent, sanitizeUrl } from "./sanitize";
 import { signInErrorCode } from "./client";
 
@@ -37,9 +37,11 @@ describe("sanitizeEvent", () => {
 });
 
 describe("config", () => {
-  it("is null without a token: PostHog stays a no-op", () => {
-    expect(getPostHogConfig({})).toBeNull();
-    expect(getPostHogConfig({ NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: "  " })).toBeNull();
+  it("defaults to the public project key; \"off\" turns PostHog off", () => {
+    // The public project key is the default; "off" turns PostHog off.
+    expect(getPostHogConfig({})?.token).toBe(DEFAULT_POSTHOG_PROJECT_TOKEN);
+    expect(getPostHogConfig({ NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: "  " })?.token).toBe(DEFAULT_POSTHOG_PROJECT_TOKEN);
+    expect(getPostHogConfig({ NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN: "off" })).toBeNull();
   });
 
   it("defaults to the Afriklang proxy", () => {

@@ -6,10 +6,15 @@
  * Both values are `NEXT_PUBLIC_*`, inlined into the client bundle at build time (Amplify also
  * copies them into `.env.production`, which the SSR compute reads).
  *
- * No token: PostHog is a complete no-op (nothing loaded, nothing sent), in every environment.
+ * The project key is PostHog's public client key: it ships inside every page of every Afriklang
+ * site, so it is the built-in default and the app reports without any hosting setup. The env
+ * variable overrides it; "off" turns PostHog off (nothing loaded, nothing sent).
  */
 
 export const APP_NAME = "speaker-app";
+
+/** Public project key of the shared Afriklang PostHog project (653233, US). Not a secret. */
+export const DEFAULT_POSTHOG_PROJECT_TOKEN = "phc_nhiGG8VPu6FueQpk9GJ3wAZ9suPjoSKqCaWPEAfKdKS3";
 
 /** The reverse proxy the public site uses (it forwards to PostHog US Cloud). */
 export const DEFAULT_POSTHOG_HOST = "https://d.afriklang.com";
@@ -27,10 +32,11 @@ const fromProcess = (): Env => ({
   NEXT_PUBLIC_POSTHOG_DEBUG: process.env.NEXT_PUBLIC_POSTHOG_DEBUG,
 });
 
-/** The configuration, or null when no project token is set. */
+/** The configuration, or null when PostHog is turned off (`NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=off`). */
 export function getPostHogConfig(env: Env = fromProcess()): PostHogConfig | null {
-  const token = env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN?.trim();
-  if (!token) return null;
+  const set = env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN?.trim();
+  if (set?.toLowerCase() === "off") return null;
+  const token = set || DEFAULT_POSTHOG_PROJECT_TOKEN;
   return {
     token,
     host: (env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_HOST).replace(/\/+$/, ""),

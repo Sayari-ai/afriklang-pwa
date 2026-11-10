@@ -1,7 +1,7 @@
 /**
  * The browser side of PostHog after start-up (init.ts): identity, handled exceptions and the
  * sign-in funnel. Nothing here imports the SDK: it acts through the client init.ts registered,
- * and is a no-op without one (no token, localhost, server render, tests).
+ * and is a no-op without one (turned off, localhost, server render, tests).
  *
  * Identity (owner, 2026-11): the contributor id only, with role, native language code and app
  * locale. Never a name, email, phone, prompt or audio. Profiles for identified people only.
