@@ -338,7 +338,10 @@ export function precheckFromCard(nextStep: string | null | undefined): string | 
 /** A take that can never be sent stays this long (for the speaker to see why), then goes (APP-024). */
 export const DEAD_TAKE_KEEP_MS = 30 * 24 * 60 * MINUTE;
 
-/** Failed takes that can never be sent (campaign closed, mission no longer theirs) and are older than DEAD_TAKE_KEEP_MS. */
+/** A failed take that can never be sent as it is (no "Try again": campaign closed, too large, a file already sent…): it goes after DEAD_TAKE_KEEP_MS (APP2-16). */
+export const isDeadTake = (i: Pick<OutboxItem, "state" | "lastCode">): boolean => i.state === "failed" && i.lastCode != null && !canRetryFailed(i.lastCode);
+
+/** Failed takes that can never be sent (isDeadTake) and are older than DEAD_TAKE_KEEP_MS. */
 export function expiredDeadTakes<T extends Pick<OutboxItem, "state" | "lastCode" | "createdAt" | "failedAt">>(items: readonly T[], now: number): T[] {
-  return items.filter((i) => i.state === "failed" && i.lastCode != null && DEAD_CODES.has(i.lastCode) && now - (i.failedAt ?? i.createdAt) > DEAD_TAKE_KEEP_MS);
+  return items.filter((i) => isDeadTake(i) && now - (i.failedAt ?? i.createdAt) > DEAD_TAKE_KEEP_MS);
 }

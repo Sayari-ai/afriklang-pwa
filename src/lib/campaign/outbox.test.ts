@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createOutbox, outboxAnalytics, type OutboxEvent } from "./outbox";
-import { backoffMs, decideSubmit, decideUploadFailure, dueItems, uploadBackoffMs, type OutboxItem } from "./outbox-logic";
+import { backoffMs, decideSubmit, decideUploadFailure, dueItems, isDeadTake, uploadBackoffMs, type OutboxItem } from "./outbox-logic";
 import { shiftProgress } from "./queries";
 import { byDay, streakDays } from "./activity";
 
@@ -362,6 +362,21 @@ describe("takes that stay on the phone (APP-024)", () => {
     const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true, now: () => now });
     expect(await ob.purgeExpired()).toBe(1);
     expect([...store.m.keys()].sort()).toEqual(["dead-new", "pending-old", "refused-old"]);
+  });
+  it("also deletes, after a month, failed takes that can never go for another reason: too large, already sent (APP2-16)", async () => {
+    const day = 86_400_000;
+    const now = 100 * day;
+    const store = memStore([
+      item({ id: "big-old", state: "failed", lastCode: "tooLarge", failedAt: now - 31 * day }),
+      item({ id: "dup-old", state: "failed", lastCode: "duplicate_audio", failedAt: now - 31 * day }),
+      item({ id: "big-new", state: "failed", lastCode: "tooLarge", failedAt: now - 3 * day }),
+      item({ id: "retryable-old", state: "failed", lastCode: "server", failedAt: now - 60 * day }),
+    ]);
+    const ob = createOutbox({ store, upload: vi.fn(), submit: vi.fn(), online: () => true, now: () => now });
+    expect(await ob.purgeExpired()).toBe(2);
+    expect([...store.m.keys()].sort()).toEqual(["big-new", "retryable-old"]);
+    expect(isDeadTake({ state: "failed", lastCode: "tooLarge" })).toBe(true);
+    expect(isDeadTake({ state: "failed", lastCode: "refused" })).toBe(false);
   });
   it("counts the month from when the take failed, not from when it was recorded (N-17)", async () => {
     const day = 86_400_000;
