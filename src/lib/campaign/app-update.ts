@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { track } from "@/lib/analytics/events";
 
 export function useAppUpdate(): { ready: boolean; apply: () => void } {
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
@@ -42,6 +43,7 @@ export function useAppUpdate(): { ready: boolean; apply: () => void } {
 
   const apply = () => {
     if (!waiting) return;
+    track("app_update_applied", {}, { instant: true });
     navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload(), { once: true });
     // The generated sw.js listens for this message (skipWaiting: false).
     waiting.postMessage({ type: "SKIP_WAITING" });

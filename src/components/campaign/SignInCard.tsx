@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { isCampaignAuthConfigured, signInWithGoogle } from "@/lib/campaign/auth-client";
 import { isInAppBrowser } from "@/lib/campaign/in-app-browser";
+import { signInFailed, signInStarted } from "@/lib/analytics/client";
 
 export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
   const t = useTranslations("campaign.claim.signIn");
@@ -18,10 +19,12 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
   async function start() {
     setBusy(true);
     setFailed(false);
+    signInStarted({ in_app_browser: inApp, has_invitation: hasInvitation });
     try {
       await signInWithGoogle("/campaign");
       // The browser is leaving for Google; keep the button busy.
-    } catch {
+    } catch (e) {
+      signInFailed(signInStartError(e));
       setFailed(true);
       setBusy(false);
     }
@@ -58,4 +61,11 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
       ) : null}
     </section>
   );
+}
+
+/** A short code for a sign-in that could not start (never the error's text). */
+function signInStartError(e: unknown): string {
+  const code = (e as { code?: unknown } | null)?.code;
+  if (typeof code === "string" && /^[a-z0-9_.-]{1,40}$/i.test(code)) return code;
+  return typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "start_failed";
 }

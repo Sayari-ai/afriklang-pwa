@@ -25,6 +25,8 @@ import { measureClockSkew } from "@/lib/campaign/clock";
 import { saveOfflinePages } from "@/lib/campaign/offline-pages";
 import { askPersistentStorage } from "@/lib/campaign/storage-safety";
 import { useOutbox, useOutboxRunner } from "@/lib/campaign/outbox-client";
+import { languageCodeOf } from "@/lib/campaign/profile-form";
+import { identifyContributor, resetIdentity } from "@/lib/analytics/client";
 
 const subscribeOnline = (fn: () => void) => {
   window.addEventListener("online", fn);
@@ -43,6 +45,7 @@ export function CampaignShell({ children }: { children: ReactNode }) {
   useOutboxRunner(userId);
   useOfflinePages();
   useInvitationLocale(/^\/campaign\/[^/]+\/studio/.test(pathname));
+  useAnalyticsIdentity(session.status);
   // Signed in: ask for storage the browser will not clear by itself (APP-007).
   useEffect(() => {
     if (userId) void askPersistentStorage();
@@ -66,6 +69,23 @@ function useInvitationLocale(inStudio: boolean) {
     if (inStudio || !wanted || !isSupportedLocale(wanted)) return;
     if (applyInvitationLocale(wanted, current)) router.refresh();
   }, [wanted, current, inStudio, router]);
+}
+
+/**
+ * Analytics identity: the contributor id once the bridge has answered, with the role, native
+ * language code and app locale only (never a name, email or phone). Forgotten when signed out
+ * (here, in another tab, or by an expired session).
+ */
+function useAnalyticsIdentity(status: ReturnType<typeof useCampaignSession>["status"]) {
+  const list = useCampaignList();
+  const locale = useLocale();
+  const contributor = list.state === "ready" ? list.data.contributor : null;
+  const contributorId = contributor?.contributor_id ?? null;
+  const nativeLanguage = contributor ? (languageCodeOf(contributor.profile.values?.nativeLanguage) ?? languageCodeOf(contributor.first_language?.code)) : null;
+  useEffect(() => {
+    if (status === "signedOut") resetIdentity();
+    else if (status === "signedIn" && contributorId) identifyContributor(contributorId, { role: "speaker", native_language: nativeLanguage, app_locale: locale });
+  }, [status, contributorId, nativeLanguage, locale]);
 }
 
 /** Keep the speaker's pages saved on the phone so the app opens offline (offline-pages.ts). */

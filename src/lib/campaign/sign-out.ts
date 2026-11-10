@@ -6,6 +6,7 @@
  * told; they go the next time this account signs in), and so does nothing else of anyone else.
  */
 
+import { resetIdentity } from "@/lib/analytics/client";
 import { clearActivity } from "./activity";
 import { signOut } from "./auth-client";
 import { campaignCache } from "./cache";
@@ -14,6 +15,8 @@ import { clearToken } from "./link-token";
 
 /** `keepInvitation`: "use another account" after a claim failed keeps the invitation, so the claim resumes. */
 export async function signOutHere(userId: string | null, opts: { keepInvitation?: boolean } = {}): Promise<void> {
+  // Analytics: the next person on this phone is not this contributor.
+  resetIdentity();
   await signOut();
   campaignCache.clear();
   if (!opts.keepInvitation) clearToken();

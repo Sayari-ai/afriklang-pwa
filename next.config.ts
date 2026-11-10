@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import withPWAInit from "@ducanh2912/next-pwa";
+import { withPostHogConfig } from "@posthog/nextjs-config";
 import createNextIntlPlugin from "next-intl/plugin";
 
 // next-intl plugin: defaults to picking up `./src/i18n/request.ts`.
@@ -54,7 +55,7 @@ const withPWA = withPWAInit({
     // Don't try to cache the Next.js dev/HMR assets.
     disableDevLogs: true,
     runtimeCaching: [
-      // Other origins (Supabase Auth, the campaign bridge): never cached. The default caches
+      // Other origins (Supabase Auth, the campaign bridge, PostHog at d.afriklang.com): never cached. The default caches
       // cross-origin GETs for an hour, which would keep account answers on the phone.
       { urlPattern: ({ sameOrigin }) => !sameOrigin, handler: "NetworkOnly", options: { cacheName: "cross-origin" } },
       // Client navigations (React Server Component payloads). On failure Next falls back to a
@@ -93,6 +94,9 @@ const APP_BUILD = (process.env.AWS_COMMIT_ID ?? "").slice(0, 12) || String(Date.
 //   - Permissions-Policy: the microphone for this origin only; camera and location off.
 //   - Strict-Transport-Security, Cross-Origin-Opener-Policy (APP-023). A nonce-based script-src
 //     (as the dashboard has) is still to do.
+//   - No connect-src / script-src either, so PostHog (NEXT_PUBLIC_POSTHOG_HOST, default
+//     https://d.afriklang.com, and the replay recorder it lazy-loads from there) needs no entry.
+//     Adding connect-src later means listing PostHog with Supabase, the bridge and Sayari.
 const securityHeaders = [
   { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -141,4 +145,26 @@ const nextConfig: NextConfig = {
 
 // Order matters: i18n inner, PWA outer. PWA needs to wrap the final
 // resolved config so its webpack plugin sees all transformations.
-export default withPWA(withNextIntl(nextConfig));
+const config = withPWA(withNextIntl(nextConfig));
+
+// PostHog error tracking: upload the source maps on production builds so stack traces show the
+// original source (then delete them from the output). Only with a personal API key and the
+// project id, read from the BUILD environment (Amplify console; never NEXT_PUBLIC_, never in
+// .env.production). Without them the build is the plain one. The upload talks to the PostHog API
+// (POSTHOG_API_HOST, default US Cloud), not to the ingestion proxy the app sends events to.
+const posthogApiKey = process.env.POSTHOG_API_KEY?.trim();
+const posthogProjectId = process.env.POSTHOG_PROJECT_ID?.trim();
+
+export default posthogApiKey && posthogProjectId
+  ? withPostHogConfig(config, {
+      personalApiKey: posthogApiKey,
+      projectId: posthogProjectId,
+      host: process.env.POSTHOG_API_HOST?.trim() || "https://us.posthog.com",
+      sourcemaps: {
+        enabled: true,
+        releaseName: "afriklang-speaker-app",
+        releaseVersion: APP_BUILD,
+        deleteAfterUpload: true,
+      },
+    })
+  : config;

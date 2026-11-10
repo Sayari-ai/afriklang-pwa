@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { saveProfile } from "@/lib/campaign/api";
+import { track } from "@/lib/analytics/events";
 import { languageInText } from "@/lib/campaign/language-name";
 import {
   AGE_BANDS,
@@ -161,7 +162,10 @@ export function ProfileForm({ card, cards, contributor, onSaved, heading }: Prop
           res = await saveProfile(again);
         }
       }
-      if (res.ok) return onSaved();
+      if (res.ok) {
+        track("profile_saved", { first_time: !contributor.profile.complete });
+        return onSaved();
+      }
       // A 400 that names fields: mark them (with each field's own hint) rather than one vague line.
       const fromServer = res.code === "invalid_input" ? profileErrorsFromServer(res.fieldErrors) : {};
       if (Object.keys(fromServer).length) {
