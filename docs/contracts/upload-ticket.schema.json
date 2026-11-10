@@ -103,6 +103,13 @@
       "maximum": 3600,
       "description": "Optional. Shortest whole-file length (s) accepted, padding included; Sayari refuses below this minus 0.5 s (422 too_short)."
     },
+    "sample_consent": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Optional. true only when, at ticket time, the speaker has a non-withdrawn \"samples\" consent (README §5): Sayari may then play this take as a sample to prospective customers. Absent, false or null: never played. When present it comes just before `purpose`."
+    },
     "purpose": {
       "enum": [
         "qualification"

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Qualification tests: reviewers (README §4.4)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "reviewers"
+  ],
+  "properties": {
+    "reviewers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "email",
+          "name"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "pattern": "^[^A-Z]+$"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -26,6 +26,8 @@ the upload.
 - The whole file (silence padding included) must last between `duration_min_s` − 0.5 s and `duration_max_s` + 0.5 s
   (`422 too_short` / `422 too_long`, nothing stored): the same rule as the app's capture check and the dashboard's
   metadata check. `duration_min_s` is optional in the ticket; the dashboard always sends it.
+- `sample_consent` is optional: `true` only when the speaker has a non-withdrawn "samples" consent at ticket time (§5).
+  Absent, `false` or `null` mean the take is never played as a sample. When present it comes just before `purpose`.
 - `purpose` is optional and absent for collection campaigns. `"qualification"` marks a qualification-test take (§4).
   It is the last key of the payload when present.
 - Product limits per speech type (hard, enforced by the dashboard's campaign validation): read 3–15 s, spontaneous
@@ -73,8 +75,9 @@ key that has only the `campaign_status_read` permission. The answer is defined b
 Background: [../QUALIFICATION_TEST_PLAN.md](../QUALIFICATION_TEST_PLAN.md). A speaker candidate records 10 takes
 through the normal ticketed upload, with `purpose: "qualification"` in the ticket. Sayari runs its checks and its
 pre-annotation as for any campaign take, then **holds** the take: qualification audio never enters the annotators'
-queue. The dashboard decides who looks at it, with the calls below. All of them are `POST`, JSON, authenticated with
-a Sayari service API key that has only the `qualification_manage` permission (`X-API-Key`), 30 requests/min per key.
+queue. The dashboard decides who looks at it, with the calls below. All of them are JSON (`POST`, except the reviewer
+list of §4.4, a `GET`), authenticated with a Sayari service API key that has only the `qualification_manage`
+permission (`X-API-Key`), 30 requests/min per key.
 
 ### 4.1 Create a test: `POST <sayari>/api/qualification/tests`
 
@@ -132,6 +135,43 @@ Body ([qualification-test-request.schema.json](qualification-test-request.schema
 
 `{ "test_id": "<uuid>" }` → `{ "test_id", "status": "cancelled" }`. The link stops working; the takes are held again
 (the dashboard may hand them to another test). A reviewed test cannot be cancelled (`409 test_reviewed`).
+
+### 4.4 Reviewers: `GET <sayari>/api/qualification/reviewers`
+
+No body → ([qualification-reviewers-response.schema.json](qualification-reviewers-response.schema.json))
+
+```jsonc
+{ "reviewers": [{ "email": "ama@example.com", "name": "Ama Mensah" }, ...] }
+```
+
+* Sayari is the source of truth for who reviews qualification tests: the dashboard takes this list instead of
+  registering reviewers by hand.
+* The list holds every **active** Sayari user whose role is `reviewer`. Admins are left out, even an admin whose role
+  is also `reviewer`. Annotators and deactivated reviewers are left out.
+* Sayari reviewers have no language scope: each one may review a test in **any** language. The answer says nothing
+  about languages.
+* `email` is lower-cased, one entry per email, the list sorted by `email`. `name` is the display name. Nothing else
+  (no Sayari user id) is exposed.
+* An empty list is a valid answer (`200 {"reviewers": []}`).
+
+## 5. Sample consent (dashboard → app → Sayari)
+
+A speaker may opt in, separately from the required consent, to "my recordings may be played as samples to
+prospective customers". It is never required and never blocks recording.
+
+* The dashboard sets `sample_consent: true` in the upload ticket (§1) when the speaker holds a non-withdrawn
+  `samples` consent. Sayari stores it per take; `/v1/samples` plays only takes with `sample_consent = true`.
+* Withdrawal: `POST <sayari>/api/campaign-audio/sample-consent`, body `sample-consent-request.schema.json`
+  (`{"speaker_ids": [...], "sample_consent": false}`), with a Sayari service API key holding the
+  `sample_consent_write` permission. Sets false on every take of those speakers; idempotent; answers `{"updated": n}`.
+  `true` is refused (`400`): consent is only ever given through a new ticket.
+
+## 6. QC limits (dashboard ← Sayari)
+
+`GET <sayari>/api/campaign-audio/qc-limits`, with the service key used for the status pull (`campaign_status_read`),
+answers `qc-limits-response.schema.json`: the limits Sayari's automatic check applies now. The dashboard caches them
+(10 min) and passes them to the app on the campaign card (`qc_limits`), so the app's take advice matches what Sayari
+refuses. The app falls back to its built-in defaults when the card has none.
 
 ## Vocabulary shared by all three
 
