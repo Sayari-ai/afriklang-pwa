@@ -29,7 +29,7 @@ import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
-import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, paddingS, queueProgress, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
+import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, onHideAction, onInterruptAction, paddingS, queueProgress, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
 import { isRefusal } from "@/lib/campaign/pool";
 import { languageInText } from "@/lib/campaign/language-name";
 import type { PoolState } from "@/lib/campaign/pool-client";
@@ -51,6 +51,8 @@ type Take = {
   takeNumber: number;
   /** Brought back from the phone's storage after the app closed (drafts.ts). */
   restored?: boolean;
+  /** Stopped early because the app went to the background while the speaker was talking (APP2-12). */
+  cutShort?: boolean;
 };
 
 const COUNTDOWN_S = 3;
@@ -182,6 +184,10 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     streamRef.current = null;
     p?.then((s) => s.getTracks().forEach((x) => x.stop())).catch(() => {});
   }, []);
+  const teardownRef = useRef(teardown);
+  /** A take being finished (stopped and measured): a second Stop, a hide or an interruption must not touch it. */
+  const finishingRef = useRef(false);
+  const finishRef = useRef<(opts?: { cutShort?: boolean }) => Promise<void>>(async () => {});
 
   useEffect(() => {
     prewarmAudioWorklet();
@@ -191,7 +197,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   // A take cut by a call, a lost microphone or the app going to the background is dropped, with a
   // clear message, instead of being kept with a gap (APP-032).
   const interrupt = () => {
-    if (!recorderRef.current) return;
+    if (!recorderRef.current || finishingRef.current) return;
+    // Only the silence after Stop was left: the voice is complete, keep the take (APP2-12).
+    if (onInterruptAction(phaseRef.current) === "finish") return void finishRef.current();
     teardown();
     setElapsed(0);
     setQuiet(false);
@@ -202,8 +210,15 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const interruptRef = useRef(interrupt);
   useEffect(() => {
     const onHide = () => {
-      const p = phaseRef.current;
-      if (document.visibilityState === "hidden" && (p === "lead" || p === "speaking" || p === "tail")) interruptRef.current();
+      if (document.visibilityState !== "hidden") return;
+      // A notification tapped, the screen turned off, another app: finish the take rather than
+      // lose it, and never let a countdown start the recording in the background (APP2-12).
+      const action = onHideAction(phaseRef.current);
+      if (action === "cancel") {
+        teardownRef.current();
+        setPhase("idle");
+      } else if (action === "drop") interruptRef.current();
+      else if (action === "finish" || action === "finishCut") void finishRef.current({ cutShort: action === "finishCut" });
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
@@ -308,9 +323,10 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // ── Stop: keep recording `pad` seconds of silence, then analyse ─────────
 
-  const finish = useCallback(async () => {
+  const finish = useCallback(async (opts: { cutShort?: boolean } = {}) => {
     const rec = recorderRef.current;
-    if (!rec || !rules) return;
+    if (!rec || !rules || finishingRef.current) return;
+    finishingRef.current = true;
     const attempt = attemptRef.current;
     clearTimers();
     setPhase("analyzing");
@@ -333,7 +349,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       const p = check?.blocking ? check.problem : null;
       track("take_checked", { result: p ? "problem" : check ? "advice" : "ok", ...(check ? { problem: check.problem } : {}), duration_s: Math.round(analysis.duration_s * 10) / 10, mission_type: missionTypeIn(byIdRef.current, mid) });
       if (p) void clearDraft(userId, campaignId);
-      setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown, takeNumber });
+      setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown, takeNumber, ...(opts.cutShort ? { cutShort: true } : {}) });
       setProblem(p);
       setPhase(p ? "problem" : "review");
       vibrate(p ? [40, 60, 40] : 30);
@@ -343,6 +359,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       reportMicError("stopFailed", false, e);
       setMicError(t("mic.stopFailed"));
       setPhase("idle");
+    } finally {
+      finishingRef.current = false;
     }
   }, [rules, t, userId, campaignId, pad]);
 
@@ -618,6 +636,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     byIdRef.current = byId;
     cardRef.current = card;
     beginTailRef.current = beginTail;
+    finishRef.current = finish;
+    teardownRef.current = teardown;
     pressRef.current = press;
     submitRef.current = submit;
   });
@@ -823,6 +843,11 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           {take.restored ? (
             <p role="status" className="rounded-2xl bg-white/10 px-4 py-3 text-sm text-white/90">
               {t("review.restored")}
+            </p>
+          ) : null}
+          {take.cutShort ? (
+            <p role="status" className="rounded-2xl bg-amber-400/15 px-4 py-3 text-sm text-amber-50 ring-1 ring-amber-300/40">
+              {t("review.cutShort")}
             </p>
           ) : null}
           {advice ? (

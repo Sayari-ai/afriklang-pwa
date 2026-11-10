@@ -53,6 +53,7 @@
     "pause": "Pause",
     "length": "{time} enregistrées",
     "restored": "Nous avons gardé l'enregistrement fait avant la fermeture de l'application. Écoutez-le, puis envoyez-le ou recommencez.",
+    "cutShort": "L'enregistrement s'est arrêté quand vous avez quitté l'application. Réécoutez : si toute votre réponse y est, vous pouvez l'envoyer. Sinon, recommencez.",
     "again": "Recommencer",
     "submit": "Envoyer et continuer",
     "submitLast": "Envoyer",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { autoStopAtS, canRecordNow, focusQueue, MAX_FOCUS, nextInQueue, paddingS, parseFocus, queueProgress, sessionGoal, sessionQueue, skip } from "./studio-flow";
+import { autoStopAtS, canRecordNow, focusQueue, MAX_FOCUS, nextInQueue, onHideAction, onInterruptAction, paddingS, parseFocus, queueProgress, sessionGoal, sessionQueue, skip } from "./studio-flow";
 import type { CampaignCard, Mission } from "./types";
 
 const m = (id: string, position: number, over: Partial<Mission> = {}): Mission => ({
@@ -117,5 +117,21 @@ describe("auto-stop (APP-005)", () => {
     expect(autoStopAtS(true, 3600, 1)).toBe(599);
     expect(autoStopAtS(false, 3600, 1)).toBe(599);
     expect(autoStopAtS(false, 0, 1)).toBe(599);
+  });
+});
+
+describe("leaving the app while recording (APP2-12)", () => {
+  it("keeps a take whose voice is complete or under way, cancels a countdown", () => {
+    expect(onHideAction("tail")).toBe("finish");
+    expect(onHideAction("speaking")).toBe("finishCut");
+    expect(onHideAction("lead")).toBe("drop");
+    expect(onHideAction("countdown")).toBe("cancel");
+    expect(onHideAction("review")).toBeNull();
+    expect(onHideAction("idle")).toBeNull();
+  });
+  it("a system interruption keeps the take only when the closing silence was left", () => {
+    expect(onInterruptAction("tail")).toBe("finish");
+    expect(onInterruptAction("speaking")).toBe("drop");
+    expect(onInterruptAction("lead")).toBe("drop");
   });
 });
