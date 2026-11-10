@@ -234,14 +234,14 @@
       "required": true,
       "type": "number",
       "example": "-22",
-      "description": "Average level in dBFS (0 is full scale; the campaign refuses anything quieter than its minimum, usually -35)."
+      "description": "Average level in dBFS (0 is full scale). Below the campaign's minimum (usually -35) the app advises the speaker; nothing is refused for it."
     },
     "peak_dbfs": {
       "campaign_only": true,
       "required": false,
       "type": "number",
       "example": "-1.5",
-      "description": "Peak level in dBFS. 0 or above means clipped (the app refuses those takes before upload)."
+      "description": "Peak level in dBFS. 0 or above means at least one sample at full scale. Not refused by the app or the dashboard; Sayari's QC refuses a take only when more than 1 % of its samples are at full scale."
     },
     "silence_before_s": {
       "campaign_only": true,

@@ -6,7 +6,7 @@
  *   idle ─tap─► countdown ─► lead (silent) ─► speaking ─stop─► tail (silent) ─► analyzing
  *                                                                         ├─► problem (length) ─► idle
  *                                                                         └─► review ─submit─► next mission
- *                                                       (with advice: no sound, clipped, quiet, noisy, short pause)
+ *                                                       (with advice: no sound, clipped, quiet, noisy, short pause, long pauses)
  *
  * The studio adds the silence the campaign asks for around the voice by itself (it records a
  * moment before saying "Speak now" and keeps recording a moment after Stop), shows a live level
@@ -779,7 +779,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // Advice about the take on the review screen (quiet, noisy, short pause): the speaker may send anyway.
   const check = take ? checkTake(take.analysis, rules) : null;
-  const advice = check && !check.blocking ? (check.problem as "silent" | "clipped" | "too_quiet" | "noisy" | "silence") : null;
+  const advice = check && !check.blocking ? (check.problem as "silent" | "clipped" | "too_quiet" | "noisy" | "silence" | "pauses") : null;
   // A focus counts its own queue ("1 of 2"); otherwise the whole campaign's missions.
   const focusProgress = focusActive ? queueProgress(queue, (id) => { const m = byId.get(id); return Boolean(m && canRecordNow(m, onPhone)); }) : null;
   const position = focusProgress ? focusProgress.position : Math.min(Math.max(1, missions.length - open + 1), missions.length);

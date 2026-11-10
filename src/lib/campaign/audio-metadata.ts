@@ -93,7 +93,9 @@ export function buildAudioMetadata(args: {
       peak_dbfs: a.peak_dbfs,
       silence_before_s: a.silence_before_s,
       silence_after_s: a.silence_after_s,
+      // Any sample at full scale (Sayari's has_clipping); Sayari refuses only above 1 % (clipping_ratio).
       clipped: a.peak_dbfs >= 0,
+      clipping_ratio: nn(a.qc?.clipping_ratio),
       noise_floor_dbfs: nn(a.noise_floor_dbfs),
       // True only when the app had nothing to say about the take; "Send anyway" over an advice is recorded as such.
       app_checks_passed: c.advice === null,
