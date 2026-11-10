@@ -45,6 +45,8 @@ const BLOCK_SAMPLES = WAV_TARGET_SAMPLE_RATE;
 
 const WORKLET_URL = "/audio/pcm-recorder.worklet.js";
 const WORKLET_NAME = "pcm-recorder";
+/** How long start() waits for a suspended audio context to resume before giving up. */
+const RESUME_TIMEOUT_MS = 3000;
 
 /**
  * Source + worklet on `ctx`. Firefox refuses to connect a microphone stream to a context whose
@@ -325,11 +327,16 @@ export class WavRecorder {
     // chunks and `stop()` would throw "No audio captured." Defensive
     // resume `getUserMedia` itself counts as an extending gesture
     // so this almost always succeeds.
+    // A resume() outside a gesture can also stay pending forever (Safari): wait a few seconds at
+    // most, and fail now with a message rather than record silence the speaker only learns
+    // about at Stop.
     if (ctx.state === "suspended") {
-      try {
-        await ctx.resume();
-      } catch {
-        // best-effort
+      await Promise.race([ctx.resume().catch(() => undefined), new Promise((r) => setTimeout(r, RESUME_TIMEOUT_MS))]);
+      if ((ctx.state as AudioContextState | "interrupted") === "suspended") {
+        source.disconnect();
+        stream.getTracks().forEach((t) => t.stop());
+        void ctx.close().catch(() => undefined);
+        throw new RecorderError("AudioContext stayed suspended.", "internal");
       }
     }
 

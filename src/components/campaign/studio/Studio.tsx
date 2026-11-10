@@ -21,6 +21,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useLocale, useTranslations } from "next-intl";
 import { checkTake, sha256Hex, type FullAnalysis, type TakeProblem } from "@/lib/audio/analyze";
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
+import { MIC_START_HINT_MS, MIC_START_TIMEOUT_MS, micHelpFor, type MicHelp } from "@/lib/audio/mic-help";
 import { buildAudioMetadata, parseDevice, varietyFor } from "@/lib/campaign/audio-metadata";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/campaign/drafts";
 import { LOW_SPACE_BYTES, freeSpaceBytes } from "@/lib/campaign/storage-safety";
@@ -99,6 +100,10 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const [take, setTake] = useState<Take | null>(null);
   const [problem, setProblem] = useState<TakeProblem | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
+  // Where to allow the microphone, shown under a "blocked" or "did not start" message.
+  const [micHelp, setMicHelp] = useState<MicHelp | null>(null);
+  // The countdown is over but the microphone has not started yet: say to answer the browser.
+  const [slowStart, setSlowStart] = useState(false);
   const [quiet, setQuiet] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
   const [flash, setFlash] = useState<"online" | "offline" | "lastOne" | null>(null);
@@ -279,7 +284,17 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     }
   };
 
-  const micMessage = useCallback((e: unknown) => t(`mic.${e instanceof RecorderError ? e.code : "internal"}`), [t]);
+  const showMicError = useCallback(
+    (e: unknown) => {
+      const code = e instanceof RecorderError ? e.code : "internal";
+      const help = micHelpFor(typeof navigator === "undefined" ? "" : navigator.userAgent);
+      // Inside WhatsApp, Facebook and the like, the answer is the same whatever failed: open the
+      // page in the phone's browser.
+      setMicError(help === "inApp" && code !== "no-mic" ? t("mic.inApp") : t(`mic.${code}`));
+      setMicHelp(code === "permission-denied" && help !== "inApp" ? help : null);
+    },
+    [t],
+  );
 
   // ── Stop: keep recording `pad` seconds of silence, then analyse ─────────
 
@@ -382,20 +397,38 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       startRecorder(attempt).catch((e) => {
         if (attempt !== attemptRef.current) return;
         recorderRef.current = null;
-        setMicError(micMessage(e));
+        showMicError(e);
         setPhase("idle");
       });
+      // Never wait for the microphone forever (a prompt left unanswered, an in-app browser that
+      // never shows one, a hung audio start): first say to answer the browser, then give up with
+      // a message instead of staying on "Get ready…".
+      later(() => {
+        if (attempt === attemptRef.current && phaseRef.current === "countdown") setSlowStart(true);
+      }, MIC_START_HINT_MS);
+      later(() => {
+        if (attempt !== attemptRef.current || phaseRef.current !== "countdown") return;
+        teardown();
+        const help = micHelpFor(navigator.userAgent);
+        setMicError(t(help === "inApp" ? "mic.inApp" : "mic.startTimeout"));
+        setMicHelp(help === "inApp" ? null : help);
+        setSlowStart(false);
+        setPhase("idle");
+        vibrate([40, 60, 40]);
+      }, MIC_START_TIMEOUT_MS);
       return;
     }
     const id = setTimeout(() => setCount((c) => c - 1), 700);
     return () => clearTimeout(id);
-  }, [phase, count, startRecorder, micMessage]);
+  }, [phase, count, startRecorder, showMicError, t, teardown]);
 
   function start() {
     // Synchronous inside the tap: iOS drops the permission prompt after any await.
     attemptRef.current++;
     const attempt = attemptRef.current;
     setMicError(null);
+    setMicHelp(null);
+    setSlowStart(false);
     setProblem(null);
     setTake(null);
     // Recording again replaces the take kept on the phone.
@@ -405,7 +438,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     p.catch((e) => {
       if (attempt !== attemptRef.current) return;
       streamRef.current = null;
-      setMicError(micMessage(e));
+      showMicError(e);
       setPhase("idle");
     });
     setCount(COUNTDOWN_S);
@@ -745,6 +778,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       {micError ? (
         <p role="alert" className="rounded-2xl bg-red-500/20 px-4 py-3 text-sm font-medium text-red-50 ring-1 ring-red-300/40">
           {micError}
+          {micHelp ? <span className="mt-1 block font-normal text-red-50/90">{t(`mic.help.${micHelp}`)}</span> : null}
         </p>
       ) : null}
       {phase === "problem" && problem ? (
@@ -784,7 +818,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     ) : (
       <div className="flex flex-col items-center gap-2">
         <p aria-hidden className={`min-h-7 text-center text-lg font-bold ${phase === "speaking" ? "text-emerald-300" : "text-white/85"}`}>
-          {phase === "problem" ? t("phase.idle") : t(`phase.${phase as "idle" | "countdown" | "lead" | "speaking" | "tail" | "analyzing"}`)}
+          {phase === "problem" ? t("phase.idle") : phase === "countdown" && slowStart ? t("phase.waitingMic") : t(`phase.${phase as "idle" | "countdown" | "lead" | "speaking" | "tail" | "analyzing"}`)}
         </p>
         {recording ? (
           <p role="timer" className="text-3xl font-black tabular-nums">
