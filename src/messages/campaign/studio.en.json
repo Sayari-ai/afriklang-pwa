@@ -8,6 +8,7 @@
   "textBigger": "Bigger text",
   "session": "{n, plural, =0 {No take yet this session} one {# take this session} other {# takes this session}}",
   "sessionGoal": "{n} of {goal} this session",
+  "sessionGoalReached": "{n, plural, one {Goal reached · # take this session} other {Goal reached · # takes this session}}",
   "type": {
     "read": "Read aloud",
     "spontaneous": "Speak freely",

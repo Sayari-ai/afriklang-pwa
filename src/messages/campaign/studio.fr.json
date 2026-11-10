@@ -8,6 +8,7 @@
   "textBigger": "Texte plus grand",
   "session": "{n, plural, =0 {Aucune prise pour l'instant} one {# prise pendant cette séance} other {# prises pendant cette séance}}",
   "sessionGoal": "{n} sur {goal} pendant cette séance",
+  "sessionGoalReached": "{n, plural, one {Objectif atteint · # prise pendant cette séance} other {Objectif atteint · # prises pendant cette séance}}",
   "type": {
     "read": "Lecture à voix haute",
     "spontaneous": "Parole libre",

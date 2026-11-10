@@ -159,3 +159,10 @@ export function onHideAction(phase: string): HideAction {
 
 /** A take cut by the system (a call, the microphone lost): kept when only the closing silence was left, else dropped (it would have a gap, APP-032). */
 export const onInterruptAction = (phase: string): "finish" | "drop" => (phase === "tail" ? "finish" : "drop");
+
+/** The studio header's session line: "n of goal" up to the goal, then "goal reached · n takes", never "6 of 1" (APP2-14). */
+export function sessionLabel(count: number, goal: number | null): { key: "session" | "sessionGoal" | "sessionGoalReached"; values: { n: number; goal?: number } } {
+  if (!goal) return { key: "session", values: { n: count } };
+  if (count > goal) return { key: "sessionGoalReached", values: { n: count } };
+  return { key: "sessionGoal", values: { n: count, goal } };
+}

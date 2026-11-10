@@ -6,7 +6,7 @@ import { Mic, Minus, Pause, Play, Plus, Square, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { languageInText } from "@/lib/campaign/language-name";
-import { TEXT_SIZES } from "@/lib/campaign/studio-flow";
+import { TEXT_SIZES, sessionLabel } from "@/lib/campaign/studio-flow";
 import type { Mission } from "@/lib/campaign/types";
 import { RejectDetailLines, useRejectDetailText } from "../CampaignHubParts";
 
@@ -200,12 +200,14 @@ export function SessionBar({ count, goal }: { count: number; goal: number | null
   const t = useTranslations("campaign.studio");
   if (!goal) return <p className="text-sm font-semibold text-white/80">{t("session", { n: count })}</p>;
   const pct = Math.min(100, (count / goal) * 100);
+  const label = sessionLabel(count, goal);
+  const text = t(label.key, label.values);
   return (
     <div className="w-full">
       <div className="mb-1 flex justify-between text-xs font-semibold text-white/80">
-        <span>{t("sessionGoal", { n: count, goal })}</span>
+        <span>{text}</span>
       </div>
-      <div role="progressbar" aria-valuemin={0} aria-valuemax={goal} aria-valuenow={Math.min(count, goal)} aria-label={t("sessionGoal", { n: count, goal })} className="h-2 overflow-hidden rounded-full bg-white/15">
+      <div role="progressbar" aria-valuemin={0} aria-valuemax={goal} aria-valuenow={Math.min(count, goal)} aria-label={text} className="h-2 overflow-hidden rounded-full bg-white/15">
         <div className="h-full rounded-full bg-yellow transition-[width] duration-500" style={{ width: `${pct}%` }} />
       </div>
     </div>
