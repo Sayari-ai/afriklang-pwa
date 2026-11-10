@@ -51,6 +51,7 @@ export default function CampaignLandingPage() {
     const onHash = () => {
       const fresh = takeLinkFromLocation();
       if (fresh.token) {
+        setOldInvitation(false);
         setBrokenLink(false);
         setFromUrl(true);
         setToken(fresh.token);

@@ -18,7 +18,9 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
   useEffect(() => {
     void Promise.resolve().then(() => {
       setInApp(isInAppBrowser(navigator.userAgent));
-      setReturned(takeSignInReturnProblem());
+      // Taken once: StrictMode runs this effect twice, and the second read must not erase the first.
+      const problem = takeSignInReturnProblem();
+      if (problem) setReturned(problem);
     });
   }, []);
 
