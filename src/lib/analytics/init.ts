@@ -59,6 +59,9 @@ export function initPostHog(): void {
       mask_all_text: true,
       mask_all_element_attributes: true,
       capture_pageview: "history_change",
+      // No URL fragment anywhere the SDK records a URL (events, person props, replay hrefs): the
+      // invitation link carries its one-time token there. before_send cleans what is left.
+      disable_capture_url_hashes: true,
       capture_pageleave: true,
       capture_performance: { web_vitals: true, network_timing: true },
       disable_surveys: true,

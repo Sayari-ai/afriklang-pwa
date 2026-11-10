@@ -22,14 +22,15 @@ describe("sanitizeEvent", () => {
   it("cleans URL properties and the person properties an event sets", () => {
     const event = sanitizeEvent({
       event: "$pageview",
-      properties: { $current_url: "https://a.b/campaign#tok", $referrer: "https://a.b/x?code=1", $pathname: "/campaign", other: "https://keep#me", $set_once: { $initial_current_url: "https://a.b/#tok" } },
+      properties: { $current_url: "https://a.b/campaign#tok", $referrer: "https://a.b/x?code=1", $pathname: "/campaign", code: "permission-denied", info: { u: "https://a.b/#tok" }, $set_once: { $initial_current_url: "https://a.b/#tok" } },
       $set_once: { $initial_referrer: "https://a.b/?token=t" },
     });
     expect(event.properties?.$current_url).toBe("https://a.b/campaign");
     expect(event.properties?.$referrer).toBe("https://a.b/x");
     expect(event.properties?.$pathname).toBe("/campaign");
-    // Only URL-named properties are touched.
-    expect(event.properties?.other).toBe("https://keep#me");
+    // Non-URLs are untouched; nested objects are cleaned too, whatever their keys.
+    expect(event.properties?.code).toBe("permission-denied");
+    expect((event.properties?.info as Record<string, string>).u).toBe("https://a.b/");
     expect((event.properties?.$set_once as Record<string, string>).$initial_current_url).toBe("https://a.b/");
     expect(event.$set_once?.$initial_referrer).toBe("https://a.b/");
   });

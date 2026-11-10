@@ -25,13 +25,17 @@ export function sanitizeUrl(value: string): string {
   return url.toString();
 }
 
-const isUrlKey = (key: string) => /url|referrer|href/i.test(key);
-
-/** Sanitize, in place, every URL-like string property of a property bag. */
-function sanitizeBag(bag: unknown): void {
-  if (!bag || typeof bag !== "object") return;
+/**
+ * Sanitize, in place, every URL string of a property bag, whatever its key, and of the plain
+ * objects nested in it (the SDK keeps some, e.g. its initial person info `{ r, u }`).
+ */
+function sanitizeBag(bag: unknown, depth = 0): void {
+  if (!bag || typeof bag !== "object" || depth > 3) return;
   const record = bag as Record<string, unknown>;
-  for (const [key, value] of Object.entries(record)) if (typeof value === "string" && isUrlKey(key)) record[key] = sanitizeUrl(value);
+  for (const [key, value] of Object.entries(record)) {
+    if (typeof value === "string") record[key] = sanitizeUrl(value);
+    else if (value && typeof value === "object" && !Array.isArray(value)) sanitizeBag(value, depth + 1);
+  }
 }
 
 /** An event as `before_send` gets it (only the parts read here). */
@@ -40,8 +44,6 @@ export type EventLike = { event?: string; properties?: Record<string, unknown> |
 /** Clean the URLs of an event (its properties and the person properties it sets), in place. */
 export function sanitizeEvent<T extends EventLike>(event: T): T {
   sanitizeBag(event.properties);
-  sanitizeBag(event.properties?.$set);
-  sanitizeBag(event.properties?.$set_once);
   sanitizeBag(event.$set);
   sanitizeBag(event.$set_once);
   return event;
