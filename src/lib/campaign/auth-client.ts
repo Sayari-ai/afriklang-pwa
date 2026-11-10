@@ -10,6 +10,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { installCampaignMock } from "./dev-mock";
+import { captureSignInReturn } from "./sign-in-return";
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -24,6 +25,8 @@ let client: SupabaseClient | null = null;
 export function getCampaignAuth(): SupabaseClient {
   if (!isCampaignAuthConfigured) throw new Error("Supabase is not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).");
   if (client) return client;
+  // Before the client reads (and strips) the address: why a sign-in came back without a session (APP2-11).
+  captureSignInReturn();
   installCampaignMock();
   client = createClient(URL_, ANON, {
     auth: {

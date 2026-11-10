@@ -8,7 +8,13 @@
     "starting": "Ouverture de Google…",
     "error": "Impossible d'ouvrir la connexion Google. Veuillez réessayer.",
     "notConfigured": "Note développeur : la connexion n'est pas configurée. Renseignez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.",
-    "inApp": "Cette page est ouverte dans une autre application (WhatsApp, Facebook, Instagram…), où la connexion Google ne fonctionne pas. Ouvrez-la dans Chrome ou Safari : touchez le menu ⋮ ou ···, puis « Ouvrir dans le navigateur »."
+    "inApp": "Cette page est ouverte dans une autre application (WhatsApp, Facebook, Instagram…), où la connexion Google ne fonctionne pas. Ouvrez-la dans Chrome ou Safari : touchez le menu ⋮ ou ···, puis « Ouvrir dans le navigateur ».",
+    "return": {
+      "signupsClosed": "Les nouvelles inscriptions sont fermées pour le moment : ce compte Google n'a pas pu être ajouté. Si vous avez été invité, contactez l'équipe Afriklang.",
+      "denied": "La connexion Google a été annulée. Touchez « Continuer avec Google » pour réessayer.",
+      "restart": "La connexion n'a pas pu se terminer ici. Touchez à nouveau « Continuer avec Google » et terminez-la dans ce même navigateur, sans changer d'application.",
+      "failed": "La connexion n'a pas fonctionné. Touchez « Continuer avec Google » pour réessayer."
+    }
   },
   "claiming": {
     "title": "Vérification de votre invitation…",
