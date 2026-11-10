@@ -25,7 +25,8 @@
     "contact": "Need help? Contact the Afriklang team.",
     "accountFor": "This invitation was sent to {email}. Sign in with the Google account that uses this address.",
     "noAccountHint": "No Google account with this address? Ask the Afriklang team to change the email address of your invitation.",
-    "autoRetry": "We will try again by ourselves as soon as your connection is back."
+    "autoRetry": "We will try again by ourselves as soon as your connection is back.",
+    "autoRetryLater": "Your invitation is still saved on this phone. We will try again by ourselves when you come back to the app."
   },
   "brokenLink": {
     "title": "This invitation link is incomplete",
@@ -39,6 +40,7 @@
     "lost": "Cannot find the email? Contact the Afriklang team and we will send you a new invitation."
   },
   "home": {
+    "oldInvitation": "This invitation link can no longer be used, but your account is already set up: here are your campaigns.",
     "greeting": "Welcome back",
     "intro": "Here are the campaigns you are invited to.",
     "loadingList": "Loading your campaigns…",

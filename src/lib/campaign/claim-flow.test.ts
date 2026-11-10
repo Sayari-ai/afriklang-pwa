@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acceptedPercent, chipFor, claimOutcome, maskedEmailIn, nextView, type ClaimState } from "./claim-flow";
+import { acceptedPercent, chipFor, claimOutcome, isOldInvitation, maskedEmailIn, nextView, type ClaimState } from "./claim-flow";
 import type { CampaignErrorCode } from "./types";
 
 const idle: ClaimState = { status: "idle" };
@@ -17,6 +17,20 @@ describe("claimOutcome", () => {
 
   it.each(["network", "bridge_unreachable", "server_error", "rate_limited", "unknown"] as const)("%s is retryable and keeps the token", (code) => {
     expect(claimOutcome({ code })).toMatchObject({ clearToken: false, retryable: true, showServerMessage: false });
+  });
+
+  it.each(["misconfigured", "unsupported", "conflict", "invalid_input"] as const)("%s is a fault on our side: the invitation stays saved and is tried again (APP2-06)", (code) => {
+    expect(claimOutcome({ code })).toMatchObject({ clearToken: false, retryable: true, serverFault: true });
+  });
+
+  it("an old link tapped by an account already set up opens its campaigns, not a failure (APP2-05)", () => {
+    expect(isOldInvitation({ code: "link_expired" }, 2)).toBe(true);
+    expect(isOldInvitation({ code: "campaign_closed" }, 1)).toBe(true);
+    expect(isOldInvitation({ code: "invalid_link" }, 1)).toBe(true);
+    // a new speaker (no campaign yet, or the list did not load) still reads why
+    expect(isOldInvitation({ code: "link_expired" }, 0)).toBe(false);
+    expect(isOldInvitation({ code: "link_expired" }, null)).toBe(false);
+    expect(isOldInvitation({ code: "account_conflict" }, 3)).toBe(false);
   });
 
   it("never shows server text for other codes and maps message keys", () => {

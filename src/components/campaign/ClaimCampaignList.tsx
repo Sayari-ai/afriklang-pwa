@@ -17,19 +17,30 @@ import { totalPaidTime } from "@/lib/campaign/pool";
 import { hasMissions, totals } from "@/lib/campaign/view";
 import { ActivityTimeline, useActivity } from "./ActivityTimeline";
 import { CampaignCardView } from "./CampaignCardView";
-import { useFailureText } from "./CampaignHubParts";
+import { Notice, useFailureText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { OutboxPanel } from "./OutboxPanel";
 import { isQualification } from "@/lib/campaign/types";
 import { useTimeText } from "./PoolParts";
 
-export function ClaimCampaignList() {
+/** `note`: a short line above the list (an old invitation link tapped again, APP2-05). */
+export function ClaimCampaignList({ note = null }: { note?: string | null } = {}) {
   const t = useTranslations("campaign.claim.home");
   const failureText = useFailureText();
   const common = useTranslations("campaign.common");
   const list = useCampaignList();
 
-  if (list.state === "ready") return <Home data={list.data} />;
+  if (list.state === "ready")
+    return note ? (
+      <div className="flex flex-col gap-4">
+        <Notice>
+          <p role="status">{note}</p>
+        </Notice>
+        <Home data={list.data} />
+      </div>
+    ) : (
+      <Home data={list.data} />
+    );
   if (list.state === "error") {
     if (list.error.code === "not_linked") return <ClaimNotLinked />;
     return (

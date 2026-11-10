@@ -63,7 +63,7 @@ export function ClaimFailureCard({ failure, email, onRetry, onContinue }: Props)
           <button type="button" onClick={retry} disabled={retried} className={PRIMARY}>
             {common("retry")}
           </button>
-          <p className="text-sm text-slate-600">{t("autoRetry")}</p>
+          <p className="text-sm text-slate-600">{t(outcome.serverFault ? "autoRetryLater" : "autoRetry")}</p>
         </>
       ) : null}
       {!outcome.retryable ? <p className="text-sm text-slate-600">{t("contact")}</p> : null}
