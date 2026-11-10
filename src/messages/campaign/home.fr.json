@@ -26,7 +26,6 @@
     "stats": {
       "accepted": "Acceptés",
       "inReview": "En vérification",
-      "streak": "{n, plural, =0 {Pas encore de série} one {# jour d'affilée} other {# jours d'affilée}}",
       "acceptedTime": "Audio accepté",
       "inReviewTime": "En vérification"
     },

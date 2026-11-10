@@ -26,7 +26,6 @@
     "stats": {
       "accepted": "Accepted",
       "inReview": "In review",
-      "streak": "{n, plural, =0 {No streak yet} one {# day in a row} other {# days in a row}}",
       "acceptedTime": "Accepted audio",
       "inReviewTime": "In review"
     },

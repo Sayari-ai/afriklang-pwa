@@ -6,16 +6,15 @@
  * instead.
  */
 
-import { CheckCircle2, Flame, Hourglass } from "lucide-react";
+import { CheckCircle2, Hourglass } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCampaignList, useCampaignSession } from "@/lib/campaign/hooks";
 import type { CampaignList } from "@/lib/campaign/api";
 import { useOutbox } from "@/lib/campaign/outbox-client";
-import { streakDays } from "@/lib/campaign/activity";
 import { totalPaidTime } from "@/lib/campaign/pool";
 import { hasMissions, totals } from "@/lib/campaign/view";
-import { ActivityTimeline, useActivity } from "./ActivityTimeline";
+import { ActivityTimeline } from "./ActivityTimeline";
 import { CampaignCardView } from "./CampaignCardView";
 import { Notice, useFailureText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
@@ -63,7 +62,6 @@ function Home({ data }: { data: CampaignList }) {
   const session = useCampaignSession();
   const userId = session.status === "signedIn" ? session.userId : null;
   const box = useOutbox();
-  const activity = useActivity(userId);
   const withMissions = data.campaigns.filter(hasMissions);
   // The qualification test is not paid work: the stats count collection campaigns only.
   const collection = data.campaigns.filter((c) => !isQualification(c));
@@ -71,7 +69,6 @@ function Home({ data }: { data: CampaignList }) {
   // Speakers are paid per hour of accepted audio: show time when the dashboard sends it, counts otherwise.
   const paid = totalPaidTime(collection);
   const time = useTimeText();
-  const streak = streakDays(activity);
   const waitingFor = (campaignId: string) => box.items.filter((i) => i.campaignId === campaignId && i.userId === userId).length;
   const waitingOkFor = (campaignId: string) => box.items.filter((i) => i.campaignId === campaignId && i.userId === userId && i.state !== "failed").length;
 
@@ -84,10 +81,10 @@ function Home({ data }: { data: CampaignList }) {
       <section className="rounded-3xl bg-gradient-to-br from-primary to-[#003a70] p-5 text-white shadow-md">
         <h1 className="text-2xl font-black">{t("hello")}</h1>
         <p className="text-sm text-white/85">{t("intro")}</p>
-        {/* A speaker with only a qualification test has no paid work yet: no "0 min" and no streak (L-20).
-            Two columns on the smallest phones (320 px), where "12 h 45 min" does not fit a third (APP2-24). */}
+        {/* A speaker with only a qualification test has no paid work yet: no "0 min" (L-20). No streak:
+            it counted only this phone's log and reset on sign-out (APP2-25, the owner's decision). */}
         {collection.length ? (
-        <dl className="mt-4 grid grid-cols-2 gap-2 text-center min-[360px]:grid-cols-3">
+        <dl className="mt-4 grid grid-cols-2 gap-2 text-center">
           {paid ? (
             <>
               <Stat icon={<CheckCircle2 size={18} aria-hidden />} value={time(paid.acceptedS)} label={t("stats.acceptedTime")} small />
@@ -99,7 +96,6 @@ function Home({ data }: { data: CampaignList }) {
               <Stat icon={<Hourglass size={18} aria-hidden />} value={sum.submitted} label={t("stats.inReview")} />
             </>
           )}
-          <Stat icon={<Flame size={18} aria-hidden className="text-yellow" />} value={streak} label={t("stats.streak", { n: streak })} className="col-span-2 min-[360px]:col-span-1" />
         </dl>
         ) : null}
       </section>

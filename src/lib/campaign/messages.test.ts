@@ -51,6 +51,12 @@ describe("campaign messages", () => {
     expect(readFileSync(path.join(app, "global-error.tsx"), "utf8")).toContain("Recharger");
   });
 
+  it("the home has no streak tile any more (APP2-25)", () => {
+    for (const locale of ["en", "fr"]) expect((load(`home.${locale}.json`).home as { stats: Record<string, string> }).stats.streak).toBeUndefined();
+    const home = readFileSync(path.resolve(__dirname, "../../components/campaign/ClaimCampaignList.tsx"), "utf8");
+    expect(home).not.toMatch(/streakDays|stats\.streak/);
+  });
+
   it("every error code has a message in both languages", () => {
     for (const locale of ["en", "fr"]) {
       const errors = (load(`common.${locale}.json`).errors ?? {}) as Record<string, string>;
