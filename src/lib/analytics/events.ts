@@ -30,7 +30,8 @@ export type AnalyticsEvents = {
   take_checked: { result: TakeCheckResult; problem?: string; duration_s: number; mission_type: string };
   take_submitted: { take_number: number; mission_type: string; campaign_kind: CampaignKind; sent_anyway: boolean; offline: boolean };
   take_skipped: { mission_type: string; campaign_kind: CampaignKind };
-  upload_succeeded: { mission_type: string; duplicate: boolean; attempts: number };
+  /** `has_sayari_id` false: the upload answer carried no recording id, so no verdict can find this take (X-09). */
+  upload_succeeded: { mission_type: string; duplicate: boolean; attempts: number; has_sayari_id: boolean };
   upload_failed: { code: string; reason?: string; mission_type: string; attempts: number };
   test_completed: { language: string; prompts: number; attempt_no?: number };
   app_update_applied: Record<string, never>;

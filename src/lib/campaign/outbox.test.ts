@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createOutbox, type OutboxEvent } from "./outbox";
+import { createOutbox, outboxAnalytics, type OutboxEvent } from "./outbox";
 import { backoffMs, decideSubmit, decideUploadFailure, dueItems, uploadBackoffMs, type OutboxItem } from "./outbox-logic";
 import { shiftProgress } from "./queries";
 import { byDay, streakDays } from "./activity";
@@ -333,6 +333,19 @@ describe("offline and concurrent edits (APP-006, APP-019)", () => {
 
   it("a signed-out hold is never due at once", () => {
     expect(decideSubmit({ ok: false, code: "unauthorized" }, 0)).toEqual({ kind: "hold", code: "unauthorized", delayMs: 60_000 });
+  });
+});
+
+describe("analytics of sent takes (X-09)", () => {
+  it("says when a take was sent without a Sayari id (no verdict can find it)", async () => {
+    const store = memStore([item(), item({ id: "sha2", missionId: "m2", createdAt: 2 })]);
+    const upload = vi.fn(async (i: OutboxItem) => ({ recordingId: i.id === "sha1" ? "r1" : null }));
+    const ob = createOutbox({ store, upload, submit: vi.fn(async () => ({ ok: true as const, data: { duplicate: false } })), online: () => true, now: () => 100 });
+    const events: OutboxEvent[] = [];
+    ob.onEvent((e) => events.push(e));
+    await ob.drain("u1");
+    const sent = events.map(outboxAnalytics).filter((e) => e?.[0] === "upload_succeeded").map((e) => e![1]);
+    expect(sent.map((p) => "has_sayari_id" in p && p.has_sayari_id).sort()).toEqual([false, true]);
   });
 });
 

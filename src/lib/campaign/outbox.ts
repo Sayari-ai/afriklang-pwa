@@ -90,6 +90,22 @@ const summary = (item: OutboxItem): OutboxSummary => {
   return { ...rest, bytes: blob?.size ?? 0 };
 };
 
+/**
+ * The analytics event for an outbox event (a take sent, or given up on for good; retries are not
+ * events). Codes only, no prompt. A take sent without a Sayari id is said (X-09): pushes are
+ * matched by that id, so its verdict cannot arrive until the dashboard matches by file.
+ */
+export function outboxAnalytics(e: OutboxEvent):
+  | ["upload_succeeded", { mission_type: string; attempts: number; duplicate: boolean; has_sayari_id: boolean }]
+  | ["upload_failed", { mission_type: string; attempts: number; code: string; reason?: string }]
+  | null {
+  const base = { mission_type: e.item.missionType ?? "unknown", attempts: e.item.attempts ?? 0 };
+  if (e.type === "sent") return ["upload_succeeded", { ...base, duplicate: e.duplicate, has_sayari_id: Boolean(e.item.sayariId) }];
+  if (e.type === "failed" || e.type === "dropped") return ["upload_failed", { ...base, code: e.code }];
+  if (e.type === "rejected") return ["upload_failed", { ...base, code: "recording_rejected", reason: e.reason }];
+  return null;
+}
+
 export function createOutbox(deps: OutboxDeps) {
   const now = deps.now ?? Date.now;
   let items: OutboxSummary[] = [];
