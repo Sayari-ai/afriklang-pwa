@@ -54,3 +54,16 @@ export function isLocalHostname(hostname: string): boolean {
 export function shouldRunInBrowser(config: PostHogConfig | null, hostname: string): config is PostHogConfig {
   return config !== null && (config.debug || !isLocalHostname(hostname));
 }
+
+/** Where speakers use the app. Every other host (Amplify branches, previews, staging) is not production. */
+export const PRODUCTION_HOSTS: readonly string[] = ["collect.afriklang.com"];
+
+/**
+ * The `environment` every event carries, from the page's host, so test sessions on a branch or
+ * preview deployment do not mix with speakers' funnels in the shared project (APP2-27).
+ */
+export function environmentFor(hostname: string): "production" | "local" | "preview" {
+  const h = hostname.toLowerCase();
+  if (PRODUCTION_HOSTS.includes(h)) return "production";
+  return isLocalHostname(h) ? "local" : "preview";
+}
