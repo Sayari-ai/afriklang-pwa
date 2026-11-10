@@ -18,7 +18,7 @@ import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard, type ContributorView } from "@/lib/campaign/types";
 import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
-import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount, withdrawOffered } from "@/lib/campaign/view";
+import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount, varietyBlockOf, withdrawOffered } from "@/lib/campaign/view";
 import { OutboxPanel } from "./OutboxPanel";
 import { LanguageBadge, ProgressRing, useQualificationText } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
@@ -108,6 +108,7 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
   // The card says ready (a consent signed, the profile completed, the campaign resumed, a block
   // lifted): the takes held for that reason go now, not in 10 minutes or 6 hours (APP2-13).
   const ready = card.next_step === "ready";
+  const blockedVariety = varietyBlockOf(card.blocked_reason);
   useEffect(() => {
     if (ready && userId) void outbox.releaseHeld(userId, card.campaign_id);
   }, [ready, userId, card.campaign_id]);
@@ -171,6 +172,8 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
         <div className="space-y-3">
           <Notice title={tf("blocked.title")} tone="warn">
             <p>{tf("blocked.body")}</p>
+            {/* What the speaker declared and what the campaign is for, when the reason says (APP2-28). */}
+            {blockedVariety ? <p className="font-semibold">{tf("blocked.varieties", blockedVariety)}</p> : null}
             <p>{tf("blocked.fix")}</p>
           </Notice>
           <button type="button" onClick={() => setCorrecting(true)} className={buttonSecondary}>

@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, waitsForPartner, withdrawOffered, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
+import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, varietyBlockOf, waitsForPartner, withdrawOffered, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -189,5 +189,13 @@ describe("withdrawOffered (APP2-09)", () => {
     // the recording view's instructions already carry it
     expect(withdrawOffered(card(true), true)).toBe(false);
     expect(withdrawOffered(card(false), false)).toBe(false);
+  });
+});
+
+describe("varietyBlockOf (APP2-28)", () => {
+  it("reads the dashboard's variety block reason, nothing else", () => {
+    expect(varietyBlockOf('Declared variety "Lebu" is not a target variety of this campaign (Baol-Baol, Kajoor)')).toEqual({ declared: "Lebu", targets: "Baol-Baol, Kajoor" });
+    expect(varietyBlockOf("Something else")).toBeNull();
+    expect(varietyBlockOf(null)).toBeNull();
   });
 });

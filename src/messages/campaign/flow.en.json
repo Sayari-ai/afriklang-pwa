@@ -75,6 +75,7 @@
   "blocked": {
     "title": "This campaign is not available for your profile",
     "body": "The variety you gave does not match the one this campaign is looking for. The Afriklang team has been told and will get in touch if another campaign suits you.",
+    "varieties": "You gave “{declared}”; this campaign is for: {targets}.",
     "fix": "If you made a mistake, you can correct your profile and the campaign will open again."
   },
   "consent": {

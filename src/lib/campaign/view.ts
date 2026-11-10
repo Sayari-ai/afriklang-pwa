@@ -200,3 +200,13 @@ export const waitsForPartner = (m: Pick<Mission, "status" | "type" | "partner_re
  * `recordingView`: the hub shows the recording view with its instructions.
  */
 export const withdrawOffered = (c: Pick<CampaignCard, "consents">, recordingView: boolean): boolean => c.consents.campaign.signed && !recordingView;
+
+/**
+ * The dashboard's block reason for a variety outside the campaign (bridge-service varietyBlock:
+ * `Declared variety "X" is not a target variety of this campaign (A, B)`), as values the app can
+ * say in the speaker's language (APP2-28). Null for any other reason: the generic text stays.
+ */
+export function varietyBlockOf(reason: string | null | undefined): { declared: string; targets: string } | null {
+  const m = /^Declared variety "(.{1,80})" is not a target variety of this campaign \((.{1,300})\)$/.exec((reason ?? "").trim());
+  return m ? { declared: m[1], targets: m[2] } : null;
+}
