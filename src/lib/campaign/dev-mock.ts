@@ -41,6 +41,8 @@
 
 import { REJECT_CHECKS, type CampaignCard, type ContributorView, type Mission, type NextStep, type PoolStatus, type QualificationView, type RejectCheck, type RejectDetail, type RejectionReason } from "./types";
 
+/** Sayari's default QC limits, as the dashboard puts them on every card (decision B). */
+const QC_LIMITS = { min_snr_db: 10, max_background_noise_db: -20, max_clipping_ratio: 0.01, max_silence_ratio: 0.5 };
 const KEY = "afriklang.mock.v3";
 const USER = { id: "00000000-0000-4000-8000-00000000a11c", email: "awa.diop@example.com" };
 const PLANNED_ID = "00000000-0000-4000-8000-0000000000c1";
@@ -286,6 +288,7 @@ function plannedCard(s: State): CampaignCard {
     next_step: step(s, s.planned.consent),
     blocked_reason: null,
     consents: CONSENTS(s, s.planned.consent),
+    qc_limits: QC_LIMITS,
     instructions: {
       recording: RECORDING,
       speech_types: [
@@ -316,6 +319,7 @@ function poolCard(s: State): CampaignCard {
     next_step: step(s, s.pool.consent),
     blocked_reason: null,
     consents: CONSENTS(s, s.pool.consent),
+    qc_limits: QC_LIMITS,
     instructions: {
       recording: RECORDING,
       speech_types: [{ type: "read", duration_min_s: 3, duration_max_s: READ_MAX_S, missions_per_session: { min: 3, max: BATCH } }],
@@ -346,6 +350,7 @@ function qualCard(s: State, lang: QualLang): CampaignCard {
     next_step: step(s, q.consent),
     blocked_reason: null,
     consents: CONSENTS(s, q.consent),
+    qc_limits: QC_LIMITS,
     instructions: {
       recording: RECORDING,
       speech_types: [

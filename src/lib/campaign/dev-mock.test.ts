@@ -183,6 +183,8 @@ describe("dev mock campaign cards", () => {
     for (const c of campaigns) {
       expect(c.instructions.recording.mic_distance_cm, c.code).toEqual({ read: [20, 30], conversational: [30, 50] });
       expect(campaignMicDistance(c).main, c.code).toEqual({ min: 20, max: 30 });
+      // Sayari's default QC limits, as the dashboard sends them (decision B)
+      expect(c.qc_limits, c.code).toEqual({ min_snr_db: 10, max_background_noise_db: -20, max_clipping_ratio: 0.01, max_silence_ratio: 0.5 });
     }
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();

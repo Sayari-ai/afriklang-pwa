@@ -78,11 +78,15 @@ export type SayariQc = {
   clipping_ratio: number;
 };
 
+/** The four limits of Sayari's automatic check the advice follows. */
+export type QcLimits = { minSnrDb: number; maxBackgroundNoiseDb: number; maxClippingRatio: number; maxSilenceRatio: number };
+
 /**
  * Sayari's default QC limits (backend app/core/config.py and qc_service.py). Sayari refuses a take
- * outside them; the app only advises, the speaker may send anyway.
+ * outside them; the app only advises, the speaker may send anyway. The campaign card's `qc_limits`
+ * (Sayari's live settings, through the dashboard) take precedence when present (TakeRules.qc).
  */
-export const SAYARI_QC = {
+export const SAYARI_QC: QcLimits = {
   /** MIN_SNR_DB */
   minSnrDb: 10,
   /** MAX_BACKGROUND_NOISE_DB */
@@ -91,7 +95,7 @@ export const SAYARI_QC = {
   maxClippingRatio: 0.01,
   /** MAX_SILENCE_RATIO */
   maxSilenceRatio: 0.5,
-} as const;
+};
 /** A sample this close to full scale counts as clipped (qc_service._clipping_ratio). */
 const CLIP_THRESHOLD = 0.99;
 /** Sayari's frame: 2048 samples every 512 (qc_service._frames), on the 16 kHz file. */
@@ -364,6 +368,8 @@ export type TakeRules = {
   durationMaxS: number;
   minLevelDbfs: number;
   silenceMarginS: number;
+  /** Sayari's live QC limits from the campaign card; SAYARI_QC when absent. */
+  qc?: QcLimits;
 };
 
 const DURATION_TOLERANCE_S = 0.5;
@@ -393,14 +399,15 @@ export function checkTake(a: TakeAnalysis, rules: TakeRules): TakeCheck | null {
   if (a.level_dbfs <= FLOOR_DB) return advise(noisyRoom ? "noisy" : "silent");
   // A few full-scale samples (a plosive, a cough) are common and accepted; Sayari refuses above 1 %.
   // A take saved by an older version has no ratio: no advice rather than a false alarm.
-  if (a.qc && a.qc.clipping_ratio > SAYARI_QC.maxClippingRatio) return advise("clipped");
+  const lim = rules.qc ?? SAYARI_QC;
+  if (a.qc && a.qc.clipping_ratio > lim.maxClippingRatio) return advise("clipped");
   if (a.level_dbfs < rules.minLevelDbfs) return advise("too_quiet");
   // The voice barely stands out from the background (APP-012), by Sayari's measure when known.
   const snr = a.qc ? a.qc.snr_db : a.noise_floor_dbfs != null ? a.level_dbfs - a.noise_floor_dbfs : null;
-  if (snr != null && snr < MIN_SNR_DB) return advise("noisy");
-  if (a.qc && a.qc.background_noise_db > SAYARI_QC.maxBackgroundNoiseDb) return advise("noisy");
+  if (snr != null && snr < lim.minSnrDb) return advise("noisy");
+  if (a.qc && a.qc.background_noise_db > lim.maxBackgroundNoiseDb) return advise("noisy");
   // Long pauses between the words (Sayari's inner silence ratio).
-  if (a.qc && a.qc.silence_ratio > SAYARI_QC.maxSilenceRatio) return advise("pauses");
+  if (a.qc && a.qc.silence_ratio > lim.maxSilenceRatio) return advise("pauses");
   const needed = rules.silenceMarginS * SILENCE_SLACK;
   // In a loud place the pause was there but drowned: say what is wrong (the noise), not "leave a pause".
   if (a.silence_before_s < needed || a.silence_after_s < needed) return advise(noisyRoom ? "noisy" : "silence");
