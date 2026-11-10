@@ -45,6 +45,8 @@
     "setupStep": "Étape {n} sur 3",
     "blocked": "Vérifiez votre profil",
     "allSent": "Tout est enregistré. En cours de vérification.",
+    "recordedOnPhone": "{n, plural, other {Enregistré · # encore sur ce téléphone}}",
+    "notSent": "{n, plural, one {# non envoyée} other {# non envoyées}}",
     "view": "Voir mes enregistrements",
     "details": "Détails",
     "waiting": "{n, plural, one {# prise en attente d'envoi} other {# prises en attente d'envoi}}",

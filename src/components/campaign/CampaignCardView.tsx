@@ -8,10 +8,14 @@
 import { AlertTriangle, CalendarClock, ChevronRight, Coins, GraduationCap, Mic, PauseCircle, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
+import { useMemo } from "react";
+import { useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
+import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
+import { useOutbox } from "@/lib/campaign/outbox-client";
 import { isPool, isRefusal, paidTime } from "@/lib/campaign/pool";
-import { usePoolMemo } from "@/lib/campaign/pool-client";
+import { useLiveMissions, usePoolMemo } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard } from "@/lib/campaign/types";
-import { daysLeft, isTestRecording, openCountOnPhone, setupStep, testRedoCount } from "@/lib/campaign/view";
+import { cardOpenCount, daysLeft, isTestRecording, openCountOnPhone, setupStep, testRedoCount } from "@/lib/campaign/view";
 import { useTimeText } from "./PoolParts";
 
 export function ProgressRing({ value, total, size = 64 }: { value: number; total: number; size?: number }) {
@@ -114,7 +118,16 @@ function CollectionCardView({ card, waiting, waitingOk }: { card: CampaignCard; 
   const t = useTranslations("campaign.home.card");
   const { progress } = card;
   const done = progress.submitted + progress.accepted;
-  const open = openCountOnPhone(card, waitingOk);
+  // The hub's count when its mission list is saved on the phone (never fetched from here: one
+  // card each would cost data), so a conversation waiting for the partner is not "left" (APP2-08).
+  const session = useCampaignSession();
+  const userId = session.status === "signedIn" ? session.userId : null;
+  const saved = useCampaignMissions(card.campaign_id, false);
+  const live = useLiveMissions(saved.state === "ready" ? saved.data.missions : null);
+  const box = useOutbox();
+  const onPhone = useMemo(() => missionsInOutbox(box.items.filter((i) => i.userId === userId && i.campaignId === card.campaign_id)), [box.items, userId, card.campaign_id]);
+  const open = cardOpenCount(card, live, onPhone);
+  const notSent = Math.max(0, waiting - waitingOk);
   const days = daysLeft(card.deadline);
   const step = setupStep(card.next_step);
   const hub = `/campaign/${card.campaign_id}`;
@@ -128,6 +141,8 @@ function CollectionCardView({ card, waiting, waitingOk }: { card: CampaignCard; 
   if (card.next_step === "ready" && open > 0) cta = { href: `${hub}/studio`, label: done > 0 ? t("continue", { n: open }) : t("start"), tone: "go" };
   // Pool: an empty batch is filled when the studio opens, unless the last draw was refused.
   else if (card.next_step === "ready" && pool) cta = isRefusal(memo?.last.status) ? { href: hub, label: t("noNewMissions"), tone: "quiet" } : { href: `${hub}/studio`, label: t("getMissions"), tone: "go" };
+  // Everything recorded, but takes still on the phone: not "under review" yet (APP2-21).
+  else if (card.next_step === "ready" && waitingOk > 0) cta = { href: hub, label: t("recordedOnPhone", { n: waitingOk }), tone: "quiet" };
   else if (card.next_step === "ready") cta = { href: hub, label: t("allSent"), tone: "quiet" };
   else if (card.next_step === "blocked") cta = { href: hub, label: t("blocked"), tone: "warn" };
   else if (step) cta = { href: hub, label: t("setup"), tone: "setup" };
@@ -181,9 +196,15 @@ function CollectionCardView({ card, waiting, waitingOk }: { card: CampaignCard; 
                 <PauseCircle size={12} aria-hidden /> {t(card.next_step)}
               </span>
             ) : null}
-            {waiting > 0 ? (
+            {waitingOk > 0 ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                <UploadCloud size={12} aria-hidden /> {t("waiting", { n: waiting })}
+                <UploadCloud size={12} aria-hidden /> {t("waiting", { n: waitingOk })}
+              </span>
+            ) : null}
+            {/* Takes that will not go as they are (APP2-21): not counted as waiting to send. */}
+            {notSent > 0 ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800">
+                <AlertTriangle size={12} aria-hidden /> {t("notSent", { n: notSent })}
               </span>
             ) : null}
           </div>

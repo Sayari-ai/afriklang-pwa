@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, daysLeft, hasMissions, historyGroups, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
+import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, waitsForPartner, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -158,5 +158,26 @@ describe("historyGroups (APP2-07)", () => {
     const g = historyGroups([ready, consent, blocked, untouched]);
     expect(g.readable).toEqual([ready]);
     expect(g.locked).toEqual([consent, blocked]);
+  });
+});
+
+describe("conversations waiting for the partner (APP2-08)", () => {
+  const conv = (id: string, partner_ready: boolean, status: "todo" | "rejected" | "submitted" = "todo") => ({ mission_id: id, status, type: "conversational" as const, partner_ready });
+  const read = (id: string) => ({ mission_id: id, status: "todo" as const, type: "read" as const, partner_ready: false });
+  it("the home card counts what can be recorded now, as the hub, when the missions are saved", () => {
+    const card = { progress: { total: 5, todo: 5, submitted: 0, accepted: 0, rejected: 0 } } as never;
+    const missions = [read("a"), read("b"), read("c"), conv("d", false), conv("e", false)];
+    expect(cardOpenCount(card, missions, new Map())).toBe(3);
+    expect(cardOpenCount(card, missions, new Map([["a", "pending" as const]]))).toBe(2);
+    // not saved on the phone yet: the card's counts, minus the takes waiting on the phone
+    expect(cardOpenCount(card, null, new Map([["a", "pending" as const], ["b", "failed" as const]]))).toBe(4);
+  });
+  it("a waiting conversation is told apart from one that can be recorded", () => {
+    expect(waitsForPartner(conv("d", false), undefined)).toBe(true);
+    expect(waitsForPartner(conv("d", false, "rejected"), undefined)).toBe(true);
+    expect(waitsForPartner(conv("d", true), undefined)).toBe(false);
+    expect(waitsForPartner(conv("d", false, "submitted"), undefined)).toBe(false);
+    expect(waitsForPartner(conv("d", false), "pending")).toBe(false);
+    expect(waitsForPartner(read("a"), undefined)).toBe(false);
   });
 });

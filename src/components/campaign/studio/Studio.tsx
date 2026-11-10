@@ -34,7 +34,7 @@ import { isRefusal } from "@/lib/campaign/pool";
 import { languageInText } from "@/lib/campaign/language-name";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
-import { toRecordCount } from "@/lib/campaign/view";
+import { toRecordCount, waitsForPartner } from "@/lib/campaign/view";
 import { reportException } from "@/lib/analytics/client";
 import { track, type MicErrorCode } from "@/lib/analytics/events";
 import { PoolRefusal } from "../PoolParts";
@@ -755,6 +755,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   }
 
   if (phase === "done" || !mission || !rules) {
+    // Conversations left wait for the partner's consent: "every mission" would not be true (APP2-08).
+    const partnerWaits = missions.filter((m) => waitsForPartner(m, onPhone.get(m.mission_id))).length;
     return shell(
       <div className="afk-pop m-auto flex max-w-sm flex-col items-center gap-4 text-center">
         {sessionCount > 0 ? <Confetti /> : null}
@@ -770,6 +772,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           // A focused session recorded what its link asked for, not "every mission": say so.
           <p className="text-base text-white/85">{t(focusActive ? "done.bodyFocus" : card.kind === "qualification" ? "done.bodyTest" : "done.body")}</p>
         )}
+        {partnerWaits > 0 ? <p className="text-base text-white/85">{t("done.partnerWaits", { n: partnerWaits })}</p> : null}
       </div>,
       <Link href={hubHref} className="grid min-h-14 place-items-center rounded-2xl bg-white text-lg font-bold text-primary">
         {t("done.back")}

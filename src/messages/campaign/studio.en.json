@@ -116,7 +116,8 @@
     "batchTitle": "Batch recorded!",
     "onPhone": "{n, plural, one {# recording is still on this phone. Keep the app open and connected until it is sent.} other {# recordings are still on this phone. Keep the app open and connected until they are sent.}}",
     "bodyTest": "You have recorded every prompt of your test. Thank you! The team reviews it and you will get the result by email.",
-    "bodyFocus": "The recordings this link asked for are done. Thank you! Anything else left to record is on the campaign page."
+    "bodyFocus": "The recordings this link asked for are done. Thank you! Anything else left to record is on the campaign page.",
+    "partnerWaits": "{n, plural, one {# conversation waits for your partner to give their consent. You can record it once they have.} other {# conversations wait for your partner to give their consent. You can record them once they have.}}"
   },
   "guard": {
     "notReady": {

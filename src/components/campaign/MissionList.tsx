@@ -8,7 +8,7 @@
 import { AlertTriangle, CheckCircle2, ChevronRight, Hourglass, MessagesSquare, Mic, MessageCircle, BookOpen, UploadCloud, Users } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { isRetryable } from "@/lib/campaign/errors";
 import { languageInText } from "@/lib/campaign/language-name";
 import { truncate } from "@/lib/campaign/mission-list";
@@ -18,6 +18,7 @@ import { canRecordNow } from "@/lib/campaign/studio-flow";
 import type { Mission, SpeechType } from "@/lib/campaign/types";
 import { useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions } from "@/lib/campaign/pool-client";
+import { waitsForPartner } from "@/lib/campaign/view";
 import { RejectDetailLines, useFailureText, useRejectDetailText } from "./CampaignHubParts";
 import { LeaseLeft } from "./PoolParts";
 
@@ -56,11 +57,17 @@ export function MissionList({ campaignId, readOnly }: Props) {
   const stage = res.state === "ready" ? res.data.campaign?.qualification?.stage : undefined;
   const testClosed = qualifying && stage != null && stage !== "recording";
 
+  // In each tab, the conversations waiting for the partner come last, under their own heading, and
+  // are not counted: the tab says what can be recorded now, as the hub's button (APP2-08).
   const groups = useMemo(() => {
     const g: Record<Tab, Mission[]> = { todo: [], redo: [], sent: [], accepted: [] };
-    if (live) for (const m of [...live].sort((a, b) => a.position - b.position)) g[tabOf(m, onPhone.get(m.mission_id))].push(m);
+    if (live) {
+      const sorted = [...live].sort((a, b) => Number(waitsForPartner(a, onPhone.get(a.mission_id))) - Number(waitsForPartner(b, onPhone.get(b.mission_id))) || a.position - b.position);
+      for (const m of sorted) g[tabOf(m, onPhone.get(m.mission_id))].push(m);
+    }
     return g;
   }, [live, onPhone]);
+  const countOf = (k: Tab) => groups[k].filter((m) => !waitsForPartner(m, onPhone.get(m.mission_id))).length;
 
   if (res.state === "error") {
     return (
@@ -95,15 +102,20 @@ export function MissionList({ campaignId, readOnly }: Props) {
             onClick={() => setPicked(k)}
             className={`flex min-h-12 flex-col items-center justify-center rounded-xl px-1 text-[11px] leading-tight font-bold ${tab === k ? "bg-white text-primary shadow-sm" : "text-slate-600"}`}
           >
-            <span className="text-base font-black tabular-nums">{groups[k].length}</span>
+            <span className="text-base font-black tabular-nums">{countOf(k)}</span>
             {testClosed && k === "redo" ? t("tabs.notAccepted") : t(`tabs.${k}`)}
           </button>
         ))}
       </div>
       <ul id="mission-panel" role="tabpanel" className="space-y-2">
         {list.length === 0 ? <li className="rounded-2xl bg-white p-5 text-center text-sm text-slate-600">{t(`empty.${tab}`)}</li> : null}
-        {list.map((m) => (
-          <MissionRow key={m.mission_id} campaignId={campaignId} mission={m} local={onPhone.get(m.mission_id)} active={box.activeId != null && box.items.some((i) => i.id === box.activeId && i.missionId === m.mission_id)} readOnly={readOnly || testClosed} qualifying={qualifying} testClosed={testClosed} sayIn={sayIn} />
+        {list.map((m, i) => (
+          <Fragment key={m.mission_id}>
+            {waitsForPartner(m, onPhone.get(m.mission_id)) && (i === 0 || !waitsForPartner(list[i - 1], onPhone.get(list[i - 1].mission_id))) ? (
+              <li className="px-1 pt-2 text-xs font-bold tracking-wide text-slate-600 uppercase">{t("partnerWait")}</li>
+            ) : null}
+            <MissionRow campaignId={campaignId} mission={m} local={onPhone.get(m.mission_id)} active={box.activeId != null && box.items.some((i) => i.id === box.activeId && i.missionId === m.mission_id)} readOnly={readOnly || testClosed} qualifying={qualifying} testClosed={testClosed} sayIn={sayIn} />
+          </Fragment>
         ))}
       </ul>
     </section>

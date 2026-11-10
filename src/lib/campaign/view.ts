@@ -56,6 +56,20 @@ export function toRecordCount(missions: readonly Pick<Mission, "mission_id" | "s
 }
 export const openCountOnPhone = (c: Pick<CampaignCard, "progress">, waitingOnPhone: number) => Math.max(0, openCount(c) - waitingOnPhone);
 
+/**
+ * The home card's "left to record": the hub's rule (toRecordCount, conversations waiting for the
+ * partner left out) from the saved mission list when the phone has it, else the card's counts
+ * (APP2-08). `missions` null: not saved on this phone yet.
+ */
+export function cardOpenCount(
+  c: Pick<CampaignCard, "progress">,
+  missions: readonly Pick<Mission, "mission_id" | "status" | "type" | "partner_ready">[] | null,
+  onPhone: ReadonlyMap<string, OutboxState>,
+): number {
+  if (missions) return toRecordCount(missions, onPhone);
+  return openCountOnPhone(c, [...onPhone.values()].filter((s) => s !== "failed").length);
+}
+
 /** Which of the three setup steps the speaker is on (1-3), or null when setup is over. */
 export function setupStep(step: NextStep): 1 | 2 | 3 | null {
   if (step === "profile" || step === "blocked") return 1;
@@ -172,3 +186,10 @@ export function historyGroups<C extends Pick<CampaignCard, "next_step" | "progre
   const open = (c: C) => c.next_step === "ready" || c.next_step === "paused" || c.next_step === "closed";
   return { readable: recorded.filter(open), locked: recorded.filter((c) => !open(c)) };
 }
+
+/**
+ * A conversation to record (or redo) that waits for the partner's consent, with no take of it on
+ * the phone: listed apart and not counted as "to record" (APP2-08), as the hub and studio count.
+ */
+export const waitsForPartner = (m: Pick<Mission, "status" | "type" | "partner_ready">, local: OutboxState | undefined): boolean =>
+  (m.status === "todo" || m.status === "rejected") && m.type === "conversational" && !m.partner_ready && !(local && local !== "failed");

@@ -45,6 +45,8 @@
     "setupStep": "Step {n} of 3",
     "blocked": "Check your profile",
     "allSent": "All recorded. Under review.",
+    "recordedOnPhone": "{n, plural, other {Recorded · # still on this phone}}",
+    "notSent": "{n, plural, one {# not sent} other {# not sent}}",
     "view": "View my recordings",
     "details": "Details",
     "waiting": "{n, plural, one {# take waiting to send} other {# takes waiting to send}}",
