@@ -291,8 +291,8 @@ function bearerToken(header: string | null): string | null {
   return m ? m[1] : null;
 }
 
-/** Largest request body the function accepts (a recording's metadata is a few hundred bytes). */
-const MAX_BODY_BYTES = 40 * 1024;
+/** Largest request body the function accepts (a recording's metadata is a few hundred bytes): the dashboard's 32 KB, so a body it would refuse is refused here first (X-13). */
+const MAX_BODY_BYTES = 32 * 1024;
 
 /** dashboard base like https://admin.example.com (no trailing slash), or null when unusable. */
 function dashboardBase(raw: string | undefined | null): string | null {

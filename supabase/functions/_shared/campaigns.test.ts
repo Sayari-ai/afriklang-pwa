@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIONS, bearerToken, buildForward, dashboardBase, identityFrom, type Identity } from "./campaigns";
+import { ACTIONS, MAX_BODY_BYTES, bearerToken, buildForward, dashboardBase, identityFrom, type Identity } from "./campaigns";
 
 const WHO: Identity = { userId: "11111111-1111-4111-8111-111111111111", email: "awa@gmail.com", emailVerified: true };
 const CID = "22222222-2222-4222-8222-222222222222";
@@ -182,5 +182,11 @@ describe("bearerToken and dashboardBase", () => {
     expect(dashboardBase("https://afriklang.com/admin-secret/x")).toBe("https://afriklang.com");
     expect(dashboardBase("http://localhost:3000")).toBe("http://localhost:3000");
     for (const bad of ["http://afriklang.com", "ftp://x.org", "https://user:pw@x.org", "not a url", "", undefined, null]) expect(dashboardBase(bad as string)).toBeNull();
+  });
+});
+
+describe("body limit (X-13)", () => {
+  it("is the dashboard's 32 KB (the bridge contract), so the function never passes a body the dashboard refuses", () => {
+    expect(MAX_BODY_BYTES).toBe(32 * 1024);
   });
 });
