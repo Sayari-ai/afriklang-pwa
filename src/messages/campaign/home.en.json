@@ -102,7 +102,8 @@
       "language": "this language cannot be received yet. It is kept and will be sent by itself: no need to record again",
       "profile": "your profile needs to be completed",
       "blocked": "the team is checking your profile; it is kept and will be sent once they are done",
-      "fixing": "there is a problem on our side that the team is fixing. Your recording is safe on this phone and will be sent by itself"
+      "fixing": "there is a problem on our side that the team is fixing. Your recording is safe on this phone and will be sent by itself",
+      "tooLarge": "it is too long to send; record a shorter answer"
     }
   },
   "hub": {

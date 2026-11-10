@@ -116,7 +116,7 @@ export function campaignMicDistance(card: Pick<CampaignCard, "instructions">): {
 }
 
 /** The short reason shown for a take held or failed on the phone (key under campaign.home.outbox.reason). */
-export function outboxReasonKey(code: string | null): "paused" | "consent" | "profile" | "blocked" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" | "fixing" {
+export function outboxReasonKey(code: string | null): "paused" | "consent" | "profile" | "blocked" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" | "fixing" | "tooLarge" {
   switch (code) {
     case "test_closed":
       return "testClosed";
@@ -148,7 +148,9 @@ export function outboxReasonKey(code: string | null): "paused" | "consent" | "pr
     case "misconfigured":
     case "ticket_required":
       return "fixing";
+    // Too big for the server: recording the same length again would fail the same way (APP2-30).
     case "tooLarge":
+      return "tooLarge";
     case "refused":
     case "invalid_input":
       return "file";

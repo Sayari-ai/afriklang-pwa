@@ -51,6 +51,8 @@ describe("speaker view facts", () => {
     // a fault on our side says so (APP2-02, APP2-04)
     expect(outboxReasonKey("misconfigured")).toBe("fixing");
     expect(outboxReasonKey("ticket_required")).toBe("fixing");
+    // too big for the server: not "refused, record it again" at the same length (APP2-30)
+    expect(outboxReasonKey("tooLarge")).toBe("tooLarge");
   });
   it("does not count a conversation waiting for the partner as to record (N-12)", () => {
     const mk = (id: string, over: Record<string, unknown> = {}) => ({ mission_id: id, status: "todo" as const, type: "read" as const, partner_ready: false, ...over });
