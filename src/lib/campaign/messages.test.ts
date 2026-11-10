@@ -23,6 +23,15 @@ describe("campaign messages", () => {
     expect(empty(en) || empty(fr)).toBe(false);
   });
 
+  it("the reason 'level' does not say 'too quiet' alone: Sayari also uses it for a take too loud (X-06, APP2-18)", () => {
+    const en = (load("common.en.json").rejection as Record<string, string>).level;
+    const fr = (load("common.fr.json").rejection as Record<string, string>).level;
+    expect(en).toMatch(/too loud/i);
+    expect(fr).toMatch(/trop fort/i);
+    // automatic refusals use 'other' too: no reviewer named
+    expect((load("common.en.json").rejection as Record<string, string>).other).not.toMatch(/reviewer/i);
+  });
+
   it("every error code has a message in both languages", () => {
     for (const locale of ["en", "fr"]) {
       const errors = (load(`common.${locale}.json`).errors ?? {}) as Record<string, string>;

@@ -147,7 +147,8 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
   };
   const statusOf = (m: Mission): string => {
     if (m.status !== "rejected") return t(`status.${m.status as "submitted" | "accepted"}`);
-    if (!test) return [t("status.rejected"), rejectionText(m.rejection_reason)].filter(Boolean).join(" · ");
+    // The check's own title when the refusal says what was measured (too loud, too noisy…), not the reason's general sentence (X-06).
+    if (!test) return [t("status.rejected"), detailText(m)?.title ?? rejectionText(m.rejection_reason)].filter(Boolean).join(" · ");
     if (testRecording) return [t("statusRedo"), detailText(m)?.title].filter(Boolean).join(" · ");
     return [t("statusTest.rejected"), testReason(m.rejection_reason)].filter(Boolean).join(" · ");
   };
