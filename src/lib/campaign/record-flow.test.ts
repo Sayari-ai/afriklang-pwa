@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, takeRules } from "./record-flow";
+import { checkTake, SAYARI_QC } from "@/lib/audio/analyze";
+import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, qcLimitsOf, takeRules } from "./record-flow";
 import type { CampaignCard, Mission } from "./types";
 
 const card = (over: Partial<CampaignCard> = {}): CampaignCard =>
@@ -12,10 +13,27 @@ const mission = (over: Partial<Mission> = {}): Mission =>
   ({ mission_id: "m1", code: "S-1", type: "spontaneous", position: 1, status: "todo", duration_s: { min: 10, max: 90 }, partner_ready: true, ...over }) as Mission;
 
 describe("takeRules", () => {
-  it("uses the speech type and recording settings", () => expect(takeRules(card(), mission())).toEqual({ durationMinS: 20, durationMaxS: 60, minLevelDbfs: -30, silenceMarginS: 2 }));
+  it("uses the speech type and recording settings", () => expect(takeRules(card(), mission())).toEqual({ durationMinS: 20, durationMaxS: 60, minLevelDbfs: -30, silenceMarginS: 2, qc: SAYARI_QC }));
   it("falls back to the mission and defaults", () => {
     const c = card({ instructions: undefined as never });
-    expect(takeRules(c, mission())).toEqual({ durationMinS: 10, durationMaxS: 90, minLevelDbfs: -35, silenceMarginS: 1 });
+    expect(takeRules(c, mission())).toEqual({ durationMinS: 10, durationMaxS: 90, minLevelDbfs: -35, silenceMarginS: 1, qc: SAYARI_QC });
+  });
+});
+
+describe("QC limits from the card (decision B)", () => {
+  const live = { min_snr_db: 15, max_background_noise_db: -30, max_clipping_ratio: 0.002, max_silence_ratio: 0.4 };
+  it("takes the card's limits, value by value, and Sayari's defaults for what is missing", () => {
+    expect(qcLimitsOf(card({ qc_limits: live }))).toEqual({ minSnrDb: 15, maxBackgroundNoiseDb: -30, maxClippingRatio: 0.002, maxSilenceRatio: 0.4 });
+    expect(qcLimitsOf(card({ qc_limits: { ...live, min_snr_db: "x" as never } })).minSnrDb).toBe(SAYARI_QC.minSnrDb);
+    expect(qcLimitsOf(card())).toEqual(SAYARI_QC);
+    expect(qcLimitsOf(card({ qc_limits: null }))).toEqual(SAYARI_QC);
+  });
+  it("the advice follows the card's limits", () => {
+    // 12 dB SNR and 0.5 % clipped samples: fine by the defaults, advised under the card's stricter limits
+    const a = { duration_s: 30, level_dbfs: -20, peak_dbfs: 0, silence_before_s: 2, silence_after_s: 2, qc: { snr_db: 12, background_noise_db: -50, silence_ratio: 0.1, clipping_ratio: 0.005 } };
+    expect(checkTake(a, takeRules(card(), mission()))).toBeNull();
+    expect(checkTake(a, takeRules(card({ qc_limits: live }), mission()))).toEqual({ problem: "clipped", blocking: false });
+    expect(checkTake({ ...a, qc: { ...a.qc, clipping_ratio: 0 } }, takeRules(card({ qc_limits: live }), mission()))).toEqual({ problem: "noisy", blocking: false });
   });
 });
 

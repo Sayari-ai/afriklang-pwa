@@ -17,13 +17,13 @@ import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard, type ContributorView } from "@/lib/campaign/types";
 import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
-import { useOutbox } from "@/lib/campaign/outbox-client";
-import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount } from "@/lib/campaign/view";
+import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
+import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount, varietyBlockOf, withdrawOffered } from "@/lib/campaign/view";
 import { OutboxPanel } from "./OutboxPanel";
 import { LanguageBadge, ProgressRing, useQualificationText } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
 import { ConsentStep } from "./ConsentStep";
-import { Instructions } from "./Instructions";
+import { Instructions, WithdrawControl } from "./Instructions";
 import { MissionList, MissionSkeleton } from "./MissionList";
 import { GiveBack, PaidTime, PoolPanel } from "./PoolParts";
 import { ProfileForm } from "./ProfileForm";
@@ -105,6 +105,14 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
   // Conversational missions waiting for the partner's consent: not recordable yet (N-12).
   const waitingPartner = live ? live.filter((m) => (m.status === "todo" || m.status === "rejected") && m.type === "conversational" && !m.partner_ready && !onPhone.has(m.mission_id)).length : 0;
 
+  // The card says ready (a consent signed, the profile completed, the campaign resumed, a block
+  // lifted): the takes held for that reason go now, not in 10 minutes or 6 hours (APP2-13).
+  const ready = card.next_step === "ready";
+  const blockedVariety = varietyBlockOf(card.blocked_reason);
+  useEffect(() => {
+    if (ready && userId) void outbox.releaseHeld(userId, card.campaign_id);
+  }, [ready, userId, card.campaign_id]);
+
   const after = useCallback(
     (type: "profile" | "consent" | "withdrawn") => () => {
       if (userId) logActivity(userId, { type, campaignId: card.campaign_id });
@@ -164,6 +172,8 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
         <div className="space-y-3">
           <Notice title={tf("blocked.title")} tone="warn">
             <p>{tf("blocked.body")}</p>
+            {/* What the speaker declared and what the campaign is for, when the reason says (APP2-28). */}
+            {blockedVariety ? <p className="font-semibold">{tf("blocked.varieties", blockedVariety)}</p> : null}
             <p>{tf("blocked.fix")}</p>
           </Notice>
           <button type="button" onClick={() => setCorrecting(true)} className={buttonSecondary}>
@@ -173,12 +183,12 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
       ) : null}
       {card.next_step === "account_consent" ? (
         <Panel>
-          <ConsentStep key="account" type="account" card={card} onSigned={after("consent")} />
+          <ConsentStep key="account" type="account" card={card} onSigned={after("consent")} onChanged={reload} />
         </Panel>
       ) : null}
       {card.next_step === "campaign_consent" ? (
         <Panel>
-          <ConsentStep key="campaign" type="campaign" card={card} onSigned={after("consent")} />
+          <ConsentStep key="campaign" type="campaign" card={card} onSigned={after("consent")} onChanged={reload} />
         </Panel>
       ) : null}
 
@@ -244,6 +254,22 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
             </div>
           </details>
         </>
+      ) : null}
+
+      {/* Paused, closed, a test with the team, a block, a new consent: withdrawing stays possible (APP2-09). */}
+      {withdrawn === null && withdrawOffered(card, card.next_step === "ready" && !testStatus) ? (
+        <details className="group rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+          <summary className="cursor-pointer list-none text-sm font-bold text-slate-700">{t("hub.more")}</summary>
+          <div className="mt-3">
+            <WithdrawControl
+              card={card}
+              onWithdrawn={(deleted) => {
+                setWithdrawn(deleted);
+                after("withdrawn")();
+              }}
+            />
+          </div>
+        </details>
       ) : null}
     </div>
   );

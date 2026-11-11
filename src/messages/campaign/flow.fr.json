@@ -75,6 +75,7 @@
   "blocked": {
     "title": "Cette campagne n'est pas disponible pour votre profil",
     "body": "La variété que vous avez indiquée ne correspond pas à celle que cherche cette campagne. L'équipe Afriklang a été prévenue et vous contactera si une autre campagne vous convient.",
+    "varieties": "Vous avez indiqué « {declared} » ; cette campagne est pour : {targets}.",
     "fix": "Si vous vous êtes trompé, vous pouvez corriger votre profil et la campagne s'ouvrira de nouveau."
   },
   "consent": {
@@ -85,6 +86,8 @@
     "readText": "Lire le texte complet du consentement",
     "opensNewTab": "(s'ouvre dans un nouvel onglet)",
     "agree": "J'ai lu et j'accepte",
+    "samplesOptIn": "Autoriser aussi Afriklang à faire écouter certains de mes enregistrements, comme exemples, à des entreprises intéressées par les données (facultatif ; vous pouvez changer d'avis à tout moment).",
+    "samplesText": "Lire le texte sur les exemples",
     "agreeFirst": "Cochez la case ci-dessus après avoir lu le texte pour continuer.",
     "sign": "J'accepte",
     "signing": "Enregistrement…",
@@ -101,8 +104,8 @@
     "quiet": "Choisissez une pièce calme. Éteignez la télévision, la radio et les ventilateurs.",
     "background": "Arrière-plan : {text}",
     "mic": "Tenez le téléphone à {min} à {max} cm de votre bouche.",
-    "level": "Parlez clairement et assez fort : l'enregistrement doit atteindre au moins {level} dBFS en moyenne. L'application le vérifie pour vous.",
-    "silence": "Restez silencieux environ {s, plural, one {# seconde} other {# secondes}} avant de commencer et après avoir fini.",
+    "level": "Parlez clairement, de votre voix normale, sans crier.",
+    "silence": "Attendez « Parlez » avant de commencer et, à la fin, restez silencieux jusqu'à l'arrêt de l'enregistrement : l'application enregistre le silence pour vous.",
     "byType": "Quoi faire, selon le type",
     "duration": "{min} à {max} secondes",
     "perSession": "Environ {min} à {max} missions par séance.",

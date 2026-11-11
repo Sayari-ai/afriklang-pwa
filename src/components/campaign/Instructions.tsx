@@ -14,10 +14,6 @@ const SPEECH_ORDER = ["read", "spontaneous", "conversational"] as const;
 /** `onWithdrawn(deleted)`: the consent is withdrawn and `deleted` takes of the campaign were removed from the phone. */
 export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWithdrawn: (deleted: number) => void }) {
   const t = useTranslations("campaign.flow.instructions");
-  const session = useCampaignSession();
-  const userId = session.status === "signedIn" ? session.userId : null;
-  const box = useOutbox();
-  const onPhone = box.items.filter((i) => i.userId === userId && i.campaignId === card.campaign_id).length;
   const storeKey = `afriklang.instructions.seen.${card.campaign_id}`;
   const [open, setOpen] = useState(() => {
     try {
@@ -26,11 +22,6 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
       return true;
     }
   });
-  const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const sending = useRef(false); // a second tap before the re-render must not send twice
-  const [failure, setFailure] = useState<CampaignFailure | null>(null);
-
   const rec = card.instructions.recording;
   // One distance for the whole campaign goes with the rules; two (conversations held further away) go with each type.
   const mic = campaignMicDistance(card);
@@ -44,22 +35,6 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
       // storage unavailable: it just stays open next time
     }
   }, [storeKey]);
-
-  async function withdraw() {
-    if (sending.current || !userId) return;
-    sending.current = true;
-    setBusy(true);
-    setFailure(null);
-    try {
-      // Stops this campaign's uploads first, then deletes its takes once the withdrawal is recorded.
-      const res = await withdrawFromCampaign(userId, card.campaign_id);
-      if (res.ok) onWithdrawn(res.deleted);
-      else setFailure(res.failure);
-    } finally {
-      sending.current = false;
-      setBusy(false);
-    }
-  }
 
   const types = SPEECH_ORDER.flatMap((type) => card.instructions.speech_types.filter((s) => s.type === type));
 
@@ -77,8 +52,9 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
               <li>{t("quiet")}</li>
               {rec.background ? <li>{t("background", { text: rec.background })}</li> : null}
               {mic.main && !perType ? <li>{t("mic", mic.main)}</li> : null}
-              <li>{t("level", { level: rec.min_level_dbfs })}</li>
-              <li>{t("silence", { s: rec.silence_margin_s })}</li>
+              {/* Plain advice: the studio records the silences and measures the level itself (APP2-17). */}
+              <li>{t("level")}</li>
+              <li>{t("silence")}</li>
             </ul>
           </div>
           {types.length ? (
@@ -103,27 +79,66 @@ export function Instructions({ card, onWithdrawn }: { card: CampaignCard; onWith
       ) : null}
 
       <div className="border-t border-slate-200 pt-4">
-        {confirming ? (
-          <div role="alertdialog" aria-labelledby="wd-title" aria-describedby="wd-body" className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
-            <h2 id="wd-title" className="text-base font-bold text-red-900">{t("withdrawTitle")}</h2>
-            <p id="wd-body" className="text-sm text-red-900">
-              {t("withdrawBody")}
-              {onPhone > 0 ? <> {t("withdrawPending", { n: onPhone })}</> : null}
-            </p>
-            {failure ? <FailureMessage failure={failure} /> : null}
-            <div className="flex flex-col gap-2">
-              <button type="button" onClick={withdraw} disabled={busy} className="min-h-12 rounded-xl bg-red-700 px-4 text-base font-bold text-white disabled:opacity-50">
-                {busy ? t("withdrawing") : t("withdrawConfirm")}
-              </button>
-              <button type="button" onClick={() => setConfirming(false)} disabled={busy} autoFocus className={buttonSecondary}>{t("cancel")}</button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setConfirming(true)} className="min-h-11 text-sm font-semibold text-red-700 underline underline-offset-2">
-            {t("withdraw")}
-          </button>
-        )}
+        <WithdrawControl card={card} onWithdrawn={onWithdrawn} />
       </div>
     </section>
+  );
+}
+
+/**
+ * "Withdraw from this campaign", with its confirmation. Offered in every state where the campaign
+ * consent is signed (paused, closed, a test being reviewed, a block…), not only while recording:
+ * the consent says the speaker can withdraw at any time (APP2-09).
+ */
+export function WithdrawControl({ card, onWithdrawn }: { card: CampaignCard; onWithdrawn: (deleted: number) => void }) {
+  const t = useTranslations("campaign.flow.instructions");
+  const session = useCampaignSession();
+  const userId = session.status === "signedIn" ? session.userId : null;
+  const box = useOutbox();
+  const onPhone = box.items.filter((i) => i.userId === userId && i.campaignId === card.campaign_id).length;
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const sending = useRef(false); // a second tap before the re-render must not send twice
+  const [failure, setFailure] = useState<CampaignFailure | null>(null);
+
+  async function withdraw() {
+    if (sending.current || !userId) return;
+    sending.current = true;
+    setBusy(true);
+    setFailure(null);
+    try {
+      // Stops this campaign's uploads first, then deletes its takes once the withdrawal is recorded.
+      const res = await withdrawFromCampaign(userId, card.campaign_id);
+      if (res.ok) onWithdrawn(res.deleted);
+      else setFailure(res.failure);
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      {confirming ? (
+        <div role="alertdialog" aria-labelledby="wd-title" aria-describedby="wd-body" className="space-y-3 rounded-xl border border-red-200 bg-red-50 p-4">
+          <h2 id="wd-title" className="text-base font-bold text-red-900">{t("withdrawTitle")}</h2>
+          <p id="wd-body" className="text-sm text-red-900">
+            {t("withdrawBody")}
+            {onPhone > 0 ? <> {t("withdrawPending", { n: onPhone })}</> : null}
+          </p>
+          {failure ? <FailureMessage failure={failure} /> : null}
+          <div className="flex flex-col gap-2">
+            <button type="button" onClick={withdraw} disabled={busy} className="min-h-12 rounded-xl bg-red-700 px-4 text-base font-bold text-white disabled:opacity-50">
+              {busy ? t("withdrawing") : t("withdrawConfirm")}
+            </button>
+            <button type="button" onClick={() => setConfirming(false)} disabled={busy} autoFocus className={buttonSecondary}>{t("cancel")}</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setConfirming(true)} className="min-h-11 text-sm font-semibold text-red-700 underline underline-offset-2">
+          {t("withdraw")}
+        </button>
+      )}
+    </>
   );
 }

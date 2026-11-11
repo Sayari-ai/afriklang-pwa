@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyzeSamples, analyzeStats, checkTake, createTakeMeter, parseWav, sha256Hex } from "./analyze";
+import { analyzeSamples, analyzeStats, checkTake, createTakeMeter, parseWav, sayariQc, sha256Hex } from "./analyze";
 import { encodeWav, floatToPCM16 } from "./wav-encoder";
 
 const RATE = 16_000;
@@ -39,6 +39,7 @@ describe("analyzeSamples", () => {
 describe("checkTake", () => {
   const rules = { durationMinS: 3, durationMaxS: 15, minLevelDbfs: -35, silenceMarginS: 1 };
   const good = { duration_s: 8, level_dbfs: -22, peak_dbfs: -3, silence_before_s: 1.1, silence_after_s: 1 };
+  const qcOk = { snr_db: 30, background_noise_db: -60, silence_ratio: 0.1, clipping_ratio: 0 };
 
   const block = (problem: string) => ({ problem, blocking: true });
   const advise = (problem: string) => ({ problem, blocking: false });
@@ -52,7 +53,7 @@ describe("checkTake", () => {
   });
 
   it("everything else is advice: the speaker may send anyway", () => {
-    expect(checkTake({ ...good, peak_dbfs: 0 }, rules)).toEqual(advise("clipped"));
+    expect(checkTake({ ...good, peak_dbfs: 0, qc: { ...qcOk, clipping_ratio: 0.02 } }, rules)).toEqual(advise("clipped"));
     // nothing above the silence threshold: said as "silent"
     expect(checkTake(analyzeSamples(new Float32Array(16000 * 4), 16000), rules)).toEqual(advise("silent"));
     expect(checkTake({ ...good, level_dbfs: -50 }, rules)).toEqual(advise("too_quiet"));
@@ -62,7 +63,7 @@ describe("checkTake", () => {
 
   it("the length is checked first: a silent or clipped take of the wrong length is refused", () => {
     expect(checkTake(analyzeSamples(new Float32Array(16000 * 2), 16000), rules)).toEqual(block("too_short"));
-    expect(checkTake({ ...good, peak_dbfs: 0, duration_s: 16 }, rules)).toEqual(block("too_long"));
+    expect(checkTake({ ...good, peak_dbfs: 0, qc: { ...qcOk, clipping_ratio: 0.5 }, duration_s: 16 }, rules)).toEqual(block("too_long"));
     expect(checkTake({ ...good, level_dbfs: -50, duration_s: 2 }, rules)).toEqual(block("too_short"));
   });
 });
@@ -127,5 +128,96 @@ describe("background noise (APP-012)", () => {
   it("keeps the -50 dBFS rule in a quiet room (the dashboard's numbers do not move)", () => {
     const take = join(silence(1.2), tone(3, 0.1), silence(1.1));
     expect(analyzeStats(meter(take), { leadS: 1.2 })).toMatchObject(analyzeSamples(take, RATE));
+  });
+});
+
+/**
+ * The advice follows Sayari's automatic check (backend app/services/qc_service.py, defaults in
+ * app/core/config.py): it must not warn about a take Sayari accepts, and must warn about one it
+ * refuses (APP2-01, X-05).
+ */
+describe("Sayari's QC limits (APP2-01, X-05)", () => {
+  const rules = { durationMinS: 3, durationMaxS: 15, minLevelDbfs: -35, silenceMarginS: 1 };
+  const meter = (samples: Float32Array) => {
+    const m = createTakeMeter(RATE);
+    m.push(samples);
+    return m.stats();
+  };
+  /** Low hiss so Sayari's noise estimate is not digital silence. */
+  const hiss = (seconds: number, amp: number) => {
+    let x = 777;
+    return Float32Array.from({ length: Math.round(seconds * RATE) }, () => {
+      x = (x * 1103515245 + 12345) & 0x7fffffff;
+      return amp * (2 * (x / 0x7fffffff) - 1);
+    });
+  };
+  const mix = (a: Float32Array, b: Float32Array) => a.map((v, i) => v + (b[i] ?? 0));
+
+  it("a few full-scale samples (a plosive) are not 'clipped': Sayari accepts up to 1 %", () => {
+    const take = join(silence(1.2), tone(4, 0.3), silence(1.2));
+    for (let i = 0; i < 300; i++) take[RATE * 2 + i * 50] = 1; // 300 of 102 400 samples ≈ 0.3 %
+    const a = analyzeStats(meter(take), { leadS: 1.2 });
+    expect(a.peak_dbfs).toBeGreaterThanOrEqual(0);
+    expect(a.qc?.clipping_ratio).toBeCloseTo(300 / take.length, 5);
+    expect(checkTake(a, rules)).toBeNull();
+  });
+
+  it("a take saturated on more than 1 % of its samples is 'clipped'", () => {
+    const a = analyzeStats(meter(join(silence(1.2), tone(4, 1), silence(1.2))), { leadS: 1.2 });
+    expect(a.qc!.clipping_ratio).toBeGreaterThan(0.01);
+    expect(checkTake(a, rules)).toEqual({ problem: "clipped", blocking: false });
+  });
+
+  it("the clipping advice no longer says the take will be refused, in EN and FR", async () => {
+    const en = (await import("@/messages/campaign/studio.en.json")).default.advice;
+    const fr = (await import("@/messages/campaign/studio.fr.json")).default.advice;
+    expect(en.clipped).not.toMatch(/refused/i);
+    expect(fr.clipped).not.toMatch(/refusée/i);
+    expect(en.pauses).toBeTruthy();
+    expect(fr.pauses).toBeTruthy();
+  });
+
+  it("measures SNR like Sayari: warns under 10 dB, not only under 8", () => {
+    // speech 9 dB above the background (Sayari's measure) must be advised; 12 dB is fine
+    const at = (snr: number) => {
+      const floor = 0.01;
+      return mix(join(silence(1.2), tone(4, floor * 10 ** (snr / 20) * Math.SQRT2), silence(1.2)), hiss(6.4, floor * Math.sqrt(3)));
+    };
+    const low = analyzeStats(meter(at(8.5)), { leadS: 1.2 });
+    expect(low.qc!.snr_db).toBeGreaterThan(8);
+    expect(low.qc!.snr_db).toBeLessThan(10);
+    expect(checkTake(low, rules)).toEqual({ problem: "noisy", blocking: false });
+    const ok = analyzeStats(meter(at(13)), { leadS: 1.2 });
+    expect(ok.qc!.snr_db).toBeGreaterThan(10);
+    expect(checkTake(ok, rules)).toBeNull();
+  });
+
+  it("a background louder than -20 dBFS is 'noisy' even when the voice stands out", () => {
+    expect(checkTake({ duration_s: 8, level_dbfs: -5, peak_dbfs: -1, silence_before_s: 1, silence_after_s: 1, qc: { snr_db: 15, background_noise_db: -18, silence_ratio: 0, clipping_ratio: 0 } }, rules)).toEqual({ problem: "noisy", blocking: false });
+  });
+
+  it("long pauses between the words are advised (Sayari refuses over half of the take silent)", () => {
+    const take = mix(join(silence(1.2), tone(1, 0.2), silence(3), tone(1, 0.2), silence(1.2)), hiss(7.4, 0.0005));
+    const a = analyzeStats(meter(take), { leadS: 1.2 });
+    expect(a.qc!.silence_ratio).toBeGreaterThan(0.5);
+    expect(checkTake(a, rules)).toEqual({ problem: "pauses", blocking: false });
+    // the edges (the studio's padding) do not count: one sentence between two long silences is fine
+    const edges = analyzeStats(meter(mix(join(silence(3), tone(2, 0.2), silence(3)), hiss(8, 0.0005))), { leadS: 3 });
+    expect(edges.qc!.silence_ratio).toBeLessThan(0.1);
+    expect(checkTake(edges, rules)).toBeNull();
+  });
+
+  it("matches Sayari's frames: 2048 samples every 512, short files as one frame", () => {
+    const st = meter(tone(1, 0.5));
+    const q = sayariQc(st)!;
+    // (16000 - 2048) / 512 = 27 frames of a steady tone: no noise frame, SNR 0 dB
+    expect(q.snr_db).toBeCloseTo(0, 1);
+    expect(q.background_noise_db).toBeCloseTo(20 * Math.log10(0.5 / Math.SQRT2), 1);
+    expect(sayariQc(meter(tone(0.05, 0.5)))!.background_noise_db).toBeCloseTo(20 * Math.log10(0.5 / Math.SQRT2), 1);
+    expect(sayariQc(meter(silence(2)))).toMatchObject({ snr_db: 60, background_noise_db: -100, silence_ratio: 1 });
+  });
+
+  it("a take saved by an older version (no Sayari measures) gets no clipping alarm", () => {
+    expect(checkTake({ duration_s: 8, level_dbfs: -22, peak_dbfs: 0, silence_before_s: 1, silence_after_s: 1 }, rules)).toBeNull();
   });
 });

@@ -29,8 +29,10 @@ import {
   dueItems,
   expiredDeadTakes,
   nextWake,
+  releasedByReadyCard,
   reusableTicket,
-  STOP_RUN_CODES,
+  SERVER_FAULT_HOLD_MS,
+  stopsRun,
   storedTicketFrom,
   uploadBackoffMs,
   type Decision,
@@ -83,13 +85,26 @@ type UploadErrorLike = { status?: number; isNetwork?: boolean; retryAfterS?: num
 /** How far the take being sent has gone (bytes of the request body). */
 export type OutboxProgress = { id: string; sent: number; total: number };
 
-/** A decision after which the next take would fail the same way (the network is gone or too weak). */
-const stopsRun = (d: Decision) => d.kind === "retry" && STOP_RUN_CODES.has(d.code);
-
 const summary = (item: OutboxItem): OutboxSummary => {
   const { blob, ...rest } = item;
   return { ...rest, bytes: blob?.size ?? 0 };
 };
+
+/**
+ * The analytics event for an outbox event (a take sent, or given up on for good; retries are not
+ * events). Codes only, no prompt. A take sent without a Sayari id is said (X-09): pushes are
+ * matched by that id, so its verdict cannot arrive until the dashboard matches by file.
+ */
+export function outboxAnalytics(e: OutboxEvent):
+  | ["upload_succeeded", { mission_type: string; attempts: number; duplicate: boolean; has_sayari_id: boolean }]
+  | ["upload_failed", { mission_type: string; attempts: number; code: string; reason?: string }]
+  | null {
+  const base = { mission_type: e.item.missionType ?? "unknown", attempts: e.item.attempts ?? 0 };
+  if (e.type === "sent") return ["upload_succeeded", { ...base, duplicate: e.duplicate, has_sayari_id: Boolean(e.item.sayariId) }];
+  if (e.type === "failed" || e.type === "dropped") return ["upload_failed", { ...base, code: e.code }];
+  if (e.type === "rejected") return ["upload_failed", { ...base, code: "recording_rejected", reason: e.reason }];
+  return null;
+}
 
 export function createOutbox(deps: OutboxDeps) {
   const now = deps.now ?? Date.now;
@@ -106,6 +121,17 @@ export function createOutbox(deps: OutboxDeps) {
   const blocked = new Set<string>();
   /** "The dashboard issues no tickets" is said once per app start, not once per take. */
   let saidNoTickets = false;
+  /**
+   * The proxy refused an upload without a ticket (409 ticket_required) since the app started: while
+   * the dashboard still issues none, no take is uploaded without one (each try would send the whole
+   * file to be refused on a header check). Held instead, with a reason (APP2-04, X-07).
+   */
+  let ticketlessRefused = false;
+  /**
+   * Languages Sayari refused during this pass (language_unsupported), with the hold given: the other
+   * takes of that language are held as well without being uploaded (APP2-03).
+   */
+  let languageHolds = new Map<string, number>();
   const listeners = new Set<() => void>();
   const eventListeners = new Set<(e: OutboxEvent) => void>();
   let snapshot: { items: OutboxSummary[]; activeId: string | null; loaded: boolean; progress: OutboxProgress | null } = { items, activeId, loaded, progress };
@@ -199,6 +225,10 @@ export function createOutbox(deps: OutboxDeps) {
           } else {
             const d = decideTicket(res, current.attempts, undefined, context(current));
             if (d.kind === "without") {
+              if (ticketlessRefused) {
+                await settle(current, { kind: "hold", code: "ticket_required", delayMs: SERVER_FAULT_HOLD_MS });
+                return false;
+              }
               if (!saidNoTickets) (deps.log ?? console.info)("[outbox] the dashboard does not issue upload tickets yet: uploading without one");
               saidNoTickets = true;
             } else {
@@ -228,10 +258,13 @@ export function createOutbox(deps: OutboxDeps) {
         // Sayari refused the ticket (expired on the way, or already used): the next try asks for a new one.
         if (err.status === 409 && current.ticket) current = { ...current, ticket: null };
         const d = decideUploadFailure({ status: err.status ?? 0, isNetwork: Boolean(err.isNetwork), retryAfterS: err.retryAfterS ?? null, detail: typeof err.message === "string" ? err.message : "" }, current.attempts, deps.online());
+        if (d.kind === "hold" && d.code === "ticket_required") ticketlessRefused = true;
+        if (d.kind === "hold" && d.code === "language_unsupported") languageHolds.set(current.upload.languageIso, d.delayMs);
         await settle(current, d);
         // Any upload to retry stops the run: the next take would hit the same server or link
-        // trouble and resend a whole file for nothing (N-6). Holds and failures concern this take only.
-        return d.kind !== "retry";
+        // trouble and resend a whole file for nothing (N-6). So does a server-side fault (APP2-02).
+        // Other holds and failures concern this take only.
+        return d.kind !== "retry" && !stopsRun(d);
       }
     }
     // Offline: the submit cannot go either. Untouched, as above.
@@ -260,10 +293,17 @@ export function createOutbox(deps: OutboxDeps) {
     } catch {
       return;
     }
+    languageHolds = new Map();
     for (const listed of dueItems(all, userId, now())) {
       // Read it again: it may have been deleted, sent by another tab or changed since the list was read.
       const item = blocked.has(listed.campaignId) ? undefined : await deps.store.get(listed.id).catch(() => undefined);
       if (!item || item.state === "failed" || item.nextAttemptAt > now()) continue;
+      // Sayari just refused this take's language: hold it too, without sending its audio (APP2-03).
+      const langHold = item.uploaded ? undefined : languageHolds.get(item.upload.languageIso);
+      if (langHold !== undefined) {
+        await settle(item, { kind: "hold", code: "language_unsupported", delayMs: langHold });
+        continue;
+      }
       activeId = item.id;
       notify();
       const keepGoing = await sendOne(item);
@@ -383,6 +423,29 @@ export function createOutbox(deps: OutboxDeps) {
       });
       await refresh();
       return drain(userId);
+    },
+    /**
+     * `campaignId`'s card says ready: send now the takes held for a reason that is now cleared
+     * (releasedByReadyCard), not in 10 minutes or 6 hours (APP2-13). Returns how many.
+     */
+    async releaseHeld(userId: string, campaignId: string) {
+      const lock = deps.withLock ?? ((run) => run());
+      let n = 0;
+      await lock(async () => {
+        const all = await deps.store.all().catch(() => [] as OutboxItem[]);
+        for (const listed of all) {
+          if (listed.userId !== userId || !releasedByReadyCard(listed, campaignId)) continue;
+          const i = await deps.store.get(listed.id);
+          if (i && releasedByReadyCard(i, campaignId)) {
+            await deps.store.put({ ...i, nextAttemptAt: 0, state: "pending" });
+            n++;
+          }
+        }
+      });
+      if (n === 0) return 0;
+      await refresh();
+      await drain(userId);
+      return n;
     },
     nextWake: (userId: string) => nextWake(items, userId),
     subscribe(fn: () => void) {

@@ -8,10 +8,12 @@ import { ClaimFailureCard } from "@/components/campaign/ClaimFailureCard";
 import { ClaimBrokenLink, ClaimSpinner } from "@/components/campaign/ClaimNotice";
 import { SignInCard } from "@/components/campaign/SignInCard";
 import { claimLink } from "@/lib/campaign/api";
-import { claimOutcome, nextView, type ClaimState } from "@/lib/campaign/claim-flow";
+import { claimOutcome, isOldInvitation, nextView, type ClaimState } from "@/lib/campaign/claim-flow";
 import { useCampaignSession } from "@/lib/campaign/hooks";
 import { clearToken, dismissTokenFor, isTokenDismissedFor, takeLinkFromLocation } from "@/lib/campaign/link-token";
-import { loadCampaigns } from "@/lib/campaign/queries";
+import { CAMPAIGNS, loadCampaigns } from "@/lib/campaign/queries";
+import { cacheId, campaignCache } from "@/lib/campaign/cache";
+import type { CampaignList } from "@/lib/campaign/api";
 import { takeReturnPath } from "@/lib/campaign/return-path";
 
 export default function CampaignLandingPage() {
@@ -31,6 +33,8 @@ export default function CampaignLandingPage() {
   const [fromUrl, setFromUrl] = useState(false);
   // A saved invitation and no connection: the home shows first; the claim runs once online.
   const [offline, setOffline] = useState(false);
+  // An old invitation tapped again by an account already set up: its campaigns, with a note (APP2-05).
+  const [oldInvitation, setOldInvitation] = useState(false);
   // The token+attempt already sent: StrictMode runs effects twice, a token must be claimed once.
   const started = useRef<string | null>(null);
 
@@ -47,6 +51,7 @@ export default function CampaignLandingPage() {
     const onHash = () => {
       const fresh = takeLinkFromLocation();
       if (fresh.token) {
+        setOldInvitation(false);
         setBrokenLink(false);
         setFromUrl(true);
         setToken(fresh.token);
@@ -90,6 +95,18 @@ export default function CampaignLandingPage() {
         return;
       }
       if (claimOutcome(res).clearToken) clearToken();
+      if (res.code === "link_expired" || res.code === "campaign_closed" || res.code === "invalid_link") {
+        // The way back into the app for many speakers is the invitation email: when their account
+        // is already set up, this is no failure for them (APP2-05).
+        void loadCampaigns(userId, true).finally(() => {
+          const list = campaignCache.read<CampaignList>(cacheId(userId, CAMPAIGNS)).data;
+          if (isOldInvitation(res, list?.campaigns?.length ?? null)) {
+            setOldInvitation(true);
+            setClaim({ status: "done" });
+          } else setClaim({ status: "failed", failure: res });
+        });
+        return;
+      }
       setClaim({ status: "failed", failure: res });
     });
   }, [session, activeToken, attempt]);
@@ -150,7 +167,7 @@ export default function CampaignLandingPage() {
     case "claimFailed":
       return claim.status === "failed" ? <ClaimFailureCard failure={claim.failure} email={email} onRetry={retry} onContinue={continueWithoutToken} /> : null;
     case "claimed":
-      return <ClaimCampaignList />;
+      return <ClaimCampaignList note={oldInvitation ? t("home.oldInvitation") : null} />;
     case "home":
       return <ClaimCampaignList />;
   }

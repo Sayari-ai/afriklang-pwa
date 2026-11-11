@@ -8,6 +8,7 @@
   "textBigger": "Texte plus grand",
   "session": "{n, plural, =0 {Aucune prise pour l'instant} one {# prise pendant cette séance} other {# prises pendant cette séance}}",
   "sessionGoal": "{n} sur {goal} pendant cette séance",
+  "sessionGoalReached": "{n, plural, one {Objectif atteint · # prise pendant cette séance} other {Objectif atteint · # prises pendant cette séance}}",
   "type": {
     "read": "Lecture à voix haute",
     "spontaneous": "Parole libre",
@@ -53,6 +54,7 @@
     "pause": "Pause",
     "length": "{time} enregistrées",
     "restored": "Nous avons gardé l'enregistrement fait avant la fermeture de l'application. Écoutez-le, puis envoyez-le ou recommencez.",
+    "cutShort": "L'enregistrement s'est arrêté quand vous avez quitté l'application. Réécoutez : si toute votre réponse y est, vous pouvez l'envoyer. Sinon, recommencez.",
     "again": "Recommencer",
     "submit": "Envoyer et continuer",
     "submitLast": "Envoyer",
@@ -73,10 +75,11 @@
   "advice": {
     "title": "Écoutez avant d'envoyer",
     "silent": "Nous n'avons pas entendu votre voix. Réécoutez : si vous vous entendez, vous pouvez l'envoyer. Sinon, vérifiez que le micro n'est ni couvert ni coupé, et recommencez.",
-    "clipped": "Le son est trop fort et sature : cette prise sera probablement refusée. Éloignez un peu le téléphone et recommencez.",
+    "clipped": "Le son est très fort et peut être saturé. Réécoutez : si votre voix est claire, vous pouvez l'envoyer. Sinon, éloignez un peu le téléphone et recommencez.",
     "too_quiet": "Votre voix est un peu faible. Réécoutez : si chaque mot est clair, vous pouvez l'envoyer. Sinon, rapprochez le téléphone et recommencez.",
     "noisy": "Il y a du bruit de fond. Réécoutez : si votre voix s'entend bien par-dessus, vous pouvez l'envoyer. Sinon, éloignez-vous du bruit et recommencez.",
-    "silence": "Vous avez commencé ou fini de parler tout au bord de l'enregistrement. Réécoutez : si aucun mot n'est coupé, vous pouvez l'envoyer. Sinon, attendez « Parlez » et restez silencieux un instant à la fin."
+    "silence": "Vous avez commencé ou fini de parler tout au bord de l'enregistrement. Réécoutez : si aucun mot n'est coupé, vous pouvez l'envoyer. Sinon, attendez « Parlez » et restez silencieux un instant à la fin.",
+    "pauses": "Il y a de longues pauses entre vos mots. Réécoutez : si toute la phrase y est, vous pouvez l'envoyer. Sinon, recommencez en parlant sans vous arrêter."
   },
   "saved": {
     "flash": "Enregistrée ! Envoi en cours : gardez l'application ouverte.",
@@ -114,8 +117,9 @@
     "back": "Retour à ma campagne",
     "batchTitle": "Lot enregistré !",
     "onPhone": "{n, plural, one {# enregistrement est encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à son envoi.} other {# enregistrements sont encore sur ce téléphone. Gardez l'application ouverte et connectée jusqu'à leur envoi.}}",
-    "bodyTest": "Vous avez enregistré toutes les consignes de votre test. Merci ! L'équipe l'examine et vous recevrez le résultat par e-mail.",
-    "bodyFocus": "Les enregistrements demandés par ce lien sont faits. Merci ! S'il reste autre chose à enregistrer, c'est sur la page de la campagne."
+    "bodyTest": "Vous avez enregistré toutes les consignes de votre test. Merci ! L'équipe l'examine et vous recevrez le résultat par e-mail. Nous répondons en général sous 5 jours ouvrés.",
+    "bodyFocus": "Les enregistrements demandés par ce lien sont faits. Merci ! S'il reste autre chose à enregistrer, c'est sur la page de la campagne.",
+    "partnerWaits": "{n, plural, one {# conversation attend le consentement de votre partenaire. Vous pourrez l'enregistrer ensuite.} other {# conversations attendent le consentement de votre partenaire. Vous pourrez les enregistrer ensuite.}}"
   },
   "guard": {
     "notReady": {
@@ -137,7 +141,7 @@
     "back": "Retour à ma campagne",
     "testClosed": {
       "title": "Votre test est terminé",
-      "body": "Tout est envoyé. Le résultat arrive par e-mail et s'affiche sur la page du test."
+      "body": "Tout est envoyé. Le résultat arrive par e-mail et s'affiche sur la page du test. Nous répondons en général sous 5 jours ouvrés."
     }
   },
   "status": {

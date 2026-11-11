@@ -26,12 +26,63 @@ export function offlinePaths(campaignIds: readonly string[]): string[] {
   return ["/campaign", "/campaign/history", ...ids.flatMap((id) => [`/campaign/${encodeURIComponent(id)}`, `/campaign/${encodeURIComponent(id)}/studio`])];
 }
 
+/** The service worker's cache for the build's own files (next.config.ts), kept across deploys (APP2-10). */
+export const KEEP_CACHE = "next-static-keep";
+
+/** The build's own script and style files among these addresses (same origin, /_next/static/), once each. Pure: exported for tests. */
+export function buildAssetUrls(urls: Iterable<string>, origin: string): string[] {
+  const out = new Set<string>();
+  for (const raw of urls) {
+    try {
+      const u = new URL(raw, origin);
+      if (u.origin === origin && u.pathname.startsWith("/_next/static/")) out.add(u.origin + u.pathname + u.search);
+    } catch {
+      // not an address
+    }
+  }
+  return [...out];
+}
+
+let kept = false;
+/**
+ * Copy the running build's script and style files into KEEP_CACHE, from the service worker's
+ * precache (no network). The next service worker deletes them from its precache; pages saved by
+ * this build still find them here when opened offline right after an update (APP2-10). Once per
+ * app start; works offline.
+ */
+export async function keepBuildAssets(): Promise<void> {
+  if (kept || typeof window === "undefined" || typeof caches === "undefined" || !navigator.serviceWorker?.controller) return;
+  kept = true;
+  try {
+    const found = [
+      ...Array.from(document.querySelectorAll<HTMLScriptElement>("script[src]"), (e) => e.src),
+      ...Array.from(document.querySelectorAll<HTMLLinkElement>("link[href]"), (e) => e.href),
+      ...(typeof performance !== "undefined" ? performance.getEntriesByType("resource").map((e) => e.name) : []),
+    ];
+    const keep = await caches.open(KEEP_CACHE);
+    for (const url of buildAssetUrls(found, location.origin)) {
+      if (await keep.match(url)) continue;
+      const hit = await caches.match(url, { ignoreSearch: true });
+      if (hit) await keep.put(url, hit);
+    }
+  } catch {
+    // Cache Storage unavailable or full: the files stay in the precache only.
+  }
+}
+
 const offline = () => navigator.onLine === false;
 let running = false;
 const done = new Set<string>();
 
-export async function saveOfflinePages(campaignIds: readonly string[]): Promise<void> {
+/**
+ * What the saved pages were made with: the build (their HTML names its script files) and the
+ * language they were rendered in (APP2-29). A different stamp saves every page again.
+ */
+export const pagesStamp = (build: string, locale: string) => (locale ? `${build}|${locale}` : build);
+
+export async function saveOfflinePages(campaignIds: readonly string[], locale = ""): Promise<void> {
   if (running || typeof window === "undefined" || typeof caches === "undefined") return;
+  void keepBuildAssets();
   if (!navigator.serviceWorker?.controller || offline()) return;
   const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
   if (conn?.saveData) return;
@@ -42,9 +93,10 @@ export async function saveOfflinePages(campaignIds: readonly string[]): Promise<
       lastBuild = localStorage.getItem(BUILD_KEY);
     } catch {
       // storage blocked: treat as the same build (fetch only what is missing)
-      lastBuild = BUILD;
+      lastBuild = pagesStamp(BUILD, locale);
     }
-    const newBuild = lastBuild !== BUILD;
+    const stamp = pagesStamp(BUILD, locale);
+    const newBuild = lastBuild !== stamp;
     const cache = await caches.open(CACHE);
     let ok = true;
     for (const path of offlinePaths(campaignIds)) {
@@ -65,7 +117,7 @@ export async function saveOfflinePages(campaignIds: readonly string[]): Promise<
     }
     if (ok) {
       try {
-        localStorage.setItem(BUILD_KEY, BUILD);
+        localStorage.setItem(BUILD_KEY, stamp);
       } catch {
         // ignore
       }

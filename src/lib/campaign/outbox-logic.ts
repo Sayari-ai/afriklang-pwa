@@ -102,6 +102,31 @@ export function uploadBackoffMs(attempts: number, random: () => number = Math.ra
 /** Network codes after which the next take would fail the same way: stop the run, save the data. */
 export const STOP_RUN_CODES: ReadonlySet<string> = new Set(["offline", "network", "timeout", "bridge_unreachable"]);
 
+/**
+ * Answers that concern every take, not this one: the next take would get the same answer, so the
+ * run stops there. A server that is not set up (the upload key, the bridge secret), a proxy that
+ * wants tickets the Edge Function cannot issue yet (APP2-02, APP2-04, X-07), a rate limit (APP2-19).
+ */
+export const SERVER_WIDE_CODES: ReadonlySet<string> = new Set(["misconfigured", "ticket_required", "rate_limited", "rateLimited"]);
+
+/** A decision after which the next take would fail the same way (the network is gone, or the server answers the same to everyone). */
+export function stopsRun(d: Decision): boolean {
+  if (d.kind === "retry") return STOP_RUN_CODES.has(d.code) || SERVER_WIDE_CODES.has(d.code);
+  return d.kind === "hold" && SERVER_WIDE_CODES.has(d.code);
+}
+
+/**
+ * A server-side fault (misconfigured, tickets required but not issued): it is fixed by the team,
+ * not by retrying, and each upload resends the whole file. Wait this long between tries.
+ */
+export const SERVER_FAULT_HOLD_MS = 30 * MINUTE;
+
+/** The `error` code of the upload proxy's JSON answer, found in the error text (AudioUploadError's message). */
+export function proxyErrorCode(detail: string | undefined): string | null {
+  const m = /"error"\s*:\s*"([a-z_]+)"/.exec(detail ?? "");
+  return m ? m[1] : null;
+}
+
 /** Upload answers that refuse the file itself: retrying the same bytes cannot help. */
 const FINAL_UPLOAD_STATUSES: ReadonlySet<number> = new Set([400, 415, 422]);
 
@@ -115,6 +140,12 @@ export function decideUploadFailure(e: UploadOutcome, attempts: number, online: 
   // The server said how long to wait (429, 503): do that, not less (each try resends the file).
   const asked = e.retryAfterS && e.retryAfterS > 0 ? Math.min(3600, e.retryAfterS) * SECOND : 0;
   if (e.status === 429) return { kind: "retry", code: "rateLimited", delayMs: Math.max(asked, 30 * SECOND, backoffMs(attempts, random)) };
+  const proxyCode = proxyErrorCode(e.detail);
+  // The upload key is missing or refused by Sayari: nothing the speaker or a retry can fix. Hold the
+  // take (it is safe on the phone) and try again in 30 minutes, not every 15 s to 15 min (APP2-02).
+  if (e.status === 500 && proxyCode === "server_misconfigured") return { kind: "hold", code: "misconfigured", delayMs: SERVER_FAULT_HOLD_MS };
+  // The proxy wants a ticket and none could be had (an older Edge Function): hold, do not loop (APP2-04, X-07).
+  if (e.status === 409 && proxyCode === "ticket_required") return { kind: "hold", code: "ticket_required", delayMs: SERVER_FAULT_HOLD_MS };
   // Every retry resends the whole file: the upload pace (15 s up to 15 minutes), never the 5-minute one.
   if (e.status >= 500) return { kind: "retry", code: "server", delayMs: Math.max(asked, uploadBackoffMs(attempts, random)) };
   // Sayari does not take this language yet: nothing is wrong with the take and recording it again
@@ -184,6 +215,21 @@ const HOLD_CODES = new Set(["campaign_paused", "partner_consent", "unauthorized"
  * until the consent is signed again, never deleted (H-1).
  */
 const DROP_IF_WITHDRAWN_HERE = "campaign_consent";
+
+/**
+ * Held takes whose reason the speaker or the team clears (a consent signed, the profile completed,
+ * the campaign resumed, a block lifted): once the campaign's card says "ready", they go at once
+ * instead of waiting out their 10 minutes (6 hours when blocked) (APP2-13).
+ */
+export const CLEARED_WHEN_READY: ReadonlySet<string> = new Set(["campaign_consent", "account_consent", "consent_version_changed", "profile_incomplete", "campaign_paused", "blocked"]);
+/** Of those, the reasons that concern the account, not one campaign: cleared for every campaign. */
+const ACCOUNT_HOLDS: ReadonlySet<string> = new Set(["account_consent", "profile_incomplete"]);
+
+/** Whether a held take may go now that `campaignId`'s card says ready (CLEARED_WHEN_READY). */
+export function releasedByReadyCard(item: Pick<OutboxItem, "state" | "lastCode" | "campaignId">, campaignId: string): boolean {
+  if (item.state !== "held" || !item.lastCode || !CLEARED_WHEN_READY.has(item.lastCode)) return false;
+  return item.campaignId === campaignId || ACCOUNT_HOLDS.has(item.lastCode);
+}
 
 /** What the outbox knows about the take beyond the answer. */
 export type SubmitContext = { withdrawnHere?: boolean };
@@ -292,7 +338,10 @@ export function precheckFromCard(nextStep: string | null | undefined): string | 
 /** A take that can never be sent stays this long (for the speaker to see why), then goes (APP-024). */
 export const DEAD_TAKE_KEEP_MS = 30 * 24 * 60 * MINUTE;
 
-/** Failed takes that can never be sent (campaign closed, mission no longer theirs) and are older than DEAD_TAKE_KEEP_MS. */
+/** A failed take that can never be sent as it is (no "Try again": campaign closed, too large, a file already sent…): it goes after DEAD_TAKE_KEEP_MS (APP2-16). */
+export const isDeadTake = (i: Pick<OutboxItem, "state" | "lastCode">): boolean => i.state === "failed" && i.lastCode != null && !canRetryFailed(i.lastCode);
+
+/** Failed takes that can never be sent (isDeadTake) and are older than DEAD_TAKE_KEEP_MS. */
 export function expiredDeadTakes<T extends Pick<OutboxItem, "state" | "lastCode" | "createdAt" | "failedAt">>(items: readonly T[], now: number): T[] {
-  return items.filter((i) => i.state === "failed" && i.lastCode != null && DEAD_CODES.has(i.lastCode) && now - (i.failedAt ?? i.createdAt) > DEAD_TAKE_KEEP_MS);
+  return items.filter((i) => isDeadTake(i) && now - (i.failedAt ?? i.createdAt) > DEAD_TAKE_KEEP_MS);
 }

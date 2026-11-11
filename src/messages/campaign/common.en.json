@@ -84,6 +84,12 @@
     "pending": "In review",
     "help": "You are paid for each hour of accepted audio."
   },
+  "notFoundPage": {
+    "title": "This page does not exist",
+    "body": "The link may be old or incomplete. Your missions and the recordings on this phone are safe.",
+    "open": "Open my missions"
+  },
+  "reloadApp": "Reload the app",
   "offlinePage": {
     "title": "You are offline",
     "body": "This page is not saved on your phone yet. Your missions and the recordings waiting to be sent are safe.",
@@ -91,14 +97,14 @@
     "retry": "Try again"
   },
   "rejection": {
-    "level": "Too quiet or too noisy. Find a quiet place and hold the phone 20 cm away.",
+    "level": "Too quiet, too loud or too noisy. Find a quiet place, speak in your normal voice and hold the phone about 20 cm away.",
     "duration": "Too short or too long for this prompt.",
     "silence": "The silence was not right: wait for “Speak now”, read without long pauses, and stay silent a moment at the end.",
     "variety": "This recording did not match the campaign's language variety. The team will contact you.",
     "banned_topic": "This recording touches a topic the campaign does not allow.",
     "reading_gap": "The recording does not match the sentence. Read it exactly as written.",
     "speaker_balance": "One voice took almost all of the conversation. Both of you should speak about as much.",
-    "other": "The reviewer could not accept this take."
+    "other": "This take could not be accepted."
   },
   "rejectDetail": {
     "too_short": {

@@ -6,7 +6,7 @@
  *   idle ─tap─► countdown ─► lead (silent) ─► speaking ─stop─► tail (silent) ─► analyzing
  *                                                                         ├─► problem (length) ─► idle
  *                                                                         └─► review ─submit─► next mission
- *                                                       (with advice: no sound, clipped, quiet, noisy, short pause)
+ *                                                       (with advice: no sound, clipped, quiet, noisy, short pause, long pauses)
  *
  * The studio adds the silence the campaign asks for around the voice by itself (it records a
  * moment before saying "Speak now" and keeps recording a moment after Stop), shows a live level
@@ -29,12 +29,12 @@ import { enqueueTake, outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { missionsInOutbox, type OutboxItem } from "@/lib/campaign/outbox-logic";
 import { buildCampaignFilename } from "@/lib/campaign/recording-name";
 import { buildMetadata, buildSayariCampaignFields, deviceLabel, draftProblem, formatClock, isTimed, takeRules } from "@/lib/campaign/record-flow";
-import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, paddingS, queueProgress, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
+import { QUIET_HINT_AFTER_S, TEXT_SIZES, autoStopAtS, canRecordNow, focusQueue, nextInQueue, onHideAction, onInterruptAction, paddingS, queueProgress, sessionGoal, sessionQueue, skip } from "@/lib/campaign/studio-flow";
 import { isRefusal } from "@/lib/campaign/pool";
 import { languageInText } from "@/lib/campaign/language-name";
 import type { PoolState } from "@/lib/campaign/pool-client";
 import type { CampaignCard, ContributorView, Mission } from "@/lib/campaign/types";
-import { toRecordCount } from "@/lib/campaign/view";
+import { toRecordCount, waitsForPartner } from "@/lib/campaign/view";
 import { reportException } from "@/lib/analytics/client";
 import { track, type MicErrorCode } from "@/lib/analytics/events";
 import { PoolRefusal } from "../PoolParts";
@@ -51,6 +51,8 @@ type Take = {
   takeNumber: number;
   /** Brought back from the phone's storage after the app closed (drafts.ts). */
   restored?: boolean;
+  /** Stopped early because the app went to the background while the speaker was talking (APP2-12). */
+  cutShort?: boolean;
 };
 
 const COUNTDOWN_S = 3;
@@ -182,6 +184,10 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     streamRef.current = null;
     p?.then((s) => s.getTracks().forEach((x) => x.stop())).catch(() => {});
   }, []);
+  const teardownRef = useRef(teardown);
+  /** A take being finished (stopped and measured): a second Stop, a hide or an interruption must not touch it. */
+  const finishingRef = useRef(false);
+  const finishRef = useRef<(opts?: { cutShort?: boolean }) => Promise<void>>(async () => {});
 
   useEffect(() => {
     prewarmAudioWorklet();
@@ -191,7 +197,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   // A take cut by a call, a lost microphone or the app going to the background is dropped, with a
   // clear message, instead of being kept with a gap (APP-032).
   const interrupt = () => {
-    if (!recorderRef.current) return;
+    if (!recorderRef.current || finishingRef.current) return;
+    // Only the silence after Stop was left: the voice is complete, keep the take (APP2-12).
+    if (onInterruptAction(phaseRef.current) === "finish") return void finishRef.current();
     teardown();
     setElapsed(0);
     setQuiet(false);
@@ -202,8 +210,15 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const interruptRef = useRef(interrupt);
   useEffect(() => {
     const onHide = () => {
-      const p = phaseRef.current;
-      if (document.visibilityState === "hidden" && (p === "lead" || p === "speaking" || p === "tail")) interruptRef.current();
+      if (document.visibilityState !== "hidden") return;
+      // A notification tapped, the screen turned off, another app: finish the take rather than
+      // lose it, and never let a countdown start the recording in the background (APP2-12).
+      const action = onHideAction(phaseRef.current);
+      if (action === "cancel") {
+        teardownRef.current();
+        setPhase("idle");
+      } else if (action === "drop") interruptRef.current();
+      else if (action === "finish" || action === "finishCut") void finishRef.current({ cutShort: action === "finishCut" });
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
@@ -308,9 +323,10 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // ── Stop: keep recording `pad` seconds of silence, then analyse ─────────
 
-  const finish = useCallback(async () => {
+  const finish = useCallback(async (opts: { cutShort?: boolean } = {}) => {
     const rec = recorderRef.current;
-    if (!rec || !rules) return;
+    if (!rec || !rules || finishingRef.current) return;
+    finishingRef.current = true;
     const attempt = attemptRef.current;
     clearTimers();
     setPhase("analyzing");
@@ -333,7 +349,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       const p = check?.blocking ? check.problem : null;
       track("take_checked", { result: p ? "problem" : check ? "advice" : "ok", ...(check ? { problem: check.problem } : {}), duration_s: Math.round(analysis.duration_s * 10) / 10, mission_type: missionTypeIn(byIdRef.current, mid) });
       if (p) void clearDraft(userId, campaignId);
-      setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown, takeNumber });
+      setTake(p ? null : { blob, analysis, recordedAt, inputSampleRate, processing, quietHintShown, takeNumber, ...(opts.cutShort ? { cutShort: true } : {}) });
       setProblem(p);
       setPhase(p ? "problem" : "review");
       vibrate(p ? [40, 60, 40] : 30);
@@ -343,6 +359,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       reportMicError("stopFailed", false, e);
       setMicError(t("mic.stopFailed"));
       setPhase("idle");
+    } finally {
+      finishingRef.current = false;
     }
   }, [rules, t, userId, campaignId, pad]);
 
@@ -535,6 +553,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           utcOffsetMin: -new Date().getTimezoneOffset(),
           device: { label: deviceLabel(navigator.userAgent), ...parseDevice(navigator.userAgent) },
           appVersion: process.env.NEXT_PUBLIC_APP_VERSION ?? "0.1.0",
+          appBuild: process.env.NEXT_PUBLIC_APP_BUILD ?? null,
         },
       });
       const item: OutboxItem = {
@@ -618,6 +637,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     byIdRef.current = byId;
     cardRef.current = card;
     beginTailRef.current = beginTail;
+    finishRef.current = finish;
+    teardownRef.current = teardown;
     pressRef.current = press;
     submitRef.current = submit;
   });
@@ -755,6 +776,8 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   }
 
   if (phase === "done" || !mission || !rules) {
+    // Conversations left wait for the partner's consent: "every mission" would not be true (APP2-08).
+    const partnerWaits = missions.filter((m) => waitsForPartner(m, onPhone.get(m.mission_id))).length;
     return shell(
       <div className="afk-pop m-auto flex max-w-sm flex-col items-center gap-4 text-center">
         {sessionCount > 0 ? <Confetti /> : null}
@@ -770,6 +793,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           // A focused session recorded what its link asked for, not "every mission": say so.
           <p className="text-base text-white/85">{t(focusActive ? "done.bodyFocus" : card.kind === "qualification" ? "done.bodyTest" : "done.body")}</p>
         )}
+        {partnerWaits > 0 ? <p className="text-base text-white/85">{t("done.partnerWaits", { n: partnerWaits })}</p> : null}
       </div>,
       <Link href={hubHref} className="grid min-h-14 place-items-center rounded-2xl bg-white text-lg font-bold text-primary">
         {t("done.back")}
@@ -779,7 +803,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
 
   // Advice about the take on the review screen (quiet, noisy, short pause): the speaker may send anyway.
   const check = take ? checkTake(take.analysis, rules) : null;
-  const advice = check && !check.blocking ? (check.problem as "silent" | "clipped" | "too_quiet" | "noisy" | "silence") : null;
+  const advice = check && !check.blocking ? (check.problem as "silent" | "clipped" | "too_quiet" | "noisy" | "silence" | "pauses") : null;
   // A focus counts its own queue ("1 of 2"); otherwise the whole campaign's missions.
   const focusProgress = focusActive ? queueProgress(queue, (id) => { const m = byId.get(id); return Boolean(m && canRecordNow(m, onPhone)); }) : null;
   const position = focusProgress ? focusProgress.position : Math.min(Math.max(1, missions.length - open + 1), missions.length);
@@ -820,6 +844,11 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           {take.restored ? (
             <p role="status" className="rounded-2xl bg-white/10 px-4 py-3 text-sm text-white/90">
               {t("review.restored")}
+            </p>
+          ) : null}
+          {take.cutShort ? (
+            <p role="status" className="rounded-2xl bg-amber-400/15 px-4 py-3 text-sm text-amber-50 ring-1 ring-amber-300/40">
+              {t("review.cutShort")}
             </p>
           ) : null}
           {advice ? (

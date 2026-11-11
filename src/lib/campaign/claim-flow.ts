@@ -13,7 +13,21 @@ export type ClaimOutcome = {
   messageKey: string;
   /** Offer to sign out and pick another Google account (the token stays saved). */
   offerOtherAccount: boolean;
+  /** A fault on our side, not the link's nor the connection's: the token stays, tried again later (APP2-06). */
+  serverFault?: boolean;
 };
+
+/** Faults on our side during a claim: they say nothing about the invitation, which stays saved (APP2-06). */
+const SERVER_FAULTS: ReadonlySet<CampaignErrorCode> = new Set(["misconfigured", "unsupported", "conflict", "invalid_input"]);
+
+/**
+ * An old invitation tapped again by a speaker whose account is already set up (it expired, or its
+ * campaign closed): not a failure for them. Their campaigns open with a short note instead of the
+ * failure card (APP2-05). `campaigns`: how many campaigns their list holds, null when it did not load.
+ */
+export function isOldInvitation(failure: Pick<CampaignFailure, "code">, campaigns: number | null): boolean {
+  return (failure.code === "link_expired" || failure.code === "campaign_closed" || failure.code === "invalid_link") && campaigns != null && campaigns > 0;
+}
 
 export function claimOutcome(failure: Pick<CampaignFailure, "code">): ClaimOutcome {
   const code: CampaignErrorCode = failure.code;
@@ -22,9 +36,10 @@ export function claimOutcome(failure: Pick<CampaignFailure, "code">): ClaimOutco
     return { clearToken: false, showServerMessage: true, retryable: false, messageKey, offerOtherAccount: true };
   }
   if (isRetryable(code)) return { clearToken: false, showServerMessage: false, retryable: true, messageKey, offerOtherAccount: false };
+  if (SERVER_FAULTS.has(code)) return { clearToken: false, showServerMessage: false, retryable: true, messageKey, offerOtherAccount: false, serverFault: true };
   // unauthorized: the session is gone, not the invitation; the sign-in card takes over.
   if (code === "unauthorized") return { clearToken: false, showServerMessage: false, retryable: false, messageKey, offerOtherAccount: false };
-  // invalid_link, link_expired, campaign_closed, account_conflict and anything else: the token is of no further use.
+  // invalid_link, link_expired, campaign_closed, account_conflict (LINK_VERDICTS) and anything else: the token is of no further use.
   return { clearToken: true, showServerMessage: false, retryable: false, messageKey, offerOtherAccount: false };
 }
 

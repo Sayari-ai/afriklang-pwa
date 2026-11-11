@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, daysLeft, hasMissions, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
+import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, submittedStatusKey, varietyBlockOf, waitsForPartner, withdrawOffered, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -48,6 +48,11 @@ describe("speaker view facts", () => {
     // A missing profile is not a consent, and a block waits for the team, not a closed campaign (N-16).
     expect(outboxReasonKey("profile_incomplete")).toBe("profile");
     expect(outboxReasonKey("blocked")).toBe("blocked");
+    // a fault on our side says so (APP2-02, APP2-04)
+    expect(outboxReasonKey("misconfigured")).toBe("fixing");
+    expect(outboxReasonKey("ticket_required")).toBe("fixing");
+    // too big for the server: not "refused, record it again" at the same length (APP2-30)
+    expect(outboxReasonKey("tooLarge")).toBe("tooLarge");
   });
   it("does not count a conversation waiting for the partner as to record (N-12)", () => {
     const mk = (id: string, over: Record<string, unknown> = {}) => ({ mission_id: id, status: "todo" as const, type: "read" as const, partner_ready: false, ...over });
@@ -142,5 +147,65 @@ describe("microphone distance", () => {
       expect(campaignMicDistance(card(["read"], mic)), JSON.stringify(mic)).toEqual({ main: null, conversation: null });
       expect(texts(card(["read"], mic), "en"), JSON.stringify(mic)).toEqual({ tip: "Phone a hand's width from your mouth", rule: null });
     }
+  });
+});
+
+describe("historyGroups (APP2-07)", () => {
+  const card = (next_step: string, total: number, todo: number) => ({ next_step, progress: { total, todo, submitted: 0, accepted: total - todo, rejected: 0 } }) as never;
+  it("a campaign with recordings waiting on a new consent is listed as locked, not hidden", () => {
+    const ready = card("ready", 10, 2);
+    const consent = card("campaign_consent", 10, 4);
+    const blocked = card("blocked", 5, 1);
+    const untouched = card("campaign_consent", 10, 10);
+    const g = historyGroups([ready, consent, blocked, untouched]);
+    expect(g.readable).toEqual([ready]);
+    expect(g.locked).toEqual([consent, blocked]);
+  });
+});
+
+describe("conversations waiting for the partner (APP2-08)", () => {
+  const conv = (id: string, partner_ready: boolean, status: "todo" | "rejected" | "submitted" = "todo") => ({ mission_id: id, status, type: "conversational" as const, partner_ready });
+  const read = (id: string) => ({ mission_id: id, status: "todo" as const, type: "read" as const, partner_ready: false });
+  it("the home card counts what can be recorded now, as the hub, when the missions are saved", () => {
+    const card = { progress: { total: 5, todo: 5, submitted: 0, accepted: 0, rejected: 0 } } as never;
+    const missions = [read("a"), read("b"), read("c"), conv("d", false), conv("e", false)];
+    expect(cardOpenCount(card, missions, new Map())).toBe(3);
+    expect(cardOpenCount(card, missions, new Map([["a", "pending" as const]]))).toBe(2);
+    // not saved on the phone yet: the card's counts, minus the takes waiting on the phone
+    expect(cardOpenCount(card, null, new Map([["a", "pending" as const], ["b", "failed" as const]]))).toBe(4);
+  });
+  it("a waiting conversation is told apart from one that can be recorded", () => {
+    expect(waitsForPartner(conv("d", false), undefined)).toBe(true);
+    expect(waitsForPartner(conv("d", false, "rejected"), undefined)).toBe(true);
+    expect(waitsForPartner(conv("d", true), undefined)).toBe(false);
+    expect(waitsForPartner(conv("d", false, "submitted"), undefined)).toBe(false);
+    expect(waitsForPartner(conv("d", false), "pending")).toBe(false);
+    expect(waitsForPartner(read("a"), undefined)).toBe(false);
+  });
+});
+
+describe("withdrawOffered (APP2-09)", () => {
+  const card = (signed: boolean) => ({ consents: { campaign: { signed } } }) as never;
+  it("offers withdrawal whenever the campaign consent is signed, outside the recording view", () => {
+    expect(withdrawOffered(card(true), false)).toBe(true);
+    // the recording view's instructions already carry it
+    expect(withdrawOffered(card(true), true)).toBe(false);
+    expect(withdrawOffered(card(false), false)).toBe(false);
+  });
+});
+
+describe("varietyBlockOf (APP2-28)", () => {
+  it("reads the dashboard's variety block reason, nothing else", () => {
+    expect(varietyBlockOf('Declared variety "Lebu" is not a target variety of this campaign (Baol-Baol, Kajoor)')).toEqual({ declared: "Lebu", targets: "Baol-Baol, Kajoor" });
+    expect(varietyBlockOf("Something else")).toBeNull();
+    expect(varietyBlockOf(null)).toBeNull();
+  });
+});
+
+describe("submittedStatusKey (X-14)", () => {
+  it("says 'sent' while the file has only reached Sayari, 'in review' once checked", () => {
+    expect(submittedStatusKey({ status: "submitted", recording: { status: "uploaded", rejection_reason: null } })).toBe("sent");
+    expect(submittedStatusKey({ status: "submitted", recording: { status: "pre_annotated", rejection_reason: null } })).toBe("submitted");
+    expect(submittedStatusKey({ status: "submitted", recording: null })).toBe("submitted");
   });
 });

@@ -20,6 +20,10 @@ export default function Error({ error, unstable_retry }: { error: globalThis.Err
       <button type="button" onClick={() => unstable_retry()} className="min-h-12 rounded-xl bg-primary px-6 font-semibold text-white">
         {t("retry")}
       </button>
+      {/* A file of an older version missing after an update (ChunkLoadError): only a full reload helps (APP2-22). */}
+      <button type="button" onClick={() => window.location.reload()} className="min-h-12 rounded-xl px-6 font-semibold text-primary">
+        {t("reloadApp")}
+      </button>
     </main>
   );
 }

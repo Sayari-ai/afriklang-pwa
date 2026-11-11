@@ -27,6 +27,9 @@ import { askPersistentStorage } from "@/lib/campaign/storage-safety";
 import { useOutbox, useOutboxRunner } from "@/lib/campaign/outbox-client";
 import { languageCodeOf } from "@/lib/campaign/profile-form";
 import { identifyContributor, resetIdentity } from "@/lib/analytics/client";
+import { signConsent, withdrawSamplesConsent } from "@/lib/campaign/api";
+import { accountSamplesConsent } from "@/lib/campaign/samples-consent";
+import { safeExternalUrl } from "@/lib/security/safe-url";
 
 const subscribeOnline = (fn: () => void) => {
   window.addEventListener("online", fn);
@@ -92,6 +95,8 @@ function useAnalyticsIdentity(status: ReturnType<typeof useCampaignSession>["sta
 function useOfflinePages() {
   const list = useCampaignList();
   const online = useOnline();
+  // Pages are rendered in one language: a language change saves them again (APP2-29).
+  const locale = useLocale();
   // The phone's clock against the server's, for pool leases (clock.ts; at most every few hours).
   useEffect(() => {
     if (online) void measureClockSkew();
@@ -100,9 +105,9 @@ function useOfflinePages() {
   useEffect(() => {
     if (ids === null || !online) return;
     // After the page has settled: never compete with what the speaker is loading.
-    const t = setTimeout(() => void saveOfflinePages(ids ? ids.split("\n") : []), 3000);
+    const t = setTimeout(() => void saveOfflinePages(ids ? ids.split("\n") : [], locale), 3000);
     return () => clearTimeout(t);
-  }, [ids, online]);
+  }, [ids, online, locale]);
 }
 
 function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: boolean; email: string | null }) {
@@ -250,12 +255,64 @@ function AccountSheet({ email, onClose }: { email: string | null; onClose: () =>
           </div>
         ) : null}
         {email ? <p className="mb-4 text-sm text-white/85">{t("signedInAs", { email })}</p> : null}
+        {/* The account consent: no button for it, but always a way (APP2-09). */}
+        <SamplesToggle />
+        <p className="mb-4 text-xs text-white/75">{t("withdrawAccount")}</p>
         <p className="mb-2 text-sm font-semibold">{t("language")}</p>
         <LocalePicker className="mb-6" />
         <button type="button" onClick={leave} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white font-bold text-primary">
           <LogOut size={18} aria-hidden /> {t("signOut")}
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * "Recordings as samples: On/Off" (decision A): signs or withdraws the optional samples consent.
+ * Shown only when the dashboard offers it. Never affects recording or uploads.
+ */
+function SamplesToggle() {
+  const t = useTranslations("campaign.home.shell.samples");
+  const locale = useLocale() === "fr" ? "fr" : "en";
+  const list = useCampaignList();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const offer = list.state === "ready" ? accountSamplesConsent(list.data.campaigns) : null;
+  if (!offer) return null;
+  const textUrl = safeExternalUrl(offer.textUrl);
+  const toggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    setFailed(false);
+    const res = offer.signed ? await withdrawSamplesConsent() : await signConsent({ type: "samples", campaignId: offer.campaignId, version: offer.version, locale });
+    if (res.ok) list.reload();
+    else setFailed(true);
+    setBusy(false);
+  };
+  return (
+    <div className="mb-4 rounded-2xl bg-white/10 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span id="samples-label" className="text-sm font-semibold">{t("label")}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={offer.signed}
+          aria-labelledby="samples-label"
+          onClick={() => void toggle()}
+          disabled={busy}
+          className={`min-h-11 min-w-20 rounded-full px-4 text-sm font-bold disabled:opacity-60 ${offer.signed ? "bg-white text-primary" : "bg-white/15 text-white"}`}
+        >
+          {offer.signed ? t("on") : t("off")}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-white/75">{t("help")}</p>
+      {textUrl ? (
+        <a href={textUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex min-h-11 items-center text-xs font-semibold text-white underline underline-offset-2">
+          {t("read")}
+        </a>
+      ) : null}
+      {failed ? <p role="alert" className="mt-1 text-xs font-semibold text-amber-200">{t("failed")}</p> : null}
     </div>
   );
 }

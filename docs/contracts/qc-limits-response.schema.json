@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QC limits (dashboard ← Sayari)",
+  "type": "object",
+  "required": [
+    "min_snr_db",
+    "max_background_noise_db",
+    "max_clipping_ratio",
+    "max_silence_ratio"
+  ],
+  "properties": {
+    "min_snr_db": {
+      "type": "number",
+      "description": "Sayari refuses a take below this SNR (dB)."
+    },
+    "max_background_noise_db": {
+      "type": "number",
+      "description": "Refused above this background level (dBFS)."
+    },
+    "max_clipping_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Refused when more than this share of samples is at full scale."
+    },
+    "max_silence_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Refused when more than this share of the take, between the first and last word, is silent."
+    }
+  }
+}

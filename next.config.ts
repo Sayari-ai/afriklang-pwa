@@ -58,6 +58,15 @@ const withPWA = withPWAInit({
       // Other origins (Supabase Auth, the campaign bridge, PostHog at d.afriklang.com): never cached. The default caches
       // cross-origin GETs for an hour, which would keep account answers on the phone.
       { urlPattern: ({ sameOrigin }) => !sameOrigin, handler: "NetworkOnly", options: { cacheName: "cross-origin" } },
+      // The build's script and style files, kept beyond their build (APP2-10). After a deploy the new
+      // service worker drops the old build's files from its precache, but a page saved by the old
+      // build can still be opened offline once (the new worker took over on that launch). The shell
+      // copies the running build's files in here (offline-pages.ts keepBuildAssets): no extra data.
+      {
+        urlPattern: ({ url: { pathname }, sameOrigin }) => sameOrigin && pathname.startsWith("/_next/static/"),
+        handler: "CacheFirst",
+        options: { cacheName: "next-static-keep", expiration: { maxEntries: 400, maxAgeSeconds: 30 * 86400, purgeOnQuotaError: true } },
+      },
       // Client navigations (React Server Component payloads). On failure Next falls back to a
       // full page load, which the "pages" cache below serves.
       {

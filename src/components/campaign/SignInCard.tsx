@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { isCampaignAuthConfigured, signInWithGoogle } from "@/lib/campaign/auth-client";
 import { isInAppBrowser } from "@/lib/campaign/in-app-browser";
 import { signInFailed, signInStarted } from "@/lib/analytics/client";
+import { takeSignInReturnProblem, type SignInReturnProblem } from "@/lib/campaign/sign-in-return";
 
 export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
   const t = useTranslations("campaign.claim.signIn");
@@ -12,13 +13,21 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
   const [failed, setFailed] = useState(false);
   // Read after mounting (the server has no user agent).
   const [inApp, setInApp] = useState(false);
+  // Back from Google without a session: say why, once (APP2-11).
+  const [returned, setReturned] = useState<SignInReturnProblem | null>(null);
   useEffect(() => {
-    void Promise.resolve().then(() => setInApp(isInAppBrowser(navigator.userAgent)));
+    void Promise.resolve().then(() => {
+      setInApp(isInAppBrowser(navigator.userAgent));
+      // Taken once: StrictMode runs this effect twice, and the second read must not erase the first.
+      const problem = takeSignInReturnProblem();
+      if (problem) setReturned(problem);
+    });
   }, []);
 
   async function start() {
     setBusy(true);
     setFailed(false);
+    setReturned(null);
     signInStarted({ in_app_browser: inApp, has_invitation: hasInvitation });
     try {
       await signInWithGoogle("/campaign");
@@ -41,6 +50,11 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
       {inApp ? (
         <p role="alert" className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
           {t("inApp")}
+        </p>
+      ) : null}
+      {returned ? (
+        <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
+          {t(`return.${returned}`)}
         </p>
       ) : null}
       <p className="text-base text-slate-800">{t("intro")}</p>

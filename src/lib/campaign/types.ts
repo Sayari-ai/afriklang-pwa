@@ -50,6 +50,9 @@ export type Rewards = { accepted: number; accepted_s?: number; pending_s?: numbe
  * text in every language it exists in (newer dashboards), so the app opens the one the speaker
  * reads the app in, the locale it records with the signature (M-16).
  */
+/** The card's `qc_limits`, as the dashboard sends them (Sayari's GET /api/campaign-audio/qc-limits). */
+export type QcLimitsView = { min_snr_db: number; max_background_noise_db: number; max_clipping_ratio: number; max_silence_ratio: number };
+
 export type ConsentView = { required_version: string | null; signed: boolean; signed_version: string | null; text_url: string | null; text_urls?: Record<string, string> | null };
 
 export type CampaignCard = {
@@ -86,6 +89,17 @@ export type CampaignCard = {
     speech_types: { type: SpeechType; duration_min_s: number; duration_max_s: number; missions_per_session?: { min: number; max: number } | null }[];
   };
   partner: { speaker_id: string | null; ready: boolean } | null;
+  /**
+   * Sayari's live QC limits, through the dashboard (decision B). Optional: an older dashboard does
+   * not send them, and the app then uses its own copy of Sayari's defaults (SAYARI_QC).
+   */
+  qc_limits?: QcLimitsView | null;
+  /**
+   * The optional consent to play the speaker's recordings as samples to prospective customers
+   * (decision A). Present only when the dashboard has an active version; never required, never
+   * blocks recording. `signed`: this speaker has a live signature of that version.
+   */
+  samples_consent?: { version: string; text_url: string | null; signed: boolean } | null;
   /** "qualification": the speaker's qualification test in this language (not paid; no redo once sent). Absent from older dashboards: a collection campaign. */
   kind?: "collection" | "qualification";
   /** Qualification campaigns only: the current attempt. */

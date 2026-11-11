@@ -17,7 +17,7 @@ const contributor = {
 } as unknown as ContributorView;
 const mission = (over: Partial<Mission> = {}) =>
   ({ mission_id: "m1", code: "M0007", type: "read", position: 7, status: "todo", rejection_reason: null, prompt: { id: "P007", text_or_topic: "Dama bëgg…", category: null }, duration_s: { min: 3, max: 15 }, partner_speaker_id: null, partner_ready: false, recording: null, ...over }) as Mission;
-const capture = { recordedAt: new Date("2026-10-12T09:00:00Z"), submittedAt: new Date("2026-10-12T09:00:05Z"), inputSampleRate: 48000, processing: { echoCancellation: true }, sizeBytes: 204844, paddingS: 1.2, quietHintShown: false, advice: null, sentAnyway: false, takeNumber: 2, sessionId: "s1", indexInSession: 3, appLocale: "fr", utcOffsetMin: 0, device: { label: "Android Chrome", os: "Android", browser: "Chrome" }, appVersion: "0.1.0" };
+const capture = { recordedAt: new Date("2026-10-12T09:00:00Z"), submittedAt: new Date("2026-10-12T09:00:05Z"), inputSampleRate: 48000, processing: { echoCancellation: true }, sizeBytes: 204844, paddingS: 1.2, quietHintShown: false, advice: null, sentAnyway: false, takeNumber: 2, sessionId: "s1", indexInSession: 3, appLocale: "fr", utcOffsetMin: 0, device: { label: "Android Chrome", os: "Android", browser: "Chrome" }, appVersion: "0.1.0", appBuild: "107836e1a2b3" };
 const build = (m: Mission, over: Partial<typeof capture> = {}) =>
   buildAudioMetadata({
     card,
@@ -47,6 +47,11 @@ describe("audio metadata document", () => {
     expect(d.recording).toMatchObject({ is_redo: true, previous_rejection_reason: "Radio in the background", take_number: 2 });
     expect(d.prompt.role).toBe("scenario");
     expect(d.conversation).toEqual({ partner_speaker_id: "SPK-4H8K2P9W", recorded_by: "SPK-7Q2M9X4D", both_credited: true, channels_per_speaker: false });
+  });
+  it("names the build that recorded the take, and the clipping ratio Sayari judges (APP2-26, APP2-01)", () => {
+    const d = build(mission());
+    expect(d.app).toEqual({ name: "afriklang-pwa", version: "0.1.0", build: "107836e1a2b3" });
+    expect(d.quality.clipping_ratio).toBeNull();
   });
   it("reads OS and browser coarsely", () => {
     expect(parseDevice("Mozilla/5.0 (Linux; Android 14) AppleWebKit Chrome/129 Mobile Safari")).toEqual({ os: "Android", browser: "Chrome" });

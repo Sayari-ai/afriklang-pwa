@@ -115,7 +115,8 @@ const ACTIONS: Record<string, Spec> = {
   consent: {
     path: "consent",
     fields: {
-      type: { kind: "text", label: "type", max: 20, required: true, oneOf: ["account", "campaign"] },
+      // "samples": the optional consent to play recordings as samples to customers (decision A).
+      type: { kind: "text", label: "type", max: 20, required: true, oneOf: ["account", "campaign", "samples"] },
       campaign_id: { kind: "uuid", label: "campaign_id" },
       version: { kind: "text", label: "version", max: 20, required: true },
       locale: { kind: "text", label: "locale", max: 2, required: true, oneOf: ["en", "fr"] },
@@ -125,7 +126,16 @@ const ACTIONS: Record<string, Spec> = {
       if (body.type === "account") delete body.campaign_id;
     },
   },
-  withdraw: { path: "consent/withdraw", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
+  // A campaign's consent (campaign_id), or the optional samples consent (type "samples", decision A).
+  // `type` goes along only for "samples", so an older dashboard sees exactly what it always did.
+  withdraw: {
+    path: "consent/withdraw",
+    fields: { campaign_id: { kind: "uuid", label: "campaign_id" }, type: { kind: "text", label: "type", max: 20, oneOf: ["campaign", "samples"] } },
+    check: (body, errors) => {
+      if (body.type !== "samples" && !body.campaign_id && !errors.campaign_id) errors.campaign_id = "campaign_id is required";
+      if (body.type === "campaign") delete body.type;
+    },
+  },
   missions: { path: "missions", fields: { campaign_id: { kind: "uuid", label: "campaign_id", required: true } } },
   // A signed upload ticket for ONE file of one mission (docs/contracts/README.md §1). The app never
   // reads the ticket: it hands it to the upload proxy, which hands it to Sayari.
@@ -291,8 +301,8 @@ function bearerToken(header: string | null): string | null {
   return m ? m[1] : null;
 }
 
-/** Largest request body the function accepts (a recording's metadata is a few hundred bytes). */
-const MAX_BODY_BYTES = 40 * 1024;
+/** Largest request body the function accepts (a recording's metadata is a few hundred bytes): the dashboard's 32 KB, so a body it would refuse is refused here first (X-13). */
+const MAX_BODY_BYTES = 32 * 1024;
 
 /** dashboard base like https://admin.example.com (no trailing slash), or null when unusable. */
 function dashboardBase(raw: string | undefined | null): string | null {

@@ -6,13 +6,14 @@
  */
 
 import { AlertTriangle, CheckCircle2, Hourglass } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { truncate } from "@/lib/campaign/mission-list";
 import { isQualification, type CampaignCard, type Mission } from "@/lib/campaign/types";
 import { totalPaidTime } from "@/lib/campaign/pool";
-import { isTestRecording, rejectionReasonCode, totals } from "@/lib/campaign/view";
+import { historyGroups, isTestRecording, rejectionReasonCode, submittedStatusKey, totals } from "@/lib/campaign/view";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { LanguageBadge } from "./CampaignCardView";
 import { buttonPrimary, useFailureText, useRejectDetailText, useRejectionText } from "./CampaignHubParts";
@@ -61,8 +62,8 @@ export function HistoryScreen() {
   // The counts are about campaign work: a qualification test is listed below, never "to redo" (L-18).
   const sum = totals(cards.filter((c) => !isQualification(c)));
   const paid = totalPaidTime(cards.filter((c) => !isQualification(c)));
-  // The bridge lists missions only once both consents are signed.
-  const readable = cards.filter((c) => c.progress.total > 0 && ["ready", "paused", "closed"].includes(c.next_step) && c.progress.total - c.progress.todo > 0);
+  // The bridge lists missions only once both consents are signed: the others say what to do (APP2-07).
+  const { readable, locked } = historyGroups(cards);
 
   return (
     <>
@@ -70,7 +71,8 @@ export function HistoryScreen() {
         <h1 className="text-2xl font-black">{t("title")}</h1>
         <p className="text-sm text-slate-600">{t("intro")}</p>
       </header>
-      <dl className="grid grid-cols-4 gap-2 text-center">
+      {/* 2 × 2 on the smallest phones: "En vérification" does not fit a quarter of 288 px (APP2-24). */}
+      <dl className="grid grid-cols-2 gap-2 text-center min-[360px]:grid-cols-4">
         {(
           [
             ["recorded", sum.submitted + sum.accepted + sum.rejected, "text-slate-900"],
@@ -91,8 +93,17 @@ export function HistoryScreen() {
 
       <section className="space-y-3">
         <h2 className="text-lg font-black">{t("recordings")}</h2>
+        {locked.map((c) => (
+          <Link key={c.campaign_id} href={`/campaign/${c.campaign_id}`} className="flex items-center gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
+            <LanguageBadge code={c.language.code} className="size-10 text-xs" />
+            <span className="min-w-0">
+              <span className="block truncate font-black">{c.title}</span>
+              <span className="block">{t(c.next_step === "blocked" ? "locked.blocked" : c.next_step === "profile" ? "locked.profile" : "locked.consent")}</span>
+            </span>
+          </Link>
+        ))}
         {readable.length === 0 ? (
-          <p className="rounded-2xl bg-white p-4 text-sm text-slate-600">{t("nothingYet")}</p>
+          locked.length === 0 ? <p className="rounded-2xl bg-white p-4 text-sm text-slate-600">{t("nothingYet")}</p> : null
         ) : (
           <>
             <div role="radiogroup" aria-label={t("recordings")} className="flex gap-2 overflow-x-auto pb-1">
@@ -136,8 +147,10 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
     return code ? t(`reasons.${code}`) : r;
   };
   const statusOf = (m: Mission): string => {
-    if (m.status !== "rejected") return t(`status.${m.status as "submitted" | "accepted"}`);
-    if (!test) return [t("status.rejected"), rejectionText(m.rejection_reason)].filter(Boolean).join(" · ");
+    if (m.status === "submitted") return t(`status.${submittedStatusKey(m)}`);
+    if (m.status !== "rejected") return t(`status.${m.status as "accepted"}`);
+    // The check's own title when the refusal says what was measured (too loud, too noisy…), not the reason's general sentence (X-06).
+    if (!test) return [t("status.rejected"), detailText(m)?.title ?? rejectionText(m.rejection_reason)].filter(Boolean).join(" · ");
     if (testRecording) return [t("statusRedo"), detailText(m)?.title].filter(Boolean).join(" · ");
     return [t("statusTest.rejected"), testReason(m.rejection_reason)].filter(Boolean).join(" · ");
   };

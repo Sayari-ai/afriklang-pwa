@@ -183,7 +183,141 @@ describe("dev mock campaign cards", () => {
     for (const c of campaigns) {
       expect(c.instructions.recording.mic_distance_cm, c.code).toEqual({ read: [20, 30], conversational: [30, 50] });
       expect(campaignMicDistance(c).main, c.code).toEqual({ min: 20, max: 30 });
+      // Sayari's default QC limits, as the dashboard sends them (decision B)
+      expect(c.qc_limits, c.code).toEqual({ min_snr_db: 10, max_background_noise_db: -20, max_clipping_ratio: 0.01, max_silence_ratio: 0.5 });
     }
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("dev mock mirrors the bridge contract (X-08)", () => {
+  async function rig() {
+    const mem = new Map<string, string>();
+    const win: Record<string, unknown> = { fetch: async () => new Response("{}"), XMLHttpRequest: class {} };
+    vi.stubGlobal("window", win);
+    vi.stubGlobal("localStorage", { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), removeItem: (k: string) => void mem.delete(k) });
+    vi.stubGlobal("navigator", { onLine: true });
+    vi.stubEnv("NEXT_PUBLIC_CAMPAIGN_MOCK", "1");
+    const { installCampaignMock } = await import("./dev-mock");
+    installCampaignMock();
+    const call = async (url: string, init: RequestInit) => (win.fetch as typeof fetch)(url, init);
+    const bridge = async (body: Record<string, unknown>) => {
+      const res = await call("https://mock.supabase.co/functions/v1/campaigns", { method: "POST", body: JSON.stringify(body) });
+      return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+    };
+    const mock = win.__afkMock as { claim: (m: string) => void; uploadDuplicate: (on?: boolean) => void; sweep: () => void; review: () => void };
+    const onboard = async (campaignId: string) => {
+      await bridge({ action: "profile", variety: "Baol-Baol", native_language: "wol" });
+      await bridge({ action: "consent", type: "account", version: "v2", locale: "en" });
+      await bridge({ action: "consent", type: "campaign", campaign_id: campaignId, version: "v1", locale: "en" });
+    };
+    return { bridge, mock, call, onboard };
+  }
+  const done = () => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  };
+  const PLANNED = "00000000-0000-4000-8000-0000000000c1";
+  const QUAL = "00000000-0000-4000-8000-0000000000c3";
+  const MISSION = "00000000-0000-4000-8000-000000000010";
+
+  it("the ticket carries duration_min_s and refuses a length outside the prompt's limits before any upload", async () => {
+    const { bridge, onboard } = await rig();
+    await onboard(PLANNED);
+    const ok = await bridge({ action: "upload_ticket", mission_id: MISSION, source_sha256: "e".repeat(64), duration_s: 5 });
+    const payload = JSON.parse(Buffer.from(String(ok.body.ticket).split(".")[0], "base64url").toString("utf8")) as Record<string, unknown>;
+    expect(typeof payload.duration_min_s).toBe("number");
+    const long = await bridge({ action: "upload_ticket", mission_id: MISSION, source_sha256: "e".repeat(64), duration_s: 999 });
+    expect(long).toMatchObject({ status: 422, body: { code: "recording_rejected", reason: "duration", detail: { check: "too_long", bound: "max" } } });
+    const short = await bridge({ action: "upload_ticket", mission_id: MISSION, source_sha256: "e".repeat(64), duration_s: 0.5 });
+    expect(short).toMatchObject({ status: 422, body: { code: "recording_rejected", detail: { check: "too_short" } } });
+    done();
+  });
+
+  it("claim can be refused as the dashboard refuses it", async () => {
+    const { bridge, mock } = await rig();
+    expect((await bridge({ action: "claim", token: "t" })).status).toBe(200);
+    mock.claim("email_mismatch");
+    expect(await bridge({ action: "claim", token: "t" })).toMatchObject({ status: 403, body: { code: "email_mismatch" } });
+    mock.claim("link_expired");
+    expect(await bridge({ action: "claim", token: "t" })).toMatchObject({ status: 410, body: { code: "link_expired" } });
+    mock.claim("misconfigured");
+    expect(await bridge({ action: "claim", token: "t" })).toMatchObject({ status: 500, body: { error: "server_misconfigured" } });
+    expect(() => mock.claim("nope")).toThrow(/unknown claim mode/);
+    done();
+  });
+
+  it("a test stays 'recording' after its last take until the sweep moves it to review", async () => {
+    const { bridge, mock, onboard } = await rig();
+    await onboard(QUAL);
+    const list = (await bridge({ action: "missions", campaign_id: QUAL })).body as { missions: Mission[] };
+    for (const m of list.missions) expect((await bridge({ action: "submit", mission_id: m.mission_id, recording: { duration_s: m.type === "read" ? 5 : 20 } })).status).toBe(200);
+    const after = (await bridge({ action: "missions", campaign_id: QUAL })).body as { campaign: CampaignCard };
+    expect(after.campaign.qualification?.stage).toBe("recording");
+    mock.sweep();
+    const swept = (await bridge({ action: "missions", campaign_id: QUAL })).body as { campaign: CampaignCard };
+    expect(swept.campaign.qualification?.stage).toBe("in_review");
+    done();
+  });
+
+  it("uploads get Sayari's answer shape, duplicate when asked; review() sends reason codes only", async () => {
+    const { bridge, mock, call, onboard } = await rig();
+    const form = new FormData();
+    form.append("source_sha256", "a".repeat(64));
+    form.append("files", new File([new Uint8Array(4)], "take.wav"));
+    const first = (await (await call("/api/audio-upload", { method: "POST", body: form })).json()) as { results: { id: string; audio_sha256: string; duplicate: boolean; filename: string }[] };
+    expect(first.results[0]).toMatchObject({ audio_sha256: "a".repeat(64), duplicate: false, filename: "take.wav" });
+    mock.uploadDuplicate(true);
+    const again = (await (await call("/api/audio-upload", { method: "POST", body: form })).json()) as { results: { duplicate: boolean }[] };
+    expect(again.results[0].duplicate).toBe(true);
+
+    await onboard(PLANNED);
+    await bridge({ action: "submit", mission_id: MISSION, recording: { duration_s: 5 } });
+    mock.review();
+    const { body } = await bridge({ action: "missions", campaign_id: PLANNED });
+    const m = (body as { missions: Mission[] }).missions.find((x) => x.mission_id === MISSION)!;
+    expect(m).toMatchObject({ status: "rejected", rejection_reason: "level", recording: { status: "rejected" } });
+    done();
+  });
+});
+
+describe("dev mock samples consent (decision A)", () => {
+  it("signs, puts sample_consent on tickets, and withdraws without touching recording", async () => {
+    const mem = new Map<string, string>();
+    const win: Record<string, unknown> = { fetch: async () => new Response("{}"), XMLHttpRequest: class {} };
+    vi.stubGlobal("window", win);
+    vi.stubGlobal("localStorage", { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), removeItem: (k: string) => void mem.delete(k) });
+    vi.stubEnv("NEXT_PUBLIC_CAMPAIGN_MOCK", "1");
+    const { installCampaignMock } = await import("./dev-mock");
+    installCampaignMock();
+    const bridge = async (body: Record<string, unknown>) => {
+      const res = await (win.fetch as typeof fetch)("https://mock.supabase.co/functions/v1/campaigns", { method: "POST", body: JSON.stringify(body) });
+      return { status: res.status, body: (await res.json()) as Record<string, unknown> };
+    };
+    const PLANNED = "00000000-0000-4000-8000-0000000000c1";
+    const MISSION = "00000000-0000-4000-8000-000000000010";
+    const cards = async () => ((await bridge({ action: "campaigns" })).body as { campaigns: CampaignCard[] }).campaigns;
+    const ticketPayload = async () => {
+      const ok = await bridge({ action: "upload_ticket", mission_id: MISSION, source_sha256: "e".repeat(64), duration_s: 5 });
+      return JSON.parse(Buffer.from(String(ok.body.ticket).split(".")[0], "base64url").toString("utf8")) as Record<string, unknown>;
+    };
+    await bridge({ action: "profile", variety: "Baol-Baol" });
+    await bridge({ action: "consent", type: "account", version: "v2", locale: "en" });
+    await bridge({ action: "consent", type: "campaign", campaign_id: PLANNED, version: "v1", locale: "en" });
+    for (const c of await cards()) expect(c.samples_consent, c.code).toMatchObject({ version: "v1", signed: false });
+    expect(await ticketPayload()).not.toHaveProperty("sample_consent");
+
+    await bridge({ action: "consent", type: "samples", campaign_id: PLANNED, version: "v1", locale: "fr" });
+    for (const c of await cards()) expect(c.samples_consent?.signed, c.code).toBe(true);
+    expect(await ticketPayload()).toMatchObject({ sample_consent: true });
+
+    await bridge({ action: "withdraw", type: "samples" });
+    const after = await cards();
+    for (const c of after) expect(c.samples_consent?.signed, c.code).toBe(false);
+    // still recording: the campaign consent stands
+    expect(after.find((c) => c.campaign_id === PLANNED)?.next_step).toBe("ready");
+    expect(await ticketPayload()).not.toHaveProperty("sample_consent");
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });

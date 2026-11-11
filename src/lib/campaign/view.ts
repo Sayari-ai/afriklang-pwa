@@ -56,6 +56,20 @@ export function toRecordCount(missions: readonly Pick<Mission, "mission_id" | "s
 }
 export const openCountOnPhone = (c: Pick<CampaignCard, "progress">, waitingOnPhone: number) => Math.max(0, openCount(c) - waitingOnPhone);
 
+/**
+ * The home card's "left to record": the hub's rule (toRecordCount, conversations waiting for the
+ * partner left out) from the saved mission list when the phone has it, else the card's counts
+ * (APP2-08). `missions` null: not saved on this phone yet.
+ */
+export function cardOpenCount(
+  c: Pick<CampaignCard, "progress">,
+  missions: readonly Pick<Mission, "mission_id" | "status" | "type" | "partner_ready">[] | null,
+  onPhone: ReadonlyMap<string, OutboxState>,
+): number {
+  if (missions) return toRecordCount(missions, onPhone);
+  return openCountOnPhone(c, [...onPhone.values()].filter((s) => s !== "failed").length);
+}
+
 /** Which of the three setup steps the speaker is on (1-3), or null when setup is over. */
 export function setupStep(step: NextStep): 1 | 2 | 3 | null {
   if (step === "profile" || step === "blocked") return 1;
@@ -102,7 +116,7 @@ export function campaignMicDistance(card: Pick<CampaignCard, "instructions">): {
 }
 
 /** The short reason shown for a take held or failed on the phone (key under campaign.home.outbox.reason). */
-export function outboxReasonKey(code: string | null): "paused" | "consent" | "profile" | "blocked" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" {
+export function outboxReasonKey(code: string | null): "paused" | "consent" | "profile" | "blocked" | "signin" | "partner" | "closed" | "unassigned" | "file" | "server" | "network" | "generic" | "testClosed" | "duplicate" | "language" | "fixing" | "tooLarge" {
   switch (code) {
     case "test_closed":
       return "testClosed";
@@ -130,7 +144,13 @@ export function outboxReasonKey(code: string | null): "paused" | "consent" | "pr
       return "closed";
     case "language_unsupported":
       return "language";
+    // A fault on our side (APP2-02, APP2-04): said so, and that the take is safe.
+    case "misconfigured":
+    case "ticket_required":
+      return "fixing";
+    // Too big for the server: recording the same length again would fail the same way (APP2-30).
     case "tooLarge":
+      return "tooLarge";
     case "refused":
     case "invalid_input":
       return "file";
@@ -138,7 +158,6 @@ export function outboxReasonKey(code: string | null): "paused" | "consent" | "pr
     case "server_error":
     case "bridge_error":
     case "bridge_unreachable":
-    case "misconfigured":
     case "rateLimited":
     case "rate_limited":
       return "server";
@@ -158,3 +177,46 @@ export function totals(cards: readonly Pick<CampaignCard, "progress">[]) {
     { accepted: 0, submitted: 0, rejected: 0, total: 0 },
   );
 }
+
+/**
+ * History's campaigns: `readable` lists its recordings (the bridge lists missions only once both
+ * consents are signed); `locked` has recordings the speaker cannot see until they act (a new consent
+ * to sign, the profile, a block): said, never "nothing recorded yet" (APP2-07).
+ */
+export function historyGroups<C extends Pick<CampaignCard, "next_step" | "progress">>(cards: readonly C[]): { readable: C[]; locked: C[] } {
+  const recorded = cards.filter((c) => c.progress.total > 0 && c.progress.total - c.progress.todo > 0);
+  const open = (c: C) => c.next_step === "ready" || c.next_step === "paused" || c.next_step === "closed";
+  return { readable: recorded.filter(open), locked: recorded.filter((c) => !open(c)) };
+}
+
+/**
+ * A conversation to record (or redo) that waits for the partner's consent, with no take of it on
+ * the phone: listed apart and not counted as "to record" (APP2-08), as the hub and studio count.
+ */
+export const waitsForPartner = (m: Pick<Mission, "status" | "type" | "partner_ready">, local: OutboxState | undefined): boolean =>
+  (m.status === "todo" || m.status === "rejected") && m.type === "conversational" && !m.partner_ready && !(local && local !== "failed");
+
+/**
+ * Whether the hub offers "Withdraw from this campaign" on its own, outside the instructions (which
+ * carry it while the speaker records): whenever the campaign consent is signed (APP2-09).
+ * `recordingView`: the hub shows the recording view with its instructions.
+ */
+export const withdrawOffered = (c: Pick<CampaignCard, "consents">, recordingView: boolean): boolean => c.consents.campaign.signed && !recordingView;
+
+/**
+ * The dashboard's block reason for a variety outside the campaign (bridge-service varietyBlock:
+ * `Declared variety "X" is not a target variety of this campaign (A, B)`), as values the app can
+ * say in the speaker's language (APP2-28). Null for any other reason: the generic text stays.
+ */
+export function varietyBlockOf(reason: string | null | undefined): { declared: string; targets: string } | null {
+  const m = /^Declared variety "(.{1,80})" is not a target variety of this campaign \((.{1,300})\)$/.exec((reason ?? "").trim());
+  return m ? { declared: m[1], targets: m[2] } : null;
+}
+
+/**
+ * A submitted mission's own state (X-14, the contract's recording status table): "sent" while the
+ * file has only reached Sayari (`uploaded`), "submitted" (in review) once its checks passed
+ * (`pre_annotated`) or when the dashboard does not say.
+ */
+export const submittedStatusKey = (m: Pick<Mission, "status" | "recording">): "sent" | "submitted" =>
+  m.status === "submitted" && m.recording?.status === "uploaded" ? "sent" : "submitted";

@@ -142,3 +142,12 @@ describe("sign-out on this phone (APP-008)", () => {
     if (logout) expect(logout).toContain("scope=local");
   });
 });
+
+describe("dev mock out of production builds (APP2-31)", () => {
+  it("is not imported statically: only a development build with the mock on loads it", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./auth-client.ts", import.meta.url), "utf8");
+    expect(src).not.toMatch(/^import .*["']\.\/dev-mock["']/m);
+    expect(src).toMatch(/process\.env\.NODE_ENV !== "production" && process\.env\.NEXT_PUBLIC_CAMPAIGN_MOCK === "1"/);
+  });
+});

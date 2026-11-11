@@ -9,7 +9,7 @@
  */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { installCampaignMock } from "./dev-mock";
+import { captureSignInReturn } from "./sign-in-return";
 
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -24,7 +24,14 @@ let client: SupabaseClient | null = null;
 export function getCampaignAuth(): SupabaseClient {
   if (!isCampaignAuthConfigured) throw new Error("Supabase is not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).");
   if (client) return client;
-  installCampaignMock();
+  // Before the client reads (and strips) the address: why a sign-in came back without a session (APP2-11).
+  captureSignInReturn();
+  // The dev mock only in a development build with the mock on. Both values are inlined at build
+  // time, so a production build drops this branch and the 800-line module with it (APP2-31).
+  if (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_CAMPAIGN_MOCK === "1") {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    (require("./dev-mock") as typeof import("./dev-mock")).installCampaignMock();
+  }
   client = createClient(URL_, ANON, {
     auth: {
       flowType: "pkce",

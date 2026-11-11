@@ -197,9 +197,11 @@ export const claimLink = (token: string, deviceId?: string) =>
   call<ClaimResult>("claim", { token, ...(deviceId ? { device_id: deviceId } : {}) }).then((r) => (r.ok ? { ...r, data: { ...r.data, campaign: filledCard(r.data.campaign) } } : r));
 export const listCampaigns = () => call<CampaignList>("campaigns").then((r) => (r.ok ? { ...r, data: { ...r.data, campaigns: r.data.campaigns.map(filledCard) } } : r));
 export const saveProfile = (p: ProfileInput) => call<{ contributor: ContributorView; blocked: unknown[] }>("profile", { ...p });
-export const signConsent = (a: { type: "account" | "campaign"; campaignId?: string; version: string; locale: "en" | "fr" }) =>
+export const signConsent = (a: { type: "account" | "campaign" | "samples"; campaignId?: string; version: string; locale: "en" | "fr" }) =>
   call<{ signed_version: string; already: boolean }>("consent", { type: a.type, campaign_id: a.campaignId, version: a.version, locale: a.locale });
 export const withdrawConsent = (campaignId: string) => call<{ withdrawn: true }>("withdraw", { campaign_id: campaignId });
+/** Withdraw the optional samples consent (decision A): recording and uploads go on as before. */
+export const withdrawSamplesConsent = () => call<{ withdrawn: true }>("withdraw", { type: "samples" });
 export const getMissions = (campaignId: string) =>
   call<MissionList>("missions", { campaign_id: campaignId }).then((r) => (r.ok ? { ...r, data: { ...r.data, campaign: filledCard(r.data.campaign) } } : r));
 export const submitRecording = (missionId: string, recording: RecordingMetadata) =>

@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCampaignSession } from "@/lib/campaign/hooks";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
-import { canRetryFailed, DEAD_CODES } from "@/lib/campaign/outbox-logic";
+import { canRetryFailed, DEAD_CODES, isDeadTake } from "@/lib/campaign/outbox-logic";
 import { usePersistentStorage } from "@/lib/campaign/storage-safety";
 import { outboxReasonKey } from "@/lib/campaign/view";
 import { useInstallPrompt } from "@/stores/install-prompt";
@@ -31,7 +31,7 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
     !compact && others > 0 && userId ? (
       <section className="rounded-2xl border border-slate-200 bg-white p-3 text-sm text-slate-800">
         <p>{t("others", { n: others })}</p>
-        <button type="button" onClick={() => window.confirm(t("othersConfirm")) && void outbox.discardOthers(userId)} className="mt-2 min-h-9 rounded-full border border-red-300 px-3 text-xs font-bold text-red-800">
+        <button type="button" onClick={() => window.confirm(t("othersConfirm")) && void outbox.discardOthers(userId)} className="mt-2 min-h-11 rounded-full border border-red-300 px-3 text-xs font-bold text-red-800">
           {t("othersDelete")}
         </button>
       </section>
@@ -84,7 +84,7 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
           <div className="mt-3 space-y-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
             <p>{t("unsafe")}</p>
             {install.deferredEvent ? (
-              <button type="button" onClick={() => void install.promptNative()} className="min-h-9 rounded-full bg-amber-900 px-3 font-bold text-white">
+              <button type="button" onClick={() => void install.promptNative()} className="min-h-11 rounded-full bg-amber-900 px-3 font-bold text-white">
                 {t("install")}
               </button>
             ) : install.isIos ? (
@@ -112,13 +112,13 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                     <>
                       {/* Nothing to try again when it can never go (too large, campaign closed, mission no longer theirs, a file already sent). */}
                       {online && canRetryFailed(i.lastCode) ? (
-                        <button type="button" onClick={() => void outbox.retryFailed(i.id, userId)} className="min-h-9 rounded-full border border-primary/40 px-3 py-2 text-xs font-bold text-primary">
+                        <button type="button" onClick={() => void outbox.retryFailed(i.id, userId)} className="min-h-11 rounded-full border border-primary/40 px-3 py-2 text-xs font-bold text-primary">
                           {t("tryAgain")}
                         </button>
                       ) : null}
                       {/* Recording again cannot help when the take can never go (test or campaign closed). */}
                       {!(i.lastCode && DEAD_CODES.has(i.lastCode)) ? (
-                        <Link href={`/campaign/${i.campaignId}/studio?m=${encodeURIComponent(i.missionId)}`} className="min-h-9 rounded-full bg-primary px-3 py-2 text-xs font-bold text-white">
+                        <Link href={`/campaign/${i.campaignId}/studio?m=${encodeURIComponent(i.missionId)}`} className="inline-flex min-h-11 items-center rounded-full bg-primary px-3 py-2 text-xs font-bold text-white">
                           {t("recordAgain")}
                         </Link>
                       ) : null}
@@ -126,7 +126,7 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                         type="button"
                         onClick={() => window.confirm(t("discardConfirm")) && void outbox.discard(i.id)}
                         aria-label={t("discard")}
-                        className="grid size-9 place-items-center rounded-full text-red-700 hover:bg-red-50"
+                        className="grid size-11 shrink-0 place-items-center rounded-full text-red-700 hover:bg-red-50"
                       >
                         <Trash2 size={16} aria-hidden />
                       </button>
@@ -137,7 +137,7 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
                       type="button"
                       onClick={() => window.confirm(t("discardConfirm")) && void outbox.discard(i.id)}
                       aria-label={t("discard")}
-                      className="grid size-9 place-items-center rounded-full text-red-700 hover:bg-red-50"
+                      className="grid size-11 shrink-0 place-items-center rounded-full text-red-700 hover:bg-red-50"
                     >
                       <Trash2 size={16} aria-hidden />
                     </button>
@@ -147,7 +147,8 @@ export function OutboxPanel({ compact = false }: { compact?: boolean }) {
             })}
           </ul>
         )}
-        {!compact && failed.length ? <p className="mt-2 text-xs opacity-70">{t("expiresNote")}</p> : null}
+        {/* Only takes that can never be sent are deleted after 30 days (APP2-16). */}
+        {!compact && failed.some(isDeadTake) ? <p className="mt-2 text-xs opacity-70">{t("expiresNote")}</p> : null}
       </section>
     </>
   );

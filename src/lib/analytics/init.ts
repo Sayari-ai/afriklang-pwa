@@ -14,7 +14,7 @@
 import posthog from "posthog-js";
 import { isInAppBrowser } from "@/lib/campaign/in-app-browser";
 import { consumeSignInReturn } from "./client";
-import { APP_NAME, POSTHOG_UI_HOST, getPostHogConfig, shouldRunInBrowser } from "./config";
+import { APP_NAME, POSTHOG_UI_HOST, environmentFor, getPostHogConfig, shouldRunInBrowser } from "./config";
 import { activePostHog, setAnalyticsClient, track } from "./events";
 import { sanitizeEvent, sanitizeUrl } from "./sanitize";
 
@@ -92,7 +92,7 @@ export function initPostHog(): void {
         return event;
       },
       loaded: (ph) => {
-        ph.register({ app: APP_NAME, app_version: APP_VERSION, ...(APP_BUILD ? { app_build: APP_BUILD } : {}) });
+        ph.register({ app: APP_NAME, app_version: APP_VERSION, environment: environmentFor(window.location.hostname), ...(APP_BUILD ? { app_build: APP_BUILD } : {}) });
       },
     });
   } catch {

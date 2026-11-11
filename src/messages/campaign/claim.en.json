@@ -8,7 +8,13 @@
     "starting": "Opening Google…",
     "error": "We could not open Google sign-in. Please try again.",
     "notConfigured": "Developer note: sign-in is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
-    "inApp": "This page is open inside another app (WhatsApp, Facebook, Instagram…), where Google sign-in does not work. Open it in Chrome or Safari: tap the ⋮ or ··· menu, then “Open in browser”."
+    "inApp": "This page is open inside another app (WhatsApp, Facebook, Instagram…), where Google sign-in does not work. Open it in Chrome or Safari: tap the ⋮ or ··· menu, then “Open in browser”.",
+    "return": {
+      "signupsClosed": "New sign-ups are closed for now, so this Google account could not be added. If you were invited, contact the Afriklang team.",
+      "denied": "The Google sign-in was cancelled. Tap “Continue with Google” to try again.",
+      "restart": "The sign-in could not be finished here. Tap “Continue with Google” again and finish it in this same browser, without switching app.",
+      "failed": "The sign-in did not work. Please tap “Continue with Google” to try again."
+    }
   },
   "claiming": {
     "title": "Checking your invitation…",
@@ -25,7 +31,8 @@
     "contact": "Need help? Contact the Afriklang team.",
     "accountFor": "This invitation was sent to {email}. Sign in with the Google account that uses this address.",
     "noAccountHint": "No Google account with this address? Ask the Afriklang team to change the email address of your invitation.",
-    "autoRetry": "We will try again by ourselves as soon as your connection is back."
+    "autoRetry": "We will try again by ourselves as soon as your connection is back.",
+    "autoRetryLater": "Your invitation is still saved on this phone. We will try again by ourselves when you come back to the app."
   },
   "brokenLink": {
     "title": "This invitation link is incomplete",
@@ -39,6 +46,7 @@
     "lost": "Cannot find the email? Contact the Afriklang team and we will send you a new invitation."
   },
   "home": {
+    "oldInvitation": "This invitation link can no longer be used, but your account is already set up: here are your campaigns.",
     "greeting": "Welcome back",
     "intro": "Here are the campaigns you are invited to.",
     "loadingList": "Loading your campaigns…",

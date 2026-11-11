@@ -1,6 +1,6 @@
 /** Pure helpers of the recording studio: the take's rules, its metadata, and the fields sent to Sayari. */
 
-import { checkTake, type TakeAnalysis, type TakeProblem, type TakeRules } from "@/lib/audio/analyze";
+import { checkTake, SAYARI_QC, type QcLimits, type TakeAnalysis, type TakeProblem, type TakeRules } from "@/lib/audio/analyze";
 import type { CampaignCard, Mission, RecordingMetadata, SpeechType } from "./types";
 
 export const isTimed = (type: SpeechType) => type !== "read";
@@ -14,6 +14,23 @@ export function takeRules(card: CampaignCard, mission: Mission): TakeRules {
     durationMaxS: num(entry?.duration_max_s, mission.duration_s.max) ?? 600,
     minLevelDbfs: num(rec?.min_level_dbfs) ?? -35,
     silenceMarginS: num(rec?.silence_margin_s) ?? 1,
+    qc: qcLimitsOf(card),
+  };
+}
+
+/**
+ * The QC limits the advice follows: the card's (Sayari's live settings) when it sends them, each
+ * value checked; Sayari's defaults for anything missing or unusable (decision B, X-05).
+ */
+export function qcLimitsOf(card: Pick<CampaignCard, "qc_limits">): QcLimits {
+  const q = card.qc_limits;
+  const num = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
+  if (!q || typeof q !== "object") return { ...SAYARI_QC };
+  return {
+    minSnrDb: num(q.min_snr_db, SAYARI_QC.minSnrDb),
+    maxBackgroundNoiseDb: num(q.max_background_noise_db, SAYARI_QC.maxBackgroundNoiseDb),
+    maxClippingRatio: num(q.max_clipping_ratio, SAYARI_QC.maxClippingRatio),
+    maxSilenceRatio: num(q.max_silence_ratio, SAYARI_QC.maxSilenceRatio),
   };
 }
 

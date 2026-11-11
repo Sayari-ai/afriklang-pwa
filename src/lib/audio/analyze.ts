@@ -58,7 +58,49 @@ export type TakeAnalysis = {
   silence_after_s: number;
   /** Background level measured in the silence before the voice (dBFS), when known (APP-012). */
   noise_floor_dbfs?: number;
+  /** Sayari's own QC measurements of this file (see sayariQc). Absent on a take saved by an older version. */
+  qc?: SayariQc;
 };
+
+/**
+ * What Sayari's automatic check measures on the uploaded file, computed the same way (Sayari
+ * backend app/services/qc_service.py, run_qc with inner_silence_only for campaign audio), so the
+ * advice on the review screen matches what is really refused (APP2-01, X-05).
+ */
+export type SayariQc = {
+  /** Mean RMS of the loudest half of the frames over the mean of the quietest tenth, dB. */
+  snr_db: number;
+  /** Mean RMS of the quietest tenth of the frames, dBFS. */
+  background_noise_db: number;
+  /** Share of frames more than 30 dB below the loudest, between the first and the last speech frame. */
+  silence_ratio: number;
+  /** Share of samples at full scale (|x| >= 0.99). */
+  clipping_ratio: number;
+};
+
+/** The four limits of Sayari's automatic check the advice follows. */
+export type QcLimits = { minSnrDb: number; maxBackgroundNoiseDb: number; maxClippingRatio: number; maxSilenceRatio: number };
+
+/**
+ * Sayari's default QC limits (backend app/core/config.py and qc_service.py). Sayari refuses a take
+ * outside them; the app only advises, the speaker may send anyway. The campaign card's `qc_limits`
+ * (Sayari's live settings, through the dashboard) take precedence when present (TakeRules.qc).
+ */
+export const SAYARI_QC: QcLimits = {
+  /** MIN_SNR_DB */
+  minSnrDb: 10,
+  /** MAX_BACKGROUND_NOISE_DB */
+  maxBackgroundNoiseDb: -20,
+  /** MAX_CLIPPING_RATIO */
+  maxClippingRatio: 0.01,
+  /** MAX_SILENCE_RATIO */
+  maxSilenceRatio: 0.5,
+};
+/** A sample this close to full scale counts as clipped (qc_service._clipping_ratio). */
+const CLIP_THRESHOLD = 0.99;
+/** Sayari's frame: 2048 samples every 512 (qc_service._frames), on the 16 kHz file. */
+const QC_HOP = 512;
+const QC_FRAME_HOPS = 4;
 
 const FLOOR_DB = -120;
 /** A 20 ms frame quieter than this counts as silence (in a quiet room; see speechThresholdDb). */
@@ -67,8 +109,8 @@ export const SILENCE_THRESHOLD_DBFS = -50;
 export const SPEECH_ABOVE_FLOOR_DB = 10;
 /** Background noise louder than this is what makes the silence check fail, not the speaker. */
 export const NOISY_FLOOR_DBFS = -50;
-/** Voice less than this far above the background: the take is too noisy to use. */
-export const MIN_SNR_DB = 8;
+/** Voice less than this far above the background: the take is too noisy to use (Sayari's MIN_SNR_DB). */
+export const MIN_SNR_DB = SAYARI_QC.minSnrDb;
 const FRAME_S = 0.02;
 
 const toDb = (x: number) => (x <= 0 ? FLOOR_DB : Math.max(FLOOR_DB, 20 * Math.log10(x)));
@@ -89,6 +131,12 @@ export type FrameStats = {
   /** Largest absolute sample of each frame (0..1). */
   framePeaks: number[];
   peak: number;
+  /** Samples at full scale (|x| >= 0.99). */
+  clipped: number;
+  /** Sum of squares of each complete block of 512 samples, for Sayari's frames (sayariQc). */
+  hopSq: number[];
+  /** Sum of squares of every sample. */
+  sumSq: number;
 };
 
 export function createTakeMeter(sampleRate: number) {
@@ -100,6 +148,11 @@ export function createTakeMeter(sampleRate: number) {
   let frameMax = 0;
   let peak = 0;
   let total = 0;
+  let clipped = 0;
+  const hopSq: number[] = [];
+  let hopAcc = 0;
+  let inHop = 0;
+  let allSq = 0;
   return {
     /** Add samples; `scale` turns them into -1..1 (1/32768 for PCM16). */
     push(x: ArrayLike<number>, scale = 1) {
@@ -107,7 +160,15 @@ export function createTakeMeter(sampleRate: number) {
         const v = x[i] * scale;
         const a = v < 0 ? -v : v;
         if (a > frameMax) frameMax = a;
+        if (a >= CLIP_THRESHOLD) clipped++;
         sumSq += v * v;
+        hopAcc += v * v;
+        if (++inHop === QC_HOP) {
+          hopSq.push(hopAcc);
+          allSq += hopAcc;
+          hopAcc = 0;
+          inHop = 0;
+        }
         if (++inFrame === frameLen) {
           rms.push(Math.sqrt(sumSq / frameLen));
           framePeaks.push(frameMax);
@@ -128,6 +189,9 @@ export function createTakeMeter(sampleRate: number) {
         rms: partial ? [...rms, Math.sqrt(sumSq / inFrame)] : rms.slice(),
         framePeaks: partial ? [...framePeaks, frameMax] : framePeaks.slice(),
         peak: Math.max(peak, frameMax),
+        clipped,
+        hopSq: hopSq.slice(),
+        sumSq: allSq + hopAcc,
       };
     },
   };
@@ -158,12 +222,64 @@ export function noiseFloorDb(st: FrameStats, leadS?: number): number | null {
 /** Frames above this are speech: -50 dBFS in a quiet room, higher where the background is louder. */
 export const speechThresholdDb = (floor: number | null) => Math.max(SILENCE_THRESHOLD_DBFS, floor == null ? SILENCE_THRESHOLD_DBFS : floor + SPEECH_ABOVE_FLOOR_DB);
 
+/**
+ * Sayari's QC measurements (qc_service._frames, _compute_snr, _compute_background_noise_db,
+ * _compute_silence_ratio with trim_edges, _clipping_ratio), from the meter's 512-sample blocks.
+ * Null for an empty take.
+ */
+export function sayariQc(st: FrameStats): SayariQc | null {
+  const n = st.samples;
+  if (n <= 0) return null;
+  const frameLen = QC_HOP * QC_FRAME_HOPS;
+  let rms: number[];
+  if (n < frameLen) rms = [Math.sqrt(st.sumSq / n)];
+  else {
+    const frames = Math.max(1, Math.floor((n - frameLen) / QC_HOP));
+    rms = new Array<number>(frames);
+    for (let k = 0; k < frames; k++) {
+      let e = 0;
+      for (let j = 0; j < QC_FRAME_HOPS; j++) e += st.hopSq[k + j] ?? 0;
+      rms[k] = Math.sqrt(Math.max(e, 0) / frameLen);
+    }
+  }
+  const sorted = [...rms].sort((a, b) => a - b);
+  const mean = (xs: number[]) => xs.reduce((t, x) => t + x, 0) / xs.length;
+  const noise = mean(sorted.slice(0, Math.max(1, Math.floor(sorted.length / 10))));
+  const signal = mean(sorted.slice(Math.floor(sorted.length / 2)));
+  const snr = noise < 1e-10 ? 60 : 20 * Math.log10(signal / noise + 1e-10);
+  const background = noise < 1e-10 ? -100 : 20 * Math.log10(noise + 1e-10);
+
+  let silence = 1;
+  const top = sorted[sorted.length - 1];
+  if (top >= 1e-10) {
+    const threshold = top * 10 ** (-30 / 20);
+    let first = -1;
+    let last = -1;
+    for (let k = 0; k < rms.length; k++) {
+      if (rms[k] >= threshold) {
+        if (first === -1) first = k;
+        last = k;
+      }
+    }
+    let quiet = 0;
+    for (let k = first; k <= last; k++) if (rms[k] < threshold) quiet++;
+    silence = quiet / (last - first + 1);
+  }
+  return {
+    snr_db: round2(snr),
+    background_noise_db: round2(background),
+    silence_ratio: Math.round(silence * 1e4) / 1e4,
+    clipping_ratio: Math.round((st.clipped / n) * 1e6) / 1e6,
+  };
+}
+
 export function analyzeStats(st: FrameStats, opts: { leadS?: number } = {}): TakeAnalysis {
   const duration = st.samples / st.sampleRate;
   const frames = st.rms.length;
   const floor = noiseFloorDb(st, opts.leadS);
   const threshold = speechThresholdDb(floor);
-  const withFloor = floor == null ? {} : { noise_floor_dbfs: round2(floor) };
+  const qc = sayariQc(st);
+  const withFloor = { ...(floor == null ? {} : { noise_floor_dbfs: round2(floor) }), ...(qc ? { qc } : {}) };
   const active = st.rms.map((r) => toDb(r) > threshold);
   const first = active.indexOf(true);
   if (first === -1) {
@@ -243,15 +359,17 @@ export async function sha256Hex(blob: Blob): Promise<string> {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// ── Capture checks (the dashboard refuses the same blocking problems) ────
+// ── Capture checks (the dashboard and Sayari refuse the same blocking problems) ────
 
-export type TakeProblem = "silent" | "too_short" | "too_long" | "too_quiet" | "clipped" | "silence" | "noisy";
+export type TakeProblem = "silent" | "too_short" | "too_long" | "too_quiet" | "clipped" | "silence" | "noisy" | "pauses";
 
 export type TakeRules = {
   durationMinS: number;
   durationMaxS: number;
   minLevelDbfs: number;
   silenceMarginS: number;
+  /** Sayari's live QC limits from the campaign card; SAYARI_QC when absent. */
+  qc?: QcLimits;
 };
 
 const DURATION_TOLERANCE_S = 0.5;
@@ -261,7 +379,11 @@ const SILENCE_SLACK = 0.5;
  * What is wrong with a take. `blocking`: it cannot be sent, record again. Only the length blocks
  * (2026-10-19, the user's decision: speakers found the other checks too strict); the dashboard and
  * Sayari refuse the same lengths. Everything else is advice shown on the review screen, and the
- * speaker may send anyway. Note the dashboard still refuses a clipped take at submit.
+ * speaker may send anyway. The dashboard no longer refuses a clipped take (2026-11-06); Sayari's
+ * automatic check refuses one above 1 % clipped samples, under 10 dB SNR, over -20 dBFS of
+ * background or with more than half of the take silent between the first and the last word: the
+ * advice uses those same limits (SAYARI_QC), measured the same way (sayariQc), so it neither
+ * warns about a take Sayari accepts nor stays quiet about one it refuses (APP2-01, X-05).
  */
 export type TakeCheck = { problem: TakeProblem; blocking: boolean };
 
@@ -275,10 +397,17 @@ export function checkTake(a: TakeAnalysis, rules: TakeRules): TakeCheck | null {
   // Not one frame above the speech threshold: the microphone heard nothing (muted, covered or not
   // working), or nothing rose above a loud background.
   if (a.level_dbfs <= FLOOR_DB) return advise(noisyRoom ? "noisy" : "silent");
-  if (a.peak_dbfs >= 0) return advise("clipped");
+  // A few full-scale samples (a plosive, a cough) are common and accepted; Sayari refuses above 1 %.
+  // A take saved by an older version has no ratio: no advice rather than a false alarm.
+  const lim = rules.qc ?? SAYARI_QC;
+  if (a.qc && a.qc.clipping_ratio > lim.maxClippingRatio) return advise("clipped");
   if (a.level_dbfs < rules.minLevelDbfs) return advise("too_quiet");
-  // The voice barely stands out from the background (APP-012).
-  if (a.noise_floor_dbfs != null && a.level_dbfs - a.noise_floor_dbfs < MIN_SNR_DB) return advise("noisy");
+  // The voice barely stands out from the background (APP-012), by Sayari's measure when known.
+  const snr = a.qc ? a.qc.snr_db : a.noise_floor_dbfs != null ? a.level_dbfs - a.noise_floor_dbfs : null;
+  if (snr != null && snr < lim.minSnrDb) return advise("noisy");
+  if (a.qc && a.qc.background_noise_db > lim.maxBackgroundNoiseDb) return advise("noisy");
+  // Long pauses between the words (Sayari's inner silence ratio).
+  if (a.qc && a.qc.silence_ratio > lim.maxSilenceRatio) return advise("pauses");
   const needed = rules.silenceMarginS * SILENCE_SLACK;
   // In a loud place the pause was there but drowned: say what is wrong (the noise), not "leave a pause".
   if (a.silence_before_s < needed || a.silence_after_s < needed) return advise(noisyRoom ? "noisy" : "silence");

@@ -8,7 +8,13 @@
     "starting": "Ouverture de Google…",
     "error": "Impossible d'ouvrir la connexion Google. Veuillez réessayer.",
     "notConfigured": "Note développeur : la connexion n'est pas configurée. Renseignez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.",
-    "inApp": "Cette page est ouverte dans une autre application (WhatsApp, Facebook, Instagram…), où la connexion Google ne fonctionne pas. Ouvrez-la dans Chrome ou Safari : touchez le menu ⋮ ou ···, puis « Ouvrir dans le navigateur »."
+    "inApp": "Cette page est ouverte dans une autre application (WhatsApp, Facebook, Instagram…), où la connexion Google ne fonctionne pas. Ouvrez-la dans Chrome ou Safari : touchez le menu ⋮ ou ···, puis « Ouvrir dans le navigateur ».",
+    "return": {
+      "signupsClosed": "Les nouvelles inscriptions sont fermées pour le moment : ce compte Google n'a pas pu être ajouté. Si vous avez été invité, contactez l'équipe Afriklang.",
+      "denied": "La connexion Google a été annulée. Touchez « Continuer avec Google » pour réessayer.",
+      "restart": "La connexion n'a pas pu se terminer ici. Touchez à nouveau « Continuer avec Google » et terminez-la dans ce même navigateur, sans changer d'application.",
+      "failed": "La connexion n'a pas fonctionné. Touchez « Continuer avec Google » pour réessayer."
+    }
   },
   "claiming": {
     "title": "Vérification de votre invitation…",
@@ -25,7 +31,8 @@
     "contact": "Besoin d'aide ? Contactez l'équipe Afriklang.",
     "accountFor": "Cette invitation a été envoyée à {email}. Connectez-vous avec le compte Google qui utilise cette adresse.",
     "noAccountHint": "Pas de compte Google avec cette adresse ? Demandez à l'équipe Afriklang de changer l'adresse e-mail de votre invitation.",
-    "autoRetry": "Nous réessaierons automatiquement dès que la connexion sera revenue."
+    "autoRetry": "Nous réessaierons automatiquement dès que la connexion sera revenue.",
+    "autoRetryLater": "Votre invitation reste enregistrée sur ce téléphone. Nous réessaierons tout seuls quand vous reviendrez dans l'application."
   },
   "brokenLink": {
     "title": "Ce lien d'invitation est incomplet",
@@ -39,6 +46,7 @@
     "lost": "Vous ne retrouvez pas l'e-mail ? Contactez l'équipe Afriklang et nous vous enverrons une nouvelle invitation."
   },
   "home": {
+    "oldInvitation": "Ce lien d'invitation ne peut plus servir, mais votre compte est déjà prêt : voici vos campagnes.",
     "greeting": "Bon retour",
     "intro": "Voici les campagnes auxquelles vous êtes invité(e).",
     "loadingList": "Chargement de vos campagnes…",

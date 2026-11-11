@@ -75,6 +75,7 @@
   "blocked": {
     "title": "This campaign is not available for your profile",
     "body": "The variety you gave does not match the one this campaign is looking for. The Afriklang team has been told and will get in touch if another campaign suits you.",
+    "varieties": "You gave “{declared}”; this campaign is for: {targets}.",
     "fix": "If you made a mistake, you can correct your profile and the campaign will open again."
   },
   "consent": {
@@ -85,6 +86,8 @@
     "readText": "Read the full consent text",
     "opensNewTab": "(opens in a new tab)",
     "agree": "I have read and agree",
+    "samplesOptIn": "Also let Afriklang play some of my recordings as samples to companies interested in the data (optional; you can change this at any time).",
+    "samplesText": "Read the text about samples",
     "agreeFirst": "Tick the box above once you have read the text to continue.",
     "sign": "I agree",
     "signing": "Saving…",
@@ -101,8 +104,8 @@
     "quiet": "Find a quiet room. Switch off TV, radio and fans.",
     "background": "Background: {text}",
     "mic": "Hold the phone {min} to {max} cm from your mouth.",
-    "level": "Speak clearly and loud enough: the recording must reach at least {level} dBFS on average. The app checks this for you.",
-    "silence": "Stay silent for about {s, plural, one {# second} other {# seconds}} before you start and after you finish.",
+    "level": "Speak clearly, in your normal voice, without shouting.",
+    "silence": "Wait for “Speak now” before you start, and after you finish stay silent until the recording stops: the app records the silence for you.",
     "byType": "What to do, by type",
     "duration": "{min} to {max} seconds",
     "perSession": "About {min} to {max} missions per sitting.",

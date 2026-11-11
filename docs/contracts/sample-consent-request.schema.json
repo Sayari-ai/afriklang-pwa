@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sample consent withdrawal (dashboard → Sayari)",
+  "type": "object",
+  "required": [
+    "speaker_ids",
+    "sample_consent"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "speaker_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "pattern": "^SPK-[A-Z0-9]{8}$"
+      }
+    },
+    "sample_consent": {
+      "const": false,
+      "description": "Only withdrawal is possible here; consent is given through a new upload ticket."
+    }
+  }
+}

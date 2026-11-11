@@ -13,7 +13,7 @@ import { track } from "@/lib/analytics/events";
 import { logActivity } from "./activity";
 import { requestUploadTicket, submitRecording, withdrawConsent } from "./api";
 import { campaignAccessToken, storedCampaignUser } from "./auth-client";
-import { createOutbox, type OutboxEvent } from "./outbox";
+import { createOutbox, outboxAnalytics, type OutboxEvent } from "./outbox";
 import { MIN_WAKE_MS, precheckFromCard, type OutboxItem } from "./outbox-logic";
 import { markWithdrawn, withdrawnHere } from "./withdrawals";
 import { askPersistentStorage } from "./storage-safety";
@@ -163,10 +163,9 @@ function onOutboxEvent(userId: string, e: OutboxEvent) {
 
 /** Analytics: a take sent, or given up on for good (retries are not events). Codes only, no prompt. */
 function trackOutboxEvent(e: OutboxEvent) {
-  const base = { mission_type: e.item.missionType ?? "unknown", attempts: e.item.attempts ?? 0 };
-  if (e.type === "sent") track("upload_succeeded", { ...base, duplicate: e.duplicate });
-  else if (e.type === "failed" || e.type === "dropped") track("upload_failed", { ...base, code: e.code });
-  else if (e.type === "rejected") track("upload_failed", { ...base, code: "recording_rejected", reason: e.reason });
+  const ev = outboxAnalytics(e);
+  if (ev?.[0] === "upload_succeeded") track(ev[0], ev[1]);
+  else if (ev?.[0] === "upload_failed") track(ev[0], ev[1]);
 }
 
 /**

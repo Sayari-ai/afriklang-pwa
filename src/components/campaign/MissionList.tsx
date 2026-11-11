@@ -8,7 +8,7 @@
 import { AlertTriangle, CheckCircle2, ChevronRight, Hourglass, MessagesSquare, Mic, MessageCircle, BookOpen, UploadCloud, Users } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { isRetryable } from "@/lib/campaign/errors";
 import { languageInText } from "@/lib/campaign/language-name";
 import { truncate } from "@/lib/campaign/mission-list";
@@ -18,6 +18,7 @@ import { canRecordNow } from "@/lib/campaign/studio-flow";
 import type { Mission, SpeechType } from "@/lib/campaign/types";
 import { useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions } from "@/lib/campaign/pool-client";
+import { submittedStatusKey, waitsForPartner } from "@/lib/campaign/view";
 import { RejectDetailLines, useFailureText, useRejectDetailText } from "./CampaignHubParts";
 import { LeaseLeft } from "./PoolParts";
 
@@ -56,11 +57,17 @@ export function MissionList({ campaignId, readOnly }: Props) {
   const stage = res.state === "ready" ? res.data.campaign?.qualification?.stage : undefined;
   const testClosed = qualifying && stage != null && stage !== "recording";
 
+  // In each tab, the conversations waiting for the partner come last, under their own heading, and
+  // are not counted: the tab says what can be recorded now, as the hub's button (APP2-08).
   const groups = useMemo(() => {
     const g: Record<Tab, Mission[]> = { todo: [], redo: [], sent: [], accepted: [] };
-    if (live) for (const m of [...live].sort((a, b) => a.position - b.position)) g[tabOf(m, onPhone.get(m.mission_id))].push(m);
+    if (live) {
+      const sorted = [...live].sort((a, b) => Number(waitsForPartner(a, onPhone.get(a.mission_id))) - Number(waitsForPartner(b, onPhone.get(b.mission_id))) || a.position - b.position);
+      for (const m of sorted) g[tabOf(m, onPhone.get(m.mission_id))].push(m);
+    }
     return g;
   }, [live, onPhone]);
+  const countOf = (k: Tab) => groups[k].filter((m) => !waitsForPartner(m, onPhone.get(m.mission_id))).length;
 
   if (res.state === "error") {
     return (
@@ -84,7 +91,7 @@ export function MissionList({ campaignId, readOnly }: Props) {
 
   return (
     <section className="space-y-3">
-      <div role="tablist" aria-label={tm("title")} className="grid grid-cols-4 gap-1 rounded-2xl bg-slate-200/70 p-1">
+      <div role="tablist" aria-label={tm("title")} className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-200/70 p-1 min-[360px]:grid-cols-4">
         {tabs.map((k) => (
           <button
             key={k}
@@ -95,15 +102,20 @@ export function MissionList({ campaignId, readOnly }: Props) {
             onClick={() => setPicked(k)}
             className={`flex min-h-12 flex-col items-center justify-center rounded-xl px-1 text-[11px] leading-tight font-bold ${tab === k ? "bg-white text-primary shadow-sm" : "text-slate-600"}`}
           >
-            <span className="text-base font-black tabular-nums">{groups[k].length}</span>
+            <span className="text-base font-black tabular-nums">{countOf(k)}</span>
             {testClosed && k === "redo" ? t("tabs.notAccepted") : t(`tabs.${k}`)}
           </button>
         ))}
       </div>
       <ul id="mission-panel" role="tabpanel" className="space-y-2">
         {list.length === 0 ? <li className="rounded-2xl bg-white p-5 text-center text-sm text-slate-600">{t(`empty.${tab}`)}</li> : null}
-        {list.map((m) => (
-          <MissionRow key={m.mission_id} campaignId={campaignId} mission={m} local={onPhone.get(m.mission_id)} active={box.activeId != null && box.items.some((i) => i.id === box.activeId && i.missionId === m.mission_id)} readOnly={readOnly || testClosed} qualifying={qualifying} testClosed={testClosed} sayIn={sayIn} />
+        {list.map((m, i) => (
+          <Fragment key={m.mission_id}>
+            {waitsForPartner(m, onPhone.get(m.mission_id)) && (i === 0 || !waitsForPartner(list[i - 1], onPhone.get(list[i - 1].mission_id))) ? (
+              <li className="px-1 pt-2 text-xs font-bold tracking-wide text-slate-600 uppercase">{t("partnerWait")}</li>
+            ) : null}
+            <MissionRow campaignId={campaignId} mission={m} local={onPhone.get(m.mission_id)} active={box.activeId != null && box.items.some((i) => i.id === box.activeId && i.missionId === m.mission_id)} readOnly={readOnly || testClosed} qualifying={qualifying} testClosed={testClosed} sayIn={sayIn} />
+          </Fragment>
         ))}
       </ul>
     </section>
@@ -123,7 +135,7 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifyin
   if (local && local !== "failed") status = <Badge tone="blue" icon={<UploadCloud size={12} aria-hidden />}>{active ? t("outbox.state.sending") : t(`outbox.state.${local}`)}</Badge>;
   else if (local === "failed") status = <Badge tone="red" icon={<AlertTriangle size={12} aria-hidden />}>{t("outbox.state.failed")}</Badge>;
   else if (m.status === "accepted") status = <Badge tone="green" icon={<CheckCircle2 size={12} aria-hidden />}>{t("history.status.accepted")}</Badge>;
-  else if (m.status === "submitted") status = <Badge tone="slate" icon={<Hourglass size={12} aria-hidden />}>{t("history.status.submitted")}</Badge>;
+  else if (m.status === "submitted") status = <Badge tone="slate" icon={<Hourglass size={12} aria-hidden />}>{t(`history.status.${submittedStatusKey(m)}`)}</Badge>;
 
   const body = (
     <>

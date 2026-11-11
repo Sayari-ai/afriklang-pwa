@@ -133,3 +133,36 @@ export function autoStopAtS(_timed: boolean, maxS: number, pad: number): number 
   const cap = Math.min(MAX_TAKE_S, maxS > 0 ? maxS : MAX_TAKE_S);
   return Math.max(pad, cap - pad);
 }
+
+/**
+ * What the studio does with a take when the app goes to the background (APP2-12). The voice may
+ * be complete when only the silence after Stop was being recorded ("tail"), or the speaker may
+ * want to keep what they said ("speaking"): the take is finished, not thrown away. Nothing was
+ * said yet during the lead: dropped, with the usual message. A countdown is cancelled so the
+ * recording never starts in the background.
+ */
+export type HideAction = "cancel" | "drop" | "finish" | "finishCut" | null;
+export function onHideAction(phase: string): HideAction {
+  switch (phase) {
+    case "countdown":
+      return "cancel";
+    case "lead":
+      return "drop";
+    case "speaking":
+      return "finishCut";
+    case "tail":
+      return "finish";
+    default:
+      return null;
+  }
+}
+
+/** A take cut by the system (a call, the microphone lost): kept when only the closing silence was left, else dropped (it would have a gap, APP-032). */
+export const onInterruptAction = (phase: string): "finish" | "drop" => (phase === "tail" ? "finish" : "drop");
+
+/** The studio header's session line: "n of goal" up to the goal, then "goal reached · n takes", never "6 of 1" (APP2-14). */
+export function sessionLabel(count: number, goal: number | null): { key: "session" | "sessionGoal" | "sessionGoalReached"; values: { n: number; goal?: number } } {
+  if (!goal) return { key: "session", values: { n: count } };
+  if (count > goal) return { key: "sessionGoalReached", values: { n: count } };
+  return { key: "sessionGoal", values: { n: count, goal } };
+}
