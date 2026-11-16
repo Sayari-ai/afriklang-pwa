@@ -25,3 +25,11 @@ export function micHelpFor(userAgent: string | null | undefined): MicHelp {
 export const MIC_START_TIMEOUT_MS = 15_000;
 /** After this long, the label says to answer the browser's microphone question. */
 export const MIC_START_HINT_MS = 2_500;
+
+/**
+ * How many numbered steps the "microphone blocked" panel shows for each phone
+ * (messages: campaign.studio.mic.steps.<help>.s1…sN). Replays (2026-11) showed speakers on a
+ * blocked microphone tapping Record again and again: the paragraph of help in the red message
+ * went unread, and Record only flashed the same error. The panel replaces Record until it works.
+ */
+export const MIC_BLOCKED_STEPS: Record<Exclude<MicHelp, "inApp">, number> = { android: 4, ios: 3, desktop: 4 };

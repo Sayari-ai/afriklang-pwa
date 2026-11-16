@@ -13,3 +13,17 @@ describe("micHelpFor", () => {
     expect(micHelpFor(undefined)).toBe("desktop");
   });
 });
+
+describe("MIC_BLOCKED_STEPS", () => {
+  it("has every step and the panel's words in English and French", async () => {
+    const { MIC_BLOCKED_STEPS } = await import("./mic-help");
+    for (const locale of ["en", "fr"]) {
+      const mic = (await import(`../../messages/campaign/studio.${locale}.json`)).default.mic;
+      for (const key of ["title", "lead", "retry", "still", "reload"]) expect(mic.blocked[key], `${locale} blocked.${key}`).toBeTruthy();
+      for (const [help, n] of Object.entries(MIC_BLOCKED_STEPS)) {
+        const steps = mic.steps[help];
+        expect(Object.keys(steps), `${locale} ${help}`).toEqual(Array.from({ length: n }, (_, i) => `s${i + 1}`));
+      }
+    }
+  });
+});

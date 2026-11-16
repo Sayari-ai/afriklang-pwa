@@ -102,6 +102,32 @@
       "android": "Pour l'autoriser : appuyez sur le cadenas ou ⓘ à côté de l'adresse › Autorisations › Micro › Autoriser. S'il est déjà autorisé, ouvrez les Paramètres du téléphone › Applications › Chrome › Autorisations › Micro › Autoriser. Dans l'application installée : appui long sur son icône › Infos sur l'appli › Autorisations › Micro. Puis rechargez la page.",
       "ios": "Pour l'autoriser : appuyez sur « aA » à côté de l'adresse › Réglages du site web › Micro › Autoriser. Vérifiez aussi Réglages de l'iPhone › Safari › Micro › Autoriser (ou Réglages › Chrome › Micro si vous utilisez Chrome). Puis rechargez la page.",
       "desktop": "Pour l'autoriser : cliquez sur le cadenas ou ⓘ à côté de l'adresse, réglez Micro sur Autoriser, et vérifiez que votre ordinateur laisse le navigateur utiliser le micro. Puis rechargez la page."
+    },
+    "blocked": {
+      "title": "Le micro est bloqué",
+      "lead": "Rien ne peut être enregistré tant que le micro n’est pas autorisé pour cette page. Pour l’autoriser :",
+      "retry": "Réessayer",
+      "still": "Toujours bloqué : le micro n’est pas encore autorisé. Suivez les étapes ci-dessus, puis appuyez sur Réessayer. Si vous l’avez déjà autorisé, rechargez la page.",
+      "reload": "Recharger la page"
+    },
+    "steps": {
+      "android": {
+        "s1": "Appuyez sur le cadenas ou ⓘ à côté de l’adresse web, en haut de l’écran.",
+        "s2": "Appuyez sur Autorisations, puis Micro, puis Autoriser.",
+        "s3": "Déjà autorisé ? Ouvrez les Paramètres du téléphone › Applications › Chrome › Autorisations › Micro › Autoriser. (Application installée : appui long sur son icône › Infos sur l’appli › Autorisations › Micro.)",
+        "s4": "Revenez ici et appuyez sur Réessayer."
+      },
+      "ios": {
+        "s1": "Appuyez sur « aA » à côté de l’adresse web › Réglages du site web › Micro › Autoriser.",
+        "s2": "Vérifiez aussi Réglages › Safari › Micro › Autoriser sur l’iPhone (Réglages › Chrome › Micro si vous utilisez Chrome).",
+        "s3": "Revenez ici et appuyez sur Réessayer."
+      },
+      "desktop": {
+        "s1": "Cliquez sur le cadenas ou ⓘ à côté de l’adresse web.",
+        "s2": "Réglez Micro sur Autoriser.",
+        "s3": "Vérifiez que l’ordinateur laisse le navigateur utiliser le micro (Windows : Paramètres › Confidentialité › Micro).",
+        "s4": "Revenez ici et cliquez sur Réessayer."
+      }
     }
   },
   "goal": {
