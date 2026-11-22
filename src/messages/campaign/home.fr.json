@@ -226,5 +226,19 @@
     "cancelled": "Ce test a été annulé.",
     "intro": "Dites chaque consigne en {language}, comme vous la diriez naturellement. Un locuteur natif écoute chaque enregistrement.",
     "notEligibleNoDate": "Pas réussi cette fois. L'équipe vous dira quand vous pourrez repasser le test."
+  },
+  "tutorial": {
+    "s1": {
+      "title": "Comment se passe le test"
+    },
+    "s2": {
+      "title": "Comment enregistrer pour une campagne"
+    },
+    "s3": {
+      "title": "Comment marchent les campagnes en pool"
+    },
+    "watch": "Voir la vidéo ({duration}, {size} Mo)",
+    "silent": "Sans son : les étapes sont écrites à l’écran.",
+    "download": "Ouvrir la vidéo"
   }
 }

@@ -47,6 +47,9 @@ const withPWA = withPWAInit({
   dynamicStartUrl: false,
   reloadOnOnline: false,
   fallbacks: { document: "/~offline" },
+  // public/ is precached on install, except these: the tutorial videos (2–3 MB each) download
+  // only when a speaker presses play, never in the background on mobile data. Keep the default.
+  publicExcludes: ["!noprecache/**/*", "!tutorials/**/*"],
   extendDefaultRuntimeCaching: true,
   workboxOptions: {
     // Keep the previous service worker until clients have reloaded so
