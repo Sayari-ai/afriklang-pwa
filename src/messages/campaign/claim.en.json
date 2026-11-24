@@ -9,6 +9,7 @@
     "error": "We could not open Google sign-in. Please try again.",
     "notConfigured": "Developer note: sign-in is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
     "inApp": "This page is open inside another app (WhatsApp, Facebook, Instagram…), where Google sign-in does not work. Open it in Chrome or Safari: tap the ⋮ or ··· menu, then “Open in browser”.",
+    "storageBlocked": "This browser does not let collect.afriklang.com save anything on your phone, so you cannot sign in. Allow cookies and site data for this site (in Chrome: ⋮ menu → Settings → Site settings → Cookies and site data), or open this page in another browser, then reload it.",
     "return": {
       "signupsClosed": "New sign-ups are closed for now, so this Google account could not be added. If you were invited, contact the Afriklang team.",
       "denied": "The Google sign-in was cancelled. Tap “Continue with Google” to try again.",

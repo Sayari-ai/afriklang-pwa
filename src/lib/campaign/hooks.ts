@@ -25,6 +25,7 @@ import { cacheId, campaignCache, type Entry } from "./cache";
 import { needsSignIn } from "./errors";
 import { CAMPAIGNS, loadCampaigns, loadMissions, missionsKey } from "./queries";
 import { NO_SESSION_YET, rememberSession, type SessionMemory } from "./session-memory";
+import { siteStorageBlocked } from "./site-storage";
 import type { CampaignFailure } from "./types";
 
 /**
@@ -67,7 +68,16 @@ function applySession(next: SessionState) {
 function startSession() {
   if (started || !isCampaignAuthConfigured || typeof window === "undefined") return;
   started = true;
-  const auth = getCampaignAuth().auth;
+  // A browser that blocks this site's storage cannot keep a session, and creating the client
+  // there throws (GitHub #86): stay signed out, the sign-in screen says how to allow storage.
+  let auth: ReturnType<typeof getCampaignAuth>["auth"];
+  try {
+    if (siteStorageBlocked()) throw new Error("site storage blocked");
+    auth = getCampaignAuth().auth;
+  } catch {
+    applySession({ status: "signedOut" });
+    return;
+  }
   // Read before the first check: a session saved on the phone that Auth then refuses has expired.
   const known = storedCampaignUser();
   if (known) memory = { held: true, lost: false };
