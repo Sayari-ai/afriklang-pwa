@@ -18,6 +18,7 @@ import { useEffect } from "react";
 import { useLocale } from "next-intl";
 
 import { isSupportedLocale, type Locale } from "@/i18n/locales";
+import { registerServiceWorker } from "@/lib/campaign/service-worker";
 import { retireLearningAppData } from "@/lib/storage/retire-learning-app";
 import { useAppLocale } from "@/stores/app-locale";
 import { initInstallPromptCapture, useInstallPrompt } from "@/stores/install-prompt";
@@ -28,6 +29,9 @@ export function AppHydration() {
   const serverLocale = useLocale();
 
   useEffect(() => {
+    // The service worker (offline launch). Never throws; once per page load.
+    void registerServiceWorker();
+
     // Once per phone: remove what the retired learning app left behind.
     retireLearningAppData();
 

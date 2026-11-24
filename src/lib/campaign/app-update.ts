@@ -30,7 +30,7 @@ export function useAppUpdate(): { ready: boolean; apply: () => void } {
       reg = r;
       check();
       r.addEventListener("updatefound", onFound);
-    });
+    }, () => undefined); // Refused where service workers are blocked (GitHub #87): no update to offer.
     // Look for a new version when the app comes back to the foreground.
     const onVisible = () => document.visibilityState === "visible" && void reg?.update().catch(() => undefined);
     document.addEventListener("visibilitychange", onVisible);

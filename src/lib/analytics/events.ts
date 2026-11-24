@@ -35,6 +35,8 @@ export type AnalyticsEvents = {
   upload_failed: { code: string; reason?: string; mission_type: string; attempts: number };
   test_completed: { language: string; prompts: number; attempt_no?: number };
   app_update_applied: Record<string, never>;
+  /** The browser refused the service worker (the app then works, only not offline). `reason`: the error's name. */
+  sw_register_failed: { reason: string };
   /** A tutorial video opened on a campaign page (S1 test, S2 campaign, S3 pool), in the language played. */
   tutorial_opened: { video: "s1" | "s2" | "s3"; language: "en" | "fr" };
 };
@@ -60,6 +62,7 @@ export const ANALYTICS_EVENTS = [
   "upload_failed",
   "test_completed",
   "app_update_applied",
+  "sw_register_failed",
 ] as const satisfies readonly AnalyticsEventName[];
 
 /** Longest string property kept: codes and language tags are short; anything longer is cut. */
