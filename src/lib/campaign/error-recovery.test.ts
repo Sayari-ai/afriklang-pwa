@@ -34,6 +34,14 @@ describe("retryAction (error screens' Retry button)", () => {
     expect(reload).toHaveBeenCalledOnce();
   });
 
+  it("never throws, even when the reload throws too", () => {
+    const boom = () => {
+      throw new Error("boom");
+    };
+    expect(() => retryAction({ retry: boom }, boom)()).not.toThrow();
+    expect(() => retryAction({}, boom)()).not.toThrow();
+  });
+
   it("reloads the page when the retry itself throws", () => {
     const reload = vi.fn();
     retryAction(

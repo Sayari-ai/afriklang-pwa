@@ -25,12 +25,19 @@ const isFunction = (f: unknown): f is () => void => typeof f === "function";
 /** The function the Retry button should call. Never throws when called. */
 export function retryAction(props: ErrorBoundaryActions, reload: () => void = () => window.location.reload()): () => void {
   const fn = [props.retry, props.unstable_retry, props.reset].find(isFunction);
+  const safeReload = () => {
+    try {
+      reload();
+    } catch {
+      // nothing more to try
+    }
+  };
   return () => {
     try {
       if (fn) fn();
-      else reload();
+      else safeReload();
     } catch {
-      reload();
+      safeReload();
     }
   };
 }
