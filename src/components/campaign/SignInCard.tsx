@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { isCampaignAuthConfigured, signInWithGoogle } from "@/lib/campaign/auth-client";
 import { isInAppBrowser } from "@/lib/campaign/in-app-browser";
+import { siteStorageBlocked } from "@/lib/campaign/site-storage";
 import { signInFailed, signInStarted } from "@/lib/analytics/client";
 import { takeSignInReturnProblem, type SignInReturnProblem } from "@/lib/campaign/sign-in-return";
 
@@ -13,11 +14,14 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
   const [failed, setFailed] = useState(false);
   // Read after mounting (the server has no user agent).
   const [inApp, setInApp] = useState(false);
+  // The browser refuses to keep anything for this site: sign-in cannot work (GitHub #86).
+  const [storageBlocked, setStorageBlocked] = useState(false);
   // Back from Google without a session: say why, once (APP2-11).
   const [returned, setReturned] = useState<SignInReturnProblem | null>(null);
   useEffect(() => {
     void Promise.resolve().then(() => {
       setInApp(isInAppBrowser(navigator.userAgent));
+      setStorageBlocked(siteStorageBlocked());
       // Taken once: StrictMode runs this effect twice, and the second read must not erase the first.
       const problem = takeSignInReturnProblem();
       if (problem) setReturned(problem);
@@ -59,7 +63,11 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
       ) : null}
       <p className="text-base text-slate-800">{t("intro")}</p>
       <p className="text-sm text-slate-600">{t("why")}</p>
-      {isCampaignAuthConfigured ? (
+      {storageBlocked ? (
+        <p role="alert" className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          {t("storageBlocked")}
+        </p>
+      ) : isCampaignAuthConfigured ? (
         <button type="button" onClick={() => void start()} disabled={busy} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-5 text-base font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60">
           {busy ? t("starting") : t("button")}
         </button>
