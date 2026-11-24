@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import { reportException } from "@/lib/analytics/client";
+import { retryAction, type ErrorBoundaryActions } from "@/lib/campaign/error-recovery";
 
 /**
  * Last-resort boundary for errors in the root layout. It replaces the
@@ -10,13 +11,7 @@ import { reportException } from "@/lib/analytics/client";
  * the text is in English and French, and the button reloads the page (a
  * file missing after an update needs a full load, APP2-22).
  */
-export default function GlobalError({
-  error,
-  unstable_retry,
-}: {
-  error: Error & { digest?: string };
-  unstable_retry: () => void;
-}) {
+export default function GlobalError({ error, ...actions }: { error: Error & { digest?: string } } & ErrorBoundaryActions) {
   useEffect(() => {
     reportException(error, { boundary: "app/global-error.tsx", digest: error.digest });
   }, [error]);
@@ -47,7 +42,7 @@ export default function GlobalError({
             try {
               window.location.reload();
             } catch {
-              unstable_retry();
+              retryAction(actions)();
             }
           }}
           style={{
