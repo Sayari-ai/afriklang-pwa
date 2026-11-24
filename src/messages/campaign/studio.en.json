@@ -102,6 +102,32 @@
       "android": "To allow it: tap the lock or ⓘ next to the web address › Permissions › Microphone › Allow. If it is already allowed, open your phone's Settings › Apps › Chrome › Permissions › Microphone › Allow. In the installed app: press and hold its icon › App info › Permissions › Microphone. Then reload the page.",
       "ios": "To allow it: tap “aA” next to the web address › Website Settings › Microphone › Allow. Also check your iPhone's Settings › Safari › Microphone › Allow (or Settings › Chrome › Microphone if you use Chrome). Then reload the page.",
       "desktop": "To allow it: click the lock or ⓘ next to the web address, set Microphone to Allow, and check that your computer lets the browser use the microphone. Then reload the page."
+    },
+    "blocked": {
+      "title": "The microphone is blocked",
+      "lead": "Nothing can be recorded until you allow the microphone for this page. To allow it:",
+      "retry": "Try again",
+      "still": "Still blocked: the microphone is not allowed yet. Follow the steps above, then tap Try again. If you have already allowed it, reload the page.",
+      "reload": "Reload the page"
+    },
+    "steps": {
+      "android": {
+        "s1": "Tap the lock or ⓘ next to the web address, at the top of the screen.",
+        "s2": "Tap Permissions, then Microphone, then Allow.",
+        "s3": "Already allowed there? Open your phone’s Settings › Apps › Chrome › Permissions › Microphone › Allow. (Installed app: press and hold its icon › App info › Permissions › Microphone.)",
+        "s4": "Come back here and tap Try again."
+      },
+      "ios": {
+        "s1": "Tap “aA” next to the web address › Website Settings › Microphone › Allow.",
+        "s2": "Also check your iPhone’s Settings › Safari › Microphone › Allow (Settings › Chrome › Microphone if you use Chrome).",
+        "s3": "Come back here and tap Try again."
+      },
+      "desktop": {
+        "s1": "Click the lock or ⓘ next to the web address.",
+        "s2": "Set Microphone to Allow.",
+        "s3": "Check that your computer lets the browser use the microphone (Windows: Settings › Privacy › Microphone).",
+        "s4": "Come back here and click Try again."
+      }
     }
   },
   "goal": {

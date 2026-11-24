@@ -21,7 +21,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useLocale, useTranslations } from "next-intl";
 import { checkTake, sha256Hex, type FullAnalysis, type TakeProblem } from "@/lib/audio/analyze";
 import { RecorderError, WavRecorder, acquireMicStream, prewarmAudioWorklet } from "@/lib/audio/recorder";
-import { MIC_START_HINT_MS, MIC_START_TIMEOUT_MS, micHelpFor, type MicHelp } from "@/lib/audio/mic-help";
+import { MIC_BLOCKED_STEPS, MIC_START_HINT_MS, MIC_START_TIMEOUT_MS, micHelpFor, type MicHelp } from "@/lib/audio/mic-help";
 import { buildAudioMetadata, parseDevice, varietyFor } from "@/lib/campaign/audio-metadata";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/campaign/drafts";
 import { LOW_SPACE_BYTES, freeSpaceBytes } from "@/lib/campaign/storage-safety";
@@ -106,6 +106,9 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
   const [micError, setMicError] = useState<string | null>(null);
   // Where to allow the microphone, shown under a "blocked" or "did not start" message.
   const [micHelp, setMicHelp] = useState<MicHelp | null>(null);
+  // The microphone is blocked (permission denied): a panel with the steps replaces Record, and
+  // counts the attempts that failed in a row, to say "still blocked" on a retry.
+  const [micBlocked, setMicBlocked] = useState(0);
   // The countdown is over but the microphone has not started yet: say to answer the browser.
   const [slowStart, setSlowStart] = useState(false);
   const [quiet, setQuiet] = useState(false);
@@ -317,6 +320,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       // page in the phone's browser.
       setMicError(help === "inApp" && code !== "no-mic" ? t("mic.inApp") : t(`mic.${code}`));
       setMicHelp(code === "permission-denied" && help !== "inApp" ? help : null);
+      setMicBlocked((n) => (code === "permission-denied" && help !== "inApp" ? n + 1 : 0));
     },
     [t],
   );
@@ -387,6 +391,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       rec.onInterrupted = () => interruptRef.current();
       await rec.start(stream ?? undefined);
       if (attempt !== attemptRef.current) return void rec.dispose();
+      setMicBlocked(0);
       const startedAt = Date.now();
       let quietFor = 0;
       let last = startedAt;
@@ -445,6 +450,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         reportMicError(help === "inApp" ? "inApp" : "startTimeout", help === "inApp", null);
         setMicError(t(help === "inApp" ? "mic.inApp" : "mic.startTimeout"));
         setMicHelp(help === "inApp" ? null : help);
+        setMicBlocked(0);
         setSlowStart(false);
         setPhase("idle");
         vibrate([40, 60, 40]);
@@ -825,7 +831,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
         </p>
       ) : null}
       <PromptCard mission={mission} lang={card.language.code} size={size} onSize={changeSize} sayIn={card.kind === "qualification" ? { language: card.language.name, uiLocale: locale } : undefined} />
-      {micError ? (
+      {micError && !(micBlocked > 0 && micHelp && phase === "idle") ? (
         <p role="alert" className="rounded-2xl bg-red-500/20 px-4 py-3 text-sm font-medium text-red-50 ring-1 ring-red-300/40">
           {micError}
           {micHelp ? <span className="mt-1 block font-normal text-red-50/90">{t(`mic.help.${micHelp}`)}</span> : null}
@@ -881,7 +887,28 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
             {maxS ? <span className="text-lg font-semibold text-white/60"> / {formatClock(maxS)}</span> : null}
           </p>
         ) : null}
-        <RecordButton mode={buttonMode} count={count} onPress={press} disabled={phase === "speaking" && !canStop} describedBy="rec-hint" levelRef={levelRef} minLevelDbfs={rules.minLevelDbfs} progress={progress} label={buttonLabel} />
+        {micBlocked > 0 && micHelp && phase === "idle" ? (
+          <div role="alert" className="afk-pop w-full space-y-3 rounded-2xl bg-white p-4 text-slate-900 shadow-lg">
+            <p className="text-lg font-bold">{t("mic.blocked.title")}</p>
+            {micBlocked > 1 ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">{t("mic.blocked.still")}</p> : null}
+            <p className="text-sm">{t("mic.blocked.lead")}</p>
+            <ol className="list-decimal space-y-1.5 pl-5 text-base">
+              {Array.from({ length: MIC_BLOCKED_STEPS[micHelp as Exclude<MicHelp, "inApp">] }, (_, i) => (
+                <li key={i}>{t(`mic.steps.${micHelp}.s${i + 1}`)}</li>
+              ))}
+            </ol>
+            <button type="button" onClick={start} className="min-h-14 w-full rounded-2xl bg-primary text-lg font-bold text-white">
+              {t("mic.blocked.retry")}
+            </button>
+            {micBlocked > 1 ? (
+              <button type="button" onClick={() => window.location.reload()} className="min-h-11 w-full rounded-2xl border border-slate-300 text-base font-semibold text-slate-700">
+                {t("mic.blocked.reload")}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <RecordButton mode={buttonMode} count={count} onPress={press} disabled={phase === "speaking" && !canStop} describedBy="rec-hint" levelRef={levelRef} minLevelDbfs={rules.minLevelDbfs} progress={progress} label={buttonLabel} />
+        )}
         <p id="rec-hint" className="min-h-5 text-center text-sm text-white/75">
           {phase === "speaking" && quiet ? <span className="font-semibold text-amber-200">{t("hint.quiet")}</span> : phase === "speaking" && !canStop ? t("hint.tooEarly", { min: minS }) : null}
         </p>
