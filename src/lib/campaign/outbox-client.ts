@@ -10,6 +10,8 @@ import { createStore, del, get, set, values, type UseStore } from "idb-keyval";
 import { useEffect, useSyncExternalStore } from "react";
 import { AudioUploadError, uploadAudio } from "@/lib/api/audio";
 import { track } from "@/lib/analytics/events";
+import { reportException } from "@/lib/analytics/client";
+import { guardStore, quietRunner } from "./idb-guard";
 import { logActivity } from "./activity";
 import { requestUploadTicket, submitRecording, withdrawConsent } from "./api";
 import { campaignAccessToken, storedCampaignUser } from "./auth-client";
@@ -69,12 +71,18 @@ let idb: UseStore | null = null;
 const db = () => (idb ??= createStore("afriklang.campaign.outbox", "takes"));
 
 export const outbox = createOutbox({
-  store: {
-    all: () => values<OutboxItem>(db()),
-    get: (id) => get<OutboxItem>(id, db()),
-    put: (item) => set(item.id, item, db()),
-    remove: (id) => del(id, db()),
-  },
+  // A failed request reopens the database next time (iOS can drop the connection, GitHub #50).
+  store: guardStore(
+    {
+      all: () => values<OutboxItem>(db()),
+      get: (id: string) => get<OutboxItem>(id, db()),
+      put: (item: OutboxItem) => set(item.id, item, db()),
+      remove: (id: string) => del(id, db()),
+    },
+    () => {
+      idb = null;
+    },
+  ),
   upload: (item, onProgress, signal, ticket) => uploadSignedIn(item, onProgress, signal, ticket),
   requestTicket: (item) => requestUploadTicket(item.missionId, item.metadata.source_sha256, item.metadata.duration_s),
   withdrawnHere: (item) => withdrawnHere(item.userId, item.campaignId),
@@ -91,12 +99,16 @@ export const outbox = createOutbox({
       : run(),
 });
 
+/** Start sending what is due. Never rejects: a storage failure is reported once and the next wake tries again (GitHub #50). */
+const runQuietly = quietRunner((e) => reportException(e, { source: "outbox" }));
+const drainQuietly = (userId: string) => runQuietly(() => outbox.drain(userId));
+
 /** Save a take and start sending it. */
 export async function enqueueTake(item: OutboxItem) {
   // Ask the browser not to evict takes under storage pressure (once per app start; APP-007).
   void askPersistentStorage();
   await outbox.add(item);
-  void outbox.drain(item.userId);
+  void drainQuietly(item.userId);
 }
 
 /**
@@ -107,7 +119,7 @@ export function useOutboxRunner(userId: string | null) {
   useEffect(() => {
     if (!userId) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
-    const kick = () => void outbox.drain(userId).then(schedule);
+    const kick = () => void drainQuietly(userId).then(schedule);
     const schedule = () => {
       if (timer) clearTimeout(timer);
       timer = null;
@@ -120,7 +132,7 @@ export function useOutboxRunner(userId: string | null) {
     const onVisible = () => document.visibilityState === "visible" && kick();
     const offEvent = outbox.onEvent((e: OutboxEvent) => onOutboxEvent(userId, e));
 
-    void outbox.purgeExpired().then(() => outbox.refresh()).then(kick);
+    void runQuietly(() => outbox.purgeExpired().then(() => outbox.refresh())).then(kick);
     window.addEventListener("online", kick);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
