@@ -26,6 +26,7 @@ import { needsSignIn } from "./errors";
 import { CAMPAIGNS, loadCampaigns, loadMissions, missionsKey } from "./queries";
 import { NO_SESSION_YET, rememberSession, type SessionMemory } from "./session-memory";
 import { siteStorageBlocked } from "./site-storage";
+import { reportException } from "@/lib/analytics/client";
 import type { CampaignFailure } from "./types";
 
 /**
@@ -70,11 +71,16 @@ function startSession() {
   started = true;
   // A browser that blocks this site's storage cannot keep a session, and creating the client
   // there throws (GitHub #86): stay signed out, the sign-in screen says how to allow storage.
+  if (siteStorageBlocked()) {
+    applySession({ status: "signedOut" });
+    return;
+  }
   let auth: ReturnType<typeof getCampaignAuth>["auth"];
   try {
-    if (siteStorageBlocked()) throw new Error("site storage blocked");
     auth = getCampaignAuth().auth;
-  } catch {
+  } catch (e) {
+    // Anything else that stops the client: still no crash, but it must stay visible.
+    reportException(e, { source: "campaign-auth-init" });
     applySession({ status: "signedOut" });
     return;
   }

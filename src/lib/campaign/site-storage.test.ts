@@ -49,8 +49,15 @@ describe("siteStorageBlocked (GitHub #86)", () => {
   });
 
   it("is false when a storage is only full (the session can still be read)", () => {
-    const full = { ...memoryStorage(), setItem: () => { throw Object.assign(new Error("full"), { name: "QuotaExceededError" }); } } as Storage;
+    const base = memoryStorage();
+    base.setItem("afriklang.campaign.auth.v1", "{}");
+    const full = Object.assign(Object.create(base) as Storage, { setItem: () => { throw Object.assign(new Error("full"), { name: "QuotaExceededError" }); } });
     expect(siteStorageBlocked({ localStorage: full, sessionStorage: memoryStorage() })).toBe(false);
+  });
+
+  it("is true when an empty storage has no room at all (older Safari private mode)", () => {
+    const none = { ...memoryStorage(), length: 0, setItem: () => { throw Object.assign(new Error("quota"), { name: "QuotaExceededError" }); } } as Storage;
+    expect(siteStorageBlocked({ localStorage: none, sessionStorage: memoryStorage() })).toBe(true);
   });
 
   it("is false on the server", () => {

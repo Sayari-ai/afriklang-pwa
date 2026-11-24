@@ -9,7 +9,7 @@
     "error": "Impossible d'ouvrir la connexion Google. Veuillez réessayer.",
     "notConfigured": "Note développeur : la connexion n'est pas configurée. Renseignez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.",
     "inApp": "Cette page est ouverte dans une autre application (WhatsApp, Facebook, Instagram…), où la connexion Google ne fonctionne pas. Ouvrez-la dans Chrome ou Safari : touchez le menu ⋮ ou ···, puis « Ouvrir dans le navigateur ».",
-    "storageBlocked": "Ce navigateur n'autorise pas collect.afriklang.com à enregistrer quoi que ce soit sur votre téléphone : la connexion est donc impossible. Autorisez les cookies et les données de ce site (dans Chrome : menu ⋮ → Paramètres → Paramètres des sites → Cookies et données des sites), ou ouvrez cette page dans un autre navigateur, puis rechargez-la.",
+    "storageBlocked": "Ce navigateur n'autorise pas ce site à enregistrer quoi que ce soit sur votre appareil : la connexion est donc impossible. Dans les paramètres du navigateur, autorisez les cookies et les données de ce site (ou quittez la navigation privée), ou ouvrez cette page dans un autre navigateur, puis rechargez-la.",
     "return": {
       "signupsClosed": "Les nouvelles inscriptions sont fermées pour le moment : ce compte Google n'a pas pu être ajouté. Si vous avez été invité, contactez l'équipe Afriklang.",
       "denied": "La connexion Google a été annulée. Touchez « Continuer avec Google » pour réessayer.",

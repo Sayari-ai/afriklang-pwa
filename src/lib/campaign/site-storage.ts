@@ -23,14 +23,20 @@ function usable(read: () => Storage | null | undefined): boolean {
     s.removeItem(PROBE_KEY);
     return true;
   } catch (e) {
-    // A full storage still works for reading the session: only a refusal means "blocked".
-    return isQuotaError(e);
+    // A full storage still works for reading the session. An empty one that refuses a write has
+    // no room at all (older Safari private mode): that is "blocked" too.
+    if (!isQuotaError(e)) return false;
+    try {
+      return (read()?.length ?? 0) > 0;
+    } catch {
+      return false;
+    }
   }
 }
 
 function isQuotaError(e: unknown): boolean {
   const name = (e as { name?: unknown } | null)?.name;
-  return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED";
+  return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED" || name === "QUOTA_EXCEEDED_ERR";
 }
 
 /** true when the browser refuses this site's localStorage or sessionStorage. False on the server. */
