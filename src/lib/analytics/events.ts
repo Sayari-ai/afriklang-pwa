@@ -35,6 +35,8 @@ export type AnalyticsEvents = {
   upload_failed: { code: string; reason?: string; mission_type: string; attempts: number };
   test_completed: { language: string; prompts: number; attempt_no?: number };
   app_update_applied: Record<string, never>;
+  /** A tutorial video opened on a campaign page (S1 test, S2 campaign, S3 pool), in the language played. */
+  tutorial_opened: { video: "s1" | "s2" | "s3"; language: "en" | "fr" };
 };
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

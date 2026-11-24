@@ -27,6 +27,7 @@ import { Instructions, WithdrawControl } from "./Instructions";
 import { MissionList, MissionSkeleton } from "./MissionList";
 import { GiveBack, PaidTime, PoolPanel } from "./PoolParts";
 import { ProfileForm } from "./ProfileForm";
+import { TutorialVideo } from "./TutorialVideo";
 
 export function CampaignHub({ campaignId }: { campaignId: string }) {
   const t = useTranslations("campaign.flow.hub");
@@ -162,6 +163,8 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
 
       {!step && card.next_step !== "blocked" && !qualifying ? <PaidTime card={card} /> : null}
       {qualifying && !testStatus && card.next_step === "ready" ? <p className="rounded-2xl bg-primary/5 p-4 text-sm font-medium text-slate-800">{t("qualification.intro", { language: languageInText(card.language.name, locale) })}</p> : null}
+      {/* The test's video from the first step on (profile, consents, recording), not once it is with the team. */}
+      {qualifying && !testStatus && card.next_step !== "blocked" ? <TutorialVideo id="s1" /> : null}
 
       {card.next_step === "profile" || (card.next_step === "blocked" && correcting) ? (
         <Panel>
@@ -239,6 +242,7 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
           )}
           {stillOnPhone > 0 ? <OutboxPanel compact /> : null}
           <Tips card={card} />
+          {qualifying ? null : <TutorialVideo id={pool.pool ? "s3" : "s2"} />}
           <MissionList campaignId={card.campaign_id} readOnly={false} />
           <details className="group rounded-2xl bg-white p-4 ring-1 ring-slate-200">
             <summary className="cursor-pointer list-none text-sm font-bold text-slate-700">{t("hub.more")}</summary>

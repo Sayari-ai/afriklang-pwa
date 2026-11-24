@@ -1,0 +1,12 @@
+# Keeps the SHA-pinned actions in .github/workflows patched: Dependabot bumps
+# the SHA and its `# vX.Y.Z` comment together, once a week, in one grouped PR.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]

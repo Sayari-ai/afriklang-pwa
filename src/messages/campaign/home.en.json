@@ -226,5 +226,19 @@
     "cancelled": "This test was cancelled.",
     "intro": "Say each prompt in {language}, the way you would naturally say it. A native speaker listens to every recording.",
     "notEligibleNoDate": "Not passed this time. The team will tell you when you can take the test again."
+  },
+  "tutorial": {
+    "s1": {
+      "title": "How the test works"
+    },
+    "s2": {
+      "title": "How to record a campaign"
+    },
+    "s3": {
+      "title": "How pool campaigns work"
+    },
+    "watch": "Watch the video ({duration}, {size} MB)",
+    "silent": "No sound: the steps are written on screen.",
+    "download": "Open the video"
   }
 }
