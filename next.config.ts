@@ -41,7 +41,9 @@ const navigationCacheKey = {
 };
 const withPWA = withPWAInit({
   dest: "public",
-  register: true,
+  // The app registers the service worker itself (lib/campaign/service-worker.ts, from
+  // AppHydration) so a browser that refuses it is not an unhandled rejection on every page.
+  register: false,
   disable: process.env.NODE_ENV === "development",
   cacheStartUrl: false,
   dynamicStartUrl: false,
