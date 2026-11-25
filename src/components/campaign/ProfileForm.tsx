@@ -32,6 +32,7 @@ import {
   tidyVariety,
   validateProfile,
   varietyChoices,
+  isStandardVariety,
   type FieldError,
   type LanguageChoice,
   type ProfileErrors,
@@ -330,7 +331,7 @@ export function ProfileForm({ card, cards, contributor, onSaved, heading }: Prop
               onClick={() => set("variety")(name)}
               className="min-h-10 rounded-full border border-slate-300 bg-white px-3 text-sm text-slate-800 hover:border-primary focus-visible:outline-2 focus-visible:outline-primary"
             >
-              {name}
+              {isStandardVariety(card, name) ? `${name} — ${t("varietyStandard")}` : name}
             </button>
           ))}
         </div>

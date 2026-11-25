@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, countryOptions, firstLanguageChoices, formNativeLanguage, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, nativeLanguageFallback, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
+import { AFRICAN_COUNTRIES, ALL_COUNTRIES, canAddVarieties, isStandardVariety, countryOptions, firstLanguageChoices, formNativeLanguage, guessDevice, initialValues, languageCodeOf, languageDisplayName, matchVariety, nativeLanguageFallback, outsideTargets, profileErrorsFromServer, suggestVarieties, validateProfile, varietyChoices, varietyKey, type ProfileValues } from "./profile-form";
 
 const ok: ProfileValues = { native_language: "wol", variety: "Baol-Baol", country: "SN", region: " Thiès ", gender: "female", age_band: "30-44", device: "Android" };
 const varieties = ["Baol-Baol", "Saloum-Saloum"];
@@ -58,6 +58,13 @@ describe("variety", () => {
     const card = { language: { code: "wol", name: "Wolof", varieties: ["Saloum-Saloum"], known_varieties: ["Baol-Baol", "saloum saloum", "Lebou"] } };
     expect(varietyChoices(card, "wol")).toEqual(["Saloum-Saloum", "Baol-Baol", "Lebou"]);
     expect(varietyChoices({ language: { code: "wol", name: "Wolof", varieties } }, "wol")).toEqual(varieties);
+  });
+  it("puts the language's standard first, once, and marks it (the variety referential)", () => {
+    const card = { language: { code: "wol", name: "Wolof", varieties: ["Saloum-Saloum"], known_varieties: ["Dakar Wolof", "Saloum-Saloum"], standard_variety: "Dakar Wolof" } };
+    expect(varietyChoices(card, "wol")).toEqual(["Dakar Wolof", "Saloum-Saloum"]);
+    expect(isStandardVariety(card, "dakar wolof")).toBe(true);
+    expect(isStandardVariety(card, "Saloum-Saloum")).toBe(false);
+    expect(isStandardVariety({ language: { ...card.language, standard_variety: null } }, "Dakar Wolof")).toBe(false);
   });
   it("on a card in another language than the native one, offers no chips and refuses nothing as unlisted (A5)", () => {
     const fuc = { language: { code: "fuc", name: "Pulaar", varieties: ["Fuuta Tooro"], known_varieties: ["Fuuta Tooro", "Fuuta Jalon"] } };
