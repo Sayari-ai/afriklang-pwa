@@ -66,8 +66,10 @@ export type CampaignCard = {
    * campaign until the team checks; none: any). A qualification test accepts any variety.
    * `known_varieties`: every variety of the language the dashboard knows, the form's suggestions.
    * Optional: an older dashboard does not send it (the form then suggests `varieties`).
+   * `standard_variety`: the language's standard, offered first as "Standard / I don't know"
+   * (the variety referential). Null or absent: none set, or an older dashboard.
    */
-  language: { code: string; name: string; varieties: string[]; known_varieties?: string[] };
+  language: { code: string; name: string; varieties: string[]; known_varieties?: string[]; standard_variety?: string | null };
   topic: { domain: string; sub_domain: string | null };
   deadline: string | null;
   dispatch?: Dispatch;

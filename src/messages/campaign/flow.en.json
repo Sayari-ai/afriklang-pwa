@@ -24,6 +24,7 @@
     "varietyHint": "Type the name of your variety, or tap one of the suggestions. If it is not listed, type it in full: it will be added.",
     "varietyHintPick": "Type the name of your variety and tap it in the suggestions.",
     "varietySuggestions": "Suggested varieties",
+    "varietyStandard": "Standard / I don't know",
     "varietyNew": "“{name}” is not in our list yet. It will be added as a variety of {language} when you save.",
     "varietyOutsideTitle": "This campaign is for other varieties",
     "varietyOutsideBody": "This campaign is for speakers of {varieties}. You can still save your variety: your missions in this campaign will wait until the Afriklang team has looked at it.",

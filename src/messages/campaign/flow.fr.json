@@ -24,6 +24,7 @@
     "varietyHint": "Saisissez le nom de votre variété ou touchez l'une des suggestions. Si elle n'est pas proposée, écrivez-la en entier : elle sera ajoutée.",
     "varietyHintPick": "Saisissez le nom de votre variété et touchez-la dans les suggestions.",
     "varietySuggestions": "Variétés suggérées",
+    "varietyStandard": "Standard / Je ne sais pas",
     "varietyNew": "« {name} » n'est pas encore dans notre liste. Elle sera ajoutée à la liste des variétés de la langue {language} lors de l'enregistrement.",
     "varietyOutsideTitle": "Cette campagne concerne d'autres variétés",
     "varietyOutsideBody": "Cette campagne s'adresse aux locuteurs de : {varieties}. Vous pouvez quand même enregistrer votre variété : vos missions de cette campagne attendront que l'équipe Afriklang l'ait examinée.",
