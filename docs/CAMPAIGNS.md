@@ -176,6 +176,17 @@ All steps can be done in the Supabase dashboard (no CLI needed).
   when it is out of date.
 - **CLI**: `supabase functions deploy campaigns --project-ref <ref>` deploys the multi-file source.
 
+### 3.3b Account erasure function (`erase-account`, JWT verification OFF)
+The dashboard's full erasure of a contributor deletes their sign-in account here (shared contract §8,
+`afriklang-landing-page/docs/CONTRIBUTOR_ERASURE_DECISIONS.md`). Nothing in the app calls it.
+- Secret **`ERASE_SECRET`**: a new long random value (`openssl rand -hex 32`, at least 32 characters), **not** the
+  bridge secret. The same value goes into the dashboard as `PWA_ERASE_SECRET`.
+- **Dashboard editor**: Deploy a new function → Via Editor, name it **`erase-account`**, paste the whole of
+  `supabase/functions/erase-account/index.ts` (one file, no imports to bundle), deploy, then turn **Verify JWT OFF**
+  in its settings: the dashboard holds no app session and proves itself with `ERASE_SECRET`.
+- **CLI**: `supabase functions deploy erase-account --no-verify-jwt --project-ref <ref>`.
+- Check: a POST without the secret answers `401`; with it and a random uuid, `200 {"deleted": false, "reason": "not_found"}`.
+
 ### 3.4 Dashboard side
 Set `PWA_BRIDGE_SECRET` (same value as above), `PWA_APP_URL` (this app's https origin),
 `CAMPAIGN_REPLY_TO`, the SES settings and `CRON_SECRET`, and apply migrations 0044-0053. Full list and
