@@ -59,9 +59,14 @@ describe("variety", () => {
     expect(varietyChoices(card, "wol")).toEqual(["Saloum-Saloum", "Baol-Baol", "Lebou"]);
     expect(varietyChoices({ language: { code: "wol", name: "Wolof", varieties } }, "wol")).toEqual(varieties);
   });
-  it("puts the language's standard first, once, and marks it (the variety referential)", () => {
+  it("puts the language's standard first, once, when the card takes it, and marks it (the variety referential)", () => {
     const card = { language: { code: "wol", name: "Wolof", varieties: ["Saloum-Saloum"], known_varieties: ["Dakar Wolof", "Saloum-Saloum"], standard_variety: "Dakar Wolof" } };
-    expect(varietyChoices(card, "wol")).toEqual(["Dakar Wolof", "Saloum-Saloum"]);
+    // A campaign that does not target the standard: the targets lead, the standard keeps its place.
+    expect(varietyChoices(card, "wol")).toEqual(["Saloum-Saloum", "Dakar Wolof"]);
+    // A qualification test, no targets, or a target standard: the standard leads.
+    expect(varietyChoices({ ...card, kind: "qualification" as const }, "wol")).toEqual(["Dakar Wolof", "Saloum-Saloum"]);
+    expect(varietyChoices({ language: { ...card.language, varieties: [] } }, "wol")).toEqual(["Dakar Wolof", "Saloum-Saloum"]);
+    expect(varietyChoices({ language: { ...card.language, varieties: ["Saloum-Saloum", "dakar wolof"] } }, "wol")).toEqual(["Dakar Wolof", "Saloum-Saloum"]);
     expect(isStandardVariety(card, "dakar wolof")).toBe(true);
     expect(isStandardVariety(card, "Saloum-Saloum")).toBe(false);
     expect(isStandardVariety({ language: { ...card.language, standard_variety: null } }, "Dakar Wolof")).toBe(false);

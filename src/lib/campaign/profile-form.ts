@@ -81,15 +81,19 @@ export function varietyKey(s: string): string {
 }
 
 /**
- * What the form suggests: the language's standard first (offered as "Standard / I don't know"),
- * then the campaign's varieties, then the language's others, no duplicates. Nothing when the
+ * What the form suggests: the campaign's varieties, then the language's others, no duplicates.
+ * The language's standard (offered as "Standard / I don't know") leads when it fits the card: a
+ * qualification test, a campaign with no target varieties, or one that targets it; otherwise it
+ * keeps its place, so the first chip never pauses a campaign (outsideTargets). Nothing when the
  * speaker's native language is not the card's: those lists are another language's.
  */
-export function varietyChoices(card: Pick<CampaignCard, "language">, nativeLanguage: string): string[] {
+export function varietyChoices(card: Pick<CampaignCard, "language"> & Partial<Pick<CampaignCard, "kind">>, nativeLanguage: string): string[] {
   if (nativeLanguage !== card.language.code) return [];
   const seen = new Set<string>();
   const out: string[] = [];
-  const standard = card.language.standard_variety ? [card.language.standard_variety] : [];
+  const std = card.language.standard_variety;
+  const leads = !!std && (card.kind === "qualification" || card.language.varieties.length === 0 || card.language.varieties.some((v) => varietyKey(v) === varietyKey(std)));
+  const standard = leads ? [std] : [];
   for (const name of [...standard, ...card.language.varieties, ...(card.language.known_varieties ?? [])]) {
     const k = varietyKey(name);
     if (!k || seen.has(k)) continue;
