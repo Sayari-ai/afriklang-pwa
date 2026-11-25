@@ -236,8 +236,9 @@ dashboard's full erasure of a contributor (owner decisions D1–D7, lp `docs/CON
   conversation take with a partner included (D5).
   * `kept_delivered` (D4, untouched): a take a customer may already hold, that is an `api_deliveries` row, a `/v1`
     item read of it, or an `annotated` take whose language a customer key listed or downloaded (`/v1/datasets/<lang>/
-    items` or `/download`, HTTP 200) after it was annotated. A kept take is marked withheld: it is never part of a new
-    delivery (`/v1` items, downloads, counts), as the privacy policy promises.
+    items` or `/download`, HTTP 200) after it was annotated. Customer keys only: the team's own keys (customer email on
+    Sayari's `INTERNAL_KEY_EMAIL_DOMAINS`, default `afriklang.com`) never count. A kept take is marked withheld: it is
+    never part of a new delivery (`/v1` items, downloads, counts), as the privacy policy promises.
   * Every other take is deleted for good (D3): blob(s), rows, annotations, verdict outbox, transcript checks.
     `pending`: a take the pipeline holds right now; `errors`: a take not deleted (its row stays for the next call);
     `remaining`: takes beyond this call's limit (200).
