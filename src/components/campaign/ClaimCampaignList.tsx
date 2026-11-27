@@ -21,6 +21,8 @@ import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { OutboxPanel } from "./OutboxPanel";
 import { isQualification } from "@/lib/campaign/types";
 import { useTimeText } from "./PoolParts";
+import { ContactTeam } from "./ContactTeam";
+import { asksForContact } from "@/lib/campaign/contact";
 
 /** `note`: a short line above the list (an old invitation link tapped again, APP2-05). */
 export function ClaimCampaignList({ note = null }: { note?: string | null } = {}) {
@@ -45,9 +47,10 @@ export function ClaimCampaignList({ note = null }: { note?: string | null } = {}
     return (
       <section className="flex flex-col gap-4">
         <h1 className="text-2xl font-bold text-slate-900">{t("errorTitle")}</h1>
-        <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900">
-          {failureText(list.error)}
-        </p>
+        <div role="alert" className="space-y-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900">
+          <p>{failureText(list.error)}</p>
+          {asksForContact(list.error.code) ? <ContactTeam /> : null}
+        </div>
         <button type="button" onClick={list.reload} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-primary px-5 text-base font-semibold text-white">
           {common("retry")}
         </button>
@@ -84,7 +87,10 @@ function Home({ data }: { data: CampaignList }) {
         {/* A speaker with only a qualification test has no paid work yet: no "0 min" (L-20). No streak:
             it counted only this phone's log and reset on sign-out (APP2-25, the owner's decision). */}
         {collection.length ? (
-        <dl className="mt-4 grid grid-cols-2 gap-2 text-center">
+        <>
+        {/* Paid work only, and labelled so: the tests are not counted here (APP-07). */}
+        <p className="mt-4 text-xs font-bold uppercase tracking-wider text-white/80">{t("statsTitle")}</p>
+        <dl className="mt-1.5 grid grid-cols-2 gap-2 text-center">
           {paid ? (
             <>
               <Stat icon={<CheckCircle2 size={18} aria-hidden />} value={time(paid.acceptedS)} label={t("stats.acceptedTime")} small />
@@ -97,6 +103,7 @@ function Home({ data }: { data: CampaignList }) {
             </>
           )}
         </dl>
+        </>
         ) : null}
       </section>
 

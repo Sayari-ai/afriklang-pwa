@@ -1,6 +1,6 @@
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
-import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, submittedStatusKey, varietyBlockOf, waitsForPartner, withdrawOffered, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
+import { campaignMicDistance, cardOpenCount, daysLeft, hasMissions, historyGroups, submittedStatusKey, varietyBlockOf, waitsForPartner, withdrawOffered, isNewAttempt, isTestRecording, micDistance, outboxReasonKey, rejectionReasonCode, setupStep, testRedoCount, toRecordCount, totals } from "./view";
 import { REJECTION_REASONS, type CampaignCard, type SpeechType } from "./types";
 import en from "../../messages/campaign/common.en.json";
 import fr from "../../messages/campaign/common.fr.json";
@@ -81,6 +81,15 @@ describe("speaker view facts", () => {
     for (const stage of ["in_review", "decided", "cancelled"] as const) expect(isTestRecording(q(stage)), stage).toBe(false);
     const progress = { total: 10, todo: 7, submitted: 1, accepted: 0, rejected: 2 };
     for (const qualification of [null, q("recording"), q("decided")]) expect(testRedoCount({ progress, qualification })).toBe(isTestRecording(qualification) ? 2 : 0);
+  });
+  it("says a test sent again starts from zero only while its new attempt is being recorded (APP-08)", () => {
+    const q = (attempt_no: number, stage: "recording" | "in_review" | "decided" | "cancelled") => ({ attempt_no, stage, decision: null, accepted: null, total: 10, retry_after: null });
+    expect(isNewAttempt(null)).toBe(false);
+    expect(isNewAttempt(undefined)).toBe(false);
+    expect(isNewAttempt(q(1, "recording"))).toBe(false);
+    expect(isNewAttempt(q(2, "recording"))).toBe(true);
+    expect(isNewAttempt(q(3, "recording"))).toBe(true);
+    for (const stage of ["in_review", "decided", "cancelled"] as const) expect(isNewAttempt(q(2, stage)), stage).toBe(false);
   });
 });
 

@@ -42,6 +42,13 @@ export const testRedoCount = (c: Pick<CampaignCard, "progress" | "qualification"
 export const isTestRecording = (q: QualificationView | null | undefined): boolean => !q || q.stage === "recording";
 
 /**
+ * A test sent again (attempt 2 or later) that is being recorded: its counts start from zero, so the
+ * card, the test page and the history say why (APP-08). The bridge does not say how the earlier
+ * attempt ended (a "retry" result, a cancelled test restarted, a new test after the waiting time).
+ */
+export const isNewAttempt = (q: QualificationView | null | undefined): boolean => Boolean(q && q.attempt_no > 1 && q.stage === "recording");
+
+/**
  * Left to record, the one count every screen shows (MAN-004): to do + to redo, minus the missions
  * whose take is already waiting on the phone (a failed take still needs the speaker). From the
  * mission list when it is known; from the card's counts otherwise (`waitingOnPhone`: takes of the

@@ -41,7 +41,8 @@
     "noMissionsTitle": "No missions for you right now",
     "noMissionsBody": "When the team assigns you recordings, they appear here. Meanwhile, here is what you have done so far.",
     "seeHistory": "See my full history",
-    "recent": "Recent activity"
+    "recent": "Recent activity",
+    "statsTitle": "Paid campaigns"
   },
   "card": {
     "daysLeft": "{n, plural, =0 {Ends today} one {# day left} other {# days left}}",
@@ -210,7 +211,10 @@
     "statusTest": {
       "rejected": "Not accepted"
     },
-    "statusRedo": "To record again"
+    "statusRedo": "To record again",
+    "paidTitle": "Paid campaigns",
+    "testsTitle": "Qualification tests",
+    "testsHelp": "Not paid. Once sent, a test's recordings are listed below."
   },
   "qualification": {
     "title": "Qualification test",
@@ -225,7 +229,11 @@
     "notEligible": "Not passed this time. You may take the test again from {date}.",
     "cancelled": "This test was cancelled.",
     "intro": "Say each prompt in {language}, the way you would naturally say it. A native speaker listens to every recording.",
-    "notEligibleNoDate": "Not passed this time. The team will tell you when you can take the test again."
+    "notEligibleNoDate": "Not passed this time. The team will tell you when you can take the test again.",
+    "unpaid": "This test is not paid. If you pass it, you can take part in paid recording campaigns in {language}: the team emails you when one opens.",
+    "unpaidShort": "Not paid. Passing it opens paid campaigns to you.",
+    "newAttempt": "This is a new test with new prompts. Your earlier attempt is closed and does not count for this one: record all {total} prompts.",
+    "earlierQuestions": "A question about your earlier attempt?"
   },
   "tutorial": {
     "s1": {

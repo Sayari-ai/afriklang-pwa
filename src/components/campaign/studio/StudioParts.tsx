@@ -2,7 +2,7 @@
 
 /** Presentational pieces of the recording studio. */
 
-import { Mic, Minus, Pause, Play, Plus, Square, Users } from "lucide-react";
+import { ChevronDown, Mic, Minus, Pause, Play, Plus, Square, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { languageInText } from "@/lib/campaign/language-name";
@@ -12,20 +12,29 @@ import { RejectDetailLines, useRejectDetailText } from "../CampaignHubParts";
 
 // ── Prompt ───────────────────────────────────────────────────────────────
 
+/** The id of the prompt's text, so the studio can bring it into view when a take starts (APP-03). */
+export const PROMPT_TEXT_ID = "studio-prompt-text";
+
 /**
  * `sayIn` (qualification test): the prompt is shown in the speaker's working language (English or
  * French) and said in theirs, so the label names that language and the text is not in `lang`.
+ * `active`: a take is running. The reason a take came back then folds to one line (a tap opens it
+ * again), so the text to say keeps the height (APP-03).
  */
-export function PromptCard({ mission, lang, size, onSize, sayIn }: { mission: Mission; lang: string; size: number; onSize: (n: number) => void; sayIn?: { language: string; uiLocale: string } }) {
+export function PromptCard({ mission, lang, size, onSize, sayIn, active = false }: { mission: Mission; lang: string; size: number; onSize: (n: number) => void; sayIn?: { language: string; uiLocale: string }; active?: boolean }) {
   const t = useTranslations("campaign.studio");
   const label = sayIn && mission.type !== "conversational" ? t(mission.type === "read" ? "prompt.sayIn" : "prompt.talkIn", { language: languageInText(sayIn.language, sayIn.uiLocale) }) : t(`prompt.${mission.type}`);
   // A mission to redo says why, and how to fix it, right before the speaker records again.
   const why = useRejectDetailText()(mission);
   const { min, max } = mission.duration_s;
   const text = TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, Math.max(0, size))];
+  // The reason is open before a take and folded during one; a tap overrides that until the take starts or ends.
+  const [toggled, setToggled] = useState<{ active: boolean; open: boolean } | null>(null);
+  const open = toggled && toggled.active === active ? toggled.open : !active;
+  const hasDetail = Boolean(why && (why.measured || why.fix));
   return (
-    <section aria-label={label} className="relative rounded-3xl bg-white p-5 text-slate-900 shadow-[0_12px_40px_rgba(0,20,60,0.35)]">
-      <div className="mb-3 flex items-center justify-between gap-2">
+    <section aria-label={label} className="relative rounded-3xl bg-white p-5 text-slate-900 shadow-[0_12px_40px_rgba(0,20,60,0.35)] phone-short:p-4">
+      <div className="mb-3 flex items-center justify-between gap-2 phone-short:mb-2">
         <p className="text-xs font-bold uppercase tracking-wider text-primary">{label}</p>
         <div className="flex items-center gap-1" role="group" aria-label={t("textSize")}>
           <button type="button" onClick={() => onSize(size - 1)} disabled={size <= 0} aria-label={t("textSmaller")} className="grid size-11 place-items-center rounded-full bg-slate-100 text-slate-700 disabled:opacity-40">
@@ -37,12 +46,25 @@ export function PromptCard({ mission, lang, size, onSize, sayIn }: { mission: Mi
         </div>
       </div>
       {mission.status === "rejected" ? (
-        <p role="note" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
-          {why ? t("prompt.redoReason", { reason: why.title }) : t("prompt.redo")}
-          {why ? <RejectDetailLines text={why} /> : null}
-        </p>
+        <div role="note" className="mb-3 rounded-xl bg-amber-50 text-sm font-medium text-amber-900 phone-short:mb-2">
+          {why && hasDetail ? (
+            // A real button, not <summary>: Space on it must not reach the studio's record shortcut.
+            <button type="button" aria-expanded={open} onClick={() => setToggled({ active, open: !open })} className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left">
+              <span className={`min-w-0 flex-1 ${open ? "" : "truncate"}`}>{t("prompt.redoReason", { reason: why.title })}</span>
+              <ChevronDown size={18} aria-hidden className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
+          ) : (
+            <p className={`px-3 py-2 ${active ? "truncate" : ""}`}>{why ? t("prompt.redoReason", { reason: why.title }) : t("prompt.redo")}</p>
+          )}
+          {why && hasDetail && open ? (
+            <div className="px-3 pb-2">
+              <RejectDetailLines text={why} />
+            </div>
+          ) : null}
+        </div>
       ) : null}
-      <p lang={sayIn ? sayIn.uiLocale : lang} className={`${text} font-semibold leading-snug ${mission.type === "read" ? "" : "text-slate-800"}`}>
+      {/* overflow-wrap:anywhere: a word longer than the card wraps instead of being cut (APP-04); never hyphens, the word is read as written. */}
+      <p id={PROMPT_TEXT_ID} lang={sayIn ? sayIn.uiLocale : lang} className={`${text} scroll-mt-2 font-semibold leading-snug [overflow-wrap:anywhere] ${mission.type === "read" ? "" : "text-slate-800"}`}>
         {mission.prompt.text_or_topic}
       </p>
       {mission.type === "conversational" ? (
@@ -117,7 +139,7 @@ export function RecordButton({
   const R = 62;
   const C = 2 * Math.PI * R;
   return (
-    <div className="relative grid size-40 place-items-center">
+    <div className="relative grid size-40 place-items-center phone-short:size-32">
       {live ? <div ref={ringRef} aria-hidden className="absolute inset-4 rounded-full transition-[transform,opacity] duration-75" /> : null}
       {progress != null ? (
         <svg aria-hidden viewBox="0 0 140 140" className="absolute inset-0 -rotate-90">
@@ -131,14 +153,14 @@ export function RecordButton({
         aria-disabled={disabled || undefined}
         aria-describedby={describedBy}
         aria-label={label}
-        className={`relative grid size-28 place-items-center rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform active:scale-95 aria-disabled:opacity-50 ${
+        className={`relative grid size-28 place-items-center rounded-full phone-short:size-24 shadow-[0_10px_30px_rgba(0,0,0,0.35)] transition-transform active:scale-95 aria-disabled:opacity-50 ${
           mode === "recording" ? "bg-record-active" : mode === "countdown" ? "bg-white/15 ring-2 ring-white/60" : "bg-white"
         }`}
       >
-        {mode === "record" ? <Mic size={44} strokeWidth={2.4} className="text-record-active" aria-hidden /> : null}
-        {mode === "recording" ? <Square size={36} fill="white" className="text-white" aria-hidden /> : null}
-        {mode === "countdown" ? <span aria-hidden className="text-5xl font-black text-white tabular-nums">{count}</span> : null}
-        {mode === "busy" ? <span aria-hidden className="size-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" /> : null}
+        {mode === "record" ? <Mic size={44} strokeWidth={2.4} className="text-record-active phone-short:size-9" aria-hidden /> : null}
+        {mode === "recording" ? <Square size={36} fill="white" className="text-white phone-short:size-7" aria-hidden /> : null}
+        {mode === "countdown" ? <span aria-hidden className="text-5xl font-black text-white tabular-nums phone-short:text-4xl">{count}</span> : null}
+        {mode === "busy" ? <span aria-hidden className="size-10 phone-short:size-8 animate-spin rounded-full border-4 border-primary/20 border-t-primary" /> : null}
       </button>
     </div>
   );

@@ -6,7 +6,9 @@ import { useCampaignSession } from "@/lib/campaign/hooks";
 import { signOutHere } from "@/lib/campaign/sign-out";
 import { claimOutcome, maskedEmailIn } from "@/lib/campaign/claim-flow";
 import type { CampaignFailure } from "@/lib/campaign/types";
+import { asksForContact } from "@/lib/campaign/contact";
 import { useFailureText } from "./CampaignHubParts";
+import { ContactTeam } from "./ContactTeam";
 
 type Props = { failure: CampaignFailure; email: string | null; onRetry: () => void; onContinue: () => void };
 
@@ -55,7 +57,8 @@ export function ClaimFailureCard({ failure, email, onRetry, onContinue }: Props)
           <button type="button" onClick={useAnother} className={PRIMARY}>
             {t("useAnother")}
           </button>
-          <p className="text-sm text-slate-600">{t("noAccountHint")}</p>
+          {/* Invited on an address that is not a Google account: only the team can change it (APP-05). */}
+          <ContactTeam lead={t("noAccountHint")} className="text-slate-600" />
         </>
       ) : null}
       {outcome.retryable ? (
@@ -66,7 +69,7 @@ export function ClaimFailureCard({ failure, email, onRetry, onContinue }: Props)
           <p className="text-sm text-slate-600">{t(outcome.serverFault ? "autoRetryLater" : "autoRetry")}</p>
         </>
       ) : null}
-      {!outcome.retryable ? <p className="text-sm text-slate-600">{t("contact")}</p> : null}
+      {!outcome.offerOtherAccount && (!outcome.retryable || asksForContact(failure.code)) ? <ContactTeam lead={t("contact")} className="text-slate-600" /> : null}
       <button type="button" onClick={onContinue} className={SECONDARY}>
         {t("continue")}
       </button>

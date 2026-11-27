@@ -15,7 +15,8 @@
       "denied": "The Google sign-in was cancelled. Tap “Continue with Google” to try again.",
       "restart": "The sign-in could not be finished here. Tap “Continue with Google” again and finish it in this same browser, without switching app.",
       "failed": "The sign-in did not work. Please tap “Continue with Google” to try again."
-    }
+    },
+    "help": "Invited on an email address that is not a Google account, or need help?"
   },
   "claiming": {
     "title": "Checking your invitation…",

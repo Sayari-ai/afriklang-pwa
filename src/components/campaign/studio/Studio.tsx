@@ -15,7 +15,7 @@
  * straight to the next mission.
  */
 
-import { Check, ChevronRight, CloudOff, RotateCcw, SkipForward, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, CloudOff, RotateCcw, SkipForward, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -38,7 +38,7 @@ import { toRecordCount, waitsForPartner } from "@/lib/campaign/view";
 import { reportException } from "@/lib/analytics/client";
 import { track, type MicErrorCode } from "@/lib/analytics/events";
 import { PoolRefusal } from "../PoolParts";
-import { Confetti, PromptCard, RecordButton, SessionBar, TakePlayer } from "./StudioParts";
+import { Confetti, PROMPT_TEXT_ID, PromptCard, RecordButton, SessionBar, TakePlayer } from "./StudioParts";
 
 type Phase = "idle" | "countdown" | "lead" | "speaking" | "tail" | "analyzing" | "problem" | "review" | "saving" | "goal" | "done";
 type Take = {
@@ -693,6 +693,54 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
     track("test_completed", { language: card.language.code, prompts: missions.length, ...(card.qualification ? { attempt_no: card.qualification.attempt_no } : {}) });
   }, [testAllRecorded, card.language.code, card.qualification, missions.length]);
 
+  // ── Small screens (APP-01, APP-03) ──────────────────────────────────────
+
+  // The microphone is blocked: its steps take the scrolling area, "Try again" stays in the footer.
+  const blockedPanel = micBlocked > 0 && micHelp != null && phase === "idle";
+  // A take is running: the prompt card folds the reason it came back, and its text comes into view.
+  const active = phase === "countdown" || phase === "lead" || phase === "speaking" || phase === "tail";
+  const mainRef = useRef<HTMLElement>(null);
+  // Whether the text to say is cut at the bottom of the scrolling area (or, with the microphone
+  // steps, whether there is more below): a small cue says so and scrolls on a tap.
+  const [moreBelow, setMoreBelow] = useState(false);
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    const check = () => {
+      const text = blockedPanel ? null : document.getElementById(PROMPT_TEXT_ID);
+      // Only the sentence counts: a cut "3 to 15 seconds" line must not put a cue over the sentence.
+      setMoreBelow(text ? text.getBoundingClientRect().bottom > main.getBoundingClientRect().bottom + 2 : main.scrollHeight - main.scrollTop - main.clientHeight > 12);
+    };
+    main.addEventListener("scroll", check, { passive: true });
+    // Fires once on observe, then on any change of size (text size, folded reason, footer).
+    const ro = new ResizeObserver(check);
+    ro.observe(main);
+    for (const child of Array.from(main.children)) ro.observe(child);
+    return () => {
+      main.removeEventListener("scroll", check);
+      ro.disconnect();
+    };
+  }, [phase, currentId, size, micBlocked, blockedPanel]);
+  // The steps of a blocked microphone start at the top of the scrolling area.
+  useEffect(() => {
+    if (blockedPanel) mainRef.current?.scrollTo({ top: 0 });
+  }, [blockedPanel]);
+  // When a take starts, the text to say is brought into view (after the reason folded and the
+  // footer grew): never "Speak now" with the sentence below the fold. Not in the tap handler: the
+  // microphone must be asked for first, synchronously (audio-flow).
+  useEffect(() => {
+    if (phase !== "countdown" && phase !== "lead") return;
+    const raf = requestAnimationFrame(() => {
+      const main = mainRef.current;
+      const text = document.getElementById(PROMPT_TEXT_ID);
+      if (!main || !text) return;
+      const m = main.getBoundingClientRect();
+      const r = text.getBoundingClientRect();
+      if (r.top < m.top || r.bottom > m.bottom) main.scrollTo({ top: main.scrollTop + r.top - m.top - 8 });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   // Takes waiting on the phone are done as far as the speaker is concerned (MAN-004, APP-026).
@@ -704,7 +752,7 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
       <p ref={statusRef} className="sr-only" role="status" aria-live="polite">
         {t(`status.${phase === "goal" ? "goal" : phase}`)}
       </p>
-      <header className="flex items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2">
+      <header className="flex shrink-0 items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),12px)] pb-2">
         <Link href={hubHref} onClick={leave} aria-label={t("close")} className="grid size-11 shrink-0 place-items-center rounded-full bg-white/10 hover:bg-white/20">
           <X size={22} aria-hidden />
         </Link>
@@ -718,8 +766,22 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           {flash === "offline" ? t("saved.flashOffline") : flash === "lastOne" ? t("skipLast") : t("saved.flash")}
         </div>
       ) : null}
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-2">{children}</main>
-      {footer ? <footer className="px-4 pt-2 pb-[max(env(safe-area-inset-bottom),16px)]">{footer}</footer> : null}
+      <main ref={mainRef} className="relative flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-2">
+        {children}
+        {/* Something is below the fold (a long prompt, the steps of a blocked microphone): say so. Takes no height. */}
+        {moreBelow ? (
+          <div className="pointer-events-none sticky bottom-0 h-0">
+            {/* In the corner, small: it must not cover the sentence it points to. */}
+            <div className="absolute right-0 bottom-1 flex">
+              <button type="button" onClick={() => mainRef.current?.scrollBy({ top: mainRef.current.clientHeight * 0.6 })} className="pointer-events-auto flex min-h-11 items-center gap-1 rounded-full bg-primary px-3 text-sm font-bold text-white shadow-lg ring-2 ring-white">
+                <ChevronDown size={18} aria-hidden /> {t("moreBelow")}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </main>
+      {/* Never cut: taller than the room left, it scrolls itself (APP-01). */}
+      {footer ? <footer className="min-h-0 overflow-y-auto px-4 pt-2 pb-[max(env(safe-area-inset-bottom),16px)]">{footer}</footer> : null}
     </div>
   );
 
@@ -830,8 +892,20 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           {t("focusDone")}
         </p>
       ) : null}
-      <PromptCard mission={mission} lang={card.language.code} size={size} onSize={changeSize} sayIn={card.kind === "qualification" ? { language: card.language.name, uiLocale: locale } : undefined} />
-      {micError && !(micBlocked > 0 && micHelp && phase === "idle") ? (
+      {blockedPanel ? (
+        <div role="alert" className="afk-pop w-full space-y-3 rounded-2xl bg-white p-4 text-slate-900 shadow-lg">
+          <p className="text-lg font-bold">{t("mic.blocked.title")}</p>
+          {micBlocked > 1 ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">{t("mic.blocked.still")}</p> : null}
+          <p className="text-sm">{t("mic.blocked.lead")}</p>
+          <ol className="list-decimal space-y-1.5 pl-5 text-base">
+            {Array.from({ length: MIC_BLOCKED_STEPS[micHelp as Exclude<MicHelp, "inApp">] }, (_, i) => (
+              <li key={i}>{t(`mic.steps.${micHelp}.s${i + 1}`)}</li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+      <PromptCard mission={mission} lang={card.language.code} size={size} onSize={changeSize} active={active} sayIn={card.kind === "qualification" ? { language: card.language.name, uiLocale: locale } : undefined} />
+      {micError && !blockedPanel ? (
         <p role="alert" className="rounded-2xl bg-red-500/20 px-4 py-3 text-sm font-medium text-red-50 ring-1 ring-red-300/40">
           {micError}
           {micHelp ? <span className="mt-1 block font-normal text-red-50/90">{t(`mic.help.${micHelp}`)}</span> : null}
@@ -876,39 +950,33 @@ export function Studio({ campaignId, card, missions, userId, speakerId, contribu
           </div>
         </div>
       ) : null
+    ) : blockedPanel ? (
+      // The steps are above, in the scrolling area: the way out is always on screen (APP-01).
+      <div className="flex flex-col items-center gap-2">
+        <button type="button" onClick={start} className="min-h-14 w-full rounded-2xl bg-white text-lg font-bold text-primary shadow-lg">
+          {t("mic.blocked.retry")}
+        </button>
+        {micBlocked > 1 ? (
+          <button type="button" onClick={() => window.location.reload()} className="min-h-11 w-full rounded-2xl border border-white/30 text-base font-semibold">
+            {t("mic.blocked.reload")}
+          </button>
+        ) : null}
+        <button type="button" onClick={skipMission} className="flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold text-white/75 hover:bg-white/10">
+          <SkipForward size={16} aria-hidden /> {t("skip")}
+        </button>
+      </div>
     ) : (
       <div className="flex flex-col items-center gap-2">
         <p aria-hidden className={`min-h-7 text-center text-lg font-bold ${phase === "speaking" ? "text-emerald-300" : "text-white/85"}`}>
           {phase === "problem" ? t("phase.idle") : phase === "countdown" && slowStart ? t("phase.waitingMic") : t(`phase.${phase as "idle" | "countdown" | "lead" | "speaking" | "tail" | "analyzing"}`)}
         </p>
         {recording ? (
-          <p role="timer" className="text-3xl font-black tabular-nums">
+          <p role="timer" className="text-3xl font-black tabular-nums phone-short:text-2xl">
             {formatClock(elapsed)}
             {maxS ? <span className="text-lg font-semibold text-white/60"> / {formatClock(maxS)}</span> : null}
           </p>
         ) : null}
-        {micBlocked > 0 && micHelp && phase === "idle" ? (
-          <div role="alert" className="afk-pop w-full space-y-3 rounded-2xl bg-white p-4 text-slate-900 shadow-lg">
-            <p className="text-lg font-bold">{t("mic.blocked.title")}</p>
-            {micBlocked > 1 ? <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">{t("mic.blocked.still")}</p> : null}
-            <p className="text-sm">{t("mic.blocked.lead")}</p>
-            <ol className="list-decimal space-y-1.5 pl-5 text-base">
-              {Array.from({ length: MIC_BLOCKED_STEPS[micHelp as Exclude<MicHelp, "inApp">] }, (_, i) => (
-                <li key={i}>{t(`mic.steps.${micHelp}.s${i + 1}`)}</li>
-              ))}
-            </ol>
-            <button type="button" onClick={start} className="min-h-14 w-full rounded-2xl bg-primary text-lg font-bold text-white">
-              {t("mic.blocked.retry")}
-            </button>
-            {micBlocked > 1 ? (
-              <button type="button" onClick={() => window.location.reload()} className="min-h-11 w-full rounded-2xl border border-slate-300 text-base font-semibold text-slate-700">
-                {t("mic.blocked.reload")}
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <RecordButton mode={buttonMode} count={count} onPress={press} disabled={phase === "speaking" && !canStop} describedBy="rec-hint" levelRef={levelRef} minLevelDbfs={rules.minLevelDbfs} progress={progress} label={buttonLabel} />
-        )}
+        <RecordButton mode={buttonMode} count={count} onPress={press} disabled={phase === "speaking" && !canStop} describedBy="rec-hint" levelRef={levelRef} minLevelDbfs={rules.minLevelDbfs} progress={progress} label={buttonLabel} />
         <p id="rec-hint" className="min-h-5 text-center text-sm text-white/75">
           {phase === "speaking" && quiet ? <span className="font-semibold text-amber-200">{t("hint.quiet")}</span> : phase === "speaking" && !canStop ? t("hint.tooEarly", { min: minS }) : null}
         </p>

@@ -15,13 +15,15 @@ import { isQualification, type CampaignCard, type Mission } from "@/lib/campaign
 import { totalPaidTime } from "@/lib/campaign/pool";
 import { historyGroups, isTestRecording, rejectionReasonCode, submittedStatusKey, totals } from "@/lib/campaign/view";
 import { ActivityTimeline } from "./ActivityTimeline";
-import { LanguageBadge } from "./CampaignCardView";
+import { LanguageBadge, NewAttemptNote, useQualificationText } from "./CampaignCardView";
 import { buttonPrimary, useFailureText, useRejectDetailText, useRejectionText } from "./CampaignHubParts";
 import { ClaimNotLinked, ClaimSpinner } from "./ClaimNotice";
 import { MissionSkeleton } from "./MissionList";
 import { OutboxPanel } from "./OutboxPanel";
 import { SignInCard } from "./SignInCard";
-import { useTimeText } from "./PoolParts";
+import { PayHow, useTimeText } from "./PoolParts";
+import { ContactTeam } from "./ContactTeam";
+import { asksForContact } from "@/lib/campaign/contact";
 
 type Filter = "all" | "accepted" | "review" | "redo";
 const MATCH: Record<Filter, (m: Mission) => boolean> = {
@@ -39,6 +41,8 @@ export function HistoryScreen() {
   const [filter, setFilter] = useState<Filter>("all");
   const time = useTimeText();
   const failureText = useFailureText();
+  const tq = useTranslations("campaign.home.qualification");
+  const testText = useQualificationText();
 
   if (list.state === "error" && list.error.code === "not_linked") return <ClaimNotLinked />;
   // Signed out (the "My history" shortcut opens here too) or a failed load: say so, never spin for ever (APP-017).
@@ -47,9 +51,10 @@ export function HistoryScreen() {
     return (
       <section className="flex flex-col gap-4">
         <h1 className="text-2xl font-black">{t("title")}</h1>
-        <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900">
-          {failureText(list.error)}
-        </p>
+        <div role="alert" className="space-y-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900">
+          <p>{failureText(list.error)}</p>
+          {asksForContact(list.error.code) ? <ContactTeam /> : null}
+        </div>
         <button type="button" onClick={list.reload} className={buttonPrimary}>
           {tc("retry")}
         </button>
@@ -59,9 +64,12 @@ export function HistoryScreen() {
   if (list.state !== "ready" || session.status !== "signedIn") return <ClaimSpinner title={tc("loading")} />;
 
   const cards = list.data.campaigns;
-  // The counts are about campaign work: a qualification test is listed below, never "to redo" (L-18).
-  const sum = totals(cards.filter((c) => !isQualification(c)));
-  const paid = totalPaidTime(cards.filter((c) => !isQualification(c)));
+  // The counts are about paid campaign work, and say so: a speaker with tests only never reads
+  // "0 Recorded" above the test they just sent (APP-07). Tests get their own lines, never "to redo" (L-18).
+  const collection = cards.filter((c) => !isQualification(c));
+  const tests = cards.filter(isQualification);
+  const sum = totals(collection);
+  const paid = totalPaidTime(collection);
   // The bridge lists missions only once both consents are signed: the others say what to do (APP2-07).
   const { readable, locked } = historyGroups(cards);
 
@@ -71,6 +79,9 @@ export function HistoryScreen() {
         <h1 className="text-2xl font-black">{t("title")}</h1>
         <p className="text-sm text-slate-600">{t("intro")}</p>
       </header>
+      {collection.length ? (
+      <section aria-labelledby="hist-paid" className="space-y-2">
+      <h2 id="hist-paid" className="text-lg font-black">{t("paidTitle")}</h2>
       {/* 2 × 2 on the smallest phones: "En vérification" does not fit a quarter of 288 px (APP2-24). */}
       <dl className="grid grid-cols-2 gap-2 text-center min-[360px]:grid-cols-4">
         {(
@@ -88,6 +99,35 @@ export function HistoryScreen() {
         ))}
       </dl>
       {paid ? <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">{t("paid", { accepted: time(paid.acceptedS), pending: time(paid.pendingS) })}</p> : null}
+      <div className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
+        <PayHow />
+      </div>
+      </section>
+      ) : null}
+
+      {tests.length ? (
+        <section aria-labelledby="hist-tests" className="space-y-2">
+          <h2 id="hist-tests" className="text-lg font-black">{t("testsTitle")}</h2>
+          <p className="text-sm text-slate-600">{t("testsHelp")}</p>
+          <ul className="space-y-2">
+            {tests.map((c) => (
+              <li key={c.campaign_id} className="space-y-2 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                <div className="flex items-center gap-3">
+                  <LanguageBadge code={c.language.code} className="size-10 text-xs" />
+                  <div className="min-w-0">
+                    <p className="font-black">
+                      {c.language.name}
+                      {c.qualification && c.qualification.attempt_no > 1 ? <span className="font-semibold text-slate-600"> · {tq("attempt", { n: c.qualification.attempt_no })}</span> : null}
+                    </p>
+                    <p className="text-sm text-slate-700">{testText(c) ?? tq("recording", { done: c.progress.submitted + c.progress.accepted, total: c.progress.total })}</p>
+                  </div>
+                </div>
+                <NewAttemptNote card={c} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <OutboxPanel />
 
@@ -178,7 +218,7 @@ function CampaignRecordings({ card, filter }: { card: CampaignCard; filter: Filt
                 <Hourglass size={18} className="mt-0.5 shrink-0 text-primary" aria-hidden />
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-slate-900">{truncate(m.prompt.text_or_topic, 90)}</p>
+                <p className="text-sm text-slate-900 [overflow-wrap:anywhere]">{truncate(m.prompt.text_or_topic, 90)}</p>
                 <p className="text-xs text-slate-500">
                   <span className="font-mono">#{m.position}</span> · {statusOf(m)}
                 </p>

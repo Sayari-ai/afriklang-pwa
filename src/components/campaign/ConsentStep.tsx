@@ -10,12 +10,14 @@ import { clearWithdrawn } from "@/lib/campaign/withdrawals";
 import { isQualification, type CampaignCard, type CampaignFailure } from "@/lib/campaign/types";
 import { safeExternalUrl } from "@/lib/security/safe-url";
 import { FailureMessage, Notice, buttonPrimary } from "./CampaignHubParts";
+import { ContactTeam } from "./ContactTeam";
 
 /** `onChanged`: the text changed before it was signed (nothing was signed): reload only (APP2-15). */
 type Props = { type: "account" | "campaign"; card: CampaignCard; onSigned: () => void; onChanged: () => void };
 
 export function ConsentStep({ type, card, onSigned, onChanged }: Props) {
   const t = useTranslations("campaign.flow.consent");
+  const tq = useTranslations("campaign.home.qualification");
   const locale = useLocale() === "fr" ? "fr" : "en";
   const id = useId();
   const consent = card.consents[type];
@@ -67,7 +69,11 @@ export function ConsentStep({ type, card, onSigned, onChanged }: Props) {
       <h1 className="text-xl font-bold text-slate-900">{t(type === "account" ? "accountTitle" : "campaignTitle")}</h1>
       {changed ? <Notice tone="warn"><p role="status">{t("changed")}</p></Notice> : null}
       {version === null ? (
-        <Notice tone="warn"><p role="alert">{t("notConfigured")}</p></Notice>
+        <Notice tone="warn">
+          <div role="alert">
+            <ContactTeam lead={t("notConfigured")} />
+          </div>
+        </Notice>
       ) : (
         <>
           <p className="text-base text-slate-700">{type === "account"
@@ -77,6 +83,8 @@ export function ConsentStep({ type, card, onSigned, onChanged }: Props) {
                 : topic
                   ? t("campaignSummary", { code: card.code, topic })
                   : t("campaignSummaryNoTopic", { code: card.code })}</p>
+          {/* Its own line, the consent sentence untouched: the test is not paid (APP-06). */}
+          {type === "campaign" && isQualification(card) ? <p className="text-base font-semibold text-slate-800">{tq("unpaid", { language: languageInText(card.language.name, locale) })}</p> : null}
           {textUrl ? (
             <a
               href={textUrl}
@@ -87,7 +95,9 @@ export function ConsentStep({ type, card, onSigned, onChanged }: Props) {
               {t("readText")} <span className="ml-1 text-xs font-normal">{t("opensNewTab")}</span>
             </a>
           ) : (
-            <p role="alert" className="text-sm text-amber-800">{t("noLink")}</p>
+            <div role="alert" className="text-amber-800">
+              <ContactTeam lead={t("noLink")} />
+            </div>
           )}
           <label htmlFor={`${id}-agree`} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-slate-300 px-3 py-2">
             <input id={`${id}-agree`} type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="size-6 shrink-0 accent-primary" />

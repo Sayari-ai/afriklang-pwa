@@ -184,5 +184,6 @@
     "done": "Everything is recorded"
   },
   "skipLast": "This is the last one left: record it, or come back later.",
-  "focusDone": "These recordings are already done. Here is what is left."
+  "focusDone": "These recordings are already done. Here is what is left.",
+  "moreBelow": "More below"
 }

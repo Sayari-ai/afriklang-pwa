@@ -14,6 +14,8 @@ import { LEASE_URGENT_MS, earliestLease, elsewhereOf, hoursLeft, isRefusal, paid
 import type { CampaignCard, Mission, PoolStatus } from "@/lib/campaign/types";
 import { Notice, buttonPrimary, buttonSecondary, useFailureText } from "./CampaignHubParts";
 import { isRetryable } from "@/lib/campaign/errors";
+import { asksForContact } from "@/lib/campaign/contact";
+import { ContactTeam } from "./ContactTeam";
 
 /** Seconds as "1 h 5 min" / "12 min" / "under 1 min", in the speaker's language. */
 export function useTimeText() {
@@ -24,15 +26,20 @@ export function useTimeText() {
   };
 }
 
-/** Accepted and in-review audio time for one campaign. Nothing when the dashboard does not send it yet. */
+/**
+ * How the speaker is paid for one campaign (APP-06): the accepted and in-review audio time when the
+ * dashboard sends it, then what is paid, that the team pays outside the app and explains the details,
+ * and how to ask. Never a rate, an amount or a date: the app does not know them.
+ */
 export function PaidTime({ card }: { card: Pick<CampaignCard, "rewards"> }) {
   const t = useTranslations("campaign.common.paid");
   const time = useTimeText();
   const paid = paidTime(card.rewards);
-  if (!paid) return null;
   return (
-    <section aria-label={t("help")} className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-      <dl className="grid grid-cols-2 gap-3">
+    <section aria-labelledby="paid-title" className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+      <h2 id="paid-title" className="mb-2 text-base font-black">{t("title")}</h2>
+      {paid ? (
+      <dl className="mb-2 grid grid-cols-2 gap-3">
         <div>
           <dt className="text-xs font-bold uppercase tracking-wider text-slate-500">{t("accepted")}</dt>
           <dd className="flex items-center gap-1.5 text-xl font-black text-emerald-700 tabular-nums">
@@ -44,8 +51,21 @@ export function PaidTime({ card }: { card: Pick<CampaignCard, "rewards"> }) {
           <dd className="text-xl font-black text-primary tabular-nums">{time(paid.pendingS)}</dd>
         </div>
       </dl>
-      <p className="mt-2 text-xs text-slate-600">{t("help")}</p>
+      ) : null}
+      <PayHow />
     </section>
+  );
+}
+
+/** What is paid, who pays and how to ask: under the campaign's paid time and the history's totals. */
+export function PayHow() {
+  const t = useTranslations("campaign.common.paid");
+  return (
+    <div className="space-y-2 text-sm text-slate-700">
+      <p>{t("help")}</p>
+      <p>{t("how")}</p>
+      <ContactTeam lead={t("questions")} />
+    </div>
   );
 }
 
@@ -103,6 +123,7 @@ export function PoolRefusal({ status, campaignId, elsewhere, dark = false }: { s
       <div className="space-y-3 text-center">
         <h2 className="text-2xl font-black">{t(`status.${status}.title`)}</h2>
         <p className="text-base text-white/85">{t(`status.${status}.body`)}</p>
+        {status === "quality_hold" ? <ContactTeam lead={t("status.quality_hold.questions")} tone="dark" className="text-left text-white/85" /> : null}
         {links}
       </div>
     );
@@ -110,6 +131,7 @@ export function PoolRefusal({ status, campaignId, elsewhere, dark = false }: { s
   return (
     <Notice title={t(`status.${status}.title`)} tone="warn">
       <p>{t(`status.${status}.body`)}</p>
+      {status === "quality_hold" ? <ContactTeam lead={t("status.quality_hold.questions")} /> : null}
       {links}
     </Notice>
   );
@@ -144,6 +166,7 @@ export function PoolPanel({ card, missions, state }: { card: CampaignCard; missi
         <div role="alert" className="space-y-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           {/* A refusal (campaign paused or closed, consent missing…) says so; only a failed call asks to check the connection. */}
           <p>{drawCode && !isRetryable(drawCode) ? failureText({ code: drawCode, message: "" }) : t("drawFailed")}</p>
+          {drawCode && !isRetryable(drawCode) && asksForContact(drawCode) ? <ContactTeam /> : null}
           {!drawCode || isRetryable(drawCode) ? (
             <button type="button" onClick={() => void state.drawNow()} className="min-h-11 rounded-xl border border-red-300 px-3 font-semibold">
               {tc("retry")}

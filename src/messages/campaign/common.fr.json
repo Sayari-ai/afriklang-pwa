@@ -70,7 +70,8 @@
       },
       "quality_hold": {
         "title": "Nouvelles missions suspendues",
-        "body": "Trop de vos enregistrements récents ont été refusés. L'équipe est prévenue et vous contactera."
+        "body": "Trop de vos enregistrements récents ont été refusés. L'équipe est prévenue et vous contactera.",
+        "questions": "Une question sur cette pause ?"
       }
     },
     "giveBack": "Rendre les missions que je n'enregistrerai pas",
@@ -82,7 +83,10 @@
   "paid": {
     "accepted": "Audio accepté",
     "pending": "En vérification",
-    "help": "Vous êtes payé pour chaque heure d'audio acceptée."
+    "help": "Vous êtes payé pour chaque heure d'audio acceptée.",
+    "title": "Comment vous êtes payé",
+    "how": "Le paiement est effectué par l'équipe Afriklang, en dehors de cette application. L'équipe vous en explique les modalités directement.",
+    "questions": "Une question sur votre paiement ?"
   },
   "notFoundPage": {
     "title": "Cette page n'existe pas",
@@ -149,5 +153,11 @@
     },
     "measuredLabel": "Ce que nous avons mesuré : {measured}",
     "fixLabel": "Comment corriger : {fix}"
+  },
+  "contact": {
+    "address": "Écrivez à l'équipe Afriklang :",
+    "write": "Envoyer un e-mail",
+    "subject": "Aide pour l'application d'enregistrement Afriklang",
+    "body": "Mon identifiant de locuteur : {id}\n\n"
   }
 }

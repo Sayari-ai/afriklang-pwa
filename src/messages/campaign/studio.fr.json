@@ -184,5 +184,6 @@
     "done": "Tout est enregistré"
   },
   "skipLast": "C'est la dernière qui reste : enregistrez-la, ou revenez plus tard.",
-  "focusDone": "Ces enregistrements sont déjà faits. Voici ce qu'il reste."
+  "focusDone": "Ces enregistrements sont déjà faits. Voici ce qu'il reste.",
+  "moreBelow": "Suite plus bas"
 }
