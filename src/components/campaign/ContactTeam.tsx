@@ -9,12 +9,13 @@
 
 import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCampaignList } from "@/lib/campaign/hooks";
+import { useSavedCampaignList } from "@/lib/campaign/hooks";
 import { CONTACT_EMAIL, contactMailto } from "@/lib/campaign/contact";
 
 export function ContactTeam({ lead, tone = "light", className = "" }: { lead?: string | null; tone?: "light" | "dark"; className?: string }) {
   const t = useTranslations("campaign.common.contact");
-  const list = useCampaignList();
+  // Read only: the help shown under a failed list must not retry that list (and unmount itself).
+  const list = useSavedCampaignList();
   const speakerId = list.state === "ready" ? list.data.contributor.speaker_id : null;
   const href = contactMailto({ subject: t("subject"), body: speakerId ? t("body", { id: speakerId }) : null });
   const dark = tone === "dark";
