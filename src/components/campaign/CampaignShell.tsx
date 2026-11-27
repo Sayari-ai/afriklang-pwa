@@ -30,6 +30,7 @@ import { identifyContributor, resetIdentity } from "@/lib/analytics/client";
 import { signConsent, withdrawSamplesConsent } from "@/lib/campaign/api";
 import { accountSamplesConsent } from "@/lib/campaign/samples-consent";
 import { safeExternalUrl } from "@/lib/security/safe-url";
+import { ContactTeam } from "./ContactTeam";
 
 const subscribeOnline = (fn: () => void) => {
   window.addEventListener("online", fn);
@@ -118,6 +119,32 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
   const update = useAppUpdate();
   const box = useOutbox();
   const [account, setAccount] = useState(false);
+  // The phone's Back button closes the sheet, not the page (APP-02): opening it adds a history
+  // entry (same address; Next keeps its own state in it), Back removes it, and closing it in any
+  // other way removes it too, so no dead entry is left behind.
+  const closing = useRef(false);
+  const openAccount = () => {
+    closing.current = false;
+    try {
+      window.history.pushState({ afkAccountSheet: true }, "");
+    } catch {
+      // no entry: Back then leaves the page, as before
+    }
+    setAccount(true);
+  };
+  const closeAccount = () => {
+    // Once: a second tap before Back has landed would leave the page.
+    if (closing.current) return;
+    closing.current = true;
+    if ((window.history.state as { afkAccountSheet?: boolean } | null)?.afkAccountSheet) window.history.back();
+    else setAccount(false);
+  };
+  useEffect(() => {
+    if (!account) return;
+    const onPop = () => setAccount(false);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [account]);
   const tabs = [
     { href: "/campaign", label: t("missions"), Icon: ClipboardList, active: pathname === "/campaign" || (/^\/campaign\/[^/]+/.test(pathname) && !pathname.startsWith("/campaign/history")) },
     { href: "/campaign/history", label: t("history"), Icon: History, active: pathname.startsWith("/campaign/history") },
@@ -131,7 +158,7 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
           <span>Afriklang</span>
         </Link>
         {signedIn ? (
-          <button type="button" onClick={() => setAccount(true)} aria-label={t("account")} aria-haspopup="dialog" className="grid size-10 place-items-center rounded-full bg-white/15 hover:bg-white/25">
+          <button type="button" onClick={openAccount} aria-label={t("account")} aria-haspopup="dialog" className="grid size-10 place-items-center rounded-full bg-white/15 hover:bg-white/25">
             <UserRound size={20} aria-hidden />
           </button>
         ) : (
@@ -172,7 +199,7 @@ function Frame({ children, signedIn, email }: { children: ReactNode; signedIn: b
           </ul>
         </nav>
       ) : null}
-      {account ? <AccountSheet email={email} onClose={() => setAccount(false)} /> : null}
+      {account ? <AccountSheet email={email} onClose={closeAccount} /> : null}
     </div>
   );
 }
@@ -239,14 +266,17 @@ function AccountSheet({ email, onClose }: { email: string | null; onClose: () =>
   }
 
   return (
-    <div className="fixed inset-0 z-40 mx-auto flex max-w-[480px] items-end bg-black/50" onClick={onClose}>
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="acct-title" onClick={(e) => e.stopPropagation()} className="afk-pop w-full rounded-t-3xl bg-primary px-5 pt-4 pb-[max(env(safe-area-inset-bottom),20px)] text-white">
-        <div className="mb-4 flex items-center justify-between">
+    // Never taller than the screen (APP-02): the title and Close stay at the top, the rest scrolls,
+    // and a strip of the page stays above it to tap away.
+    <div className="fixed inset-0 z-40 mx-auto flex max-w-[480px] items-end bg-black/50 pt-[max(env(safe-area-inset-top),24px)]" onClick={onClose}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="acct-title" onClick={(e) => e.stopPropagation()} className="afk-pop flex max-h-full w-full flex-col rounded-t-3xl bg-primary text-white">
+        <div className="flex shrink-0 items-center justify-between px-5 pt-4 pb-3">
           <h2 id="acct-title" className="text-lg font-black">{t("account")}</h2>
-          <button ref={closeRef} type="button" onClick={onClose} aria-label={t("close")} className="grid size-10 place-items-center rounded-full bg-white/15">
+          <button ref={closeRef} type="button" onClick={onClose} aria-label={t("close")} className="grid size-11 place-items-center rounded-full bg-white/15">
             <X size={20} aria-hidden />
           </button>
         </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-1 pb-[max(env(safe-area-inset-bottom),20px)]">
         {speakerId ? (
           <div className="mb-4 rounded-2xl bg-white/10 p-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-white/70">{t("speakerId")}</p>
@@ -257,12 +287,13 @@ function AccountSheet({ email, onClose }: { email: string | null; onClose: () =>
         {email ? <p className="mb-4 text-sm text-white/85">{t("signedInAs", { email })}</p> : null}
         {/* The account consent: no button for it, but always a way (APP2-09). */}
         <SamplesToggle />
-        <p className="mb-4 text-xs text-white/75">{t("withdrawAccount")}</p>
+        <ContactTeam lead={t("withdrawAccount")} tone="dark" className="mb-4 text-white/85" />
         <p className="mb-2 text-sm font-semibold">{t("language")}</p>
         <LocalePicker className="mb-6" />
         <button type="button" onClick={leave} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white font-bold text-primary">
           <LogOut size={18} aria-hidden /> {t("signOut")}
         </button>
+        </div>
       </div>
     </div>
   );

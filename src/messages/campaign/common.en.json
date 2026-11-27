@@ -70,7 +70,8 @@
       },
       "quality_hold": {
         "title": "New missions are on hold",
-        "body": "Too many of your recent recordings were rejected. The team has been told and will be in touch."
+        "body": "Too many of your recent recordings were rejected. The team has been told and will be in touch.",
+        "questions": "A question about this hold?"
       }
     },
     "giveBack": "Give back the missions I will not record",
@@ -82,7 +83,10 @@
   "paid": {
     "accepted": "Accepted audio",
     "pending": "In review",
-    "help": "You are paid for each hour of accepted audio."
+    "help": "You are paid for each hour of accepted audio.",
+    "title": "How you are paid",
+    "how": "Payment is made by the Afriklang team, outside this app. The team explains the details to you directly.",
+    "questions": "A question about your payment?"
   },
   "notFoundPage": {
     "title": "This page does not exist",
@@ -149,5 +153,11 @@
     },
     "measuredLabel": "What we measured: {measured}",
     "fixLabel": "How to fix it: {fix}"
+  },
+  "contact": {
+    "address": "Write to the Afriklang team:",
+    "write": "Send an email",
+    "subject": "Help with the Afriklang recording app",
+    "body": "My speaker ID: {id}\n\n"
   }
 }

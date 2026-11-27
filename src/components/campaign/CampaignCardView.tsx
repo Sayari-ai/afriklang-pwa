@@ -5,7 +5,7 @@
  * straight into the studio when they can record, or to the setup step that is missing.
  */
 
-import { AlertTriangle, CalendarClock, ChevronRight, Coins, GraduationCap, Mic, PauseCircle, UploadCloud } from "lucide-react";
+import { AlertTriangle, CalendarClock, ChevronRight, Coins, GraduationCap, Info, Mic, PauseCircle, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useMemo } from "react";
@@ -15,8 +15,32 @@ import { useOutbox } from "@/lib/campaign/outbox-client";
 import { isPool, isRefusal, paidTime } from "@/lib/campaign/pool";
 import { useLiveMissions, usePoolMemo } from "@/lib/campaign/pool-client";
 import { isQualification, type CampaignCard } from "@/lib/campaign/types";
-import { cardOpenCount, daysLeft, isTestRecording, openCountOnPhone, setupStep, testRedoCount } from "@/lib/campaign/view";
+import { cardOpenCount, daysLeft, isNewAttempt, isTestRecording, openCountOnPhone, setupStep, testRedoCount } from "@/lib/campaign/view";
 import { useTimeText } from "./PoolParts";
+import { ContactTeam } from "./ContactTeam";
+
+/**
+ * A test sent again (attempt 2 or later) that is being recorded: one line says why the count is
+ * back to zero (APP-08). True whatever closed the earlier attempt (a "retry" result, a test the
+ * team cancelled and restarted, a new test after the waiting time): each attempt draws prompts not
+ * used before and is judged on its own recordings. The bridge does not say how the earlier attempt
+ * ended, so the line does not either.
+ */
+export function NewAttemptNote({ card, withContact = false, className = "" }: { card: Pick<CampaignCard, "qualification" | "progress">; withContact?: boolean; className?: string }) {
+  const t = useTranslations("campaign.home.qualification");
+  const q = card.qualification;
+  if (!q || !isNewAttempt(q)) return null;
+  return (
+    <div className={`flex items-start gap-2 rounded-2xl bg-primary/5 p-3 text-sm text-slate-800 ring-1 ring-primary/15 ${className}`}>
+      <Info size={18} className="mt-0.5 shrink-0 text-primary" aria-hidden />
+      <div className="min-w-0 space-y-2">
+        {/* "Attempt n" is the title above it, on the card and the test page. */}
+        <p>{t("newAttempt", { total: q.total || card.progress.total })}</p>
+        {withContact ? <ContactTeam lead={t("earlierQuestions")} /> : null}
+      </div>
+    </div>
+  );
+}
 
 export function ProgressRing({ value, total, size = 64 }: { value: number; total: number; size?: number }) {
   const r = size / 2 - 5;
@@ -81,10 +105,13 @@ function QualificationCardView({ card, waitingOk }: { card: CampaignCard; waitin
           <p className="text-xs font-bold uppercase tracking-wider text-primary">{card.language.name}</p>
           <h2 className="text-lg leading-tight font-black text-slate-900">{t("title")}</h2>
           {card.qualification && card.qualification.attempt_no > 1 ? <p className="text-sm text-slate-600">{t("attempt", { n: card.qualification.attempt_no })}</p> : null}
+          {/* The test is not paid work, and says so before it is recorded (APP-06). */}
+          {recording ? <p className="text-sm text-slate-600">{t("unpaidShort")}</p> : null}
         </div>
         <ChevronRight size={20} className="mt-1 shrink-0 text-slate-400" aria-hidden />
       </Link>
       <div className="px-4 pb-4">
+        <NewAttemptNote card={card} className="mb-3" />
         {status ? (
           <p role="status" className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-800">{status}</p>
         ) : (

@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { useFailureText } from "@/components/campaign/CampaignHubParts";
 import { Studio } from "@/components/campaign/studio/Studio";
 import { isRetryable } from "@/lib/campaign/errors";
+import { asksForContact } from "@/lib/campaign/contact";
+import { ContactTeam } from "@/components/campaign/ContactTeam";
 import { sessionExpired, useCampaignList, useCampaignMissions, useCampaignSession } from "@/lib/campaign/hooks";
 import { useLiveMissions, usePool } from "@/lib/campaign/pool-client";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
@@ -92,6 +94,7 @@ export default function StudioPage() {
     return (
       <div className={dark} role="alert">
         <p>{failureText(failed.error)}</p>
+        {asksForContact(failed.error.code) ? <ContactTeam tone="dark" /> : null}
         {isRetryable(failed.error.code) ? (
           <button type="button" onClick={failed.reload} className="min-h-12 rounded-2xl border border-white/40 px-6 font-semibold">
             {tc("retry")}

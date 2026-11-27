@@ -3,6 +3,7 @@
 /** Small full-width states of the landing screen: a spinner message, the "no campaign link yet" screen and a broken link. */
 
 import { useTranslations } from "next-intl";
+import { ContactTeam } from "./ContactTeam";
 
 export function ClaimSpinner({ title, body }: { title: string; body?: string }) {
   return (
@@ -20,7 +21,7 @@ export function ClaimNotLinked() {
     <section className="flex flex-col gap-3 py-6">
       <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
       <p className="text-base text-slate-800">{t("body")}</p>
-      <p className="text-sm text-slate-600">{t("lost")}</p>
+      <ContactTeam lead={t("lost")} className="text-slate-600" />
     </section>
   );
 }
@@ -32,7 +33,7 @@ export function ClaimBrokenLink({ onContinue }: { onContinue: () => void }) {
     <section className="flex flex-col gap-4 py-6">
       <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
       <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-900">{t("body")}</p>
-      <p className="text-sm text-slate-600">{t("help")}</p>
+      <ContactTeam lead={t("help")} className="text-slate-600" />
       <button type="button" onClick={onContinue} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-300 px-5 text-base font-semibold text-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
         {t("continue")}
       </button>

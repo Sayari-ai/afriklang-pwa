@@ -41,7 +41,8 @@
     "noMissionsTitle": "Aucune mission pour vous pour l'instant",
     "noMissionsBody": "Quand l'équipe vous attribuera des enregistrements, ils apparaîtront ici. En attendant, voici ce que vous avez déjà fait.",
     "seeHistory": "Voir tout mon historique",
-    "recent": "Activité récente"
+    "recent": "Activité récente",
+    "statsTitle": "Campagnes rémunérées"
   },
   "card": {
     "daysLeft": "{n, plural, =0 {Se termine aujourd'hui} one {# jour restant} other {# jours restants}}",
@@ -210,7 +211,10 @@
     "statusTest": {
       "rejected": "Non accepté"
     },
-    "statusRedo": "À réenregistrer"
+    "statusRedo": "À réenregistrer",
+    "paidTitle": "Campagnes rémunérées",
+    "testsTitle": "Tests de qualification",
+    "testsHelp": "Non rémunérés. Une fois envoyés, les enregistrements d'un test sont listés plus bas."
   },
   "qualification": {
     "title": "Test de qualification",
@@ -225,7 +229,11 @@
     "notEligible": "Pas réussi cette fois. Vous pourrez repasser le test à partir du {date}.",
     "cancelled": "Ce test a été annulé.",
     "intro": "Dites chaque consigne en {language}, comme vous la diriez naturellement. Un locuteur natif écoute chaque enregistrement.",
-    "notEligibleNoDate": "Pas réussi cette fois. L'équipe vous dira quand vous pourrez repasser le test."
+    "notEligibleNoDate": "Pas réussi cette fois. L'équipe vous dira quand vous pourrez repasser le test.",
+    "unpaid": "Ce test n'est pas rémunéré. Si vous le réussissez, vous pourrez participer aux campagnes d'enregistrement rémunérées en {language} : l'équipe vous écrit quand l'une d'elles ouvre.",
+    "unpaidShort": "Non rémunéré. Le réussir vous ouvre les campagnes rémunérées.",
+    "newAttempt": "Voici un nouveau test, avec de nouvelles consignes. Votre tentative précédente est close et ne compte pas pour celle-ci : enregistrez les {total} consignes.",
+    "earlierQuestions": "Une question sur votre tentative précédente ?"
   },
   "tutorial": {
     "s1": {

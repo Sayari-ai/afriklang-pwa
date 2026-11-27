@@ -45,6 +45,7 @@ import type {
   ProfileInput,
 } from "@/lib/campaign/types";
 import { FailureMessage, Notice, buttonPrimary } from "./CampaignHubParts";
+import { ContactTeam } from "./ContactTeam";
 
 const control =
   "min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base text-slate-900 focus-visible:outline-2 focus-visible:outline-primary aria-[invalid=true]:border-red-500";
@@ -376,6 +377,8 @@ export function ProfileForm({ card, cards, contributor, onSaved, heading }: Prop
           {t("formError")}
         </p>
       ) : null}
+      {/* The errors that only the team can solve (a variety or a language our list does not have) say how to reach it (APP-05). */}
+      {errors.variety === "notListed" || errors.variety === "server" || errors.native_language === "server" ? <ContactTeam className="text-slate-700" /> : null}
       {failure ? <FailureMessage failure={failure} /> : null}
       <button
         type="submit"

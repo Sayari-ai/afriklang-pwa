@@ -7,6 +7,8 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { Lightbulb } from "lucide-react";
 import { ERROR_KEY } from "@/lib/campaign/errors";
+import { asksForContact } from "@/lib/campaign/contact";
+import { ContactTeam } from "./ContactTeam";
 import { rejectDetailMessage, rejectDetailOf } from "@/lib/campaign/reject-detail";
 import { rejectionReasonCode } from "@/lib/campaign/view";
 import type { CampaignFailure, Mission, RejectDetail } from "@/lib/campaign/types";
@@ -99,6 +101,7 @@ export function FailureMessage({ failure }: { failure: CampaignFailure }) {
   return (
     <div role="alert" className="space-y-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
       <p>{text}</p>
+      {asksForContact(failure.code) ? <ContactTeam /> : null}
       {failure.code === "unauthorized" ? (
         <Link href="/campaign" className="inline-flex min-h-11 items-center font-semibold text-red-900 underline underline-offset-2">
           {t("signInAgain")}

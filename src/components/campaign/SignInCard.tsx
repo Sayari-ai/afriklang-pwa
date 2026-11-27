@@ -7,6 +7,7 @@ import { isInAppBrowser } from "@/lib/campaign/in-app-browser";
 import { siteStorageBlocked } from "@/lib/campaign/site-storage";
 import { signInFailed, signInStarted } from "@/lib/analytics/client";
 import { takeSignInReturnProblem, type SignInReturnProblem } from "@/lib/campaign/sign-in-return";
+import { ContactTeam } from "./ContactTeam";
 
 export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
   const t = useTranslations("campaign.claim.signIn");
@@ -81,6 +82,8 @@ export function SignInCard({ hasInvitation }: { hasInvitation: boolean }) {
           {t("error")}
         </p>
       ) : null}
+      {/* Someone invited on a Yahoo or Outlook address, or refused at sign-up, has no other way in (APP-05). */}
+      <ContactTeam lead={t("help")} className="border-t border-slate-200 pt-4 text-slate-600" />
     </section>
   );
 }

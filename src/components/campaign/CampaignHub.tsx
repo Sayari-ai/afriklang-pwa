@@ -20,7 +20,7 @@ import { missionsInOutbox } from "@/lib/campaign/outbox-logic";
 import { outbox, useOutbox } from "@/lib/campaign/outbox-client";
 import { campaignMicDistance, daysLeft, hasMissions, openCountOnPhone, setupStep, toRecordCount, varietyBlockOf, withdrawOffered } from "@/lib/campaign/view";
 import { OutboxPanel } from "./OutboxPanel";
-import { LanguageBadge, ProgressRing, useQualificationText } from "./CampaignCardView";
+import { LanguageBadge, NewAttemptNote, ProgressRing, useQualificationText } from "./CampaignCardView";
 import { BackToList, FailureMessage, Notice, buttonSecondary } from "./CampaignHubParts";
 import { ConsentStep } from "./ConsentStep";
 import { Instructions, WithdrawControl } from "./Instructions";
@@ -159,10 +159,20 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
         </div>
       ) : null}
 
+      {/* A test sent again starts from zero: say why, from the first screen of it (APP-08). */}
+      {qualifying ? <NewAttemptNote card={card} withContact /> : null}
+
       {step ? <Stepper current={step} /> : null}
 
-      {!step && card.next_step !== "blocked" && !qualifying ? <PaidTime card={card} /> : null}
-      {qualifying && !testStatus && card.next_step === "ready" ? <p className="rounded-2xl bg-primary/5 p-4 text-sm font-medium text-slate-800">{t("qualification.intro", { language: languageInText(card.language.name, locale) })}</p> : null}
+      {/* Not paid, and what passing leads to: from the first setup step on, as the video (APP-06). The test's consent step says it itself, and once ready it joins the test's intro. */}
+      {qualifying && !testStatus && (card.next_step === "profile" || card.next_step === "account_consent") ? <p className="rounded-2xl bg-white p-4 text-sm font-medium text-slate-800 ring-1 ring-slate-200">{t("qualification.unpaid", { language: languageInText(card.language.name, locale) })}</p> : null}
+
+      {qualifying && !testStatus && card.next_step === "ready" ? (
+        <div className="space-y-2 rounded-2xl bg-primary/5 p-4 text-sm font-medium text-slate-800">
+          <p>{t("qualification.intro", { language: languageInText(card.language.name, locale) })}</p>
+          <p>{t("qualification.unpaid", { language: languageInText(card.language.name, locale) })}</p>
+        </div>
+      ) : null}
       {/* The test's video from the first step on (profile, consents, recording), not once it is with the team. */}
       {qualifying && !testStatus && card.next_step !== "blocked" ? <TutorialVideo id="s1" /> : null}
 
@@ -200,6 +210,7 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
           <Notice title={tf(card.next_step === "paused" ? "hub.pausedTitle" : "hub.closedTitle")} tone="warn">
             <p>{tf(`hub.${card.next_step}`)}</p>
           </Notice>
+          {qualifying ? null : <PaidTime card={card} />}
           <MissionList campaignId={card.campaign_id} readOnly />
         </>
       ) : null}
@@ -241,6 +252,8 @@ function Hub({ card, cards, contributor, reload }: { card: CampaignCard; cards: 
             </p>
           )}
           {stillOnPhone > 0 ? <OutboxPanel compact /> : null}
+          {/* Under the way to record, not above it: on a small phone the button stays in the first screen (APP-06). */}
+          {qualifying ? null : <PaidTime card={card} />}
           <Tips card={card} />
           {qualifying ? null : <TutorialVideo id={pool.pool ? "s3" : "s2"} />}
           <MissionList campaignId={card.campaign_id} readOnly={false} />

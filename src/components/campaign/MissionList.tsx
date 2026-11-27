@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Fragment, useMemo, useState } from "react";
 import { isRetryable } from "@/lib/campaign/errors";
+import { asksForContact } from "@/lib/campaign/contact";
 import { languageInText } from "@/lib/campaign/language-name";
 import { truncate } from "@/lib/campaign/mission-list";
 import { missionsInOutbox, type OutboxState } from "@/lib/campaign/outbox-logic";
@@ -21,6 +22,7 @@ import { useLiveMissions } from "@/lib/campaign/pool-client";
 import { submittedStatusKey, waitsForPartner } from "@/lib/campaign/view";
 import { RejectDetailLines, useFailureText, useRejectDetailText } from "./CampaignHubParts";
 import { LeaseLeft } from "./PoolParts";
+import { ContactTeam } from "./ContactTeam";
 
 type Tab = "todo" | "redo" | "sent" | "accepted";
 const TYPE_ICON: Record<SpeechType, typeof BookOpen> = { read: BookOpen, spontaneous: MessageCircle, conversational: MessagesSquare };
@@ -74,6 +76,7 @@ export function MissionList({ campaignId, readOnly }: Props) {
       <div role="alert" className="space-y-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
         <p className="font-semibold">{tm("loadError")}</p>
         <p>{failureText(res.error)}</p>
+        {asksForContact(res.error.code) ? <ContactTeam /> : null}
         {isRetryable(res.error.code) ? (
           <button type="button" onClick={res.reload} className="min-h-11 rounded-xl border border-red-300 px-3 font-semibold">
             {tc("retry")}
@@ -148,7 +151,7 @@ function MissionRow({ campaignId, mission: m, local, active, readOnly, qualifyin
           <span>{qualifying && m.type === "read" ? (sayIn ? tm("types.sayIn", { language: sayIn }) : tm("types.say")) : tm(`types.${m.type}`)}</span>
           {m.duration_s.min != null && m.duration_s.max != null ? <span>{tm("duration", { min: m.duration_s.min, max: m.duration_s.max })}</span> : null}
         </span>
-        <span className="block text-sm font-semibold text-slate-900">{truncate(m.prompt.text_or_topic, 110)}</span>
+        <span className="block text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">{truncate(m.prompt.text_or_topic, 110)}</span>
         {m.status === "rejected" && !local ? (
           <span className="mt-1 block text-xs font-semibold text-amber-800">
             {testClosed ? tm("notAccepted", { reason: why?.title ?? "" }) : why ? tm("reason", { reason: why.title }) : tm("noReason")}

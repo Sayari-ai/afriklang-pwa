@@ -15,7 +15,8 @@
       "denied": "La connexion Google a été annulée. Touchez « Continuer avec Google » pour réessayer.",
       "restart": "La connexion n'a pas pu se terminer ici. Touchez à nouveau « Continuer avec Google » et terminez-la dans ce même navigateur, sans changer d'application.",
       "failed": "La connexion n'a pas fonctionné. Touchez « Continuer avec Google » pour réessayer."
-    }
+    },
+    "help": "Invité(e) sur une adresse e-mail qui n'est pas un compte Google, ou besoin d'aide ?"
   },
   "claiming": {
     "title": "Vérification de votre invitation…",
