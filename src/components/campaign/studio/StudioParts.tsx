@@ -29,8 +29,15 @@ export function PromptCard({ mission, lang, size, onSize, sayIn, active = false 
   const { min, max } = mission.duration_s;
   const text = TEXT_SIZES[Math.min(TEXT_SIZES.length - 1, Math.max(0, size))];
   // The reason is open before a take and folded during one; a tap overrides that until the take starts or ends.
-  const [toggled, setToggled] = useState<{ active: boolean; open: boolean } | null>(null);
-  const open = toggled && toggled.active === active ? toggled.open : !active;
+  // The override is dropped each time a take starts or ends (adjusted during render, React's pattern
+  // for state that follows a prop), so the next take always starts folded.
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
+    setToggled(null);
+  }
+  const open = toggled ?? !active;
   const hasDetail = Boolean(why && (why.measured || why.fix));
   return (
     <section aria-label={label} className="relative rounded-3xl bg-white p-5 text-slate-900 shadow-[0_12px_40px_rgba(0,20,60,0.35)] phone-short:p-4">
@@ -49,7 +56,7 @@ export function PromptCard({ mission, lang, size, onSize, sayIn, active = false 
         <div role="note" className="mb-3 rounded-xl bg-amber-50 text-sm font-medium text-amber-900 phone-short:mb-2">
           {why && hasDetail ? (
             // A real button, not <summary>: Space on it must not reach the studio's record shortcut.
-            <button type="button" aria-expanded={open} onClick={() => setToggled({ active, open: !open })} className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left">
+            <button type="button" aria-expanded={open} onClick={() => setToggled(!open)} className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left">
               <span className={`min-w-0 flex-1 ${open ? "" : "truncate"}`}>{t("prompt.redoReason", { reason: why.title })}</span>
               <ChevronDown size={18} aria-hidden className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
             </button>

@@ -205,6 +205,13 @@ const isCampaignList = (d: CampaignList) => Array.isArray(d?.campaigns);
 
 export const useCampaignList = (): Loaded<CampaignList> => useCached<CampaignList>(CAMPAIGNS, listLoader, isCampaignList);
 
+/**
+ * The saved campaign list only, never fetched: for small pieces that just read it (the speaker ID
+ * in ContactTeam). Mounting one never retries a failed list, so it cannot send its parent back to
+ * "loading" and unmount itself in a loop.
+ */
+export const useSavedCampaignList = (): Loaded<CampaignList> => useCached<CampaignList>(CAMPAIGNS, null, isCampaignList);
+
 /** `enabled: false` reads the saved copy only (the bridge refuses missions before the consents). */
 export function useCampaignMissions(campaignId: string, enabled = true): Loaded<MissionList> {
   const loader = useCallback((userId: string, force: boolean) => loadMissions(userId, campaignId, force), [campaignId]);
